@@ -1,10 +1,10 @@
 # AppsService
 
-Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`), [040](../../adrs/040-installed-apps.md) (installed apps), [047](../../adrs/047-solo-app-open.md) (solo), [049](../../adrs/049-lazy-app-metadata.md) (meta) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
+Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dialogs` · ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [022](../../adrs/022-desktop-folder.md) (shortcuts), [023](../../adrs/023-session-persistence.md) (`create_instance`, manifest `restore`), [040](../../adrs/040-installed-apps.md) (installed apps), [047](../../adrs/047-solo-app-open.md) (solo), [049](../../adrs/049-lazy-app-metadata.md) (meta), [077](../../adrs/077-app-store.md) (catalogue, stage 2) · Source: `src/lib/core/api/services/apps/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
-The app registry. Holds every discovered manifest and which user apps are installed, launches an app into a new window with validated props, and resolves a file path to the app that should open it. A `.desktop` shortcut file resolves to the app it points at.
+The app registry. Holds every app the catalogue names (ADR-077): boot knows only the installed apps' entries, the rest arrive with the full catalogue, and each app's manifest code loads on its own. It holds which user apps are installed, launches an app into a new window with validated props, and resolves a file path to the app that should open it. A `.desktop` shortcut file resolves to the app it points at.
 
 | File | Contents |
 |------|----------|
@@ -18,11 +18,13 @@ The app registry. Holds every discovered manifest and which user apps are instal
 | `letters.ts` | `LETTERS` (`#`, A–Z) and `group_by_letter()`: the phone's letter rail and full list file each app under its name's first letter, accents folded, anything else under `#` |
 | `sentence.ts` | Lazy: the sentence search ([below](#sentence-search)). `build_sentence_index()`, `rank_sentence()`, `query_terms()`, `stem()`, `suggest_keywords()` and `suggest_messages()` (on-device AI). Imported only by `components/apps/sentence-search.svelte.ts` and `app find`, never at boot |
 | `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
-| `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040) |
+| `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040); `CATALOGUE_PATH` (ADR-077) |
+| `catalogue.ts` | `CatalogueApp`, `Catalogue`, `CatalogueData`, `LAZY_PARTS`, `manifest_data()`, `json_safe()`, `parse_catalogue()`, `parse_catalogue_text()`, `serialize_slice()`. Plain data and functions, no `$lib` imports: `tooling/vite-plugin-catalogue.ts` imports it, so the build, the dev server and tests describe an app with the same function |
+| `source.ts` | `CatalogueSource` and its two implementations: `bundle_source()` (the built site) and `glob_source(manifests)` (dev server and tests); `catalogue_source()` picks one by `import.meta.env.DEV` ([below](#catalogue-sources)) |
 | `recent.ts` | `RECENT_PATH`, `RECENT_LIMIT` (16), `parse_recent()` (tolerant: a broken file is `[]`, non-string and repeated entries drop out), `serialize_recent()`, `with_recent(ids, id)` (moves `id` to the front, capped) |
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
 | `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked. The intro hides a group with none of its apps registered |
-| `test-apps.ts` | Tests only: `EXAMPLE_APP` and `TestAppsService`, which registers it, so core tests don't depend on user apps |
+| `test-apps.ts` | Tests only: `EXAMPLE_APP`, `TEST_APPS` and `TestAppsService`, whose glob source holds the system apps and these, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |
 | `solo.svelte.ts` | `SoloAppsService`, registered instead in solo mode (see [Solo mode](#solo-mode)) |
 
@@ -32,19 +34,22 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `registry` | `Map<string, AppManifest>` (a `SvelteMap`) | Public on the class, not on the interface. Reactive |
+| `registry` | `Map<string, AppManifest>` (a `SvelteMap`) | Public on the class, not on the interface. Reactive. Every known app: its manifest once its code loaded, a [stub](#stubs) until then |
+| `complete` | `boolean` | Public on the class. `$state`: the full catalogue of this build arrived |
 | `list(filter?)` | `(filter?: { installed?: boolean }): IterableIterator<[AppId, AppManifest]>` | Iterator over `registry`, insertion order. `installed: true` only installed apps (the start menu, the mobile home and app list, `app list`), `false` only the others (search's Not installed group) |
 | `is_installed(id)` | `(id: AppId): boolean` | System apps always; unknown ids never. Reactive |
 | `install(ids)` | `(ids: AppId \| AppId[]): AppId[]` | Adds the ones not installed yet, saves, returns them. No toast |
 | `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for system and unknown apps. Unpins it from the taskbar's quick launch (ADR-042). `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`, then awaits the manifest's `on_uninstall_data` if it has one (a throw is logged and toasted "Some of {App}'s data is left"; the uninstall stands). Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
-| `get(id)` | `(id: AppId): AppManifest \| undefined` | |
-| `register(manifest)` | `(manifest: AppManifest): void` | `registry.set`. Same id overwrites silently. No `unregister` |
-| `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | An id no app has opens the app that [replaces](#replaced-app-ids-adr-071) it; throws `App ${id} not found` when none does. An app that isn't installed opens without installing (ADR-077) and toasts "{App} isn't installed" with **Install**. Always opens a new window |
-| `create_instance(id, props?, state?)` | `(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts. Used by session restore. See below |
+| `get(id)` | `(id: AppId): AppManifest \| undefined` | The manifest, or the stub while its code hasn't loaded. `undefined` for an app the device doesn't know yet: call `catalogue()` first where that matters |
+| `catalogue()` | `(): Promise<boolean>` | Fetches the full catalogue once and registers every app in it. `true` when this build's catalogue is known; `false` offline with no copy, or with another build's copy, whose apps are listed but can't open. A later call tries again. [Catalogue](#catalogue-adr-077) |
+| `load(id)` | `(id: AppId): Promise<AppManifest \| undefined>` | The manifest with its code (one import per app, shared). Rejects when the chunk can't load or the entry is another build's |
+| `installed_catalogue()` | `(): Catalogue \| null` | The installed apps' entries for `/var/lib/apps/catalogue.json`; `null` while one isn't known or is another build's. Reactive. StoreService writes it |
+| `register(manifest)` | `(manifest: AppManifest): void` | An app whose code is already here (tests' stand-ins): its entry comes from `manifest_data`, without meta. Same id overwrites silently. No `unregister` |
+| `launch(id, props?)` | `(id: AppId, props?: unknown): WindowId` | An id no app has opens the app that [replaces](#replaced-app-ids-adr-071) it; throws `App ${id} not found` when none does. An app that isn't installed opens without installing (ADR-077) and toasts "{App} isn't installed" with **Install**. Always opens a new window, at once even before the app's code is here |
+| `create_instance(id, props?, state?)` | `(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts; `null` until the app's code has loaded (`load(id)` first). Used by session restore. See below |
 | `open(path, options?)` | `(path: string, options?: OpenOptions): Promise<WindowId \| null>` | File → app resolution, below |
-| `meta_ready` | `Promise<void>` (getter) | Settles once every app's `meta` has loaded; the first read starts the load. [App meta](#app-meta-adr-049) |
-| `meta(id)` | `(id: AppId): Promise<AppMeta>` | After `meta_ready`: the app's meta, `{}` without one |
-| `listings(filter?)` | `(filter?: AppsFilter): AppListing[]` | Every app (or the installed / not installed ones, like `list`), its manifest merged with its meta. Reactive: bare manifests until the metas load. [App meta](#app-meta-adr-049) |
+| `meta(id)` | `(id: AppId): Promise<AppMeta>` | The app's text from its catalogue entry, `{}` without any; an unknown id fetches the catalogue first. [App text](#app-text) |
+| `listings(filter?)` | `(filter?: AppsFilter): AppListing[]` | Every known app (or the installed / not installed ones, like `list`), its manifest or stub merged with its entry's text and `daily`. Reactive. [App text](#app-text) |
 | `recent` | `readonly AppId[]` (getter) | User apps `launch()` opened lately, newest first, each once, at most 16. Installed ones only: an uninstalled app drops out (and comes back if reinstalled). Reactive. [Recent apps](#recent-apps) |
 | `clear_recent()` | `(): void` | Empties the list and saves it |
 
@@ -92,32 +97,32 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 
 ## State
 
-- `registry`, filled in the constructor from the eager glob in `src/lib/apps/index.ts` (see [lifecycle](../apps/lifecycle.md#1-discovery)).
+- `registry`, filled in `init()` from the catalogue ([below](#catalogue-adr-077)), a manifest or stub per entry.
+- `entries`, a private `SvelteMap` of `CatalogueApp`, and `code`, a private `SvelteMap` of the manifests whose chunk loaded; `loading` (the import in flight per app), `failed` (a load failed: the tile stops pulsing; coming online retries installed ones) and `foreign` (entries from another build's catalogue, listed and never run).
 - `installed`, a private `SvelteSet` of user app ids (system apps are never stored), filled by `init()`.
-- `metas`, a private `$state.raw` `ReadonlyMap<AppId, AppMeta>`, empty until the meta load replaces it once ([below](#app-meta-adr-049)).
 - `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping only installed user apps, is what `recent` returns.
-- `all_listings`, a private `$derived` over `registry` and `metas`: each manifest merged with its meta, the bare manifest while it has none. `listings()` returns it, filtered when asked.
+- `all_listings`, a private `$derived` over `registry` and `entries`: each manifest or stub merged with its entry's text and `daily`. `listings()` returns it, filtered when asked.
 
-The constructor also wires `$derived` references to its five dependencies. There is no `destroy()`.
+The constructor only wires `$derived` references to its five dependencies. `destroy()` removes the `online` listener and the idle callback.
 
 ### `init()`: the installed list (ADR-040)
 
-1. `/var/lib/apps/installed.json` parses → load it through `current_ids`: an id an app [replaces](#replaced-app-ids-adr-071) becomes every app replacing it, any other unknown id drops. The file isn't rewritten; the next install or uninstall saves the mapped list. Done.
+1. `/var/lib/apps/installed.json` parses → load it through `current_ids`: an id an app [replaces](#replaced-app-ids-adr-071) becomes every app replacing it, any other unknown id drops. Only with the full catalogue: booted from the installed slice, every id stays, since an id the slice lacks isn't unknown (and `init()` then fetches the catalogue in the background to list it). The file isn't rewritten; the next install or uninstall saves the mapped list. Done.
 2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → only the system apps, quietly. The intro's interests page installs the rest (`INTERESTS` in `suggestions.ts`).
-3. Missing, but the version state exists (a device from before installed apps) → a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Store**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), matched against ids from `command_apps()`, which loads every app's `commands.ts` for this one pass, and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
+3. Missing, but the version state exists (a device from before installed apps) → `catalogue()` (skipped offline), then a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Store**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), matched against ids from `command_apps()`, which loads every app's `commands.ts` for this one pass, and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
 4. Steps 2 and 3 save the list.
 
-Before any of that, `init()` schedules the meta load with `requestIdleCallback`. After it, `load_recent()` reads the recent list ([below](#recent-apps)).
+Before any of that, `init()` reads the catalogue ([below](#catalogue-adr-077)). After it, `load_recent()` reads the recent list ([below](#recent-apps)), replaced ids in pins and file defaults are mapped (full catalogue only), an `online` listener retries a wanted catalogue and failed installed apps' code, and `on_idle` starts loading every installed app's manifest.
 
 ## Lifecycle
 
-Constructed by the kernel after its dependencies. Registration happens in the constructor, which bends the CONVENTIONS rule "constructors only set fields", but it has no side effects outside the instance.
-
-Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifest eagerly. This happens while the `$lib/core/api` barrel is still initializing, which is why manifests may not import constants from the barrel ([manifest.md](../apps/manifest.md#the-import-rule)).
+Constructed by the kernel after its dependencies. Nothing registers in the constructor. Boot imports no manifest: `$lib/apps` (the glob) is imported only by the dev server's and tests' source, after the barrel has finished initializing.
 
 ## Persistence
 
 `/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[] }`, sorted, user apps only, written through a `LatestWriter` on every change.
+
+`/var/lib/apps/catalogue.json` (ADR-077): `{ "version": 1, "core", "build", "release", "apps": CatalogueApp[] }`, the installed apps' entries (system apps included) sorted by id. This service only reads it, at boot; StoreService writes it ([store](store.md#the-installed-apps-catalogue)).
 
 `/var/lib/apps/recent.json`: `{ "version": 1, "ids": AppId[] }`, newest first, at most 16, written through its own `LatestWriter` when a launch changes the list and on `clear_recent()`. Missing or invalid reads as empty. Missing or invalid means "not decided yet" (see `init()`). Backed up with `/var/lib` (ADR-037). `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
 
@@ -127,8 +132,8 @@ Importing `service.svelte.ts` imports `$lib/apps`, which evaluates every manifes
 
 1. Look up the manifest. Missing → try `resolve_replaced` ([below](#replaced-app-ids-adr-071)) and carry on with the app and props it gives. Still missing → `throw`.
 2. Not installed → the protected `offer_install(manifest)`: an info toast "{App} isn't installed" / "Install it to keep it in your apps and use it offline." with **Install** (`install(id)`). The window opens either way: a file, a deep link, an announcement's Open, Game Hub's Play and search's Open run the app on demand without installing it (ADR-077, which replaced ADR-040's silent install). `SoloAppsService` overrides it to nothing.
-3. Validate props (below).
-4. Private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
+3. Code loaded → validate props (below), then private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
+   Still a stub (`open_pending`) → the window opens at once from the stub (name, icon, size, raw props), and its component promise loads the manifest, validates the props against the real schema (the same warning and toast on failure) and sets them on the window through `windows.get(id).app.props`, before the component renders.
 5. `windows.open({ id, manifest, component, props })` → the new `WindowId`.
 6. `remember(id)`: a user app moves to the front of the recent list ([below](#recent-apps)).
 7. `track_launch(id, kernel.mode, kernel.platform)` (`core/utils/analytics.ts`, ADR-070): pushes gtag's `app_open` event with `app_id`, `mode` (`desktop` for the full OS, `solo`) and `platform` (`desktop` | `mobile`). Never props, paths, file names or command text. A no-op when `window.gtag` is missing (tests, dev, localhost, blocked). Session restore goes through `create_instance`, so restored windows aren't counted; a solo tab counts its one window, not the blocked launches after it.
@@ -149,14 +154,35 @@ Not mapped: scheduler jobs (`/var/lib/scheduler/jobs.json`, none of the replaced
 
 Today: Color Games became Color Recall (`{ app: "color-games" }` and `{ mode: "recall" }`), Odd One Out, Gradient Sort and Hex Guess (`{ mode: … }` each). `#/solo/color-games?mode=hex-guess&seed=12` opens Hex Guess with `{ seed: 12 }`; `#/solo/color-games` opens Color Recall.
 
-### App meta (ADR-049)
+### Catalogue (ADR-077)
 
-An app's display text (`description`, `keywords`, `pitch`, `authors`) is in its `meta.ts`, behind the manifest's `meta` loader ([manifest](../apps/manifest.md#meta-metats)), so the manifests stay small; boot loads it in one chunk.
+Boot reads only `/var/lib/apps/catalogue.json`, so boot cost follows the installed apps, never every app that exists. No manifest is imported before first paint.
 
-- **Loading.** `meta_ready` is a getter over one memoized promise: the first read starts the load, every later read gets the same promise. `init()` awaits it next to the installed list (ADR-049 revision 2026-10-24), and the build modulepreloads the `app-meta` chunk from `index.html`, so it downloads alongside `main` and every listing has its text when the desktop first paints. The load calls every registered app's `meta()` in parallel with `Promise.allSettled`; Vite puts all of them in one `app-meta` chunk, so it's one request. A module that fails logs `[AppsService] {id}'s meta failed to load` and the app counts as having none. It runs once per page: an app registered after the load starts has no meta (only tests register late).
-- **`meta(id)`** awaits `meta_ready` and resolves the app's `AppMeta`, or `{}` for an app without `meta`, one whose module failed, or an unknown id.
-- **`listings(filter?)`** is the read side: every `AppListing` (`AppManifest & AppMeta`), from a `$derived` over the registry and the loaded metas. The load lands before `init()` returns, so readers see the text at once; it never awaits. `filter.installed` works as in `list()`. The start menu, the mobile app list, the first-boot intro's suggestions, the App Store and Showcase, Game Hub, Settings › About › Credits and the Style Guide derive their lists from it. `meta_ready` and `meta(id)` stay internal. `search_apps` and `group_apps` are generic over the listing type. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement only after `meta_ready`, then reads `listings()` ([version](version.md)).
-- Static per app, so two windows of one app, the mobile service set and solo mode (`SoloAppsService` inherits it) all share the one load.
+1. **Boot (`boot_catalogue`).** The slice parses and its `build` is this page's (`BUILD_INFO.buildTimestamp`) → its entries register as stubs. Done, nothing fetched. Otherwise (no file: a first boot or the first boot of this release; another build's: every new release, or a restored backup) → `catalogue()`, awaited by boot. If that fails too (offline right after an update), the old slice's entries register as `foreign`: listed, their code never loads, until the catalogue arrives (`online` retries it). The order matters: the update itself was online, so the first boot of a release fetches the catalogue, StoreService writes this build's slice, and the next boot works offline from it.
+2. **Full catalogue (`catalogue()`).** `source.fetch()` once (later calls share the promise; after a failure the next call tries again). A catalogue of this build registers every entry (stubs for the ones not known) and sets `complete`. Another build's (a deploy happened since this page loaded, or the cached copy offline is older) registers its entries as `foreign`, never over a runnable one, and resolves `false`.
+3. **Code (`load(id)`).** `source.manifest(entry)` imports the manifest chunk; the result (with `system` and `version` from the entry) replaces the stub in `registry` and `code`. After first paint `on_idle` loads every installed app's; `install()` loads the new app's; a stub's lazy parts and `component()` load it on use.
+
+Who asks for the full catalogue: the App Store (on open, again on `online`), the start menu's and the phone app list's search (once a query is typed), `open()` and Open with when no known app takes the file, a `.desktop` / `.widget` target or a remembered default the device doesn't know, RouterService for a link to an unknown app, VersionService for the first-boot intro and the new-app announcement, SessionService when a saved window's app is unknown, StoreService's migration of `/etc/offline.json`, Game Hub (app, widget, commands), `app info` / `app find` / `version log --apps`, the shortcut icon of an unknown target, Settings › About (credits) and › Default apps, Getting started, the PDF Viewer (its PDF Tools link), Docs' map and app atlas, and the Style Guide.
+
+#### Stubs
+
+A stub is an `AppManifest` built from the entry: `id`, `name`, `version`, `category`, `system`, `defaults`, `associations`, `tools`, `restore`, `daily_rank`, `replaces`, `widget_size`, `default_widget`. Each lazy part the entry flags (`shell`, `widget`, `highlights`, `preview`, `on_fire`, `on_uninstall_data`) is a loader that loads the manifest first, then runs the real one; `component()` the same. A stub has no `props` schema and no `badge`: badges fill in when the code lands. Its `icon` is `components/apps/catalogue-icon.svelte` bound to the app (`bind_icon`, a proxy over the caller's props, one per id): the app's own icon once its code is here, the sprite's symbol (`<svg><use href="{base}store/icons.svg#{id}"/></svg>`) while it isn't installed, a `bg-foreground/12` tile meanwhile that pulses (motion allowing) until the load settles. A window opened from a stub keeps that icon component, so its titlebar fills in too.
+
+#### Catalogue sources
+
+`catalogue_source()` returns `glob_source((await import("$lib/apps")).apps)` when `import.meta.env.DEV` (the dev server and every test), else `bundle_source()`. A build replaces the condition with `false`, so neither the glob nor any manifest reaches the bundle.
+
+- `bundle_source()`: `fetch("{base}store/catalogue.json", { cache: "no-cache" })` through the service worker's `NetworkFirst` rule (`webos-store`, so the last copy answers offline), `parse_catalogue`; `manifest(entry)` is `import("{base}{entry.manifest}")`.
+- `glob_source(manifests)`: the manifests already in memory. Its catalogue is built once from `manifest_data(manifest, await manifest.meta(), system)`, the function the build plugin runs, plus this page's build stamp and version, so the dev server never waits for its own `store/catalogue.json` middleware (several seconds on first request) and both paths describe an app the same way. `manifest(entry)` returns the in-memory one.
+- `TestAppsService` overrides `catalogue_source()` with a glob source of the system apps and the stand-ins; tests that need the deployed behaviour (a slice, a fetch count, a manifest that takes time) pass their own source the same way (`service.browser.test.ts`).
+
+### App text
+
+An app's display text (`description`, `keywords`, `pitch`, `authors`) is written in its `meta.ts` ([manifest](../apps/manifest.md#meta-metats)); the build copies it into the app's catalogue entry, and the OS reads it from there. No `meta.ts` loads at runtime.
+
+- **`meta(id)`** resolves the entry's text (`{}` for an app without any or an unknown id); an id the device doesn't know fetches the catalogue first.
+- **`listings(filter?)`** is the read side: every `AppListing` (`AppManifest & AppMeta & { daily? }`), from a `$derived` over the registry and the entries. Text is there as soon as an app is known; it never awaits. `filter.installed` works as in `list()`. The start menu, the mobile app list, the first-boot intro's suggestions, the App Store and Showcase, Game Hub, Settings › About › Credits and the Style Guide derive their lists from it. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement after `catalogue()`, then reads `listings()` ([version](version.md)).
+- `daily` comes from the entry (props take `daily`, ADR-035): a stub has no `props` schema, so Game Hub reads `daily` to list a game's daily puzzle without loading it.
 
 ### Recent apps
 
@@ -182,11 +208,11 @@ The Recent row in the start menu, the Recent rows on the mobile home, and `app r
 
 ### `create_instance(id, props?)`
 
-Silent and strict, for callers that would rather skip than open an empty window (ADR-023). `state` seeds the instance's window state (`AppInstance.state`, a `$state` record; `{}` otherwise), read by `storage.window()` ([app context](../apps/app-context.md#window)):
+Silent and strict, for callers that would rather skip than open an empty window (ADR-023). It needs the app's code: without it, `null`, so callers `load(id)` first (SessionService does, for every saved app, once Restore is picked). `state` seeds the instance's window state (`AppInstance.state`, a `$state` record; `{}` otherwise), read by `storage.window()` ([app context](../apps/app-context.md#window)):
 
 | Input | Result |
 |-------|--------|
-| Unknown id | `null` |
+| Unknown id, or code not loaded | `null` |
 | `props === undefined` | Instance with no props |
 | Props, but the manifest has no schema | `null` |
 | `schema.safeParse(props)` fails | `null` |
@@ -209,10 +235,10 @@ Discarding does two things: `console.warn("[AppsService] \"{id}\" {reason}, disc
 
 1. `files.get_file(path)`. `null` → error notification "File not found" (app id `"apps"`, message = path) → resolve `null`. If `get_file` throws, the promise rejects; the caller handles it.
 2. `extension = file_extension(file.name)`.
-3. **Shortcut.** If the extension is `.desktop`: read the file and `parse_shortcut()` it. Unparseable, or the `app_id` is neither registered nor replaced → error notification "Broken shortcut" (app id `"apps"`, message = path) → `null`. Otherwise → `launch(app_id, props)`, with the shortcut's props, not `{ path }`. This runs before remembered defaults and associations, so no default or Open-with choice can capture `.desktop`.
+3. **Shortcut.** If the extension is `.desktop`: read the file and `parse_shortcut()` it. Unparseable, or the `app_id` is neither registered nor replaced (after `catalogue()` when it isn't known) → error notification "Broken shortcut" (app id `"apps"`, message = path) → `null`. Otherwise → `launch(app_id, props)`, with the shortcut's props, not `{ path }`. This runs before remembered defaults and associations, so no default or Open-with choice can capture `.desktop`.
    **Widget.** Same for `.widget`: `parse_widget()`, and an unparseable file or an `app` neither registered nor replaced → error notification "Broken widget" → `null`. Otherwise → `launch(app, props)` with the widget's props, so opening a widget opens its app in a window.
 4. **Remembered default.** Skipped when an app claims the file by a compound extension (`has_compound_match`, `.form.md`). Otherwise, if there is an extension, `settings.file_defaults[extension]` names an app, and that app is in the registry → `launch(default_id, { path })`. The default app does not have to list the extension in its associations. A default pointing at a missing app is skipped, not deleted.
-5. **Candidates.** `best_apps_for(registry.values(), file)`, matching on `file.name` and `file.type` (the MIME the browser assigns to the OPFS `File`).
+5. **Candidates.** `best_apps_for(registry.values(), file)`, matching on `file.name` and `file.type` (the MIME the browser assigns to the OPFS `File`). None among the known apps → `catalogue()` and match again, so a file only a not-installed app opens still opens (on demand, with the Install toast). Apps that aren't installed are only candidates once the full catalogue is known.
 6. Zero candidates → warning notification "No app can open {name}" (app id `"apps"`) → `null`.
 7. One candidate → `launch(candidate.id, { path })`.
 8. Several → `import()` `open-with-dialog.svelte`, then `dialogs.show(OpenWithDialog, { file_name, extension, apps }, { anchor: options.anchor })`.
@@ -235,12 +261,14 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 ## Divergence from ADR
 
-- ADR-001's glob is `./**/index.ts`. The code globs `./system/*/index.ts` and `./user/*/index.ts`, one level deep.
+- ADR-001's glob is `./**/index.ts`. The dev and test glob is `./system/*/index.ts` and `./user/*/index.ts`, one level deep; a build reads the catalogue instead (ADR-077).
+- ADR-077 says StoreService owns the catalogue. AppsService fetches and holds it, since boot needs it before StoreService exists (store depends on apps) and the registry is AppsService's; StoreService writes the installed slice. Revision note 2026-10-26.
+- ADR-077 compares catalogues by core hash; stage 2 compares the slice's `build` with the page's, since every release still reloads and file names change with any build. Stage 3 moves the check to the core hash. Revision note 2026-10-26.
 - ADR-018's resolution matches the code. The `open()` JSDoc says it resolves `null` "when the file is missing or no app matches (both notify)"; it also resolves `null`, silently, when the chooser is dismissed.
 
 ## Shell
 
-Contributes `app list|info|launch`, `app find <words…>` (`ai: "read"`: the strict matches, then the [sentence search](#sentence-search)'s, over every app installed or not, at most 10, as `app` values; it awaits `meta_ready` first and `import()`s `sentence.ts`; no words fails with a hint), `app recent` (yields `app` values from `recent`, newest first; `--clear` calls `clear_recent()` and yields nothing), `open`, `taskbar list|pin|unpin` (ADR-042: the quick launch in `settings.taskbar.pinned`; `taskbar list` yields `app` values in order, `pin` takes installed apps only and appends, `unpin` fails on an app that isn't pinned), `taskbar position [top|bottom|left|right]`, `taskbar size [small|medium|large]` `taskbar autohide [on|off]` and `taskbar seconds [on|off]` (ADR-015 revision: zod enums, so Tab completes them; with no argument each returns the current value as text), the `app` completer, the `app` value type (opening one launches it, or, when it isn't installed, opens the App Store at it, since the shell never installs) and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also puts every app's manifest `shell` module behind its contribution's `lazy`, loaded in parallel on the shell's first `load()`, tagging those commands with `app: <id>` (ADR-034, revised 2026-10-17). See [shell](shell.md#contributions).
+Contributes `app list|info|launch`, `app find <words…>` (`ai: "read"`: the strict matches, then the [sentence search](#sentence-search)'s, over every app installed or not, at most 10, as `app` values; it awaits `catalogue()` first and `import()`s `sentence.ts`; no words fails with a hint), `app info` fetches the catalogue for an app the device doesn't know and loads its code for the `props` line, `app recent` (yields `app` values from `recent`, newest first; `--clear` calls `clear_recent()` and yields nothing), `open`, `taskbar list|pin|unpin` (ADR-042: the quick launch in `settings.taskbar.pinned`; `taskbar list` yields `app` values in order, `pin` takes installed apps only and appends, `unpin` fails on an app that isn't pinned), `taskbar position [top|bottom|left|right]`, `taskbar size [small|medium|large]` `taskbar autohide [on|off]` and `taskbar seconds [on|off]` (ADR-015 revision: zod enums, so Tab completes them; with no argument each returns the current value as text), the `app` completer, the `app` value type (opening one launches it, or, when it isn't installed, opens the App Store at it, since the shell never installs) and opening `file` values (folders in File Explorer) (`apps/shell.ts`). It also puts every known app's manifest `shell` module behind its contribution's `lazy` (a stub loads the manifest first), loaded in parallel on the shell's first `load()`, tagging those commands with `app: <id>` (ADR-034, revised 2026-10-17). See [shell](shell.md#contributions).
 
 The shell never installs (ADR-040):
 
@@ -254,5 +282,7 @@ The shell never installs (ADR-040):
 - Duplicate app ids overwrite silently. User apps register after system apps (glob order), so a user app can replace a system one with no warning.
 - No unregister, no way to change a running window's props.
 - A second tab doesn't see an install or uninstall until it reloads (cross-tab sync is open).
+- An app whose manifest chunk can't load (offline before its download finished) keeps a still placeholder icon and opens to the window's load-failed screen; a saved window of it is skipped at restore with the usual "couldn't be restored" toast.
+- Offline on the first boot of a new release, with another build's slice, apps are listed but don't open until the catalogue arrives; with no slice at all (the first boot of this release offline) nothing is listed, system apps included.
 - Session restore and Alt+Shift+T build instances with `create_instance`, which doesn't install: a window of an app uninstalled in another tab can still come back.
 - Stale `file_defaults` entries (pointing at removed apps) stay in settings until the user forgets them in Settings → Default apps, which flags them as "no longer installed".

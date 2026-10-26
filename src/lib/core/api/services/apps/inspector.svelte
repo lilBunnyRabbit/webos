@@ -11,7 +11,8 @@
 </script>
 
 <InspectorStats>
-  <InspectorStat label="Registered" value={manifests.length} />
+  <InspectorStat label="Known" value={manifests.length} />
+  <InspectorStat label="Installed slice" value={service.installed_catalogue()?.apps.length ?? "not ready"} />
   <InspectorStat label="System / user" value="{system_count} / {manifests.length - system_count}" />
   <InspectorStat label="Associations" value={association_count} />
   <InspectorStat label="Recent" value={service.recent.length} />

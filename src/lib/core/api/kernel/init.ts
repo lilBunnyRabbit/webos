@@ -7,9 +7,6 @@ import type {
   SpeechService as ISpeechService,
   WindowsService as IWindowsService,
 } from "../services";
-// App manifests load with AppsService and read WindowFlag through the barrel, which is still mid-cycle here. The windows
-// service used to load it first; now that it's lazy, this keeps that order.
-import "../services/windows/type";
 import { SettingsService } from "../services/settings/service.svelte";
 import { AppsService } from "../services/apps/service.svelte";
 import { SessionService } from "../services/session/service.svelte";

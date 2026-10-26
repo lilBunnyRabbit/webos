@@ -4,57 +4,22 @@ import path from "node:path";
 import { createServer, type Plugin, type ResolvedConfig, type ViteDevServer } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { VersionInfo } from "./vite-plugin-version";
+import { manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
+
+export { json_safe, manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "../src/lib/core/api/services/apps/catalogue";
 
 /** Where the build finds the live catalogue, to keep each unchanged app's version. Overridden by `WEBOS_PREVIOUS_CATALOGUE`; empty skips it. */
 export const PREVIOUS_CATALOGUE = "https://lilbunnyrabbit.github.io/webos/store/catalogue.json";
 const PREVIOUS_TIMEOUT_MS = 5000;
+/** Each manifest chunk is an entry named `{id}.manifest`; boot never loads one. */
+export const MANIFEST_SUFFIX = ".manifest";
+export const is_manifest_chunk = (name: string) => name.endsWith(MANIFEST_SUFFIX);
 const APP_KINDS = ["system", "user"] as const;
 const COMPONENT_IMPORT = /\bcomponent\s*:\s*\(\)\s*=>\s*import\(\s*["']([^"']+)["']\s*\)/;
 const TEXT_FILE = /\.(m?js|css|html|json|svg|txt|md)$/;
 const PRECACHED_PUBLIC = /\.(m?js|css|html|woff2)$/;
 // Content-hashed names (`name-HASH8.ext`), as Rollup and Vite write them.
 const HASHED_NAME = /([\w.-]+)-[\w-]{8}(\.[a-z0-9]+)\b/g;
-
-export interface CatalogueApp {
-  id: string;
-  name: string;
-  category: string;
-  system: boolean;
-  /** The release the app's files last changed in. */
-  version: string;
-  /** Internal: compared with the previous catalogue's to carry `version` over. */
-  hash: string;
-  manifest: string;
-  entry: string;
-  /** What installing the app downloads, the same list as `offline/{id}.json`. */
-  files: string[];
-  associations?: string[];
-  tools?: string[];
-  description?: string;
-  keywords?: string[];
-  pitch?: { problem: string; solution: string };
-  authors?: { name: string; github?: string; url?: string }[];
-  defaults?: unknown;
-  replaces?: unknown[];
-  restore?: boolean;
-  daily_rank?: unknown;
-  /** Its props take `daily`: Game Hub lists its daily puzzle (ADR-035). */
-  daily?: boolean;
-  widget?: boolean;
-  widget_size?: unknown;
-  default_widget?: boolean;
-  highlights?: boolean;
-  preview?: boolean;
-  shell?: boolean;
-  badge?: boolean;
-}
-
-export interface Catalogue {
-  version: 1;
-  core: string;
-  release: string;
-  apps: CatalogueApp[];
-}
 
 export interface ReleaseNote {
   version: string;
@@ -69,7 +34,7 @@ export interface VersionFields {
 }
 
 export interface CollectedApp {
-  data: Omit<CatalogueApp, "version" | "hash" | "manifest" | "entry" | "files">;
+  data: CatalogueData;
   symbol: string;
   index: string;
   component: string;
@@ -91,52 +56,6 @@ function sha(parts: Iterable<string | Buffer>): string {
   const hash = createHash("sha256");
   for (const part of parts) hash.update(part).update("\0");
   return hash.digest("base64url").slice(0, 16);
-}
-
-export function json_safe(value: unknown): unknown {
-  if (value === null || ["string", "number", "boolean"].includes(typeof value)) return value;
-  if (typeof value !== "object") return undefined;
-  if (Array.isArray(value) || Symbol.iterator in value) return [...(value as Iterable<unknown>)].map(json_safe);
-  const out: Record<string, unknown> = {};
-  for (const [key, item] of Object.entries(value)) {
-    const safe = json_safe(item);
-    if (safe !== undefined) out[key] = safe;
-  }
-  return out;
-}
-
-function zod_shape(schema: unknown): Record<string, unknown> | null {
-  const shape = (schema as { shape?: unknown } | null)?.shape;
-  return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : null;
-}
-
-export function manifest_data(manifest: ManifestModule["default"], meta: Record<string, unknown>, system: boolean): CollectedApp["data"] {
-  const has = (key: string) => typeof manifest[key] === "function";
-  const data: CollectedApp["data"] = {
-    id: manifest.id,
-    name: manifest.name,
-    category: manifest.category,
-    system,
-    associations: manifest.associations as string[] | undefined,
-    tools: manifest.tools as string[] | undefined,
-    description: meta.description as string | undefined,
-    keywords: meta.keywords as string[] | undefined,
-    pitch: meta.pitch as CatalogueApp["pitch"],
-    authors: meta.authors as CatalogueApp["authors"],
-    defaults: manifest.defaults,
-    replaces: manifest.replaces as unknown[] | undefined,
-    restore: manifest.restore === false ? false : undefined,
-    daily_rank: manifest.daily_rank,
-    daily: zod_shape(manifest.props) && "daily" in zod_shape(manifest.props)! ? true : undefined,
-    widget: has("widget") || undefined,
-    widget_size: manifest.widget_size,
-    default_widget: manifest.default_widget === true || undefined,
-    highlights: has("highlights") || undefined,
-    preview: has("preview") || undefined,
-    shell: has("shell") || undefined,
-    badge: has("badge") || undefined,
-  };
-  return json_safe(data) as CollectedApp["data"];
 }
 
 function attributes(text: string): [string, string][] {
@@ -215,12 +134,6 @@ export function release_notes(changelog: ReleaseNote[], previous_release: string
   return notes.map(({ version, date, title, changes }) => ({ version, date, title, changes: changes.map(({ kind, text }) => ({ kind, text })) }));
 }
 
-export function parse_catalogue(value: unknown): Catalogue | null {
-  const catalogue = value as Catalogue | null;
-  if (!catalogue || catalogue.version !== 1 || typeof catalogue.release !== "string" || !Array.isArray(catalogue.apps)) return null;
-  return catalogue;
-}
-
 export async function fetch_previous(url: string): Promise<Catalogue | null> {
   if (!url) return null;
   try {
@@ -279,10 +192,12 @@ function own_hash(app: CollectedApp): string[] {
 }
 
 /** The dev server's and tests' catalogue: module URLs for chunks, no files, every app at the current release. */
-export function dev_catalogue(apps: CollectedApp[], release: string): Catalogue {
+export function dev_catalogue(apps: CollectedApp[], info: VersionInfo): Catalogue {
+  const release = info.version;
   return {
     version: 1,
     core: "dev",
+    build: info.buildTimestamp,
     release,
     apps: apps.map((app) => ({
       ...app.data,
@@ -295,8 +210,10 @@ export function dev_catalogue(apps: CollectedApp[], release: string): Catalogue 
   };
 }
 
+const CHANGELOG = "src/lib/core/api/services/version/changelog.ts";
+
 async function load_changelog(load: Load): Promise<ReleaseNote[]> {
-  return ((await load("/src/lib/core/api/services/version/changelog.ts")) as { CHANGELOG: ReleaseNote[] }).CHANGELOG;
+  return ((await load(`/${CHANGELOG}`)) as { CHANGELOG: ReleaseNote[] }).CHANGELOG;
 }
 
 async function with_node_loader<T>(config: ResolvedConfig, run: (load: Load) => Promise<T>): Promise<T> {
@@ -327,12 +244,12 @@ function list_file(out_dir: string, name: string): string[] {
 
 /**
  * ADR-077 stage 2, build side: `store/catalogue.json` and `store/icons.svg` from every manifest, each manifest as its
- * own chunk, and the core hash and release notes for `version.json`. The runtime doesn't read them yet.
+ * own chunk, and the core hash and release notes for `version.json`. AppsService reads the catalogue and loads each
+ * manifest chunk by URL (`src/lib/core/api/services/apps/source.ts`).
  */
 export function catalogue_plugin(info: VersionInfo) {
   const previous_url = process.env.WEBOS_PREVIOUS_CATALOGUE ?? PREVIOUS_CATALOGUE;
   let config: ResolvedConfig;
-  let main_entry = "";
   let dev: ViteDevServer | null = null;
   let collected: Promise<{ apps: CollectedApp[]; changelog: ReleaseNote[] }> | null = null;
   let previous: Promise<Catalogue | null> = Promise.resolve(null);
@@ -343,21 +260,19 @@ export function catalogue_plugin(info: VersionInfo) {
     name: "webos-catalogue",
     configResolved(resolved) {
       config = resolved;
-      main_entry = path.resolve(resolved.root, "src/main.ts");
     },
     buildStart() {
       if (config.command !== "build" || config.build.ssr) return;
       refs.clear();
-      // An implicit entry loaded after `main`: while the registry still imports every manifest at boot, each chunk is
-      // a facade over the chunk that holds it, so boot keeps its shape.
+      // Entries of their own, not implicit ones after `main`: Rollup orders implicit entries as they finish resolving,
+      // which reorders core's mangled export names from one build of the same tree to the next.
       for (const app of app_dirs(config.root)) {
         refs.set(
           app.id,
           this.emitFile({
             type: "chunk",
             id: path.resolve(config.root, app.index),
-            name: `${app.id}.manifest`,
-            implicitlyLoadedAfterOneOf: [main_entry],
+            name: `${app.id}${MANIFEST_SUFFIX}`,
             preserveSignature: "strict",
           })
         );
@@ -376,7 +291,7 @@ export function catalogue_plugin(info: VersionInfo) {
           const json = url.endsWith(".json");
           res.setHeader("Content-Type", json ? "application/json" : "image/svg+xml");
           res.setHeader("Cache-Control", "no-store");
-          res.end(json ? JSON.stringify(dev_catalogue(apps, info.version)) : icon_sprite(apps.map((app) => app.symbol)));
+          res.end(json ? JSON.stringify(dev_catalogue(apps, info)) : icon_sprite(apps.map((app) => app.symbol)));
         } catch (error) {
           next(error);
         }
@@ -401,14 +316,22 @@ export function catalogue_plugin(info: VersionInfo) {
         };
 
         const public_files = config.publicDir && existsSync(config.publicDir) ? readdirSync(config.publicDir).filter((name) => PRECACHED_PUBLIC.test(name)) : [];
+        // The changelog gains a line every release, app-only ones included; the core hash must not move with it.
+        const changelog_id = path.resolve(config.root, CHANGELOG);
+        const notes_chunk = Object.values(bundle).find((file) => file.type === "chunk" && file.moduleIds.includes(changelog_id));
+        if (notes_chunk?.type === "chunk" && notes_chunk.moduleIds.length > 1) {
+          throw new Error(`catalogue: ${notes_chunk.fileName} holds more than the changelog, so the core hash would skip code`);
+        }
+        const core_files = list_file(out_dir, "core").filter((name) => name !== notes_chunk?.fileName);
         const core = sha([
-          hash_files(list_file(out_dir, "core"), read, normalize),
+          hash_files(core_files, read, normalize),
           hash_files(public_files, (name) => readFileSync(path.join(config.publicDir, name)), normalize),
         ]);
 
         const catalogue: Catalogue = {
           version: 1,
           core,
+          build: info.buildTimestamp,
           release: info.version,
           apps: apps.map((app) => {
             const files = list_file(out_dir, app.data.id);

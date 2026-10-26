@@ -30,6 +30,9 @@
   const shown = $derived(filtering ? group_by_letter(matches) : by_letter);
   const sections = $derived(LETTERS.filter((letter) => shown.has(letter)));
   const gettable = $derived(filtering ? search_apps(apps.listings({ installed: false }), query) : []);
+  $effect(() => {
+    if (filtering) void apps.catalogue();
+  });
   // No AI row: phones have no on-device model.
   const sentence = new SentenceSearch<AppListing>({ apps: () => apps.listings(), query: () => query, shown: () => [...matches, ...gettable] });
   const best = $derived(matches[0] ?? gettable[0] ?? sentence.related[0]);

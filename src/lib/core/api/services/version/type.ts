@@ -57,6 +57,20 @@ export interface Release {
   introduces?: AppId[];
 }
 
+/** A release as `version.json` carries it for the update screen: no app lists. */
+export interface ReleaseNote {
+  version: string;
+  date: string;
+  title: string;
+  changes: Pick<Change, "kind" | "text">[];
+}
+
+/** `version.json`: the build stamp, the core hash and the new release's notes (ADR-077); older builds have neither. */
+export interface RemoteVersion extends VersionInfo {
+  core?: string;
+  notes?: ReleaseNote[];
+}
+
 /** An app and the release that first shipped it. */
 export interface AppIntroduction {
   app: AppId;
@@ -68,7 +82,7 @@ export interface VersionService extends IService {
   info: VersionInfo;
 
   /** Remote version info if an update is available, otherwise null. */
-  update_available: VersionInfo | null;
+  update_available: RemoteVersion | null;
 
   /** Whether a check is currently in progress. */
   is_checking: boolean;

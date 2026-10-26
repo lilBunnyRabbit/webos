@@ -69,7 +69,7 @@ describe("RouterService", () => {
     location.hash = "#/app/example?count=3";
     const kernel = await boot();
 
-    expect(open_apps(kernel)).toEqual([["example", { count: 3 }]]);
+    await vi.waitFor(() => expect(open_apps(kernel)).toEqual([["example", { count: 3 }]]));
     expect(location.hash).toBe("");
     expect(router(kernel).last_link).toEqual({ hash: "#/app/example?count=3", outcome: LinkOutcome.OPENED });
   });
@@ -89,7 +89,7 @@ describe("RouterService", () => {
   test("a link to a replaced app opens the app that took it over (ADR-071)", async () => {
     location.hash = "#/app/old-games?mode=count&count=3";
     const kernel = await boot();
-    expect(open_apps(kernel)).toEqual([["example", { count: 3 }]]);
+    await vi.waitFor(() => expect(open_apps(kernel)).toEqual([["example", { count: 3 }]]));
 
     location.hash = "#/app/old-games";
     await vi.waitFor(() => expect(open_apps(kernel)).toEqual([["example", { count: 3 }], ["game", undefined]]));

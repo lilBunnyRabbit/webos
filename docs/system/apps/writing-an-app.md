@@ -6,12 +6,12 @@ The short path from nothing to a window. Details live in [manifest.md](manifest.
 
 ```
 src/lib/apps/user/notes/        # or system/ for a bundled OS app
-├── index.ts                    # manifest, loaded eagerly
-├── meta.ts                     # description, keywords, pitch, authors; loaded after boot
+├── index.ts                    # manifest: the build reads it, its chunk loads after first paint once installed
+├── meta.ts                     # description, keywords, pitch, authors; the build copies it into the catalogue
 └── notes.app.svelte            # component, loaded on launch
 ```
 
-The folder must sit directly under `system/` or `user/`; deeper folders aren't discovered. No registration step: the glob picks it up on the next build or HMR reload.
+The folder must sit directly under `system/` or `user/`; deeper folders aren't discovered. No registration step: the build writes it into the catalogue (ADR-077), and the dev server's glob picks it up on the next HMR reload.
 
 ## 2. Write the manifest
 
@@ -51,7 +51,7 @@ export default {
 ```
 
 - `id` must be unique; a clash silently replaces the other app.
-- Text the user reads but boot doesn't need (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): every manifest ships in the boot chunk, the metas load together after it. `bun run check` rejects those fields in `define_app` ([meta](manifest.md#meta-metats)).
+- Text the user reads but boot doesn't need (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): the catalogue carries it, so lists show it without loading the app (ADR-077). `bun run check` rejects those fields in `define_app` ([meta](manifest.md#meta-metats)).
 - From `$lib/core/api`, import only types and functions. Constants come from their own module ([why](manifest.md#the-import-rule)).
 - Skip `associations` and `props` if the app doesn't open files. Without a `props` schema the app never receives props.
 

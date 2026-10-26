@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Plugin, Rollup } from "vite";
+import { is_manifest_chunk } from "./vite-plugin-catalogue";
 
 export interface BundleFile {
   name: string;
@@ -22,7 +23,7 @@ export interface OfflineListFile {
 export const RUNTIME_CACHED = /(\.(wasm|onnx|ttf|ttc|aff|dic)$)|(^assets\/mammoth-[^/]+\.js$)/;
 
 const APP_INDEX = /\/apps\/(?:system|user)\/([^/]+)\/index\.ts$/;
-const SHARED_CHUNKS = new Set(["core", "app-boot", "app-meta"]);
+const SHARED_CHUNKS = new Set(["core"]);
 // Content-hashed file names (`name-HASH8.ext`), as a worker or a `new URL()` asset is named inside a file's source.
 const HASHED_NAME = /[\w.-]+-[\w-]{8}\.[a-z0-9]+/g;
 
@@ -103,7 +104,10 @@ export function offline_plugin(build: number) {
       for (const id of chunk_of.keys()) {
         const match = APP_INDEX.exec(id);
         if (!match) continue;
-        const own = new Set<string>();
+        // ADR-077: the OS loads the manifest's chunk by URL before anything else of the app. When the app's component
+        // imports its own manifest, that chunk is a facade over the shared one.
+        const manifest = Object.values(bundle).find((file) => file.type === "chunk" && file.facadeModuleId === id && is_manifest_chunk(file.name));
+        const own = new Set<string>(manifest ? [manifest.fileName] : []);
         for (const lazy of this.getModuleInfo(id)?.dynamicallyImportedIds ?? []) {
           const chunk = chunk_of.get(lazy);
           const shared = chunk && bundle[chunk]?.type === "chunk" && SHARED_CHUNKS.has((bundle[chunk] as Rollup.OutputChunk).name);
@@ -113,7 +117,7 @@ export function offline_plugin(build: number) {
       }
 
       const boot = Object.values(bundle)
-        .filter((file) => file.fileName === "index.html" || (file.type === "chunk" && file.isEntry))
+        .filter((file) => file.fileName === "index.html" || (file.type === "chunk" && file.isEntry && !is_manifest_chunk(file.name)))
         .map((file) => file.fileName);
       const lists = offline_lists(to_bundle_files(bundle), boot, app_roots);
       core = new Set(lists.core);

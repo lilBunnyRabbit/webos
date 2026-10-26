@@ -23,6 +23,7 @@ import {
   UpdateStage,
   type AppIntroduction,
   type Release,
+  type RemoteVersion,
   type UpdateProgress,
   type VersionInfo,
   type VersionService as IVersionService,
@@ -53,7 +54,7 @@ export class VersionService implements IVersionService {
   shell = () => version_shell(this, () => this.apps_service);
 
   public info = $state<VersionInfo>(BUILD_INFO);
-  public update_available = $state<VersionInfo | null>(null);
+  public update_available = $state<RemoteVersion | null>(null);
   public is_checking = $state(false);
   public update_stage = $state<UpdateStage>(UpdateStage.IDLE);
   public update_progress = $state<UpdateProgress | null>(null);
@@ -127,8 +128,9 @@ export class VersionService implements IVersionService {
       void import("./samples")
         .then(({ seed_samples }) => seed_samples(this.files_service, [...this.apps_service.list()].map(([, manifest]) => manifest)))
         .catch((error) => console.error("[VersionService] Failed to add sample files", error));
-      // Loaded during boot, so the introduction is already up when the splash goes. Only a first boot waits for the meta.
-      await Promise.all([intro_dialog(), this.apps_service.meta_ready]);
+      // Loaded during boot, so the introduction is already up when the splash goes. Its interests list apps that
+      // aren't installed, from the full catalogue a first boot has already fetched.
+      await Promise.all([intro_dialog(), this.apps_service.catalogue()]);
       // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
       this.show_intro().then(() => {
         if (this.destroyed) return;
@@ -149,8 +151,15 @@ export class VersionService implements IVersionService {
     this.writer.write(serialize_seen(this.info.version));
     if (this.unseen.length > 0) this.notify_updated();
 
-    this.announced = introduced_apps(this.unseen).filter(({ app }) => this.apps_service.get(app));
-    if (this.announced.length > 0) this.after_restore(() => this.show_announcement());
+    this.announced = introduced_apps(this.unseen);
+    if (this.announced.length > 0) this.after_restore(() => void this.announce());
+  }
+
+  // New apps aren't installed, so only the full catalogue knows them; one it doesn't (a fork) is left out.
+  private async announce(): Promise<void> {
+    if (this.announced.some(({ app }) => !this.apps_service.get(app))) await this.apps_service.catalogue();
+    this.announced = this.announced.filter(({ app }) => this.apps_service.get(app));
+    if (this.announced.length > 0) await this.show_announcement();
   }
 
   destroy() {
@@ -179,7 +188,7 @@ export class VersionService implements IVersionService {
       const response = await fetch(`${import.meta.env.BASE_URL}version.json`, { cache: "no-store" }).catch(() => null);
       if (!response?.ok) return;
 
-      const remote: VersionInfo = await response.json();
+      const remote: RemoteVersion = await response.json();
       if (remote.buildTimestamp > this.info.buildTimestamp) {
         this.update_available = remote;
         this.notify_update_available(remote);
@@ -296,7 +305,7 @@ export class VersionService implements IVersionService {
   }
 
   async show_intro(): Promise<void> {
-    const [{ default: component }] = await Promise.all([intro_dialog(), this.apps_service.meta_ready]);
+    const [{ default: component }] = await Promise.all([intro_dialog(), this.apps_service.catalogue()]);
     await this.dialogs_service.show(component, {}, { dismissible: false });
   }
 
@@ -330,7 +339,7 @@ export class VersionService implements IVersionService {
   }
 
   private async show_announcement(): Promise<void> {
-    const [{ default: component }] = await Promise.all([announcement_dialog(), this.apps_service.meta_ready]);
+    const [{ default: component }] = await Promise.all([announcement_dialog(), this.apps_service.catalogue()]);
     const listings = this.apps_service.listings();
     const apps = this.announced.flatMap(({ app, release }) => {
       const manifest = listings.find((listing) => listing.id === app);
@@ -359,7 +368,7 @@ export class VersionService implements IVersionService {
   }
 
   /** Once per detected build; a later check that finds the same build stays quiet. */
-  private notify_update_available(remote: VersionInfo, again = false): void {
+  private notify_update_available(remote: RemoteVersion, again = false): void {
     if (import.meta.env.DEV || (!again && remote.buildTimestamp === this.notified_build)) return;
     this.notified_build = remote.buildTimestamp;
 

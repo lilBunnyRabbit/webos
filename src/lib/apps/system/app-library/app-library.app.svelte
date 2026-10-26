@@ -15,7 +15,7 @@
   import AppProgress from "$lib/core/components/apps/app-progress.svelte";
   import { set_drag_app } from "$lib/core/components/apps/drag";
   import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";
-  import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     ClockCounterClockwise as ClockCounterClockwiseIcon,
@@ -87,6 +87,14 @@
 
   let query = $state("");
 
+  // Boot knows only the installed apps (ADR-077): the Store asks for the rest, again when the connection comes back.
+  const CatalogueState = { LOADING: "loading", READY: "ready", OFFLINE: "offline" } as const;
+  type CatalogueState = (typeof CatalogueState)[keyof typeof CatalogueState];
+  let catalogue = $state<CatalogueState>(CatalogueState.LOADING);
+  function load_catalogue() {
+    void apps.catalogue().then((ready) => (catalogue = ready ? CatalogueState.READY : CatalogueState.OFFLINE));
+  }
+  load_catalogue();
 
   const manifests = $derived(apps.listings());
   const selected = $derived(selected_id.value ? (manifests.find((manifest) => manifest.id === selected_id.value) ?? null) : null);
@@ -256,6 +264,8 @@
   <Segmented size="sm" label="App Store view" options={VIEWS} bind:value={page.value} />
 {/snippet}
 
+<svelte:window ononline={load_catalogue} />
+
 <div class="flex h-full flex-col">
   {#if showcase}
     <div class={cn("min-h-0 flex-1 flex-col", selected ? "hidden" : "flex")}>
@@ -388,6 +398,11 @@
 
   <StatusBar>
     <span>{shown} of {manifests.length} apps · {installed.size} installed</span>
+    {#if catalogue === CatalogueState.LOADING}
+      <span class="flex items-center gap-1.5"><Spinner label="Loading every app" /> Loading every app…</span>
+    {:else if catalogue === CatalogueState.OFFLINE}
+      <span class="truncate">Offline: installed apps only</span>
+    {/if}
     {#if !showcase && filters.value.length}<span class="hidden @sm:inline">{filters.value.length} filter{filters.value.length === 1 ? "" : "s"}</span>{/if}
     {#if selected}<span class="ml-auto">{selected.id}</span>{/if}
   </StatusBar>

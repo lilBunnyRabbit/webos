@@ -10,7 +10,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
-**Next (owner, 2026-10-21): App store.** Designed 2026-10-26 as [ADR-077](adrs/077-app-store.md): installed = cached, a build catalogue so boot follows installed apps only, app updates without an OS reload. Three stages, each its own release; stage 1 (installed = cached, Install / Open, App Store) is done.
+**Next (owner, 2026-10-21): App store.** Designed 2026-10-26 as [ADR-077](adrs/077-app-store.md): installed = cached, a build catalogue so boot follows installed apps only, app updates without an OS reload. Three stages, each its own release; stages 1 (installed = cached, Install / Open, App Store) and 2 (catalogue, flat boot, sprite icons, versions, update notes) are done; stage 3 (app updates without reload) is next.
 
 1. [x] **Foundations**
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
@@ -425,7 +425,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)
 - [x] Color Tools ([ADR-072](adrs/072-color-tools.md), [brainstorm](brainstorm/2026-10-25_chromatics.md), [internals](apps/color-tools.md), 2026-10-25): one app, sections Pick (EyeDropper, picture or camera with a loupe, typed CSS, sliders in any model), Convert (70 models), Contrast (WCAG 2), Vision (CVD with severity), Harmony (schemes, ramp, steps), Palette (`.palette` files in Documents); owns the chromatics wrappers (`color-tools/color.ts`). Mix section and shell commands later
 - [x] Colour Atlas ([ADR-073](adrs/073-colour-atlas.md), [internals](apps/colour-atlas.md), 2026-10-26): match a target with a different colour model's sliders each round (2 Familiar, 2 Perceptual, 1 Exotic), ΔE2000 scoring, collect all 70 models in a dex with each model's family, source, channels and route to sRGB, daily run in Game Hub, practice by tier or model
-- [ ] Boot-weight pass (owner, 2026-10-25, next as of 2026-10-26): budget raised 215 → 218 KB gz at 216.0, then 218 → 219 at 218.16 (Speech, Docs, Paste); find room in `core` and `main` before raising again
+- [-] Boot-weight pass (owner, 2026-10-25, next as of 2026-10-26): budget raised 215 → 218 KB gz at 216.0, then 218 → 219 at 218.16 (Speech, Docs, Paste); find room in `core` and `main` before raising again. App Store stage 2 took manifests and app text out of boot: 218.7 → 164.2 KB gz, budget lowered to 167.2 (2026-10-26). `core` (143 KB gz) itself is untouched
 - [ ] Kit colour picker on chromatics (OKLCH, theme swatches, eyedropper), replacing the 9 native `<input type="color">`; package moves to root; own grill
 - [ ] Theme audit in Settings › Theme: WCAG of every token pair, CVD of the 17 tokens, optional whole-desktop CVD filter; own grill
 - [ ] Color Mixing (owner's ideas notes, 2026-10-17): pick a target colour (camera or eyedropper), enter your paints, get mix ratios. Decided 2026-10-25: Mix section of Color Tools after v1, on the package's `Ryb` ranked by ΔE2000, labelled approximate; Kubelka–Munk only if it lands in the package
@@ -699,6 +699,8 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
 - [ ] Window events for file upload (and similar app-level events)
 - [-] "App store": designed 2026-10-26 as [ADR-077](adrs/077-app-store.md) ([brainstorm](brainstorm/2026-10-26_app-store.md)). Installed = cached, catalogue and flat boot, app updates without reload; three stages.
   - [x] Stage 1 (2026-10-26, 3.74.0): installed means downloaded and kept offline, StoreService, Install and Open, App Library renamed App Store, system apps out of the precache
+  - [x] Stage 2 (2026-10-26, 3.74.0): the build writes the catalogue, icon sprite and a chunk per manifest; boot reads only the installed apps' entries and loads their code after first paint; the full catalogue on demand (Store, search, Open with, links, intro, announcements, Game Hub); sprite icons for apps that aren't installed; versions per app; release notes on the update screen; a core hash that holds across app-only releases. Boot 218.7 → 164.2 KB gz
+  - [ ] Stage 3: app updates without reload
 
 ---
 

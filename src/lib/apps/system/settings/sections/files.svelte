@@ -5,6 +5,7 @@
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  void kernel.service<AppsService>("apps").catalogue();
 
   const defaults = $derived(Object.entries(settings.file_defaults).sort(([a], [b]) => a.localeCompare(b)));
 

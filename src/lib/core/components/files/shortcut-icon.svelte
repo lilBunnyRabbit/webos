@@ -11,6 +11,9 @@
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const manifest = $derived(app_id ? apps.get(app_id) : undefined);
+  $effect(() => {
+    if (app_id && !manifest) void apps.catalogue();
+  });
 </script>
 
 <span class={cn("relative inline-flex shrink-0", class_name)}>

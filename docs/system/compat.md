@@ -66,7 +66,7 @@ Pure parts have Node tests (`browser.test.ts`: real UA strings for Chrome on mac
 
 ## Boot
 
-1. `index.html` loads `src/boot.ts` (the `index-*.js` entry). In a production build it also `modulepreload`s `main.ts`'s chunk and its static imports (`core`, `app-boot`, `preload-helper`) and `preload`s its stylesheet, so those download alongside the entry (`preload_main_plugin` in `vite.config.ts`). The stylesheet is only preloaded: applied, it would restyle the warning screen; Vite's preload helper links it when `main.ts` loads.
+1. `index.html` loads `src/boot.ts` (the `index-*.js` entry). In a production build it also `modulepreload`s `main.ts`'s chunk and its static imports (`core`, `preload-helper`) and `preload`s its stylesheet, so those download alongside the entry (`preload_main_plugin` in `vite.config.ts`). The stylesheet is only preloaded: applied, it would restyle the warning screen; Vite's preload helper links it when `main.ts` loads.
 2. `boot.ts` runs `check(FEATURES, detect_browser())`, keeps the entries `in_scope` for `solo_app(location.hash)`, and reads `webos.compat.dismissed`.
 3. Nothing missing or outdated beyond the dismissed set: `import("./main")`, and boot carries on as in [overview](overview.md#boot-sequence).
 4. Otherwise it imports `screen.ts` and shows the warning over the splash. Continue (or Try anyway, or Escape) removes the screen and imports `main.ts`; the splash and its progress bar are still underneath.

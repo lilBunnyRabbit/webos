@@ -121,7 +121,6 @@ describe("VersionService at boot", () => {
     const kernel = await boot("1.1.0", { restore });
     const version = kernel.service<VersionService>("version");
 
-    expect(version.announced).toEqual([expect.objectContaining({ app: "example", release: expect.objectContaining({ version: "1.2.0" }) })]);
     expect(version.announced.every(({ release }) => release.version !== "1.1.0")).toBe(true);
     await vi.waitFor(() => expect(show).toHaveBeenCalledOnce());
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -129,6 +128,8 @@ describe("VersionService at boot", () => {
 
     answer(false);
     await vi.waitFor(() => expect(announcements()).toHaveLength(1));
+    // An app the catalogue doesn't have (a fork without it) is left out.
+    expect(version.announced).toEqual([expect.objectContaining({ app: "example", release: expect.objectContaining({ version: "1.2.0" }) })]);
     const [props] = announcements();
     expect(props.apps?.map((app) => [app?.manifest?.id, app?.version])).toEqual(
       version.announced.map(({ app, release }) => [app, release.version])

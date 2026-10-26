@@ -9,9 +9,13 @@ import { parse_settings, SETTINGS_PATH } from "../settings/persistence";
 import { SettingsService } from "../settings/service.svelte";
 import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
 import { WindowsService } from "../windows/service.svelte";
-import { INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
+import { BUILD_INFO } from "../version/build-info";
+import { serialize_slice } from "./catalogue";
+import { CATALOGUE_PATH, INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
 import { parse_recent, RECENT_PATH, serialize_recent } from "./recent";
-import { TestAppsService } from "./test-apps";
+import { AppsService as AppsServiceClass } from "./service.svelte";
+import { glob_source, type CatalogueSource } from "./source";
+import { TEST_APPS, TestAppsService } from "./test-apps";
 import type { AppsService } from "./type";
 import { serialize_widget } from "./widget";
 
@@ -283,32 +287,148 @@ describe("app find", () => {
   });
 });
 
-describe("AppsService meta (ADR-049)", () => {
-  test("metas are loaded by the time boot finishes", async () => {
+describe("AppsService catalogue text (ADR-077)", () => {
+  test("listings carry each app's text from boot, and filter like list()", async () => {
     const service = apps(await boot());
-    expect(service.listings().find(({ id }) => id === "example")?.description).toBe("Test app");
-  });
-
-  test("every app's meta loads once; an app without one, or an unknown id, resolves {}", async () => {
-    const kernel = await boot();
-    const service = apps(kernel);
-    service.register({ ...service.get("example")!, id: "no-meta", meta: undefined });
-    expect(service.meta_ready).toBe(service.meta_ready);
-    expect(await service.meta("example")).toEqual({ description: "Test app" });
-    expect((await service.meta("settings")).description).toBeTruthy();
-    expect(await service.meta("no-meta")).toEqual({});
-    expect(await service.meta("nope")).toEqual({});
-  });
-
-  test("listings() merges each manifest with its meta once loaded, and filters like list()", async () => {
-    const kernel = await boot();
-    const service = apps(kernel);
-    await service.meta_ready;
     const listing = (id: string) => service.listings().find((candidate) => candidate.id === id);
     expect(listing("example")).toMatchObject({ id: "example", name: "Example", description: "Test app" });
     expect(listing("settings")?.description).toBeTruthy();
     expect(service.listings().map(({ id }) => id)).toEqual([...service.list()].map(([id]) => id));
     expect(service.listings({ installed: true }).every(({ id }) => service.is_installed(id))).toBe(true);
     expect(service.listings({ installed: false }).some(({ id }) => service.is_installed(id))).toBe(false);
+  });
+
+  test("meta resolves the entry's text; an app without any, or an unknown id, resolves {}", async () => {
+    const service = apps(await boot());
+    service.register({ ...service.get("board")!, id: "no-meta" });
+    expect(await service.meta("example")).toEqual({ description: "Test app" });
+    expect((await service.meta("settings")).description).toBeTruthy();
+    expect(await service.meta("no-meta")).toEqual({});
+    expect(await service.meta("nope")).toEqual({});
+  });
+});
+
+describe("AppsService catalogue (ADR-077)", () => {
+  interface Gate {
+    fetches: number;
+    online: boolean;
+    open: () => void;
+  }
+
+  async function sourced(build_of_fetch = BUILD_INFO.buildTimestamp): Promise<{ service: typeof AppsServiceClass; gate: Gate }> {
+    const { apps: glob } = await import("$lib/apps");
+    const base = glob_source([...glob.filter((manifest) => manifest.system), ...TEST_APPS]);
+    let open = () => {};
+    const ready = new Promise<void>((resolve) => (open = resolve));
+    const gate: Gate = { fetches: 0, online: true, open: () => open() };
+    const source: CatalogueSource = {
+      build: BUILD_INFO.buildTimestamp,
+      async fetch() {
+        gate.fetches += 1;
+        if (!gate.online) return null;
+        const catalogue = await base.fetch();
+        return catalogue && { ...catalogue, build: build_of_fetch };
+      },
+      async manifest(entry) {
+        await ready;
+        return base.manifest(entry);
+      },
+    };
+    class SourcedApps extends AppsServiceClass {
+      protected override catalogue_source(): Promise<CatalogueSource> {
+        return Promise.resolve(source);
+      }
+    }
+    return { service: SourcedApps, gate };
+  }
+
+  async function boot_with(service: typeof AppsServiceClass): Promise<Kernel> {
+    const booted = await boot_test_kernel({
+      files: FilesService,
+      settings: SettingsService,
+      windows: WindowsService,
+      notifications: NotificationsService,
+      dialogs: stub_service("dialogs", {}),
+      apps: service,
+    });
+    shutdown = booted.shutdown;
+    return booted.kernel;
+  }
+
+  async function write_slice(build: number, ids: string[]) {
+    const { apps: glob } = await import("$lib/apps");
+    const full = (await glob_source([...glob.filter((manifest) => manifest.system), ...TEST_APPS]).fetch())!;
+    await write(CATALOGUE_PATH, serialize_slice({ ...full, build }, full.apps.filter((entry) => ids.includes(entry.id))));
+  }
+
+  const system_ids = async () => (await import("$lib/apps")).apps.filter((manifest) => manifest.system).map((manifest) => manifest.id);
+
+  test("boot reads the installed apps' slice and fetches nothing; catalogue() brings the rest", async () => {
+    const { service, gate } = await sourced();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example"]));
+    await write_slice(BUILD_INFO.buildTimestamp, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    expect(gate.fetches).toBe(0);
+    expect(user_apps(kernel)).toEqual(["example"]);
+    expect(await apps(kernel).catalogue()).toBe(true);
+    expect(gate.fetches).toBe(1);
+    expect(user_apps(kernel).sort()).toEqual(["board", "example", "game", "notes"]);
+    expect(await apps(kernel).catalogue()).toBe(true);
+    expect(gate.fetches).toBe(1);
+  });
+
+  test("another build's slice fetches the full catalogue at boot, and keeps every installed id", async () => {
+    const { service, gate } = await sourced();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example", "notes"]));
+    await write_slice(1, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    expect(gate.fetches).toBe(1);
+    expect(apps(kernel).is_installed("notes")).toBe(true);
+    expect(apps(kernel).installed_catalogue()?.apps.map(({ id }) => id)).toContain("notes");
+  });
+
+  test("offline with another build's slice, its apps are listed but don't open", async () => {
+    const { service, gate } = await sourced();
+    gate.online = false;
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example"]));
+    await write_slice(1, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    gate.open();
+    expect(apps(kernel).is_installed("example")).toBe(true);
+    await expect(apps(kernel).load("example")).rejects.toThrow(/updated since this page loaded/);
+    expect(apps(kernel).installed_catalogue()).toBeNull();
+  });
+
+  test("before its code lands an app is a stub: a launch opens at once and checks the props once it lands", async () => {
+    const { service, gate } = await sourced();
+    const kernel = await boot_with(service);
+    const stub = apps(kernel).get("example")!;
+    expect(stub.props).toBeUndefined();
+    expect(stub.version).toBe(BUILD_INFO.version);
+    const windows = kernel.service<WindowsService>("windows");
+    const good = apps(kernel).launch("example", { count: 3 });
+    const bad = apps(kernel).launch("example", { count: "three" });
+    expect(windows.get(good)?.app.manifest.name).toBe("Example");
+    gate.open();
+    await vi.waitFor(() => expect(apps(kernel).get("example")?.props).toBeDefined());
+    await vi.waitFor(() => expect(toasts(kernel)).toContain("Example opened without its data"));
+    expect(windows.get(good)?.app.props).toEqual({ count: 3 });
+    expect(windows.get(bad)?.app.props).toBeUndefined();
+  });
+
+  test("installed_catalogue follows installs and uninstalls", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    const ids = () => apps(kernel).installed_catalogue()?.apps.map(({ id }) => id) ?? [];
+    expect(ids()).not.toContain("example");
+    apps(kernel).install("example");
+    expect(ids()).toContain("example");
+    await apps(kernel).uninstall("example");
+    expect(ids()).not.toContain("example");
+    expect(ids()).toEqual(expect.arrayContaining(await system_ids()));
   });
 });

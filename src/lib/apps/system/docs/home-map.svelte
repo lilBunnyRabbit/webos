@@ -20,6 +20,7 @@
   let { library, onopen }: Props = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
+  void kernel.service<AppsService>("apps").catalogue();
   let stores = $state<{ label: string; detail: string; hash: string }[]>([]);
 
   load_page("system/persistence")

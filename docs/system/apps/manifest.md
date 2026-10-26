@@ -1,6 +1,6 @@
 # App manifest
 
-ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md), [062](../../adrs/062-background-scheduler.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `meta.ts`, `search.ts`, discovery in `src/lib/apps/index.ts`
+ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md), [062](../../adrs/062-background-scheduler.md), [077](../../adrs/077-app-store.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `catalogue.ts`, `search.ts`; the build reads manifests in `tooling/vite-plugin-catalogue.ts`, the dev server and tests in `src/lib/apps/index.ts`
 
 Every app is a folder with an `index.ts` that default-exports `define_app({...})`, and usually a `meta.ts` with its display text. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
 
@@ -10,9 +10,9 @@ Every app is a folder with an `index.ts` that default-exports `define_app({...})
 function define_app<TProps extends AppProps = {}>(config: AppConfig<TProps>): AppDefinition<TProps>
 ```
 
-Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`. Discovery (`src/lib/apps/index.ts`) turns each one into an `AppManifest` by adding `system: true` for apps under `./system/`. `define_app` itself does two things:
+Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`. The OS never imports a manifest at boot (ADR-077): the build turns each one into a catalogue entry, and AppsService loads the manifest's own chunk later, adding `system` and `version` from the entry. In the dev server and tests the glob in `src/lib/apps/index.ts` stands in for the build. `define_app` itself does two things:
 
-- It validates `widget_size` when given (spans 1–8, `min ≤ default ≤ max`) and throws `[define_app] {id}: widget_size needs …` otherwise, so a bad manifest fails at boot.
+- It validates `widget_size` when given (spans 1–8, `min ≤ default ≤ max`) and throws `[define_app] {id}: widget_size needs …` otherwise, so a bad manifest fails the build.
 - `component` is wrapped: `() => config.component().then((m) => m.default)`. You write a plain dynamic import; the manifest's loader resolves straight to the component.
 
 `TProps` is inferred from the `props` schema.
@@ -23,13 +23,13 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 |-------|------|----------|--------------|
 | `id` | `AppId` (`string`) | yes | Registry key. Matched by start menu search. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
 | `name` | `string` | yes | Start menu (tile label, search, sort order), the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
-| `version` | `string` | yes | The apps inspector's registry table, and the App Store details when the changelog says nothing about the app (it shows "Added v… · Updated v…" from the release notes otherwise, ADR-038) |
+| `version` | `string` | yes | Ignored since ADR-077 stage 2: the OS shows the catalogue's version, the release the app's files last changed in ("Version 3.67.0" in the App Store details, `app info`, the apps inspector), and replaces this value with it. Still required, so existing apps keep compiling |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. The app's own `icon.svelte`, drawn to the [app icon rules](../../design/foundations.md#app-icons); it takes `class` and ignores `weight` like a Phosphor icon. An app that needs on-device AI wraps it: `icon: ai_icon(AppIcon)` from `$kit/components/ai-icon` adds the sparkle ([app icons](../../design/foundations.md#app-icons)) |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
 | `category` | `AppCategory` | yes | The launcher section a user app sits in, and searchable by its label. See below |
-| `system` | `boolean` | set by discovery | `true` for apps in `src/lib/apps/system/`. Puts the app in the launcher's System section; the apps inspector counts it. Not written in `define_app` |
-| `meta` | `() => Promise<{ default: AppMeta }>` | no | The app's display text: `description`, `keywords`, `pitch`, `authors`, as `meta: () => import("./meta")` (ADR-049). Lazy and loaded all at once after boot, see [below](#meta-metats) |
-| `highlights` | `() => Promise<{ default: AppHighlight[] }>` (`{ icon: Component; title: string; text: string }`) | no | Three or four cards on what the app does: the new-app announcement and the App Store's "What it does" (ADR-038). Lazy, like `preview`: `highlights: () => import("./highlights")`, with the cards as the default export of `highlights.ts` (`satisfies AppHighlight[]`). Manifests load at boot, and eager cards cost ~1 KB gz each app, mostly their icons. Without them the announcement shows the description only |
+| `system` | `boolean` | set from the catalogue | `true` for apps in `src/lib/apps/system/`. Puts the app in the launcher's System section; the apps inspector counts it. Not written in `define_app` |
+| `meta` | `() => Promise<{ default: AppMeta }>` | no | The app's display text: `description`, `keywords`, `pitch`, `authors`, as `meta: () => import("./meta")` (ADR-049). The build copies it into the catalogue; the OS never calls it, see [below](#meta-metats) |
+| `highlights` | `() => Promise<{ default: AppHighlight[] }>` (`{ icon: Component; title: string; text: string }`) | no | Three or four cards on what the app does: the new-app announcement and the App Store's "What it does" (ADR-038). Lazy, like `preview`: `highlights: () => import("./highlights")`, with the cards as the default export of `highlights.ts` (`satisfies AppHighlight[]`). Only the announcement and the App Store need them. Without them the announcement shows the description only |
 | `preview` | `() => Promise<{ default: string }>` | no | A picture of the app for the announcement, as a lazy URL import (`() => import("./preview.webp?url")`), so it never weighs on boot |
 | `author` | `string` | no | **Deprecated**, removed in 4.0. Stored only. Older than `authors` (now in `meta`); nothing reads it |
 | `license` | `string` | no | **Deprecated**, removed in 4.0. Stored only |
@@ -53,7 +53,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 
 ### `meta` (`meta.ts`)
 
-Display text that boot never reads lives in a sibling `meta.ts`, not in the manifest (ADR-049, 3.0). Manifests are discovered eagerly, so anything in `index.ts` ships in the boot chunk; the text was ~9.5 KB gz of it and grew with every app.
+Display text lives in a sibling `meta.ts`, not in the manifest (ADR-049, 3.0). Since ADR-077 stage 2 the build copies it into the app's catalogue entry, so the OS reads it without loading anything of the app.
 
 ```ts
 // meta.ts
@@ -73,7 +73,7 @@ export default {
 | `pitch` | `AppPitch` (`{ problem: string; solution: string }`) | The sentence search (weight 1, with the category label). The App Store's Showcase card and detail: the problem the app solves, from the user's side, and what it does about it, one short sentence each, user-facing (no ADR numbers or service names). Without it the Showcase shows `description` as the answer and no problem line. Every bundled app has one (2.2) |
 | `authors` | `AppAuthor[]` (`{ name: string; github?: string; url?: string }`) | Who made the app. Omitted or empty means the owner, `OWNER = { name: "lilBunnyRabbit", github: "lilBunnyRabbit" }`. `app_authors(meta)` in `services/apps/authors.ts` resolves it; the credit links to `github.com/{github}`, else `url`. Shown as "By …" in the App Store details and the new-app announcement, in Settings › About › Credits, and as `author` in `app info` and an `authors` column in `app list` |
 
-How it loads: AppsService imports every app's `meta` once, in `requestIdleCallback` after boot, and `listings()` fills in when it lands ([apps](../services/apps.md#app-meta-adr-049)). Vite's `manualChunks` puts every `apps/*/*/meta.ts` into one `app-meta` chunk. Until it arrives, the launcher matches names, ids and categories only, and the text fills in; it's one small chunk, so that window is short. Readers get each manifest combined with its meta as an `AppListing` (`AppManifest & AppMeta`) from `apps.listings()`.
+How it loads: it doesn't, at runtime. The build calls `meta()` in Node and writes the text into `store/catalogue.json`; the dev server and tests run the same `manifest_data()` on the glob. Readers get each app with its text as an `AppListing` (`AppManifest & AppMeta`, plus `daily`) from `apps.listings()`, or one app's through `apps.meta(id)` ([apps](../services/apps.md#app-text)).
 
 ### `category` and `system`
 
@@ -214,11 +214,12 @@ import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
 import { AppCategory } from "$lib/core/api/services/apps/type";
 ```
 
-Why: manifests are evaluated eagerly while the barrel is still initializing. The chain is `$lib/core/api` → `kernel` → `init.ts` → `apps/service.svelte.ts` → `$lib/apps` (eager glob) → your `index.ts` → `$lib/core/api` again, which is mid-evaluation. Function declarations are hoisted, so `define_app` works. A `const` from a module that hasn't run yet is in the temporal dead zone and throws.
+Why: until ADR-077 stage 2, manifests were evaluated eagerly while the barrel was still initializing. The chain was `$lib/core/api` → `kernel` → `init.ts` → `apps/service.svelte.ts` → `$lib/apps` (eager glob) → your `index.ts` → `$lib/core/api` again, which is mid-evaluation. Function declarations are hoisted, so `define_app` works. A `const` from a module that hasn't run yet is in the temporal dead zone and throws.
 
-`FILE_PROPS` (`helpers.ts`) and `AppCategory` (`type.ts`) live in modules nothing on that chain has evaluated yet, so importing them via the barrel throws. Importing the module directly evaluates it on the spot.
+`FILE_PROPS` (`helpers.ts`) and `AppCategory` (`type.ts`) lived in modules nothing on that chain had evaluated yet, so importing them via the barrel threw. Importing the module directly evaluates it on the spot.
 
-Oddity: the Example app imports the const `WindowFlag` from the barrel and works. That's luck: `init.ts` imports `WindowsService` before `AppsService`, so `windows/type.ts` has already run. Don't rely on it.
+Since stage 2 nothing imports a manifest while the barrel initializes: the build's Node step, the dev glob and the runtime all load manifests after it has finished, so the cycle is gone. The rule stays as written until it's lifted on purpose; it costs nothing to follow.
+
 
 ## Example
 
@@ -244,6 +245,6 @@ export default define_app({
 ## Divergence from ADR
 
 - ADR-001 `defaults.size`: not implemented.
-- ADR-001 glob `./**/index.ts`: the code uses `./system/*/index.ts` and `./user/*/index.ts`.
+- ADR-001 glob `./**/index.ts`: the build reads `src/lib/apps/{system,user}/*/index.ts`; the dev and test glob is `./system/*/index.ts` and `./user/*/index.ts`.
 - ADR-001 `categories: ["utilities"]` (an array): replaced by one `category` plus a folder-derived `system` (ADR-001 revision 2026-10-12).
 - ADR-008 sketches `define_app<TSchema extends ZodType>`. The code is generic over `TProps` with `props?: ZodType<TProps>`; inference works the same.

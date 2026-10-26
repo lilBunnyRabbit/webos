@@ -2,11 +2,11 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-const BUDGET_BYTES = 219_000;
+const BUDGET_BYTES = 167_200;
 const DIST = "dist";
 
 const html = readFileSync(join(DIST, "index.html"), "utf8");
-// The entry and the chunks it imports statically (`core`, `app-boot`), which Vite preloads next to it.
+// The entry and the chunks it preloads (`main`, `core`, `preload-helper`).
 const entries = [
   ...html.matchAll(/<(?:script type="module"[^>]+src|link rel="modulepreload"[^>]+href)="[^"]*?(assets\/[^"]+\.js)"/g),
 ].map((match) => match[1]);

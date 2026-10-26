@@ -6,7 +6,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
 import { get_version_info, version_plugin } from "./tooling/vite-plugin-version";
 import { offline_plugin } from "./tooling/vite-plugin-offline";
-import { catalogue_plugin } from "./tooling/vite-plugin-catalogue";
+import { catalogue_plugin, is_manifest_chunk } from "./tooling/vite-plugin-catalogue";
 import { phosphor_imports_plugin, phosphor_plugin } from "./tooling/vite-plugin-phosphor";
 import { core_modules } from "./tooling/vite-core-chunk";
 import { import_map_plugin } from "./tooling/vite-plugin-import-map";
@@ -50,7 +50,7 @@ function preload_main_plugin(entry: string): Plugin {
       const chunks = Object.values(bundle ?? {}).filter((file) => file.type === "chunk");
       const main = chunks.find((chunk) => chunk.moduleIds.includes(entry));
       if (!main) throw new Error(`preload main: no chunk holds ${entry}`);
-      const linked = new Set(chunks.filter((chunk) => chunk.isEntry).flatMap((chunk) => [chunk.fileName, ...chunk.imports]));
+      const linked = new Set(chunks.filter((chunk) => chunk.isEntry && !is_manifest_chunk(chunk.name)).flatMap((chunk) => [chunk.fileName, ...chunk.imports]));
       const files = new Set<string>();
       const css = new Set<string>();
       const walk = (file: string) => {
@@ -61,9 +61,6 @@ function preload_main_plugin(entry: string): Plugin {
         chunk?.imports.forEach(walk);
       };
       walk(main.fileName);
-      // ADR-049 revision 2026-10-24: AppsService awaits every app's meta at boot, so it downloads alongside main.
-      const meta = chunks.find((chunk) => chunk.name === "app-meta");
-      if (meta) walk(meta.fileName);
       return [
         ...[...files].filter((file) => !linked.has(file)).map((file) => ({ tag: "link", attrs: { rel: "modulepreload", crossorigin: "", href: `${base}${file}` }, injectTo: "head" as const })),
         ...[...css].map((file) => ({ tag: "link", attrs: { rel: "preload", as: "style", crossorigin: "", href: `${base}${file}` }, injectTo: "head" as const })),
@@ -78,7 +75,6 @@ const VOLATILE = [
   "src/lib/core/api/services/version/build-info.ts",
   "src/lib/core/api/services/version/changelog.ts",
 ];
-const APP_INDEX = /\/apps\/(system|user)\/[^/]+\/index\.ts$/;
 const cores = new WeakMap<object, Set<string>>();
 const BASE = "/webos/";
 const info = get_version_info(process.cwd());
@@ -148,6 +144,13 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-mammoth", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 2 } },
           },
+          // The app catalogue and icon sprite (ADR-077): fresh online, the last copy offline, so the App Store and search
+          // still list apps that aren't installed.
+          {
+            urlPattern: new RegExp(`^[^?#]*${BASE}store/`),
+            handler: "NetworkFirst",
+            options: { cacheName: "webos-store", networkTimeoutSeconds: 4, cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 4 } },
+          },
           // Last, so the rules above keep their files. One cache per build: StoreService fills it with the installed apps
           // and deletes older ones after a sync (ADR-077). No expiration, which could evict an installed app.
           {
@@ -205,20 +208,13 @@ export default defineConfig({
         // A fixed name, so the precache can leave the chunk out.
         chunkFileNames: (chunk) =>
           chunk.moduleIds.some((id) => id.includes("/node_modules/mammoth/")) ? "assets/mammoth-[hash].js" : "assets/[name]-[hash].js",
-        // ADR-049: one request for every app's display text instead of 77, and it compresses better together.
         manualChunks(id, { getModuleInfo }) {
-          if (/\/apps\/(system|user)\/[^/]+\/meta\.ts$/.test(id)) return "app-meta";
           // `boot.ts` needs Vite's preload helper before the browser check; in `core` it would load all of core first.
           if (id === "\0vite/preload-helper.js") return "preload-helper";
           if (!cores.has(getModuleInfo)) {
             cores.set(getModuleInfo, core_modules(getModuleInfo, path.resolve("src/main.ts"), VOLATILE, "src/lib/apps"));
           }
           if (cores.get(getModuleInfo)!.has(id)) return "core";
-          // What a manifest imports (icon, props, sections) is shared with its app's chunk; in the entry, every such app
-          // would be renamed with the registry.
-          if (getModuleInfo(id)?.importers.some((importer) => APP_INDEX.test(importer)) && !APP_INDEX.test(id)) {
-            return "app-boot";
-          }
         },
       },
     },

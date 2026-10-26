@@ -62,8 +62,11 @@
 
   const installed = $derived(apps.listings({ installed: true }));
   const matches = $derived(search_apps(installed, query));
-  /** Search covers every app: the ones not installed come after, under Not installed (ADR-040). */
+  /** Search covers every app: the ones not installed come after, under Not installed (ADR-040), once the catalogue is here (ADR-077). */
   const gettable = $derived(query.trim() ? search_apps(apps.listings({ installed: false }), query) : []);
+  $effect(() => {
+    if (query.trim() && !commanding) void apps.catalogue();
+  });
   const sentence = new SentenceSearch<AppListing>({
     apps: () => apps.listings(),
     query: () => (commanding ? "" : query),

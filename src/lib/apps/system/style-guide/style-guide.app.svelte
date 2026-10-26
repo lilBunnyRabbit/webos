@@ -132,6 +132,7 @@
   let wave_selection = $state<Span | null>({ start: 0.8, end: 1.1 });
 
   const apps = $derived(kernel.service<AppsService>("apps"));
+  void kernel.service<AppsService>("apps").catalogue();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   // Paint with made-up highlights, so the cards and the "Start menu" strip both show.

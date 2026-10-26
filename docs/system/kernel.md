@@ -53,9 +53,9 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 
 ## Registration
 
-`init.ts` → `register_default_services(kernel)` is **the** place services are registered. It is the only file that imports service classes. `main.ts` awaits it right before `kernel.init()`, so registration happens at boot, not at import time. The kernel module doesn't import it: `init.ts` reaches the app registry and the build stamp, which must stay out of the shared `core` chunk ([overview](overview.md#build--deploy), ADR-036 revision 2026-10-21). It's async: the platform variants of `windows` and `desktop` are `import()`ed for `kernel.platform` only (ADR-016, ADR-036), so they live in their own chunks.
+`init.ts` → `register_default_services(kernel)` is **the** place services are registered. It is the only file that imports service classes. `main.ts` awaits it right before `kernel.init()`, so registration happens at boot, not at import time. The kernel module doesn't import it: `init.ts` reaches the build stamp and the changelog (through AppsService's catalogue source and VersionService), which must stay out of the shared `core` chunk ([overview](overview.md#build--deploy), ADR-036 revision 2026-10-21). It's async: the platform variants of `windows` and `desktop` are `import()`ed for `kernel.platform` only (ADR-016, ADR-036), so they live in their own chunks.
 
-`init.ts` also has a side-effect import of `services/windows/type`. AppsService loads every app manifest, and some read `WindowFlag` through the `$lib/core/api` barrel while the barrel is still mid-cycle. The windows service used to evaluate that module first; now that it's lazy, the explicit import keeps the order.
+No manifest loads during boot (ADR-077): AppsService reads the installed apps' catalogue entries, and their manifest chunks load after first paint, when the barrel has long finished. The side-effect import of `services/windows/type` that kept manifests reading `WindowFlag` mid-cycle is gone with it.
 
 | Key | Class | `dependencies` |
 |-----|-------|----------------|
@@ -107,10 +107,12 @@ files, notifications, dialogs, apps, session, settings ► version
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files` and `notifications`, so both are pushed before it. With the registrations above, the order is:
 
 ```
-files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → scheduler → tasks → offline → backup → ai → speech → router → version
+files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → scheduler → tasks → store → backup → ai → speech → router → version
 ```
 
-Shutdown runs the reverse: `version → router → speech → ai → backup → offline → tasks → scheduler → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
+Shutdown runs the reverse: `version → router → speech → ai → backup → store → tasks → scheduler → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
+
+`apps` reads `/var/lib/apps/catalogue.json` in its `init()` and, on the first boot of a release (or with no file), awaits the full `store/catalogue.json` there, so `desktop`, `session` and the rest see every installed app; StoreService (`store`) writes the file later in the order ([apps](services/apps.md#catalogue-adr-077)).
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 

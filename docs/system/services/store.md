@@ -1,6 +1,6 @@
 # StoreService
 
-Key `store` · Depends on: `files`, `apps`, `tasks` · ADR: [ADR-077](../../adrs/077-app-store.md) (stage 1), [ADR-065](../../adrs/065-apps-on-demand.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/store/`, `tooling/vite-plugin-offline.ts`, `src/lib/core/components/apps/app-progress.svelte` · Inspector: `inspector.svelte` (ADR-020)
+Key `store` · Depends on: `files`, `apps`, `tasks` · ADR: [ADR-077](../../adrs/077-app-store.md) (stages 1 and 2), [ADR-065](../../adrs/065-apps-on-demand.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/store/`, `tooling/vite-plugin-offline.ts`, `src/lib/core/components/apps/app-progress.svelte` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Uninstalling deletes the app's files from the cache, except the ones another ins
 
 An app opened without installing (AppsService's `launch`, ADR-077's Open) loads on demand like any other, isn't downloaded whole and isn't promised offline.
 
-AppsService owns the installed set ([apps](apps.md#init-the-installed-list-adr-040)); this service follows it. Catalogue, versions, update detection and hot swaps are ADR-077's later stages.
+AppsService owns the installed set ([apps](apps.md#init-the-installed-list-adr-040)) and the catalogue it reads ([apps](apps.md#catalogue-adr-077)); this service follows the set, downloads it and writes the installed apps' catalogue boot reads ([below](#the-installed-apps-catalogue)). Update detection and hot swaps are ADR-077 stage 3.
 
 ## Public API
 
@@ -31,9 +31,9 @@ AppsService owns the installed set ([apps](apps.md#init-the-installed-list-adr-0
 
 `tooling/vite-plugin-offline.ts` (`offline_plugin(build)`, registered in `vite.config.ts` after the import map) runs in `writeBundle`, so it sees final file names (core renamed after the import map), before vite-plugin-pwa writes `sw.js` in `closeBundle`.
 
-- **Roots.** For each `src/lib/apps/{system,user}/{id}/index.ts`, the chunks of every module its manifest `import()`s: the component, `commands`, `highlights`, `preview`, `widget`, `on_fire`, `on_uninstall_data`. Chunks named `core`, `app-boot` or `app-meta` are never roots.
+- **Roots.** For each `src/lib/apps/{system,user}/{id}/index.ts`, its manifest chunk (`{id}.manifest-<hash>.js`, the entry the catalogue plugin emits, which AppsService loads first; a facade when the app's component imports its own manifest) and the chunks of every module the manifest `import()`s: the component, `commands`, `highlights`, `preview`, `widget`, `on_fire`, `on_uninstall_data`, `meta` (never loaded at runtime, a few hundred bytes). `core` is never a root.
 - **Edges.** A chunk's `imports` and `dynamicImports`, its `importedCss` and `importedAssets`, and the hashed file names its code mentions that are assets (worker scripts, `?url` files). Vite's `__vite__mapDeps` preload table is stripped first: it lists every `import()`'s deps, apps' included. Assets (worker bundles, CSS) are scanned for hashed names too.
-- **Core** (`offline/core.json`): everything `index.html` and the entry reach without entering a root. That is the shell, `core`, `app-boot`, `app-meta` and the fonts the CSS names. A chunk an app shares with core (File Explorer's components, which the file picker uses) stays in core.
+- **Core** (`offline/core.json`): everything `index.html` and the entry (`boot.ts`; the manifest entries don't count) reach without entering a root. That is the shell, `main`, `core`, their lazy chunks (the changelog among them) and the fonts the CSS names. A chunk an app shares with core (File Explorer's components, which the file picker uses) stays in core.
 - **Apps** (`offline/{id}.json`): everything the app's roots reach without entering core. System apps get a list like user apps (ADR-077).
 - Both leave out what other runtime rules cache (`*.wasm`, `*.onnx`, `*.ttf|ttc`, `*.aff|dic`, `assets/mammoth-*.js`).
 - Each file is `{ "build": <buildTimestamp>, "files": ["assets/…", …] }`, sorted. The build stamp is computed once in `vite.config.ts` (`get_version_info`) and shared with `version_plugin`, so `version.json`, `BUILD_INFO` and the cache name agree. The catalogue plugin copies each list into its app's `files` ([overview](../overview.md)).
@@ -46,6 +46,7 @@ Still `generateSW` (`vite.config.ts`):
 
 - `manifestTransforms` keeps an entry when it's outside `assets/` (`index.html`, `registerSW.js`, `sw-notifications.js`, icons, manifest) or in core (`offline.precached(url)`).
 - The Portfolio path (`/webos/portfolio/`, written by `tooling/vite-plugin-portfolio-path.ts` when the Portfolio app exists) is a copy of `index.html` left out of the precache (`globIgnores`) and of the navigation fallback (`navigateFallbackDenylist`), so it always comes from the network and boots the deployed build. Its one extra script defaults a bare visit to `#/solo/portfolio` and drops the query (the `portfolio` repo's redirect adds `?t=` to skip the HTTP cache, and carries the hash so a worker from before 3.70.1, which still answers the path with its cached shell, opens Portfolio rather than the desktop). Offline it doesn't load.
+- `store/` (the catalogue and the icon sprite) is `NetworkFirst` into `webos-store` (4 s network timeout, 200 only, at most 4 entries): fresh online, the last copy offline, so the App Store and search still list apps that aren't installed. Neither file is precached.
 - The last `runtimeCaching` rule is `CacheFirst` for `^[^?#]*/webos/assets/` into `webos-assets-{buildTimestamp}`, 200 responses only, `ignoreVary`, no expiration (it could evict an installed app). Earlier rules keep the wasm, model, font, dictionary and mammoth files in their own caches.
 
 ## Sync
@@ -63,14 +64,23 @@ The loop runs again if an app was installed while a job ran. The lazy `sync.ts` 
 
 **Following the installed set.** An effect over `apps.list({ installed: true })` compares it with the last one. A new app that isn't saved starts `sync()`. A removed app leaves `saved` at once, then, under the same lock and only online, `drop_app` fetches its list and every installed app's list and deletes from this build's cache the files only it holds (`unshared` in `lists.ts`). Offline, or when a list fails, nothing is deleted; the files go with this build's cache at the next update.
 
+## The installed apps' catalogue
+
+`/var/lib/apps/catalogue.json` is the only thing boot reads to list apps ([apps](apps.md#catalogue-adr-077)). An effect over `apps.installed_catalogue()` writes it through a `LatestWriter` seeded with the file's text, so it's written only when it changes:
+
+- on the first boot of a release, once AppsService has this build's full catalogue (the slice it read was another build's, or missing);
+- on every install and uninstall, with the new app's entry (from the full catalogue the Store or search fetched) or without the removed one.
+
+`installed_catalogue()` is `null` while an installed app's entry is unknown or another build's, so a slice that can't run here is never written. It's written before the app's files finish downloading: the slice says what's installed, the state file what's on the device.
+
 ## Lifecycle
 
 `init()`:
 
 - `online`/`offline` listeners (coming online with installed apps left to save starts a sync) and `visibilitychange` (visible: re-read the state file).
-- Reads `/var/lib/store/state.json`. Missing: reads the old `/var/lib/offline/state.json` instead, once, and deletes `/var/lib/offline`. A state from this build fills `saved`; a missing one or another build's starts empty and writes `{ build, apps: [] }`.
-- **Migration from kept offline (ADR-077).** Not solo, and `/etc/offline.json` exists: its apps (an id another app [replaces](apps.md#replaced-app-ids-adr-071) read as every app replacing it, `current_ids`) are installed through `apps.install`, then the file is deleted. A solo tab leaves it for the full OS.
-- Effects: the revision of `/var/lib/store` re-reads the file (skipped while one of this tab's writes is pending), and the installed-set effect above.
+- Reads `/var/lib/store/state.json`, and seeds the catalogue writer with `/var/lib/apps/catalogue.json`. Missing: reads the old `/var/lib/offline/state.json` instead, once, and deletes `/var/lib/offline`. A state from this build fills `saved`; a missing one or another build's starts empty and writes `{ build, apps: [] }`.
+- **Migration from kept offline (ADR-077).** Not solo, and `/etc/offline.json` exists: picks the device doesn't know need the full catalogue first (offline, the file waits for a later boot); its apps (an id another app [replaces](apps.md#replaced-app-ids-adr-071) read as every app replacing it, `current_ids`) are installed through `apps.install`, then the file is deleted. A solo tab leaves it for the full OS.
+- Effects: the revision of `/var/lib/store` re-reads the file (skipped while one of this tab's writes is pending), the installed-set effect above, and the installed apps' catalogue.
 - After an update (state from another build) or with installed apps not saved: `sync()` on `on_idle` (`requestIdleCallback`, or a `setTimeout` where Safari has none), never awaited by boot.
 
 `destroy()` removes the listeners and disposes the effects.
@@ -80,6 +90,8 @@ The loop runs again if an app was installed while a job ran. The lazy `sync.ts` 
 | Where | What | Format |
 |-------|------|--------|
 | `/var/lib/store/state.json` | Apps saved in this build | `{ "build": 1792699153883, "apps": [...] }`, sorted, through `LatestWriter`. Another build's file counts as empty |
+| `/var/lib/apps/catalogue.json` | The installed apps' catalogue entries, read by AppsService at boot | `{ "version": 1, "core", "build", "release", "apps": [...] }`, the entries sorted by id, minified |
+| Cache Storage `webos-store` | The last `store/catalogue.json` and `store/icons.svg` | Written by the service worker's `NetworkFirst` rule |
 | `/var/lib/offline/state.json` | Before 3.74.0. Read once when the new file is missing, then the folder is deleted | Same shape |
 | `/etc/offline.json` | Before 3.74.0: apps kept offline. Joined to the installed set once, then deleted | `{ "version": 1, "apps": [...] }` |
 | Cache Storage `webos-assets-{build}` | The files | Written by the service worker (any `/assets/` request) and by this service (`cache.put`) |

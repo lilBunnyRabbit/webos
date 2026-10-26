@@ -123,12 +123,9 @@
       </h2>
       <p class="flex flex-wrap items-center gap-x-2 text-ui text-foreground/80">
         {category_label(manifest)}
-        {#if history.added || history.updated}
-          <span class="font-mono text-2xs text-foreground/65">
-            {#if history.added}Added v{history.added.version}{/if}{#if history.added && history.updated}{" · "}{/if}{#if history.updated}Updated v{history.updated.version}{/if}
-          </span>
-        {:else}
-          <span class="font-mono text-2xs text-foreground/65">v{manifest.version}</span>
+        <span class="text-2xs text-foreground/65">Version <span class="font-mono">{manifest.version}</span></span>
+        {#if history.added}
+          <span class="font-mono text-2xs text-foreground/65">Added v{history.added.version}</span>
         {/if}
       </p>
       <AppByline {manifest} class="mt-0.5" />

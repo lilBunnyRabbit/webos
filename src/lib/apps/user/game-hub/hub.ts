@@ -45,9 +45,9 @@ export function mode_label(mode: string): string {
 }
 
 /** One row per daily: a game with a per-mode `daily_rank` gets one per mode, in the record's order (ADR-050). */
-export function daily_games<T extends GameInfo & { props?: ZodType; daily_rank?: DailyRank | DailyRanks }>(games: T[]): DailyGame<T>[] {
+export function daily_games<T extends GameInfo & { daily?: boolean; props?: ZodType; daily_rank?: DailyRank | DailyRanks }>(games: T[]): DailyGame<T>[] {
   return games
-    .filter((game) => supports_daily(game.props))
+    .filter((game) => game.daily ?? supports_daily(game.props))
     .sort((a, b) => a.name.localeCompare(b.name))
     .flatMap((game): DailyGame<T>[] => {
       if (typeof game.daily_rank !== "object") return [{ key: game.id, game, mode: null, name: game.name, short: game.name }];

@@ -1,8 +1,9 @@
-import { define_app, type AppManifest, type Kernel } from "$lib/core/api";
+import { define_app, type AppManifest } from "$lib/core/api";
 import { z } from "zod";
 import { define_command } from "../shell/define";
 import { AppCategory } from "./type";
 import { AppsService } from "./service.svelte";
+import { glob_source, type CatalogueSource } from "./source";
 
 const never = () => new Promise<never>(() => {});
 
@@ -39,11 +40,12 @@ export const NOTES_APP = stand_in({
 
 export const GAME_APP = stand_in({ id: "game", name: "Game", category: AppCategory.GAMES, replaces: [{ app: "old-games" }] });
 
-/** The system apps plus these: the same registry whether or not the user apps exist. */
+export const TEST_APPS = [EXAMPLE_APP, BOARD_APP, NOTES_APP, GAME_APP];
+
+/** The system apps plus these: the same catalogue whether or not the user apps exist. */
 export class TestAppsService extends AppsService {
-  constructor(kernel: Kernel) {
-    super(kernel);
-    for (const [id, manifest] of this.registry) if (!manifest.system) this.registry.delete(id);
-    for (const app of [EXAMPLE_APP, BOARD_APP, NOTES_APP, GAME_APP]) this.register(app);
+  protected override async catalogue_source(): Promise<CatalogueSource> {
+    const { apps } = await import("$lib/apps");
+    return glob_source([...apps.filter((manifest) => manifest.system), ...TEST_APPS]);
   }
 }

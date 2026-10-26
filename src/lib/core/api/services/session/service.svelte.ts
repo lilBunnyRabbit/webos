@@ -104,11 +104,17 @@ export class SessionService implements ISessionService {
   }
 
   private async offer_restore(saved: WindowSnapshot[]): Promise<void> {
+    // A window of an app opened without installing (ADR-077): only the full catalogue knows it.
+    if (saved.some((snapshot) => !this.apps_service.get(snapshot.app_id))) await this.apps_service.catalogue();
     const apps = saved.map((snapshot) => this.apps_service.get(snapshot.app_id) ?? null);
     const restore = await this.dialogs_service.show(RestoreSessionDialog, { apps }, { dismissible: false });
     if (this.destroyed) return;
 
     if (restore) {
+      // Restored props are checked against each app's schema, which comes with its code.
+      const ids = new Set(saved.map((snapshot) => snapshot.app_id));
+      await Promise.all([...ids].map((id) => this.apps_service.load(id).catch(() => undefined)));
+      if (this.destroyed) return;
       const result = this.windows_service.restore(saved, ({ app_id, props, state }) =>
         this.apps_service.create_instance(app_id, props, state)
       );

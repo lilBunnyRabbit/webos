@@ -137,7 +137,10 @@ export const TOPICS: Topic[] = [
       const { SAMPLES_FOLDER, seed_samples } = await import("$lib/core/api/services/version/samples");
       const samples = `${PATHS.documents}/${SAMPLES_FOLDER}`;
       // Only a first boot writes them, so a device from before 1.9.0 (or one that deleted them) gets them here.
-      if (!(await files.get_directory(samples))) await seed_samples(files, [...apps().list()].map(([, manifest]) => manifest));
+      if (!(await files.get_directory(samples))) {
+        await apps().catalogue();
+        await seed_samples(files, [...apps().list()].map(([, manifest]) => manifest));
+      }
       apps().launch("file-explorer", { path: (await files.get_directory(samples)) ? samples : PATHS.home });
     },
   },

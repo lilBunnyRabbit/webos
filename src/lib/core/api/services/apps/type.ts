@@ -5,6 +5,7 @@ import type { WindowId, WindowOptions } from "../windows/type";
 import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
 import type { OnFire } from "../scheduler/type";
+import type { Catalogue } from "./catalogue";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
@@ -35,17 +36,27 @@ export interface AppsService extends IService {
    * localStorage and `/var/lib/apps/{id}/`; never anything in `/home`. Windows and desktop entries are the caller's.
    */
   uninstall(id: AppId, options?: UninstallOptions): Promise<void>;
-  /**
-   * Settles once every app's `meta` has loaded (ADR-049). Loading starts when the desktop is idle after boot, or as soon
-   * as something awaits this. An app whose `meta` fails to load counts as having none.
-   */
-  readonly meta_ready: Promise<void>;
+  /** The app's display text from its catalogue entry; an app this device doesn't know yet fetches the full catalogue. */
   meta(id: AppId): Promise<AppMeta>;
   /**
-   * Every app, or only the installed (`true`) or not installed (`false`) ones, its manifest merged with its `meta`
-   * (ADR-049). Reactive: bare manifests until the metas load, so names show at once and the text fills in.
+   * Every app known so far, or only the installed (`true`) or not installed (`false`) ones, with its catalogue text
+   * (ADR-077). Boot knows the installed apps; the rest arrive with `catalogue()`. Reactive.
    */
   listings(filter?: AppsFilter): AppListing[];
+  /**
+   * Makes every app of this build known (ADR-077): fetches `store/catalogue.json` network-first, once, and lists the
+   * apps it names. Resolves `false` when it couldn't (offline with no copy, or a copy from another build, whose apps are
+   * listed but can't open); a later call tries again. Call it before showing apps that may not be installed.
+   */
+  catalogue(): Promise<boolean>;
+  /**
+   * The app's manifest with its code: `get()` gives a stub built from the catalogue entry until the manifest's chunk
+   * has loaded (installed apps' load after first paint). Needed before reading `props`, or `badge`. `undefined` for an
+   * unknown id; rejects when the chunk can't load.
+   */
+  load(id: AppId): Promise<AppManifest | undefined>;
+  /** The installed apps' entries for `/var/lib/apps/catalogue.json`, `null` while some aren't this build's or known. */
+  installed_catalogue(): Catalogue | null;
   /**
    * User apps `launch()` opened lately, newest first, each once, at most 16; never system apps, and apps uninstalled
    * since drop out. Reactive. Saved in `/var/lib/apps/recent.json`; always empty in solo mode (ADR-047).
@@ -90,6 +101,7 @@ export type AppProps = Record<string, unknown>;
 export interface AppManifest<TProps extends AppProps = AppProps> {
   id: AppId;
   name: string;
+  /** The release the app last changed in, from the catalogue (ADR-077). What `define_app` is given is replaced. */
   version: string;
   icon: Component;
   category: AppCategory;
@@ -155,14 +167,14 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   default_widget?: boolean;
   /**
    * What the app does, as three or four cards: the new-app announcement and the App Store details show them (ADR-038).
-   * Lazy like `preview`: manifests load at boot, and the cards' icons and text are worth ~1 KB gz each app.
+   * Lazy like `preview`: only the announcement and the App Store need them.
    */
   highlights?: () => Promise<{ default: AppHighlight[] }>;
   /** A picture of the app for the announcement, `import("./preview.webp?url")`. Lazy, so it never weighs on boot. */
   preview?: () => Promise<{ default: string }>;
   /**
-   * Display text boot never needs, as `import("./meta")` (ADR-049). AppsService loads every app's, in one chunk, once
-   * the desktop is idle; read it through `meta(id)`.
+   * Display text, as `import("./meta")` (ADR-049). The build copies it into the catalogue (ADR-077), so the OS never
+   * loads it; read it through `meta(id)` or `listings()`.
    */
   meta?: () => Promise<{ default: AppMeta }>;
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
@@ -182,7 +194,10 @@ export interface AppMeta {
   authors?: AppAuthor[];
 }
 
-export type AppListing = AppManifest & AppMeta;
+export type AppListing = AppManifest & AppMeta & {
+  /** Its props take `daily` (ADR-035), from the catalogue: a listing's `props` stays empty until its code loads. */
+  daily?: boolean;
+};
 
 export interface AppReplacement {
   app: AppId;

@@ -37,7 +37,7 @@
 
   // Solo never polls, and a link to an app or prop added after this build was cached looks broken here: ask once.
   $effect(() => {
-    if (!current && (broken || !manifest)) untrack(() => void version.check());
+    if (!current && (broken || (!manifest && router.last_link))) untrack(() => void version.check());
   });
 
   function reopen() {
@@ -67,7 +67,7 @@
   <main class="relative isolate min-h-0 flex-1">
     {#if current}
       {#key current}<SoloWindow id={current} />{/key}
-    {:else if (broken || !manifest) && version.update_available}
+    {:else if (broken || (!manifest && router.last_link)) && version.update_available}
       <EmptyState
         icon={ArrowCircleUpIcon}
         title="This link needs a newer WebOS"
@@ -85,9 +85,9 @@
           </Button>
         {/snippet}
       </EmptyState>
-    {:else if broken || !manifest}
+    {:else if broken || (!manifest && router.last_link)}
       <EmptyState icon={LinkBreakIcon} tone="error" title="This link can't open" description={version.is_checking ? "Checking for a newer version of WebOS…" : "The app it points to doesn't exist, or its data doesn't fit."} />
-    {:else if router.last_link}
+    {:else if router.last_link && manifest}
       <EmptyState icon={manifest.icon} title="{manifest.name} is closed">
         {#snippet actions()}
           <Button variant="primary" onclick={reopen}><ArrowClockwiseIcon weight="bold" /> Reopen</Button>

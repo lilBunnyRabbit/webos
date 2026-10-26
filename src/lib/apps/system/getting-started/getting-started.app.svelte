@@ -1,7 +1,7 @@
 <script lang="ts">
   import { z } from "zod";
   import { tick, untrack } from "svelte";
-  import kernel, { format_keys, Platform, type ShortcutsService } from "$lib/core/api";
+  import kernel, { format_keys, Platform, type AppsService, type ShortcutsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Button, Kbd } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
@@ -16,7 +16,8 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const progress = storage.file("progress.json", { tried: [] as TopicId[] }, z.object({ tried: z.array(z.enum(TOPIC_IDS)) }));
-  const topics = topics_for(kernel.platform);
+  void kernel.service<AppsService>("apps").catalogue();
+  const topics = $derived(topics_for(kernel.platform));
   const keyboard = kernel.platform === Platform.DESKTOP;
   const tried = $derived(new Set(progress.value.tried));
   const count = $derived(topics.filter((entry) => tried.has(entry.id)).length);

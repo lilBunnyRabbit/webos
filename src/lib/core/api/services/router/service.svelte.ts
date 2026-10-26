@@ -87,11 +87,17 @@ export class RouterService implements IRouterService {
     if (this.kernel.mode === Mode.FULL) history.replaceState(history.state, "", `${location.pathname}${location.search}`);
 
     const route = parse_hash(hash);
-    this.last_link = { hash, outcome: route ? this.open(route) : LinkOutcome.NOT_A_LINK };
-    if (!route) this.notifications_service.notify("router", { type: "error", title: "This link isn't one WebOS knows" });
+    if (!route) {
+      this.last_link = { hash, outcome: LinkOutcome.NOT_A_LINK };
+      this.notifications_service.notify("router", { type: "error", title: "This link isn't one WebOS knows" });
+      return;
+    }
+    void this.open(route).then((outcome) => (this.last_link = { hash, outcome }));
   };
 
-  private open(link: Route): LinkOutcome {
+  private async open(link: Route): Promise<LinkOutcome> {
+    // Boot knows only the installed apps (ADR-077); a link to any other needs the full catalogue.
+    if (!this.apps_service.get(link.id)) await this.apps_service.catalogue();
     const replaced = this.apps_service.get(link.id) ? null : resolve_replaced(Array.from(this.apps_service.list(), ([, manifest]) => manifest), link.id, link.props);
     const route = replaced ? { ...link, ...replaced } : link;
     const manifest = this.apps_service.get(route.id);
@@ -101,7 +107,9 @@ export class RouterService implements IRouterService {
     }
 
     // launch() would open the app without its data; a link with bad data opens nothing.
-    if (route.props !== undefined && !manifest.props?.safeParse(route.props).success) {
+    // Code that can't load (offline) opens anyway: the window says why.
+    const code = route.props === undefined ? undefined : await this.apps_service.load(route.id).catch(() => undefined);
+    if (code && !code.props?.safeParse(route.props).success) {
       this.notifications_service.notify("router", { type: "error", title: `The link to ${manifest.name} is broken`, message: "Its data doesn't fit the app." });
       return LinkOutcome.INVALID_PROPS;
     }

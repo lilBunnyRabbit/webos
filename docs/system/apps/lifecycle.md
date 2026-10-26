@@ -4,22 +4,16 @@ From folder to closed window. Services: [apps](../services/apps.md), [windows](.
 
 ## 1. Discovery
 
-`src/lib/apps/index.ts`:
+Two paths, one description of an app (ADR-077):
 
-```ts
-const modules = import.meta.glob<{ default: AppDefinition }>(["./system/*/index.ts", "./user/*/index.ts"], { eager: true });
-export const apps: AppManifest[] = Object.entries(modules).map(([path, m]) => ({ ...m.default, system: path.startsWith("./system/") }));
-```
-
-- Vite resolves the glob at build time. Adding an app = adding a folder; no registration.
+- **Build.** `tooling/vite-plugin-catalogue.ts` loads every `src/lib/apps/{system,user}/*/index.ts` in Node, describes each with `manifest_data()` (`services/apps/catalogue.ts`) and writes `store/catalogue.json` and `store/icons.svg`. Each manifest becomes a chunk of its own (`assets/{id}.manifest-<hash>.js`). Adding an app = adding a folder; no registration.
+- **Dev server and tests.** `src/lib/apps/index.ts` globs the same folders eagerly; `glob_source()` runs `manifest_data()` on them. Only `import.meta.env.DEV` code imports it, so a build never bundles it.
 - One level deep: `apps/system/{id}/index.ts`, `apps/user/{id}/index.ts`. The folder decides `system`.
-- Core tests don't depend on the user apps: `services/apps/test-apps.ts` has `EXAMPLE_APP` (a stand-in `example` app with a `{ count }` schema) and `TestAppsService`, which registers it on top of the glob. It's never globbed.
-- Eager: every manifest module runs when `$lib/apps` is first imported, which is during kernel construction. The `.app.svelte` files are not loaded; each is behind its `component` dynamic import.
-- Manifest evaluation happens inside a circular import of `$lib/core/api`, hence [the import rule](manifest.md#the-import-rule).
+- Core tests don't depend on the user apps: `services/apps/test-apps.ts` has `EXAMPLE_APP` (a stand-in `example` app with a `{ count }` schema) and `TestAppsService`, whose source is the system apps plus the stand-ins.
 
 ## 2. Registry
 
-The `AppsService` constructor calls `register()` for each manifest in glob order (system before user, alphabetical within). The registry is a `SvelteMap` keyed by `id`; a duplicate id overwrites. The start menu iterates `apps.list()`.
+`AppsService.init()` registers what the catalogue knows: at boot only the installed apps' entries from `/var/lib/apps/catalogue.json` (the full catalogue on the first boot of a release), each as a stub; the rest once something calls `catalogue()`. Each installed app's manifest chunk loads after first paint and replaces its stub ([apps](../services/apps.md#catalogue-adr-077)). The registry is a `SvelteMap` keyed by `id`; a duplicate id overwrites. The start menu iterates `apps.listings({ installed: true })`.
 
 ## 3. Launch
 
@@ -28,14 +22,14 @@ Entry points: start menu (`launch(id)`), desktop shortcut (through `apps.open(pa
 `AppsService.launch(id, props?)`:
 
 1. Unknown id → `throw new Error("App {id} not found")`.
-   A user app that isn't installed yet is installed first, with a "{name} installed" toast (ADR-040).
-2. Validates `props` against `manifest.props` ([rules](../services/apps.md#props-validation-adr-008)).
+   A user app that isn't installed opens without installing, with an "{App} isn't installed" toast offering Install (ADR-077).
+2. Validates `props` against `manifest.props` ([rules](../services/apps.md#props-validation-adr-008)). When the app's code hasn't landed yet, the window opens first and the props are checked when the manifest loads, before the component renders.
 3. Builds the instance (private `instantiate`) and starts the component import: `component()` returns a promise, stored as-is.
 4. `windows.open(app_instance)` with `AppInstance = { id, manifest (without component), component: Promise, props?, state }`. `state` is the window's `storage.window()` values: empty on launch, the saved values on restore.
 
 In solo mode (a `#/solo/` link, ADR-047) `SoloAppsService` replaces this: the first launch opens the one window and installs nothing; every later launch opens nothing, focuses that window and toasts "Open WebOS to use other apps" ([apps](../services/apps.md#solo-mode), [solo shell](../shell/solo.md)).
 
-**Session restore** is the other way in. At boot, if the user picks Restore, [SessionService](../services/session.md) calls `apps.create_instance(app_id, props)` for each saved window (`null` for an unknown app or invalid props, silently) and `windows.restore(snapshots, create)`, which inserts the windows with their saved bounds, flags and snap zone instead of the cascade. Skipped windows get one summary toast. Apps with `restore: false` in the manifest are never saved.
+**Session restore** is the other way in. At boot, if the user picks Restore, [SessionService](../services/session.md) loads each saved app's code (`apps.load`), then calls `apps.create_instance(app_id, props)` for each saved window (`null` for an unknown app, code that didn't load or invalid props, silently) and `windows.restore(snapshots, create)`, which inserts the windows with their saved bounds, flags and snap zone instead of the cascade. Skipped windows get one summary toast. Apps with `restore: false` in the manifest are never saved.
 
 ## 4. Window
 

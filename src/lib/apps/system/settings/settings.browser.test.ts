@@ -15,7 +15,7 @@ const shortcut = (category: ShortcutCategory): ListedShortcut => ({ id: category
 
 const STUBS = {
   dialogs: stub_service("dialogs", { system: [] }),
-  apps: stub_service("apps", { get: () => undefined, listings: () => [], launch: () => "" }),
+  apps: stub_service("apps", { get: () => undefined, listings: () => [], launch: () => "", catalogue: async () => true }),
   version: stub_service("version", {
     info: { version: "1.0.0", commit: "abc", branch: "master", buildTime: "2026-10-21T00:00:00Z" },
     changelog: [],

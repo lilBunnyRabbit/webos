@@ -97,7 +97,8 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         args: z.object({ id: arg.app() }),
         positional: ["id"],
         async run({ args }) {
-          const manifest = require_app(args.id);
+          if (!apps.get(args.id)) await apps.catalogue();
+          const manifest = (await apps.load(args.id).catch(() => undefined)) ?? require_app(args.id);
           const { $type: _, authors, ...app } = app_value(manifest, await apps.meta(args.id));
           return {
             ...app,
@@ -131,7 +132,7 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         async *run({ args }) {
           const sentence = args.words.join(" ").trim();
           if (!sentence) throw new ShellError("say what the app should do, like: app find make pixel art");
-          await apps.meta_ready;
+          await apps.catalogue();
           const listings = apps.listings();
           const { build_sentence_index, rank_sentence } = await import("./sentence");
           const strict = search_apps(listings, sentence);

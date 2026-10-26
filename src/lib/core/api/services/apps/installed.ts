@@ -4,6 +4,8 @@ import type { AppId } from "./type";
 
 /** Package databases live in `/var/lib` (ADR-040); app data folders sit beside it, and no app id ends in `.json`. */
 export const INSTALLED_PATH = `${PATHS.var_lib}/apps/installed.json`;
+/** The installed apps' catalogue entries (ADR-077): StoreService writes it, boot reads only this. */
+export const CATALOGUE_PATH = `${PATHS.var_lib}/apps/catalogue.json`;
 const INSTALLED_VERSION = 1;
 
 const installed_schema = z.object({

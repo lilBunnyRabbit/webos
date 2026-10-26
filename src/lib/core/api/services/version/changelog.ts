@@ -18,6 +18,8 @@ export const CHANGELOG: Release[] = [
         kind: IMPROVED,
         text: "Opening a file or a link with an app you haven't installed opens it without installing it, and offers Install.",
       },
+      { kind: IMPROVED, text: "WebOS starts faster: only the apps you installed load at startup." },
+      { kind: IMPROVED, apps: ["app-library"], text: "The App Store shows each app's version, the release it last changed in." },
     ],
   },
   {

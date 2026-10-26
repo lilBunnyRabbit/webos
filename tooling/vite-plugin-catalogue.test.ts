@@ -181,7 +181,7 @@ describe("every app", () => {
     expect(sprite).toContain("currentColor");
     expect(sprite).toContain("var(--primary)");
 
-    const catalogue = dev_catalogue(apps, "1.0.0");
+    const catalogue = dev_catalogue(apps, { version: "1.0.0", commit: "c", branch: "b", buildTime: "", buildTimestamp: 1 });
     for (const app of catalogue.apps) {
       expect(app.manifest).toMatch(new RegExp(`^src/lib/apps/(system|user)/${app.id}/index\\.ts$`));
       expect(app.entry).toMatch(/^src\/lib\/apps\/.+\.svelte$/);

@@ -9,6 +9,8 @@ import { TaskJobStatus } from "../tasks/type";
 import { BUILD_INFO } from "../version/build-info";
 import { stale_caches } from "./lists";
 import { current_ids } from "../apps/replaces";
+import { serialize_slice } from "../apps/catalogue";
+import { CATALOGUE_PATH } from "../apps/installed";
 import { LEGACY_PICKED_PATH, LEGACY_STATE_DIR, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_picked, parse_state, serialize_state } from "./persistence";
 import { StoreStatus, type StoreService as IStoreService } from "./type";
 
@@ -48,6 +50,7 @@ export class StoreService implements IStoreService {
   private tasks_service!: TasksService;
 
   private state_writer = new LatestWriter(() => this.files_service, STORE_STATE_PATH, "store state");
+  private catalogue_writer = new LatestWriter(() => this.files_service, CATALOGUE_PATH, "installed apps' catalogue");
 
   constructor(private kernel: Kernel) {
     this.files_service = $derived(this.kernel.service<FilesService>("files"));
@@ -84,6 +87,7 @@ export class StoreService implements IStoreService {
     if (new_build) this.reason = state === null ? SyncReason.SETUP : SyncReason.UPDATE;
     if (this.kernel.mode !== Mode.SOLO) await this.migrate_picked();
     this.installed = this.installed_ids();
+    this.catalogue_writer.seed(await this.read(CATALOGUE_PATH));
 
     this.cleanups.push(
       $effect.root(() => {
@@ -99,6 +103,11 @@ export class StoreService implements IStoreService {
         $effect(() => {
           const ids = this.installed_ids();
           untrack(() => this.follow_installed(ids));
+        });
+        // Boot reads only this (ADR-077), so it follows every install and uninstall, and a new build's catalogue.
+        $effect(() => {
+          const slice = this.apps_service.installed_catalogue();
+          if (slice) untrack(() => this.catalogue_writer.write(serialize_slice(slice, slice.apps)));
         });
       })
     );
@@ -231,6 +240,8 @@ export class StoreService implements IStoreService {
     const text = await this.read(LEGACY_PICKED_PATH);
     if (text === null) return;
     const picked = parse_picked(text) ?? [];
+    // Picks the device doesn't know yet wait for a boot that can fetch the catalogue, rather than being dropped.
+    if (picked.some((id) => !this.apps_service.get(id)) && !(await this.apps_service.catalogue())) return;
     const manifests = Array.from(this.apps_service.list(), ([, manifest]) => manifest);
     this.apps_service.install(current_ids(manifests, picked, (id) => this.apps_service.get(id) !== undefined));
     await this.remove(...split(LEGACY_PICKED_PATH));

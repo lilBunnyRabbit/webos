@@ -27,6 +27,7 @@
 
   const files = $derived(kernel.service<FilesService>("files"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  void kernel.service<AppsService>("apps").catalogue();
   const PDF_TOOLS = "pdf-tools";
 
   /** `undefined` while loading, `null` when the path points at nothing. */

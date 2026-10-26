@@ -57,6 +57,7 @@ export function version_shell(version: VersionService, apps: () => AppsService):
         async *run({ args }): AsyncGenerator<Value, void> {
           await version.load_changelog();
           if (args.apps) {
+            await apps().catalogue();
             for (const { app, release } of introduced_apps(version.changelog)) {
               const manifest = apps().get(app);
               if (manifest) yield { $type: "new-app", id: app, name: manifest.name, added: release.version, date: release.date };

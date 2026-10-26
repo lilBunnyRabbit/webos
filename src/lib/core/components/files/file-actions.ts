@@ -160,7 +160,11 @@ export function show_properties(handler: DirectoryHandler, window: WindowHandle,
 export async function open_with_items(item: FileSystemItem): Promise<MenuItem[]> {
   if (item.kind !== "file" || file_extension(item.name) === SHORTCUT_EXTENSION) return [];
   const file = await item.handle.getFile();
-  const apps = [...kernel.service<AppsService>("apps").list()].map(([, manifest]) => manifest);
+  const service = kernel.service<AppsService>("apps");
+  const known = () => [...service.list()].map(([, manifest]) => manifest);
+  // No app this device knows works on it: the full catalogue may have one that isn't installed (ADR-077).
+  let apps = known();
+  if (apps_for(apps, file).length === 0 && tools_for(apps, file).length === 0 && (await service.catalogue())) apps = known();
   const entry = (app: AppManifest): MenuItem => ({ id: `open_with:${app.id}`, label: app.name, icon: app.icon });
   const associated = apps_for(apps, file).map(entry);
   const tools = tools_for(apps, file).map(entry);

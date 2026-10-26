@@ -7,6 +7,8 @@ import { BUILD_INFO } from "../version/build-info";
 import { LEGACY_PICKED_PATH, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_state, serialize_picked, serialize_state } from "./persistence";
 import { StoreService } from "./service.svelte";
 import { StoreStatus } from "./type";
+import { CATALOGUE_PATH } from "../apps/installed";
+import { parse_catalogue_text } from "../apps/catalogue";
 
 const BUILD = BUILD_INFO.buildTimestamp;
 const APPS: Record<string, { system: boolean; name: string; replaces?: { app: string }[] }> = {
@@ -15,6 +17,7 @@ const APPS: Record<string, { system: boolean; name: string; replaces?: { app: st
   settings: { system: true, name: "Settings" },
 };
 const shutdowns: Array<() => Promise<void>> = [];
+const entry_of = (id: string) => ({ id, name: APPS[id]?.name ?? id, category: "productivity", system: APPS[id]?.system ?? false, version: "1.0.0", hash: "", manifest: `${id}.js`, entry: "", files: [] });
 
 async function seed(path: string, text: string): Promise<void> {
   const files = new FilesService();
@@ -43,6 +46,8 @@ async function open_tab(installed: string[] = ["paint"]) {
           .filter(([id]) => filter.installed === undefined || set.has(id) === filter.installed)
           [Symbol.iterator]()) as never,
       is_installed: (id: string) => set.has(id),
+      catalogue: async () => true,
+      installed_catalogue: () => ({ version: 1, core: "c", build: BUILD, release: "1.0.0", apps: [...set].sort().map(entry_of) }),
     }),
     tasks: stub_service("tasks", {}),
     store: StoreService,
@@ -61,7 +66,7 @@ async function read(files: FilesService, path: string): Promise<string | null> {
 }
 
 beforeEach(async () => {
-  await opfs.clear_opfs();
+  await vi.waitFor(() => opfs.clear_opfs());
 });
 
 afterEach(async () => {
@@ -85,7 +90,7 @@ describe("boot", () => {
     expect(tab.store.status("cards")).toBe(StoreStatus.NOT_INSTALLED);
     expect(tab.store.progress("paint")).toBeNull();
 
-    await opfs.clear_opfs();
+    await vi.waitFor(() => opfs.clear_opfs());
     await seed(STORE_STATE_PATH, serialize_state({ build: BUILD - 1, apps: ["paint"] }));
     const updated = await open_tab();
     expect(updated.store.is_saved("paint")).toBe(false);
@@ -117,5 +122,16 @@ describe("migration (ADR-077)", () => {
     expect(tab.store.is_saved("paint")).toBe(true);
     expect(await tab.files.get_directory("/var/lib/offline")).toBeNull();
     await vi.waitFor(async () => expect(parse_state(await read(tab.files, STORE_STATE_PATH))).toEqual({ build: BUILD, apps: ["paint"] }));
+  });
+});
+
+describe("installed apps' catalogue (ADR-077)", () => {
+  test("boot writes the installed apps' entries for the next boot to read", async () => {
+    const tab = await open_tab(["paint"]);
+    await vi.waitFor(async () => {
+      const slice = parse_catalogue_text(await read(tab.files, CATALOGUE_PATH));
+      expect(slice?.build).toBe(BUILD);
+      expect(slice?.apps.map(({ id }) => id)).toEqual(["paint", "settings"]);
+    });
   });
 });

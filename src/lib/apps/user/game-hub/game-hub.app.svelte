@@ -58,6 +58,7 @@
   ];
 
 
+  void kernel.service<AppsService>("apps").catalogue();
   const games = $derived(list_games(apps.listings()));
   const library = $derived(sort_entries(entries(games, plays.value), sort.value));
   const dailies = $derived(daily_games(games));

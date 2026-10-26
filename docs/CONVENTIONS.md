@@ -45,7 +45,7 @@ src/lib/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else
         ├── index.ts              # define_app manifest (eager)
-        ├── meta.ts               # description, keywords, pitch, authors: `meta: () => import("./meta")` (lazy, one `app-meta` chunk, ADR-049)
+        ├── meta.ts               # description, keywords, pitch, authors: `meta: () => import("./meta")` (the build copies it into the catalogue, ADR-049, ADR-077)
         ├── icon.svelte           # the app's own icon
         ├── highlights.ts         # App Library showcase slides, `highlights: () => import("./highlights")` (lazy)
         ├── package.json          # only when the app has its own packages (ADR-045)
@@ -112,10 +112,10 @@ export default define_app({
 ```
 
 - What an app may rely on (frozen at 1.0, stable until 4.0) and what is internal: [system/app-api.md](system/app-api.md).
-- Auto-discovered by glob in `src/lib/apps/index.ts`. No registration.
+- Discovered by folder: the build writes every app into the catalogue, the dev server and tests glob them in `src/lib/apps/index.ts` (ADR-077). No registration.
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
-- Display text (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts`: boot never reads it, and AppsService loads every app's together after boot (ADR-049).
+- Display text (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): the build copies it into the app's catalogue entry, so the OS shows it without loading the app (ADR-077).
 - Shell commands: `shell: () => import("./commands")`, never an inline object. `commands.ts` default-exports the `ShellContribution` ([writing an app](system/apps/writing-an-app.md)).
 - A manifest may take only types and functions from `$lib/core/api`. Manifests are evaluated while that barrel is still initializing (AppsService imports the glob), so a `const` from it is in the temporal dead zone. Import constants such as `FILE_PROPS` from their own module (`$lib/core/api/services/apps/helpers`).
 - Everything a manifest imports ships in the boot chunk, and a module the app's lazy code also imports lands there whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 190 KB gz (`bun run build && bun run budget`).
