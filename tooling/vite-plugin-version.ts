@@ -34,9 +34,10 @@ export function get_version_info(root: string): VersionInfo {
 }
 
 // One stamp per build or dev session: the bundle, version.json and the service worker's runtime cache name must match.
-export function version_plugin(info: VersionInfo): Plugin {
+export function version_plugin(info: VersionInfo, extra: () => Promise<object | null> = async () => null): Plugin {
   let out_dir = "dist";
   let version_url = "/version.json";
+  let build = false;
 
   return {
     name: "version-plugin",
@@ -44,18 +45,21 @@ export function version_plugin(info: VersionInfo): Plugin {
     configResolved(config) {
       out_dir = resolve(config.root, config.build.outDir);
       version_url = `${config.base}version.json`;
+      build = config.command === "build";
     },
 
     // Dev: serve /version.json via middleware
     configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        if (req.url === version_url) {
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url !== version_url) return next();
+        try {
+          const body = JSON.stringify({ ...info, ...(await extra()) }, null, 2);
           res.setHeader("Content-Type", "application/json");
           res.setHeader("Cache-Control", "no-store");
-          res.end(JSON.stringify(info, null, 2));
-          return;
+          res.end(body);
+        } catch (error) {
+          next(error);
         }
-        next();
       });
     },
 
@@ -68,9 +72,10 @@ export function version_plugin(info: VersionInfo): Plugin {
       };
     },
 
-    closeBundle() {
+    async closeBundle() {
+      if (!build) return;
       mkdirSync(out_dir, { recursive: true });
-      writeFileSync(resolve(out_dir, "version.json"), JSON.stringify(info, null, 2));
+      writeFileSync(resolve(out_dir, "version.json"), JSON.stringify({ ...info, ...(await extra()) }, null, 2));
     },
   };
 }

@@ -60,8 +60,18 @@ interface Pipeline { state: PipelineState; sha: string; title: string; created: 
 |------|--------|
 | `config()` | Calls `get_version_info()` **once** and keeps the result. Defines `__VERSION_INFO__` as that JSON, so it's baked into the bundle in dev and in build. |
 | `configResolved()` | Records `build.outDir` (resolved against root). |
-| `closeBundle()` (build) | Writes the same stamp to `{outDir}/version.json`. |
-| `configureServer()` (dev) | Middleware answers `{base}version.json` (the resolved Vite `base`) with the same stamp, `Cache-Control: no-store`. |
+| `closeBundle()` (build) | Writes the same stamp to `{outDir}/version.json`, plus the catalogue plugin's fields. Builds only: a dev server's close writes nothing. |
+| `configureServer()` (dev) | Middleware answers `{base}version.json` (the resolved Vite `base`) with the same stamp and fields, `Cache-Control: no-store`. |
+
+`version_plugin(info, extra)` merges what `extra()` resolves to; `vite.config.ts` passes the catalogue plugin's `version_fields` (ADR-077 stage 2, [overview](../overview.md#build--deploy)). `version.json` then holds:
+
+| Field | Value |
+|-------|-------|
+| `version`, `commit`, `branch`, `buildTime`, `buildTimestamp` | The stamp above. |
+| `core` | The core hash: what a new service worker would precache, normalized so a rebuild of the same tree gives the same value. `"dev"` on the dev server. |
+| `notes` | `{ version, date, title, changes: [{ kind, text }] }[]`: the top `CHANGELOG` release plus every release newer than the deployed catalogue's `release`. On the dev server, or without a previous catalogue, the top release only. |
+
+Nothing reads `core` or `notes` yet; the update overlay will (ADR-077).
 
 The bundle and `version.json` always carry the same `buildTimestamp`. Only a new build (or a dev server restart) produces a newer one.
 

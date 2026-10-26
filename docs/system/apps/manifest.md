@@ -198,6 +198,12 @@ component: () => import("./my-app.app.svelte"),
 
 Always explicit; there's no convention-based lookup. The import runs when the app is launched (in `launch()`, before the window renders), not at discovery. Each launch calls the loader again; the browser's module cache makes repeats free.
 
+## Node-safe
+
+The build imports every manifest in Node to write the app catalogue and the icon sprite (ADR-077, [overview](../overview.md#build--deploy)): `index.ts`, everything it imports, its `meta()` and its icon component, rendered with `svelte/server`. So none of them may touch the DOM, `window`, `location`, `navigator`, `localStorage` or OPFS **at module level**: read them inside functions that run later (`badge`, `component`, a lazy import). A manifest that breaks this fails `bun run build` with `catalogue: … can't run in Node`, and `tooling/vite-plugin-catalogue.test.ts` fails first. The `$lib/core/api` barrel builds the kernel singleton on import, so `detect_platform()` and `detect_mode()` answer desktop and full when there's no browser. The component itself must also keep `component: () => import("./x.app.svelte")` written literally: the build reads the path from the source to find its chunk.
+
+Only `src/lib/apps/system/*` and `src/lib/apps/user/*` are read; nothing else under `src/lib/apps/` reaches the catalogue.
+
 ## The import rule
 
 A manifest may import only **types and functions** from `$lib/core/api`. Import constants from their own module:

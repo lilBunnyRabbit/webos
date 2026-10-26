@@ -85,3 +85,15 @@ Each stage is its own release and updates its docs in the same commit.
   - stage 1: `system/services/offline.md` becomes `store.md`, `apps.md`, `persistence.md`, `system-apps.md` (App Store), `shell/taskbar.md`, `shell/mobile.md`, `services/settings.md`, kernel table in `CLAUDE.md` and `system/overview.md`, the README services diagram, the Docs app's pages;
   - stage 2: `apps/manifest.md`, `app-api.md`, `kernel.md` (boot), `overview.md` (Chunks, boot budget), `services/version.md` (overlay), `docs/writing-an-app` guidance;
   - stage 3: `store.md` (hot updates), `services/version.md`, `shell/window.md` and `shell/taskbar.md` (Update ready).
+
+## Revisions
+
+### 2026-10-26: stage 2 build side built
+The build writes `store/catalogue.json`, `store/icons.svg`, a chunk per manifest, and `core` and `notes` in `version.json` (`tooling/vite-plugin-catalogue.ts`, [overview](../system/overview.md#build--deploy)). The runtime doesn't read them yet; boot is unchanged. Decided within scope:
+- **Manifests load through a second, bare Vite server** (`ssrLoadModule`, `svelte()` plus the build's aliases), not the project config, whose plugins would run their hooks twice. Only `apps/{system,user}/*`. The dev server answers `store/*` from the same code with its own loader; Node tests call `collect_apps()` with `import()`.
+- **Node-safe manifests needed one core fix:** the `$lib/core/api` barrel builds the kernel on import, and `detect_platform()` / `detect_mode()` read `location`, `matchMedia` and `navigator` in default parameters. They now answer desktop and full without a browser. No manifest needed a change.
+- **Catalogue fields** beyond the ADR's list, for the readers it names: `tools` and `replaces` (Open with, old ids in links), `restore`, `defaults`, `daily_rank`, `widget_size`, `default_widget`, and flags for parts that need the manifest's code (`daily`, `widget`, `highlights`, `preview`, `shell`, `badge`). `manifest`, `entry` and `files` are paths relative to the base, like the offline lists.
+- **Manifest chunks are facades for now:** an implicit entry per `index.ts`, loaded after `main.ts`. While `main` holds the manifests, each chunk re-exports from it and `main` grows by their export table (+0.4 KB gz, boot 218.6 / 219). They become standalone when boot stops importing them, with no build change. The manifest chunk isn't in `files` yet.
+- **Hashes ignore the build stamp and renamed imports**, so a rebuild of the same tree gives the same core and app hashes (checked: two builds, identical hashes for core and all 104 apps). The app hash covers its files, its catalogue data, its symbol and its `index.ts` source (the facade says nothing about the manifest). The core hash covers `offline/core.json`'s files and the precached `public/` files; it changes every release today, because `main`, `app-boot`, `app-meta` and the changelog are in that list until the runtime switch takes them out.
+- **`notes`** carry each release's `title` too, for the overlay.
+- **System apps have `files: []`** until the offline lists give system apps their own (parallel change); their hash then follows.

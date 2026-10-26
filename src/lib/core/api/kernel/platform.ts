@@ -14,9 +14,9 @@ interface NavigatorUAData {
  * is mobile. Hints come first because Samsung Internet on Galaxy phones reports `hover: hover`.
  */
 export function detect_platform(
-  search: string = location.search,
-  touch_first: boolean = matchMedia("(pointer: coarse) and (hover: none)").matches,
-  phone: boolean = (navigator as Navigator & { userAgentData?: NavigatorUAData }).userAgentData?.mobile ?? false
+  search: string = globalThis.location?.search ?? "",
+  touch_first: boolean = globalThis.matchMedia?.("(pointer: coarse) and (hover: none)").matches ?? false,
+  phone: boolean = (globalThis.navigator as (Navigator & { userAgentData?: NavigatorUAData }) | undefined)?.userAgentData?.mobile ?? false
 ): Platform {
   const forced = new URLSearchParams(search).get("platform");
   if (forced === Platform.MOBILE || forced === Platform.DESKTOP) return forced;

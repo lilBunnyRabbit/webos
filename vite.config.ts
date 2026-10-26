@@ -6,6 +6,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
 import { get_version_info, version_plugin } from "./tooling/vite-plugin-version";
 import { offline_plugin } from "./tooling/vite-plugin-offline";
+import { catalogue_plugin } from "./tooling/vite-plugin-catalogue";
 import { phosphor_imports_plugin, phosphor_plugin } from "./tooling/vite-plugin-phosphor";
 import { core_modules } from "./tooling/vite-core-chunk";
 import { import_map_plugin } from "./tooling/vite-plugin-import-map";
@@ -82,6 +83,7 @@ const cores = new WeakMap<object, Set<string>>();
 const BASE = "/webos/";
 const info = get_version_info(process.cwd());
 const offline = offline_plugin(info.buildTimestamp);
+const catalogue = catalogue_plugin(info);
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -97,9 +99,10 @@ export default defineConfig({
     //     runes: true,
     //   },
     // }
-    version_plugin(info),
+    version_plugin(info, catalogue.version_fields),
     import_map_plugin(),
     offline.plugin,
+    catalogue.plugin,
     portfolio_path_plugin(process.cwd()),
     preload_font_plugin(/InterVariable-[^/]*\.woff2$/),
     preload_main_plugin(path.resolve("src/main.ts")),
