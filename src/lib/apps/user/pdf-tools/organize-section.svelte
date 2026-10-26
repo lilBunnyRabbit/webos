@@ -206,7 +206,7 @@
   });
 </script>
 
-<DropZone label="Drop a PDF to organize it" class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={(sources) => void open(sources[0])}>
+<DropZone label="Drop a PDF to organize it" accept={PDF_ACCEPT} {active} class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={(sources) => void open(sources[0])}>
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>

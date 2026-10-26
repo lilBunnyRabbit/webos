@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import {
     Button,
     Checkbox,
@@ -49,7 +50,7 @@
 
   const ZOOM_STEP = 1.25;
 
-  const { picker, initial_paths }: SectionProps = $props();
+  const { picker, initial_paths, active }: SectionProps = $props();
 
   const { app_id, storage, window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
@@ -317,19 +318,11 @@
     if (file) open_file(file, null);
     else report("Not an image", "Drop a PNG, JPEG, WebP or other image file", NotificationType.WARNING);
   }
-
-  function on_paste(event: ClipboardEvent) {
-    const file = image_files(event.clipboardData)[0];
-    if (!file) return;
-    event.preventDefault();
-    open_file(file, null);
-  }
 </script>
 
 <!-- Focusable so clicks anywhere in the app take focus, which scopes paste and shortcuts to this window. -->
 <div
   role="presentation"
-  tabindex="-1"
   class={cn("relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto] outline-none", dragging && "ring-2 ring-primary ring-inset")}
   onkeydown={on_keydown}
   onkeyup={(event) => event.code === "Space" && (space_held = false)}
@@ -338,7 +331,7 @@
   ondragover={on_drag}
   ondragleave={on_drag}
   ondrop={on_drop}
-  onpaste={on_paste}
+  {@attach active && paste_files({ win, accept: ["image/*"], onfiles: (files) => open_file(files[0], null) })}
 >
   <Toolbar>
     {@render picker()}

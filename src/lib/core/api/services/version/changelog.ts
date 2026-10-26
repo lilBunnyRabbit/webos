@@ -17,6 +17,14 @@ export const CHANGELOG: Release[] = [
         kind: IMPROVED,
         text: "Files copied in Explorer paste into any Open…, and the terminal's clip ls shows what's on the clipboard.",
       },
+      {
+        kind: IMPROVED,
+        text: "Ctrl+V works in apps straight after they open, without a click first, in a popped-out window too, and pastes files copied in Explorer.",
+      },
+      {
+        kind: NEW,
+        text: "Paste works in more apps: PDF Tools, Video Tools, Birdseye, Music Visualizer, Soundboard, Font Viewer, Metadata, Hex Viewer, Media Preview, PDF Viewer, Nonogram's From an image and the Settings wallpaper.",
+      },
     ],
   },
   {

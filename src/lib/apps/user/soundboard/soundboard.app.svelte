@@ -4,6 +4,7 @@
   import { has_drag_paths, read_drag_paths } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
   import { has_files } from "$kit/utils/image";
+  import { paste_files } from "$kit/utils/paste";
   import type { Position } from "$lib/core/utils/type";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
@@ -385,6 +386,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: ACCEPT, multiple: true, onfiles: (list) => void add_files(list) })}
   role="presentation"
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   ondragenter={on_dragover}
@@ -416,7 +418,7 @@
       <EmptyState
         icon={SquaresFourIcon}
         title="No sounds on this board"
-        description="Add sounds or videos from your files or your device, or drop them here. From a video you pick the part to keep. Each sound is copied into the board, so moving the original won't break it."
+        description="Add sounds or videos from your files or your device, drop them here or paste them. From a video you pick the part to keep. Each sound is copied into the board, so moving the original won't break it."
       >
         {#snippet actions()}
           <Button variant="primary" onclick={add_from_files}><FolderOpenIcon weight="bold" /> Add sounds…</Button>

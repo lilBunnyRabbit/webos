@@ -110,10 +110,16 @@ The desktop and File Explorer select the same way (`$lib/core/utils/selection.ts
 
 ## Paste and drop
 
-Apps that take a file or a code (image tools, QR Reader, GIF Player, Forms' answer codes) accept it three ways: Open…, a drop, and a paste.
+Apps that take a file or a code (image tools, QR Reader, GIF Player, PDF Tools, Forms' answer codes) accept it three ways: Open…, a drop, and a paste.
 
 - **Drop:** files dragged in from the computer (`has_files(event)`, `$kit/utils/image`) light the drop area with an inset 2px `primary` ring (`ring-2 ring-primary ring-inset`) while they're over it. Drags from inside the page are left alone.
-- **Paste:** anywhere in the window, not only in a field. A `<svelte:document onpaste>` handler acts only when its window is focused (`win.is_focused`) and the event's target is inside the app's root (or `body`); a text paste skips inputs, textareas and contenteditable. Anything it doesn't recognise falls through to the browser.
+- **Paste:** anywhere in the window, not only in a field, and straight after the window opens: no click first. Use the kit's attachment, never a hand-rolled `onpaste` (ADR-076):
+  ```svelte
+  <div {@attach active && paste_files({ win, accept: ["image/*"], multiple: true, onfiles: (files) => take(files) })}>
+  ```
+  It listens on the root's own document (so a popped-out window works), acts only while the window is focused with no sheet or system dialog up, and only for targets inside the window's frame (a focused window holds the keyboard on its frame, outside the app's root) or `body`. Files on the paste that match `accept` win, even in a field. Otherwise files copied in WebOS (Explorer, desktop, `copy`) when the system clipboard's text is still their paths. Otherwise text, which a field keeps unless `ontext(text, editable)` returns `true`. One usable file, or a `multiple` caller, goes straight to `onfiles`; several open the clipboard view to pick one. Anything it doesn't claim falls through to the browser.
+- **The picker pastes too.** Every Open… has **Paste…** beside "This device…", which opens the clipboard view (the system clipboard's item and the WebOS copy, thumbnails, unaccepted items dimmed); it's the way in on a phone. Ctrl+V while the picker is up pastes into it.
+- Pasting means opening. Where paste means inserting into a document (Moonrabbit and Proposals pictures, Warren, Paint and Hopsprite) the app keeps its own handler.
 - A dropped or pasted file is a `File` in memory: nothing is written to OPFS until the user saves (ADR-031). The empty state says so in its one line: "Open an image, drop it here or paste it."
 
 ## Dialogs and menus

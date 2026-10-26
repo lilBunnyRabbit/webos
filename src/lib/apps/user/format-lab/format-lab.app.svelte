@@ -11,6 +11,7 @@
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { error_message, format_bytes, resolve_token } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { SSIM_STEP, SSIM_WINDOW } from "$kit/utils/codecs";
@@ -280,20 +281,6 @@
     }
   }
 
-  function accepts_input() {
-    return win.is_focused && dialogs.system.length === 0 && dialogs.for_window(window_id).length === 0;
-  }
-
-  function on_paste(event: ClipboardEvent) {
-    if (!accepts_input()) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const file = Array.from(event.clipboardData?.files ?? []).find(is_image);
-    if (!file) return;
-    event.preventDefault();
-    take(file, null);
-  }
-
   function on_dragover(event: DragEvent) {
     if (!has_files(event) || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
     event.preventDefault();
@@ -315,8 +302,6 @@
   const total_ms = $derived(LAB_FORMATS.reduce((sum, format) => sum + (current(format)?.ms ?? 0), 0));
   const ready_count = $derived(LAB_FORMATS.filter((format) => current(format)).length);
 </script>
-
-<svelte:document onpaste={on_paste} />
 
 {#snippet left_side(pixelated: boolean)}
   {#if left_bitmap}
@@ -342,6 +327,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: IMAGE_ACCEPT, onfiles: (files) => take(files[0], null) })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
   aria-label="Format Lab"

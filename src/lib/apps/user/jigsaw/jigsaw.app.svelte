@@ -1,6 +1,7 @@
 <script lang="ts">
-  import kernel, { type DialogsService, NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
+  import kernel, { NotificationType, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { format_time, Stopwatch, track_play } from "$kit/games";
   import { BoardOverlay, Button, EmptyState, IconButton, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
@@ -48,8 +49,7 @@
 
   const { path: path_prop }: { path?: string } = $props();
 
-  const { app_id, window_id, window: win, storage } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { app_id, window: win, storage } = get_app_context();
   const play = track_play(app_id, () => win.is_visible);
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -384,16 +384,6 @@
     return () => element.removeEventListener("wheel", on_wheel);
   }
 
-  function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const list = image_files(event.clipboardData);
-    if (!list.length) return;
-    event.preventDefault();
-    void take(list);
-  }
-
   function on_dragover(event: DragEvent) {
     if (!has_files(event)) return;
     event.preventDefault();
@@ -412,10 +402,9 @@
   }
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: ["image/*"], onfiles: (files) => void take(files) })}
   role="presentation"
   class={cn("grid h-full grid-rows-[auto_1fr_auto]", dragging_file && "ring-2 ring-cottontail ring-inset")}
   ondragover={on_dragover}

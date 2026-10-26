@@ -6,6 +6,8 @@ Id `image-tools` · Source: `src/lib/apps/user/image-tools/`, writers in `src/li
 
 One app with a section per small image job: remove background, join, trim, split, sprites, atlas, patch, redact, squash, fit under a size, convert, compare, poster print, test image. This page covers the parts with non-obvious internals: Fit (getting an image under an upload limit while keeping as much quality as it can), Convert (one image in every format) and the formats both write through the kit's encoder table. The other sections are forms over canvas operations.
 
+Every section except Test image takes an image three ways: Open…, a drop, and Ctrl+V anywhere in the window, through the kit's `paste_files` on the section's root while the section is the active one (ADR-076). Join, Atlas, Squash, Compare and Patch take every pasted image; the others take one, and several open the clipboard view to pick.
+
 ## How it works
 
 ### Fit search

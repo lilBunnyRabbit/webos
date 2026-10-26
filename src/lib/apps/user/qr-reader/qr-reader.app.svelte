@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { Button, CopyButton, EmptyState, IconButton, Section, Toolbar, button } from "$lib/core/components/ui";
   import { cn, format_datetime, error_message } from "$lib/core/utils";
   import {
@@ -105,13 +106,6 @@
     if (file) void scan_file(file);
   }
 
-  function on_paste(event: ClipboardEvent) {
-    const pasted = [...(event.clipboardData?.files ?? [])];
-    if (!pasted.length) return;
-    event.preventDefault();
-    scan_first(pasted);
-  }
-
   function on_drop(event: DragEvent) {
     event.preventDefault();
     dragging = false;
@@ -134,9 +128,8 @@
 {:else}
   <div
     role="presentation"
-    tabindex="-1"
-    class={cn("grid h-full grid-rows-[auto_1fr] outline-none", dragging && "ring-2 ring-primary ring-inset")}
-    onpaste={on_paste}
+    class={cn("grid h-full grid-rows-[auto_1fr]", dragging && "ring-2 ring-primary ring-inset")}
+    {@attach paste_files({ win, accept: ["image/*"], onfiles: scan_first })}
     ondragover={on_dragover}
     ondragleave={on_dragleave}
     ondrop={on_drop}

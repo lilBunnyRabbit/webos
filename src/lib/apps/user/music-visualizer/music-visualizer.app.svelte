@@ -4,6 +4,7 @@
   import { Button, EmptyState, IconButton, Segmented, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { format_bytes, error_message } from "$lib/core/utils";
   import { has_files } from "$kit/utils/image";
+  import { paste_files } from "$kit/utils/paste";
   import {
     ChartBar as ChartBarIcon,
     Circle as CircleIcon,
@@ -227,6 +228,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: ACCEPT, onfiles: ([file]) => void load(async () => ({ file, path: null })) })}
   role="presentation"
   tabindex="-1"
   class="relative h-full outline-none"
@@ -243,7 +245,7 @@
       {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !file && !mic}
-    <EmptyState icon={EqualizerIcon} title="Nothing playing" description="Open a song to see it as bars, a waveform or a circle. You can also drop one here or listen to the microphone.">
+    <EmptyState icon={EqualizerIcon} title="Nothing playing" description="Open a song to see it as bars, a waveform or a circle. You can also drop or paste one here, or listen to the microphone.">
       {#snippet actions()}
         <Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open audio…</Button>
         <Button onclick={toggle_mic}><MicrophoneIcon weight="bold" /> Use microphone</Button>

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Input, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
   import { SwipeCompare } from "$kit/components/swipe-compare";
@@ -54,8 +55,7 @@
   }
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { app_id, window: win, storage } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const settings = storage.persisted(
@@ -209,16 +209,6 @@
     copied_timer = setTimeout(() => (copied = false), 1200);
   }
 
-  function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const files = image_files(event.clipboardData);
-    if (!files.length) return;
-    event.preventDefault();
-    take(files);
-  }
-
   function on_dragover(event: DragEvent) {
     if (!has_files(event)) return;
     event.preventDefault();
@@ -241,8 +231,6 @@
   }
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 {#snippet heading(text: string)}
   <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">{text}</h3>
 {/snippet}
@@ -256,6 +244,7 @@
 
 <div
   bind:this={root}
+  {@attach active && paste_files({ win, accept: ["image/*"], onfiles: (files) => take(files) })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
   aria-label="Fit under a size"

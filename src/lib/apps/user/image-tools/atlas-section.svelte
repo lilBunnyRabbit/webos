@@ -1,8 +1,9 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type FilesService } from "$lib/core/api";
+  import kernel, { type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import {
     Export as ExportIcon,
     FolderOpen as FolderOpenIcon,
@@ -15,7 +16,7 @@
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
-  import { has_files, image_files, is_image_file, load_image, load_image_at, paint, read_pixels, type SourceImage } from "$kit/utils/image";
+  import { has_files, is_image_file, load_image, load_image_at, paint, read_pixels, type SourceImage } from "$kit/utils/image";
   import { AtlasFormat, SHEET_SIZES, natural_compare, pack, unique_names, type AtlasFrame, type Rect } from "./atlas";
   import { draw_sheet, export_atlas, type SheetFrame } from "./atlas-render";
   import { is_image_name } from "./naming";
@@ -48,8 +49,7 @@
   const TAP_SLOP = 6;
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window_id, window: win } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { app_id, window: win } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
 
   let root = $state<HTMLElement>();
@@ -183,16 +183,6 @@
     for (const frame of removed) frame.image.bitmap.close();
     hovered = selected = null;
     camera = FIT;
-  }
-
-  function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const list = image_files(event.clipboardData);
-    if (!list.length) return;
-    event.preventDefault();
-    take(list);
   }
 
   function on_dragover(event: DragEvent) {
@@ -349,14 +339,13 @@
   }
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 {#snippet heading(text: string)}
   <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">{text}</h3>
 {/snippet}
 
 <div
   bind:this={root}
+  {@attach active && paste_files({ win, accept: ["image/*"], multiple: true, onfiles: (files) => take(files) })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
   aria-label="Atlas"

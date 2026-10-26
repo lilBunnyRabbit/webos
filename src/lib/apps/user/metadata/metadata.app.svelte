@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { Button, Checkbox, EmptyState, IconButton, Section, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
   import {
@@ -124,6 +125,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: ACCEPT, onfiles: ([file]) => void load(file, null) })}
   role="presentation"
   class={cn("relative h-full", dragging && "ring-2 ring-primary ring-inset")}
   ondragover={on_dragover}
@@ -137,7 +139,7 @@
       <EmptyState
         icon={FileMagnifyingGlassIcon}
         title="No file open"
-        description="Open a JPEG, PNG, WebP or PDF to see what it says about itself. You can also drop one here."
+        description="Open a JPEG, PNG, WebP or PDF to see what it says about itself. You can also drop or paste one here."
         actions={open_actions}
       />
     {/if}

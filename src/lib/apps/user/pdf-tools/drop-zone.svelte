@@ -1,10 +1,23 @@
 <script lang="ts">
   import { has_drag_paths } from "$lib/core/components/files/drag";
   import { cn } from "$lib/core/utils";
+  import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import type { Snippet } from "svelte";
-  import { accepts_drop, read_drop, type SourceFile } from "./pdf-files";
+  import { accepts_drop, device_source, read_drop, type SourceFile } from "./pdf-files";
 
-  const { ondrop, label, class: class_name, children }: { ondrop: (sources: SourceFile[]) => void; label: string; class?: string; children: Snippet } = $props();
+  interface Props {
+    ondrop: (sources: SourceFile[]) => void;
+    label: string;
+    accept: string[];
+    multiple?: boolean;
+    active: boolean;
+    class?: string;
+    children: Snippet;
+  }
+
+  const { ondrop, label, accept, multiple = false, active, class: class_name, children }: Props = $props();
+  const { window: win } = get_app_context();
 
   let root = $state<HTMLElement | null>(null);
   let over = $state(false);
@@ -29,7 +42,10 @@
   }
 </script>
 
-<div bind:this={root} class={cn("relative", class_name)} role="region" aria-label={label} ondragenter={on_dragover} ondragover={on_dragover} ondragleave={on_dragleave} ondrop={on_drop}>
+<div
+  bind:this={root}
+  {@attach active && paste_files({ win, accept, multiple, onfiles: (files) => ondrop(files.map(device_source)) })}
+  class={cn("relative", class_name)} role="region" aria-label={label} ondragenter={on_dragover} ondragover={on_dragover} ondragleave={on_dragleave} ondrop={on_drop}>
   {@render children()}
   {#if over}
     <div class="pointer-events-none absolute inset-2 z-10 grid place-items-center rounded-xl bg-primary/8 ring-2 ring-primary/70">

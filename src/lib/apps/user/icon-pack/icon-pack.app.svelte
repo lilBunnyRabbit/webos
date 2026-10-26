@@ -1,9 +1,10 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
+  import kernel, { type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { to_hex } from "$lib/apps/system/settings/color";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { error_message, format_bytes } from "$lib/core/utils";
   import { has_files } from "$kit/utils/image";
   import { write_at } from "$lib/core/utils/zip/files";
@@ -35,8 +36,7 @@
   const ACCEPT = ["image/*", ".svg"];
 
   const { path }: { path?: string } = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { app_id, window: win, storage } = get_app_context();
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
@@ -122,17 +122,6 @@
     }
   }
 
-  function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    if (target instanceof HTMLInputElement) return;
-    const files = Array.from(event.clipboardData?.files ?? []);
-    if (!files.length) return;
-    event.preventDefault();
-    take(files);
-  }
-
   function on_dragover(event: DragEvent) {
     if (!has_files(event)) return;
     event.preventDefault();
@@ -150,8 +139,6 @@
     take(Array.from(event.dataTransfer?.files ?? []));
   }
 </script>
-
-<svelte:document onpaste={on_paste} />
 
 {#snippet heading(label: string)}
   <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">{label}</h3>
@@ -173,6 +160,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: ACCEPT, onfiles: take })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
   aria-label="Icon Pack"

@@ -5,6 +5,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes } from "$lib/core/utils";
   import { has_files } from "$kit/utils/image";
+  import { paste_files } from "$kit/utils/paste";
   import {
     ArrowLineLeft as ArrowLineLeftIcon,
     ArrowLineRight as ArrowLineRightIcon,
@@ -294,6 +295,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: VIDEO_ACCEPT, onfiles: take })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto] outline-none"
   role="presentation"
   tabindex="-1"
@@ -327,7 +329,7 @@
     <EmptyState
       icon={FilmSlateIcon}
       title="No video open"
-      description="Trim a video to a WebM clip, turn part of it into a GIF, or save its sound. Open one or drop it here."
+      description="Trim a video to a WebM clip, turn part of it into a GIF, or save its sound. Open one, drop it here or paste it."
     >
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a video…</Button>{/snippet}
     </EmptyState>

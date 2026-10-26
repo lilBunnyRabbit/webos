@@ -3,7 +3,7 @@ Id `soundboard` · Source: `src/lib/apps/user/soundboard/` · [brainstorm](../br
 
 ## What it does
 
-A grid of pads that play your own sounds by click or key, on one or more boards. A pad has a label, a theme colour or any colour, an optional picture, a volume, a key and a loop switch. Its sound can be trimmed and cut in the pad dialog, and a pad can be made from a part of a video: the video opens a trim sheet with the picture following the handles, and only the chosen part is kept, as a WAV. Credit: LaxDOTexe and the owner (`meta.ts`).
+A grid of pads that play your own sounds by click or key, on one or more boards. A pad has a label, a theme colour or any colour, an optional picture, a volume, a key and a loop switch. Its sound can be trimmed and cut in the pad dialog, and a pad can be made from a part of a video: the video opens a trim sheet with the picture following the handles, and only the chosen part is kept, as a WAV. Sounds and videos come in through Add sounds…, a drop, or Ctrl+V (`paste_files`, every pasted file at once through the same `add_files` as a device drop). Credit: LaxDOTexe and the owner (`meta.ts`).
 
 ## How it works
 

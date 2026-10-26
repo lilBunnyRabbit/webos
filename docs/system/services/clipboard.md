@@ -34,7 +34,7 @@ The caller shows the conflict question: File Explorer as a window sheet (`Confli
 
 ### The system clipboard (ADR-076)
 
-Copy and cut write the paths as text to the system clipboard, fire and forget (a refusal is a `console.warn`), replacing whatever was there, as a real OS does. That text is how a paste in an app or the picker tells the two clipboards apart: text equal to `content.paths.join("\n")` means the WebOS copy is the newest thing copied, anything else means the system clipboard is newer. The logic lives in `core/components/clipboard/` ([files: clipboard view](files.md#clipboard-view-adr-076)); `clear()` leaves the system clipboard alone.
+Copy and cut write the paths as text to the system clipboard, fire and forget (a refusal is ignored), replacing whatever was there, as a real OS does. That text is how a paste in an app or the picker tells the two clipboards apart: text equal to `content.paths.join("\n")` means the WebOS copy is the newest thing copied, anything else means the system clipboard is newer. The logic lives in `core/components/clipboard/` ([files: clipboard view](files.md#clipboard-view-adr-076)); `clear()` leaves the system clipboard alone.
 
 ## Lifecycle
 
@@ -46,7 +46,7 @@ None. A reload empties the clipboard, as on a real OS.
 
 ## Shell
 
-Contributes `copy` (text, or piped files onto the file clipboard), `paste` and `clip ls` (`clipboard/shell.ts`). `clip ls` lists the clipboard newest first: the system clipboard's item as a `clip` value (`name`, `type`, `size`; text shows its first line) when the browser lets it be read and it isn't WebOS's own paths, then the WebOS copy as `file` values, so `clip ls | open` opens them. Its body imports `core/components/clipboard/paste.ts` on first run. See [shell](shell.md#contributions).
+Contributes `copy` (text, or piped files onto the file clipboard), `paste` and `clip ls` (`clipboard/shell.ts`). `clip ls` lists the clipboard newest first: the system clipboard's item as a `clip` value (`name`, `type`, `size`; text shows its first line) when the browser lets it be read and it isn't WebOS's own paths, then the WebOS copy as `file` values, so `clip ls | open` opens them. It is the contribution's lazy part (`clipboard/shell-clip.ts`), and its body imports `core/components/clipboard/paste.ts` on first run, so neither is in the boot chunk. See [shell](shell.md#contributions).
 
 ## Known gaps
 

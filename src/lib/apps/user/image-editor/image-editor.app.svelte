@@ -1,8 +1,9 @@
 <script lang="ts">
-  import kernel, { type DialogsService, Platform, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { Platform, ShortcutCategory, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { Button, Checkbox, EmptyState, IconButton, Input, Segmented, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import {
     FORMAT_OPTIONS,
     ImageFormat,
@@ -65,7 +66,6 @@
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -400,16 +400,6 @@
     return () => node.removeEventListener("wheel", on_wheel);
   }
 
-  function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const files = image_files(event.clipboardData);
-    if (!files.length) return;
-    event.preventDefault();
-    take(files);
-  }
-
   function on_dragover(event: DragEvent) {
     if (!has_files(event)) return;
     event.preventDefault();
@@ -450,8 +440,6 @@
   });
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 {#snippet open_actions(primary: boolean)}
   <Button variant={primary ? "primary" : "secondary"} onclick={open}><FolderOpenIcon weight="bold" /> Open an image…</Button>
 {/snippet}
@@ -462,6 +450,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: ["image/*"], onfiles: (files) => void take(files) })}
   class="relative h-full"
   role="region"
   aria-label="Image Editor"

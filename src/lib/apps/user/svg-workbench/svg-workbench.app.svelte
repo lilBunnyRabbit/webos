@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
+  import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import {
     Badge,
@@ -19,6 +19,7 @@
     Toolbar,
   } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { error_message, format_bytes, resolve_token } from "$lib/core/utils";
   import { has_files } from "$kit/utils/image";
   import {
@@ -81,8 +82,7 @@
   }
 
   const props: { path?: string } = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { app_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
@@ -364,15 +364,10 @@
     return true;
   }
 
-  function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    if (take_files(event.clipboardData?.files)) return event.preventDefault();
-    const text = event.clipboardData?.getData("text/plain") ?? "";
-    if (!/<svg[\s>]/i.test(text)) return;
-    event.preventDefault();
+  function take_text(text: string): boolean {
+    if (!/<svg[\s>]/i.test(text)) return false;
     load(async () => ({ name: "pasted.svg", path: null, text }));
+    return true;
   }
 
   function on_dragover(event: DragEvent) {
@@ -399,8 +394,6 @@
   };
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 {#snippet toggle(label: string, title: string, key: "multipass" | "keep_ids" | "merge_paths" | "strip_size" | "strip_title" | "pretty")}
   <label class="flex min-h-7 items-center justify-between gap-3 text-ui" {title}>
     {label}
@@ -410,6 +403,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: ACCEPT, onfiles: take_files, ontext: take_text })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
   aria-label="SVG Workbench"

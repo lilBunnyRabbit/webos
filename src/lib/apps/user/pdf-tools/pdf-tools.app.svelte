@@ -76,10 +76,10 @@
       />
     </div>
     <div class="h-full" hidden={section.value !== Section.MERGE}>
-      <MergeSection {picker} initial_paths={paths_for(Section.MERGE)} />
+      <MergeSection {picker} initial_paths={paths_for(Section.MERGE)} active={section.value === Section.MERGE} />
     </div>
     <div class="h-full" hidden={section.value !== Section.SPLIT}>
-      <SplitSection {picker} initial_paths={paths_for(Section.SPLIT)} />
+      <SplitSection {picker} initial_paths={paths_for(Section.SPLIT)} active={section.value === Section.SPLIT} />
     </div>
     <div class="h-full" hidden={section.value !== Section.SIGN}>
       <SignSection {picker} initial_paths={paths_for(Section.SIGN)} bind:signature_name={sign_with}
@@ -88,10 +88,10 @@
       />
     </div>
     <div class="h-full" hidden={section.value !== Section.IMAGES}>
-      <ImagesSection {picker} initial_paths={paths_for(Section.IMAGES)} />
+      <ImagesSection {picker} initial_paths={paths_for(Section.IMAGES)} active={section.value === Section.IMAGES} />
     </div>
     <div class="h-full" hidden={section.value !== Section.EXPORT}>
-      <ExportSection {picker} initial_paths={paths_for(Section.EXPORT)} />
+      <ExportSection {picker} initial_paths={paths_for(Section.EXPORT)} active={section.value === Section.EXPORT} />
     </div>
     <div class="h-full" hidden={section.value !== Section.SIGNATURES}>
       <SignaturesSection {picker} on_use={use_signature} />

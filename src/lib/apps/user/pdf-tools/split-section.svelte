@@ -15,7 +15,7 @@
   import { chunks, default_ranges, every_page, flatten_groups, parse_ranges } from "./ranges";
   import { parent_path } from "$lib/core/api/services/files/path";
 
-  const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
+  const { picker, initial_paths, active }: { picker: Snippet; initial_paths: string[]; active: boolean } = $props();
   const { app_id, window: win, storage } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
 
@@ -90,7 +90,7 @@
   }
 </script>
 
-<DropZone label="Drop a PDF to split it" class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={(sources) => void slot.open(sources[0])}>
+<DropZone label="Drop a PDF to split it" accept={PDF_ACCEPT} {active} class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={(sources) => void slot.open(sources[0])}>
   <Toolbar>
     {@render picker()}
     <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>

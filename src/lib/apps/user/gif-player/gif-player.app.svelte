@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { Button, EmptyState, IconButton, Select, Separator, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
   import {
@@ -221,13 +222,6 @@
     action();
   }
 
-  function on_paste(event: ClipboardEvent) {
-    const pasted = [...(event.clipboardData?.files ?? [])];
-    if (!pasted.length) return;
-    event.preventDefault();
-    load_first(pasted);
-  }
-
   function on_drop(event: DragEvent) {
     event.preventDefault();
     dragging = false;
@@ -251,7 +245,7 @@
   tabindex="-1"
   class={cn("relative h-full outline-none", dragging && "ring-2 ring-primary ring-inset")}
   onkeydown={on_keydown}
-  onpaste={on_paste}
+  {@attach paste_files({ win, accept: [...ACCEPT, "image/*"], onfiles: load_first })}
   ondragover={on_dragover}
   ondragleave={on_dragleave}
   ondrop={on_drop}

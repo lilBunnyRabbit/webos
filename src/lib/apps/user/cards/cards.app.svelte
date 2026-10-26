@@ -4,6 +4,7 @@
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Input, Spinner, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { create_barcode_detector, detect_barcode, type BarcodeDetector, type DetectedCode } from "$kit/utils/qr";
@@ -57,7 +58,7 @@
 
   let { card: card_prop, import: import_prop }: Props = $props();
 
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -87,7 +88,6 @@
   let photo_version = $state(0);
   let dropping = $state(false);
   let busy = $state(false);
-  let root = $state<HTMLElement>();
 
   const cards = $derived(data.value.cards);
   const sorted = $derived(sort_cards(cards));
@@ -402,28 +402,12 @@
     else new_card(code);
   }
 
-  function blocked(): boolean {
-    return !win.is_focused || checkout_id !== null || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0;
-  }
-
-  function on_paste(event: ClipboardEvent) {
-    if (blocked()) return;
-    const target = event.target as Node | null;
-    if (target && target !== document.body && !root?.contains(target)) return;
-    const pasted = [...(event.clipboardData?.files ?? [])];
-    if (pasted.length) {
-      event.preventDefault();
-      void take_files(pasted);
-      return;
-    }
-    const element = event.target as HTMLElement | null;
-    if (element?.closest("input, textarea, [contenteditable]")) return;
-    const text = event.clipboardData?.getData("text") ?? "";
-    if (!text.trim()) return;
-    event.preventDefault();
+  function take_text(text: string, editable: boolean): boolean {
+    if (editable || !text.trim()) return false;
     void import_payload(text).then((handled) => {
       if (!handled && overlay?.kind === "import") report("That isn't a Cards list", undefined, NotificationType.WARNING);
     });
+    return true;
   }
 
   function on_dragover(event: DragEvent) {
@@ -482,10 +466,8 @@
   );
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 <div
-  bind:this={root}
+  {@attach checkout_id === null && paste_files({ win, accept: [".zip", "application/zip", "image/*"], onfiles: (files) => void take_files(files), ontext: take_text })}
   role="presentation"
   class={cn("relative flex h-full min-h-0 flex-col", dropping && "ring-2 ring-primary ring-inset")}
   ondragover={on_dragover}

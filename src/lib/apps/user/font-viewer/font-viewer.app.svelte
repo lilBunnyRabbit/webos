@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { FontRole, type DialogsService, type FilesService, type NotificationsService, type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { Button, EmptyState, IconButton, Input, Section, Select, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn, error_message, format_bytes } from "$lib/core/utils";
   import { split_collection } from "$lib/core/utils/font-collection";
@@ -186,6 +187,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: FONT_ACCEPT, onfiles: ([file]) => void load(file, file) })}
   role="presentation"
   tabindex="-1"
   class={cn("relative h-full outline-none", dragging && "ring-2 ring-primary ring-inset")}
@@ -199,7 +201,7 @@
     </EmptyState>
   {:else if !font}
     {#if !loading}
-      <EmptyState icon={TextAaIcon} title="No font open" description="Open a TTF, OTF, TTC, WOFF or WOFF2 font to preview it. You can also drop one here.">
+      <EmptyState icon={TextAaIcon} title="No font open" description="Open a TTF, OTF, TTC, WOFF or WOFF2 font to preview it. You can also drop or paste one here.">
         {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a font…</Button>{/snippet}
       </EmptyState>
     {/if}

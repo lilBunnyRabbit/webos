@@ -6,7 +6,7 @@ Id `birdseye` · Source: `src/lib/apps/user/birdseye/`, capture and encoding in 
 
 For watching one moving thing in a video, such as a bird in flight: you draw a box around it once, and the video is re-framed so that subject stays still in the middle while everything else moves around it. Frames where the tracker lost the subject show on the timeline, and you box it again there. The result is saved as a WebM next to the source, with its sound.
 
-Flow: open a video (`path` prop, "Open with" on any `video/*`, the picker, or a drop) → pause → **Box** and drag around the subject → **Track** (a task) → **Locked** view with zoom and edge fill → **Save** (a task).
+Flow: open a video (`path` prop, "Open with" on any `video/*`, the picker, a drop, or Ctrl+V through `paste_files`, which takes the same in-memory path as a drop) → pause → **Box** and drag around the subject → **Track** (a task) → **Locked** view with zoom and edge fill → **Save** (a task).
 
 ## How it works
 

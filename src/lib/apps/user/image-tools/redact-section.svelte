@@ -1,7 +1,8 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type SettingsService } from "$lib/core/api";
+  import kernel, { type SettingsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Select, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { error_message, format_bytes, resolve_token } from "$lib/core/utils";
   import {
     EyeSlash as EyeSlashIcon,
@@ -52,8 +53,7 @@
   const TAP_REACH = { mouse: 4, touch: 16 };
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window_id, window: win } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { app_id, window: win } = get_app_context();
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
   let root = $state<HTMLElement>();
@@ -134,16 +134,6 @@
   function take(files: File[]) {
     const [file] = files;
     if (file) load(() => load_image(file));
-  }
-
-  function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const files = image_files(event.clipboardData);
-    if (!files.length) return;
-    event.preventDefault();
-    take(files);
   }
 
   function on_dragover(event: DragEvent) {
@@ -360,14 +350,13 @@
   }
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 {#snippet heading(text: string)}
   <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">{text}</h3>
 {/snippet}
 
 <div
   bind:this={root}
+  {@attach active && paste_files({ win, accept: ["image/*"], onfiles: (files) => take(files) })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
   aria-label="Redact"

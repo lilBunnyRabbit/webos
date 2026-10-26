@@ -40,7 +40,7 @@ export class ClipboardService implements IClipboardService {
     this.content = paths.length > 0 ? { kind: "files", mode, paths: [...paths] } : null;
     // The paths on the system clipboard tell a later paste whether this copy is still the newest one (ADR-076).
     if (paths.length > 0) {
-      void navigator.clipboard?.writeText(paths.join("\n")).catch((error) => console.warn("[ClipboardService] Couldn't write the paths", error));
+      void navigator.clipboard?.writeText(paths.join("\n")).catch(() => {});
     }
   }
 

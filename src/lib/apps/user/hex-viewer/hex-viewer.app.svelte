@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type ClipboardService, type FilesService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Button, EmptyState, IconButton, Input, Segmented, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { clamp, cn, error_message, format_bytes } from "$lib/core/utils";
@@ -320,6 +321,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, onfiles: ([file]) => void load(file) })}
   role="presentation"
   tabindex="-1"
   class={cn("relative h-full outline-none", dragging_file && "ring-2 ring-primary ring-inset")}
@@ -333,7 +335,7 @@
     </EmptyState>
   {:else if !file}
     {#if !loading}
-      <EmptyState icon={BinaryIcon} title="No file open" description="Open any file to see its bytes. Huge files are fine: only what's on screen is read. You can also drop one here.">
+      <EmptyState icon={BinaryIcon} title="No file open" description="Open any file to see its bytes. Huge files are fine: only what's on screen is read. You can also drop or paste one here.">
         {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a file…</Button><Button onclick={pick_device}><DevicesIcon weight="bold" /> From device…</Button>{/snippet}
       </EmptyState>
     {/if}

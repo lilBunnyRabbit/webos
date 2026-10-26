@@ -168,7 +168,7 @@ Types that come with the stable methods: `AppsService`, `OpenOptions`, `FilesSer
 
 Theme tokens are part of the surface too: the token names in [CONVENTIONS](../CONVENTIONS.md#themes-and-tokens) (`background` ladder, `foreground`, `primary`, `secondary`, `tertiary`, `accent`, `cottontail`, the states) and their Tailwind classes. Renaming one breaks every app's markup, so that's a major. Values change any time.
 
-Not in the kit, internal: everything else under `$lib/core/components/` (`files`, `dialogs`, `apps/app-badge.svelte`, `brand`, `theme`, `desktop`).
+Not in the kit, internal: everything else under `$lib/core/components/` (`files`, `dialogs`, `clipboard`, `apps/app-badge.svelte`, `brand`, `theme`, `desktop`).
 
 ## App kit (`$kit`)
 
@@ -177,6 +177,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 | Module | Stable | Internal (used by) |
 |--------|--------|--------------------|
 | `$kit/games`, `games/time`, `games/daily`, `games/direction`, `games/grid` | All of it, see [Games kit](#games-kit) | |
+| `$kit/utils/paste` | `paste_files({ win, accept, multiple, onfiles, ontext })` (3.73) | |
 | `$kit/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` | `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality` |
 | `$kit/utils/picture` | | A picture as a downscaled WebP data URL for documents that keep pictures inline: `picture_data_url(blob, { max_side, quality })` (long edge 1200 px and quality 0.8 by default, never upscaled, decoded through `<img>` so SVG works), `fit_size`, `encode_webp`, `blob_to_data_url` (Proposals) |
 | `$kit/utils/image-format` | | The kernel-free format tables, re-exported by `image` (Image Tools, Image Editor import them directly) |

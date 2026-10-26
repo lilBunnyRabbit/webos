@@ -3,6 +3,7 @@
   import { Button, EmptyState, Grabber, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import type { Bounds, Position } from "$lib/core/utils/type";
@@ -536,16 +537,6 @@
     return dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0;
   }
 
-  function on_paste(event: ClipboardEvent) {
-    if (!win.is_focused || busy_elsewhere() || view === View.SHARE || view === View.RECEIVE) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const [image] = image_files(event.clipboardData);
-    if (!image) return;
-    event.preventDefault();
-    choose_part(image);
-  }
-
   function on_dragover(event: DragEvent) {
     if (!has_files(event) || busy_elsewhere()) return;
     event.preventDefault();
@@ -562,10 +553,9 @@
   }
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 <div
   bind:this={root}
+  {@attach view !== View.SHARE && view !== View.RECEIVE && paste_files({ win, accept: ["image/*"], onfiles: (files) => choose_part(files[0]) })}
   role="presentation"
   class={cn("relative grid h-full grid-cols-[minmax(0,1fr)] grid-rows-[auto_1fr_auto] bg-background", dragging_file && "ring-2 ring-primary ring-inset")}
   ondragover={on_dragover}

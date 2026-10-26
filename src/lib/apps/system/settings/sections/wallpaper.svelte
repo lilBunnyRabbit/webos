@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { WallpaperFit, WallpaperPreset, type SettingsService, type Wallpaper } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { Button, Section, Segmented, SettingRow, Slider } from "$lib/core/components/ui";
   import WallpaperView from "$lib/core/components/desktop/wallpaper.svelte";
   import { report_file_error } from "$lib/core/components/files/file-explorer.errors";
@@ -81,7 +82,7 @@
   </button>
 {/snippet}
 
-<div class="flex flex-col gap-8">
+<div class="flex flex-col gap-8" {@attach paste_files({ win, accept: ["image/*"], onfiles: ([file]) => void set_image(file) })}>
 <Section setting="wallpaper-style" title="Style" description="Behind the desktop and the phone's home screen. Presets follow the theme." flush>
   <div class="grid grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] gap-2">
     {#each PRESETS as { preset, label } (preset)}
@@ -99,7 +100,7 @@
   </div>
 </Section>
 
-<Section setting="wallpaper-image" title="Image" description="A picture of your own, from your files or this device.">
+<Section setting="wallpaper-image" title="Image" description="A picture of your own, from your files or this device. You can also paste one.">
   <SettingRow label="Picture" description={image ? "A copy is kept, so the original can move or go." : "None chosen yet."}>
     {#snippet children({ id, describedby })}
       <Button {id} aria-describedby={describedby} onclick={choose} disabled={busy}><ImageIcon /> Choose image…</Button>

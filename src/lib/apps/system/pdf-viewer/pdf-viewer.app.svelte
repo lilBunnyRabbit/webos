@@ -8,6 +8,7 @@
     Warning as WarningIcon,
   } from "phosphor-svelte";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { untrack } from "svelte";
   import manifest from "./index";
   import { error_message } from "$lib/core/utils";
@@ -67,25 +68,27 @@
   });
 </script>
 
-{#if !source}
-  <EmptyState icon={FilePdfIcon} title="No PDF open" description="Pick a PDF, or open one from File Explorer.">
-    {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a PDF…</Button>{/snippet}
-  </EmptyState>
-{:else if error}
-  <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
-{:else if file === null}
-  <EmptyState icon={WarningIcon} tone="error" title="File not found" description={path} />
-{:else if !file || !url}
-  <div class="grid h-full place-items-center"><Spinner label="Loading PDF" /></div>
-{:else}
-  <div class="grid h-full grid-rows-[auto_1fr]">
-    <Toolbar>
-      <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
-      <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
-      {#if path && apps.get(PDF_TOOLS)}
-        <IconButton label="Edit in PDF Tools" size="sm" onclick={() => apps.launch(PDF_TOOLS, { path })}><PencilSimpleIcon weight="bold" /></IconButton>
-      {/if}
-    </Toolbar>
-    <iframe src={url} title={file.name} class="block size-full border-0 bg-background-darker"></iframe>
-  </div>
-{/if}
+<div class="contents" {@attach paste_files({ win, accept: manifest.associations, onfiles: ([file]) => (source = file) })}>
+  {#if !source}
+    <EmptyState icon={FilePdfIcon} title="No PDF open" description="Pick or paste a PDF, or open one from File Explorer.">
+      {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a PDF…</Button>{/snippet}
+    </EmptyState>
+  {:else if error}
+    <EmptyState icon={WarningIcon} tone="error" title="Couldn't read the file" description={error} />
+  {:else if file === null}
+    <EmptyState icon={WarningIcon} tone="error" title="File not found" description={path} />
+  {:else if !file || !url}
+    <div class="grid h-full place-items-center"><Spinner label="Loading PDF" /></div>
+  {:else}
+    <div class="grid h-full grid-rows-[auto_1fr]">
+      <Toolbar>
+        <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
+        <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">{file.name}</span>
+        {#if path && apps.get(PDF_TOOLS)}
+          <IconButton label="Edit in PDF Tools" size="sm" onclick={() => apps.launch(PDF_TOOLS, { path })}><PencilSimpleIcon weight="bold" /></IconButton>
+        {/if}
+      </Toolbar>
+      <iframe src={url} title={file.name} class="block size-full border-0 bg-background-darker"></iframe>
+    </div>
+  {/if}
+</div>

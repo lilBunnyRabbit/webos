@@ -1,6 +1,6 @@
 # ADR-076: Paste to Open
 **Date:** 2026-10-26
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 Apps that open files take them from the picker, a drop or (in some apps) a paste. Paste is copied per app (18+ handlers, three gate styles), ignored by the picker, impossible on phones, blind in popped-out windows, and unaware of files copied in Explorer ([brainstorm](../brainstorm/2026-10-26_paste.md)).
@@ -26,3 +26,13 @@ Apps that open files take them from the picker, a drop or (in some apps) a paste
 - Every Open… can paste, on phones too.
 - Copying in Explorer overwrites the system clipboard.
 - The kit owns the paste gate; existing apps migrate to it.
+
+## Revision 2026-10-26: as built
+- **The view lives in core, not the kit.** The picker is core and core can't import `$kit`, so the clipboard view and the paste logic are in `src/lib/core/components/clipboard/` (`paste-plan.ts` pure and Node-tested, `paste.ts`, `clipboard-view.svelte`, loaded lazily). The kit's `paste_files` (`$kit/utils/paste`) is a thin attachment over it.
+- **Scope is the window frame, not the app's root.** A window that comes to the front puts focus on its frame, outside the app's root, so the old per-app gate (target inside the root) ignored Ctrl+V until the first click. The attachment accepts targets inside the window's `[data-window-id]` frame or `body`; a popped-out window's document counts whole.
+- **The picker listens on the document too** (`sheet_paste`): focus sits on the sheet's wrapper, outside the picker's element. It acts only while it is the window's top sheet (an `inert` overlay means another sheet is above).
+- **`multiple` callers take every usable file directly**; only a single-file caller with several usable files sees the view. Join or Merge getting all of a paste is what those apps did before.
+- **`ontext(text, editable)`** gets whether the paste landed in a field, so Cards keeps skipping fields and SVG Workbench keeps taking `<svg` text anywhere.
+- **Files pasted in a popped-out window are re-made as the tab's `File`s**: the mini window is another realm, and `instanceof File` in FilesService failed on them.
+- **Text on the clipboard shows in the view but can't be picked**: the view returns files.
+- **Not migrated:** Moonrabbit and Proposals (paste inserts a picture at the caret), Warren (Lexical), Forms (answer codes are text, not files), Paint and Hopsprite (open vs insert, owner call pending).

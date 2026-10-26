@@ -53,9 +53,9 @@ One detector per window, made on first use with every format Cards draws (`cards
 | Source | Path |
 |--------|------|
 | Camera | `CameraScan` from the kit in the card editor: live preview, reports `{ value, format }`, releases the camera while the window isn't visible |
-| Photo, drop, paste | `scan_image` (`cards.app.svelte:166`): `createImageBitmap`, one `detect_barcode` call, a warning toast when nothing is found |
+| Photo, drop, paste | `scan_image` (`cards.app.svelte:171`): `createImageBitmap`, one `detect_barcode` call, a warning toast when nothing is found |
 
-Paste is document-level, so it's ignored while the window isn't focused, checkout is open or any dialog is up (`cards.app.svelte:355`).
+Paste goes through the kit's `paste_files` (ADR-076), so it's ignored while the window isn't focused or any dialog is up, and the attachment is off while checkout is open (`cards.app.svelte:470`). An image or zip is taken from anywhere in the window, a field included; text outside a field is tried as a share payload (`take_text`, `cards.app.svelte:405`).
 
 ### Share payload: `WEBOS-CARDS:1:`
 

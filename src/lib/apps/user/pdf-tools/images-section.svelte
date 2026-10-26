@@ -24,7 +24,7 @@
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
 
-  const { picker, initial_paths }: { picker: Snippet; initial_paths: string[] } = $props();
+  const { picker, initial_paths, active }: { picker: Snippet; initial_paths: string[]; active: boolean } = $props();
   const { app_id, window: win, storage } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
 
@@ -151,7 +151,7 @@
   }
 </script>
 
-<DropZone label="Drop images to add them" class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={add}>
+<DropZone label="Drop images to add them" accept={IMAGE_ACCEPT} multiple {active} class="grid h-full grid-rows-[auto_1fr_auto]" ondrop={add}>
   <Toolbar>
     {@render picker()}
     <IconButton label="Add images…" size="sm" onclick={pick} disabled={busy}><ImageSquareIcon weight="bold" /></IconButton>

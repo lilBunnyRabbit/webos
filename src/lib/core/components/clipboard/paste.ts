@@ -1,5 +1,6 @@
 import type { Attachment } from "svelte/attachments";
 import kernel, { type ClipboardService, type DialogsService, type FilesService, type WindowId, type WindowsService } from "$lib/core/api";
+import type { WindowHandle } from "$lib/core/contexts/app";
 import { accepts_file, PasteFrom, plan_paste, same_paths } from "./paste-plan";
 
 export { accepts_file, PasteFrom, same_paths };
@@ -82,7 +83,8 @@ export interface PasteRead {
 /** Reads a paste event synchronously, so the caller can still `preventDefault()` when it's files. */
 export function read_paste(event: ClipboardEvent, accept?: string[]): PasteRead {
   const data = event.clipboardData;
-  const files = Array.from(data?.files ?? []);
+  // A popped-out window's paste carries Files of its own realm, which fail `instanceof File` in the tab's code.
+  const files = Array.from(data?.files ?? [], (file) => new File([file], file.name, { type: file.type, lastModified: file.lastModified }));
   const text = data?.getData("text/plain") ?? "";
   const paths = clipboard().content?.paths ?? [];
   const editable = is_editable(event.target);
@@ -159,4 +161,50 @@ export async function show_clipboard(
 export async function choose_from_clipboard(window_id: WindowId, options: PasteOptions): Promise<PasteFile[] | null> {
   const system = await read_system();
   return show_clipboard(window_id, await clipboard_items(system), system !== null, options);
+}
+
+export interface PasteFilesOptions {
+  win: WindowHandle;
+  /** Association syntax (".pdf", "image/*"); empty or missing takes any file. */
+  accept?: string[];
+  /** Several files go straight through; without it, several usable files open the clipboard view to pick one. */
+  multiple?: boolean;
+  onfiles(files: File[]): void;
+  /** Text the paste carries when no file fits; `true` claims it. `editable`: the paste lands in a field. */
+  ontext?(text: string, editable: boolean): boolean;
+}
+
+/**
+ * Ctrl+V anywhere in the window opens files (ADR-076): `<div {@attach paste_files({ win, accept, onfiles })}>`.
+ * Listens on the root's own document, so it keeps working in a popped-out window.
+ */
+export function paste_files(options: PasteFilesOptions): Attachment<HTMLElement> {
+  return (root) => {
+    const document = root.ownerDocument;
+
+    function blocked(): boolean {
+      const dialogs = kernel.service<DialogsService>("dialogs");
+      const id = options.win.id;
+      return dialogs.system.length > 0 || dialogs.for_window(id).length > 0 || dialogs.for_origin(id).length > 0;
+    }
+
+    async function deliver(pending: Promise<PasteFile[]>) {
+      const items = await settle(options.win.id, await pending, { accept: options.accept, multiple: options.multiple });
+      if (items.length) options.onfiles(items.map((item) => item.file));
+    }
+
+    function on_paste(event: ClipboardEvent) {
+      if (event.defaultPrevented || !options.win.is_focused || blocked() || !in_window(root, event.target)) return;
+      const read = read_paste(event, options.accept);
+      if (read.from === PasteFrom.EVENT || read.from === PasteFrom.WEBOS) {
+        event.preventDefault();
+        void deliver(read.files());
+      } else if (read.from === PasteFrom.TEXT && options.ontext?.(read.text, read.editable)) {
+        event.preventDefault();
+      }
+    }
+
+    document.addEventListener("paste", on_paste);
+    return () => document.removeEventListener("paste", on_paste);
+  };
 }

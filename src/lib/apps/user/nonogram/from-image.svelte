@@ -3,7 +3,8 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
-  import { load_image_at, paint, type SourceImage } from "$kit/utils/image";
+  import { load_image, load_image_at, paint, type SourceImage } from "$kit/utils/image";
+  import { paste_files } from "$kit/utils/paste";
   import {
     ArrowLeft as ArrowLeftIcon,
     Check as CheckIcon,
@@ -195,7 +196,13 @@
   </figure>
 {/snippet}
 
-<div bind:this={root} class="grid h-full grid-rows-[auto_auto_minmax(0,1fr)_auto]" role="region" aria-label="Puzzle from an image">
+<div
+  bind:this={root}
+  {@attach paste_files({ win, accept: ["image/*"], onfiles: ([file]) => load(() => load_image(file)) })}
+  class="grid h-full grid-rows-[auto_auto_minmax(0,1fr)_auto]"
+  role="region"
+  aria-label="Puzzle from an image"
+>
   <Toolbar>
     <IconButton size="sm" label="Back to the editor" onclick={on_cancel}><ArrowLeftIcon weight="bold" /></IconButton>
     <IconButton size="sm" label="Open an image…" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>

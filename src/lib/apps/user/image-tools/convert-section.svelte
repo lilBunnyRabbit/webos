@@ -1,7 +1,8 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type FilesService, type NotificationsService, type TaskJob } from "$lib/core/api";
+  import kernel, { type FilesService, type NotificationsService, type TaskJob } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { paste_files } from "$kit/utils/paste";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { format_bytes } from "$lib/core/utils";
   import { ENCODER_FORMATS, ENCODER_INFO, type EncoderFormat } from "$kit/utils/codecs/formats";
@@ -30,8 +31,7 @@
   }
 
   const { picker, initial_paths, active }: SectionProps = $props();
-  const { app_id, window_id, window: win } = get_app_context();
-  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const { app_id, window: win } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   let root = $state<HTMLElement>();
@@ -134,16 +134,6 @@
     }
   }
 
-  function on_paste(event: ClipboardEvent) {
-    if (!active || !win.is_focused || dialogs.system.length > 0 || dialogs.for_window(window_id).length > 0) return;
-    const target = event.target;
-    if (target instanceof Node && target !== document.body && !root?.contains(target)) return;
-    const [file] = image_files(event.clipboardData);
-    if (!file) return;
-    event.preventDefault();
-    take_file(file, null);
-  }
-
   function on_dragover(event: DragEvent) {
     if (!has_files(event)) return;
     event.preventDefault();
@@ -163,10 +153,9 @@
   }
 </script>
 
-<svelte:document onpaste={on_paste} />
-
 <div
   bind:this={root}
+  {@attach active && paste_files({ win, accept: ["image/*"], onfiles: (files) => take_file(files[0], null) })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto]"
   role="region"
   aria-label="Convert"

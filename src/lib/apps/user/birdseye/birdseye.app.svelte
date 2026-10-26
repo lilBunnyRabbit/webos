@@ -7,6 +7,7 @@
   import type { Bounds } from "$lib/core/utils/type";
   import { CropFrame } from "$kit/components/crop-frame";
   import { has_files } from "$kit/utils/image";
+  import { paste_files } from "$kit/utils/paste";
   import { probe_video, type VideoInfo } from "$kit/utils/video/capture";
   import { format_time } from "$kit/utils/video/plan";
   import { VIDEO_ACCEPT, is_video_name } from "$kit/utils/video/files";
@@ -393,6 +394,7 @@
 
 <div
   bind:this={root}
+  {@attach paste_files({ win, accept: VIDEO_ACCEPT, onfiles: take })}
   class="relative grid h-full grid-rows-[auto_minmax(0,1fr)_auto] outline-none"
   role="presentation"
   tabindex="-1"
@@ -428,7 +430,7 @@
     <EmptyState
       icon={FrameCornersIcon}
       title="No video open"
-      description="Box a moving subject and Birdseye keeps it still in the middle while the world moves around it. Open a video or drop it here."
+      description="Box a moving subject and Birdseye keeps it still in the middle while the world moves around it. Open a video, drop it here or paste it."
     >
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a video…</Button>{/snippet}
     </EmptyState>
