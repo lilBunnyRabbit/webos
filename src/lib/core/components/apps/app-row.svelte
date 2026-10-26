@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppManifest, type OfflineService } from "$lib/core/api";
+  import kernel, { type AppManifest, type StoreService } from "$lib/core/api";
   import type { HTMLButtonAttributes } from "svelte/elements";
   import { cn } from "$lib/core/utils";
   import { long_press } from "$lib/core/utils/long-press";
@@ -16,7 +16,7 @@
 
   let { manifest, on_menu, wallpaper = false, class: class_name, children, ...rest }: Props = $props();
 
-  const offline = $derived(kernel.service<OfflineService>("offline"));
+  const offline = $derived(kernel.service<StoreService>("store"));
   const ready = $derived(offline.can_open(manifest.id));
 </script>
 

@@ -118,7 +118,7 @@ Not given the swipe, on purpose:
 
 ## Services read
 
-`windows` (as `MobileWindowsService`), `desktop` (as `MobileDesktopService`), `apps` (listings, recent, install state), `offline` (dimming, `can_open`), `dialogs`, `notifications` (toasts, the nav bar's unread dot), `ui` (launcher, switcher and edit overlays, `back()`), `settings` (wallpaper).
+`windows` (as `MobileWindowsService`), `desktop` (as `MobileDesktopService`), `apps` (listings, recent, install state), `store` (dimming, `can_open`), `dialogs`, `notifications` (toasts, the nav bar's unread dot), `ui` (launcher, switcher and edit overlays, `back()`), `settings` (wallpaper).
 
 ## Known gaps
 

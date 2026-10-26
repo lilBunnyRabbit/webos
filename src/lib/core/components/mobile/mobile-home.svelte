@@ -4,7 +4,7 @@
     type AppsService,
     type DesktopItem,
     type MobileDesktopService,
-    type OfflineService,
+    type StoreService,
     type UiService,
     WidgetStyle,
   } from "$lib/core/api";
@@ -35,7 +35,7 @@
 
   const desktop = $derived(kernel.service<MobileDesktopService>("desktop"));
   const apps = $derived(kernel.service<AppsService>("apps"));
-  const offline = $derived(kernel.service<OfflineService>("offline"));
+  const offline = $derived(kernel.service<StoreService>("store"));
   const ui = $derived(kernel.service<UiService>("ui"));
 
   /** Widgets were sized for the grid's 104px rows; one row of height per cell keeps them readable in a full-width list. */

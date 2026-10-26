@@ -49,7 +49,7 @@ The reference is part of the code. A change isn't finished until the page that d
 | [services/ai.md](services/ai.md) | `ai` |
 | [services/speech.md](services/speech.md) | `speech` |
 | [services/scheduler.md](services/scheduler.md) | `scheduler` |
-| [services/offline.md](services/offline.md) | `offline` |
+| [services/store.md](services/store.md) | `store` |
 
 ### Shell
 

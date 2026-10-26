@@ -1,21 +1,21 @@
 import type { IService } from "../../type";
 import type { AppId } from "../apps/type";
 
-export const OfflineStatus = {
+export const StoreStatus = {
   /** A system app: precached with the core, always there. */
   SYSTEM: "system",
   SAVED: "saved",
   DOWNLOADING: "downloading",
   NOT_SAVED: "not-saved",
 } as const;
-export type OfflineStatus = (typeof OfflineStatus)[keyof typeof OfflineStatus];
+export type StoreStatus = (typeof StoreStatus)[keyof typeof StoreStatus];
 
 /**
  * Which user apps work offline (ADR-065). The service worker precaches only the core and the system apps; a user app
  * loads on demand into a per-build cache. Picked apps are downloaded whole after every update, and an app opened in a
  * build is downloaded whole too, so both open offline until the next update.
  */
-export interface OfflineService extends IService {
+export interface StoreService extends IService {
   readonly online: boolean;
 
   /** User apps the user keeps offline, from `/etc/offline.json`. System apps are never in it. */
@@ -30,7 +30,7 @@ export interface OfflineService extends IService {
 
   can_open(id: AppId): boolean;
 
-  status(id: AppId): OfflineStatus;
+  status(id: AppId): StoreStatus;
 
   /** Ticks or unticks an app. Ticking one that isn't saved starts a sync. System apps are ignored. */
   set_picked(id: AppId, keep: boolean): void;

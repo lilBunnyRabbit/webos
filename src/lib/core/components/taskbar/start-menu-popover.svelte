@@ -9,7 +9,7 @@
     type AppsService,
     type DesktopService,
     type DialogsService,
-    type OfflineService,
+    type StoreService,
     type SettingsService,
     type ShellService,
     type ShortcutsService,
@@ -49,7 +49,7 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const ai = $derived(kernel.service<AiService>("ai"));
-  const offline = $derived(kernel.service<OfflineService>("offline"));
+  const offline = $derived(kernel.service<StoreService>("store"));
 
   let query = $state("");
   let search: HTMLInputElement | null = $state(null);

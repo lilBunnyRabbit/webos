@@ -1,10 +1,10 @@
 <script lang="ts">
-  import kernel, { OfflineStatus, search_apps, type AppListing, type AppsService, type OfflineService } from "$lib/core/api";
+  import kernel, { StoreStatus, search_apps, type AppListing, type AppsService, type StoreService } from "$lib/core/api";
   import { Badge, Input, Section, Spinner, Switch } from "$lib/core/components/ui";
   import { untrack } from "svelte";
   import { MagnifyingGlass as MagnifyingGlassIcon, WifiSlash as WifiSlashIcon } from "phosphor-svelte";
 
-  const offline = $derived(kernel.service<OfflineService>("offline"));
+  const offline = $derived(kernel.service<StoreService>("store"));
   const apps = $derived(kernel.service<AppsService>("apps"));
 
   // Rows are a fixed height so only the ones in view render: the list has to stay fast with any number of apps.
@@ -37,11 +37,11 @@
     });
   });
 
-  const STATUS: Record<OfflineStatus, { label: string; tone: "success" | "primary" | "neutral" }> = {
-    [OfflineStatus.SYSTEM]: { label: "Always saved", tone: "neutral" },
-    [OfflineStatus.SAVED]: { label: "Saved", tone: "success" },
-    [OfflineStatus.DOWNLOADING]: { label: "Downloading", tone: "primary" },
-    [OfflineStatus.NOT_SAVED]: { label: "Not saved", tone: "neutral" },
+  const STATUS: Record<StoreStatus, { label: string; tone: "success" | "primary" | "neutral" }> = {
+    [StoreStatus.SYSTEM]: { label: "Always saved", tone: "neutral" },
+    [StoreStatus.SAVED]: { label: "Saved", tone: "success" },
+    [StoreStatus.DOWNLOADING]: { label: "Downloading", tone: "primary" },
+    [StoreStatus.NOT_SAVED]: { label: "Not saved", tone: "neutral" },
   };
 </script>
 
@@ -83,7 +83,7 @@
                   <span class="truncate text-ui font-medium">{app.name}</span>
                   <span class="flex items-center gap-1.5">
                     <Badge tone={status.tone}>{status.label}</Badge>
-                    {#if offline.is_picked(app.id) && offline.status(app.id) === OfflineStatus.NOT_SAVED}
+                    {#if offline.is_picked(app.id) && offline.status(app.id) === StoreStatus.NOT_SAVED}
                       <span class="truncate text-2xs text-foreground/65">Downloads when you're online</span>
                     {/if}
                   </span>

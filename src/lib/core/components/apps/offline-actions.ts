@@ -1,7 +1,7 @@
-import kernel, { NotificationType, type AppId, type AppsService, type MenuItem, type NotificationsService, type OfflineService } from "$lib/core/api";
+import kernel, { NotificationType, type AppId, type AppsService, type MenuItem, type NotificationsService, type StoreService } from "$lib/core/api";
 import { Check as CheckIcon, CloudArrowDown as CloudArrowDownIcon } from "phosphor-svelte";
 
-const offline = () => kernel.service<OfflineService>("offline");
+const offline = () => kernel.service<StoreService>("store");
 const apps = () => kernel.service<AppsService>("apps");
 
 export const KEEP_OFFLINE_ID = "keep-offline";

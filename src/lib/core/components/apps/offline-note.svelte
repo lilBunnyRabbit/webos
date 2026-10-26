@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type OfflineService } from "$lib/core/api";
+  import kernel, { type StoreService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { WifiSlash as WifiSlashIcon } from "phosphor-svelte";
   import { Button } from "../ui";
@@ -7,7 +7,7 @@
 
   let { onopen, class: class_name }: { onopen?: () => void; class?: string } = $props();
 
-  const offline = $derived(kernel.service<OfflineService>("offline"));
+  const offline = $derived(kernel.service<StoreService>("store"));
 </script>
 
 {#if !offline.online}

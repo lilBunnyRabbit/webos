@@ -6,8 +6,8 @@ import { NotificationsService } from "../notifications/service.svelte";
 import { BUILD_INFO } from "../version/build-info";
 import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
 import { OFFLINE_STATE_PATH, PICKED_PATH, parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
-import { OfflineService } from "./service.svelte";
-import { OfflineStatus } from "./type";
+import { StoreService } from "./service.svelte";
+import { StoreStatus } from "./type";
 
 const BUILD = BUILD_INFO.buildTimestamp;
 const APPS: Record<string, { system: boolean; name: string; replaces?: { app: string }[] }> = {
@@ -39,12 +39,12 @@ async function open_tab() {
     }),
     tasks: stub_service("tasks", {}),
     windows: stub_service("windows", { list: () => [], get: () => null }),
-    offline: OfflineService,
+    store: StoreService,
   });
   shutdowns.push(booted.shutdown);
   return {
     files: booted.kernel.service<FilesService>("files"),
-    offline: booted.kernel.service<OfflineService>("offline"),
+    offline: booted.kernel.service<StoreService>("store"),
     notifications: booted.kernel.service<NotificationsService>("notifications"),
     launch,
   };
@@ -86,8 +86,8 @@ describe("boot", () => {
     await seed(OFFLINE_STATE_PATH, serialize_state({ build: BUILD, apps: ["paint"] }));
     const tab = await open_tab();
     expect(tab.offline.is_saved("paint")).toBe(true);
-    expect(tab.offline.status("paint")).toBe(OfflineStatus.SAVED);
-    expect(tab.offline.status("cards")).toBe(OfflineStatus.NOT_SAVED);
+    expect(tab.offline.status("paint")).toBe(StoreStatus.SAVED);
+    expect(tab.offline.status("cards")).toBe(StoreStatus.NOT_SAVED);
 
     await opfs.clear_opfs();
     await seed(OFFLINE_STATE_PATH, serialize_state({ build: BUILD - 1, apps: ["paint"] }));
@@ -100,7 +100,7 @@ describe("boot", () => {
     await seed(PICKED_PATH, serialize_picked(["settings", "paint"]));
     const tab = await open_tab();
     expect([...tab.offline.picked]).toEqual(["paint"]);
-    expect(tab.offline.status("settings")).toBe(OfflineStatus.SYSTEM);
+    expect(tab.offline.status("settings")).toBe(StoreStatus.SYSTEM);
     expect(tab.offline.is_saved("settings")).toBe(true);
     tab.offline.online = false;
     expect(tab.offline.can_open("settings")).toBe(true);

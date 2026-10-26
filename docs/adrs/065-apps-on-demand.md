@@ -3,7 +3,7 @@
 **Status:** Implemented
 
 > **Revision 2026-10-26: the Portfolio path ([solo stale-build brainstorm](../brainstorm/2026-10-26_solo-stale-build.md)).**
-> `/webos/portfolio/` is a copy of `index.html` the worker never precaches or serves (`globIgnores`, `navigateFallbackDenylist`), so the public Portfolio link always boots the deployed build instead of the one cached before the last deploy. It's the one path that isn't offline-first. Details in [offline.md](../system/services/offline.md#service-worker).
+> `/webos/portfolio/` is a copy of `index.html` the worker never precaches or serves (`globIgnores`, `navigateFallbackDenylist`), so the public Portfolio link always boots the deployed build instead of the one cached before the last deploy. It's the one path that isn't offline-first. Details in [store.md](../system/services/store.md#service-worker).
 
 > **Revision 2026-10-22: implementation.**
 > - Each list is `{ build, files }`: a tab still running an older build would otherwise fetch the newer build's list and save its files under its own cache. A list from another build fails that app's task with "WebOS was updated…".

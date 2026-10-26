@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type OfflineService, type VersionService } from "$lib/core/api";
+  import kernel, { type StoreService, type VersionService } from "$lib/core/api";
   import { Button, EmptyState } from "$lib/core/components/ui";
   import { untrack } from "svelte";
   import {
@@ -23,7 +23,7 @@
   let { error, name, what = "app", compact = false, onretry, onclose }: Props = $props();
 
   const version = $derived(kernel.service<VersionService>("version"));
-  const offline = $derived(kernel.service<OfflineService>("offline"));
+  const offline = $derived(kernel.service<StoreService>("store"));
 
   // A failed lazy import is usually a deploy: this page asks for chunks the new build replaced. Waiting for the
   // half-hourly poll would leave the window dead, so check now and offer the update in place.

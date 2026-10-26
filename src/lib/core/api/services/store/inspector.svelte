@@ -1,14 +1,14 @@
 <script lang="ts">
-  import kernel, { OfflineStatus, type AppsService, type InspectorProps, type OfflineService } from "$lib/core/api";
+  import kernel, { StoreStatus, type AppsService, type InspectorProps, type StoreService } from "$lib/core/api";
   import { InspectorStat, InspectorStats, InspectorTable } from "$lib/core/components/inspector";
 
-  let { service, detailed }: InspectorProps<OfflineService> = $props();
+  let { service, detailed }: InspectorProps<StoreService> = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const user_apps = $derived(apps.listings().filter((app) => !app.system));
-  const saved = $derived(user_apps.filter((app) => service.status(app.id) === OfflineStatus.SAVED).length);
-  const downloading = $derived(user_apps.filter((app) => service.status(app.id) === OfflineStatus.DOWNLOADING).length);
-  const tracked = $derived(user_apps.filter((app) => service.is_picked(app.id) || service.status(app.id) !== OfflineStatus.NOT_SAVED));
+  const saved = $derived(user_apps.filter((app) => service.status(app.id) === StoreStatus.SAVED).length);
+  const downloading = $derived(user_apps.filter((app) => service.status(app.id) === StoreStatus.DOWNLOADING).length);
+  const tracked = $derived(user_apps.filter((app) => service.is_picked(app.id) || service.status(app.id) !== StoreStatus.NOT_SAVED));
 </script>
 
 <InspectorStats>

@@ -65,7 +65,7 @@ Pure helpers, exported from the barrel:
 
 `SHORTCUT_EXTENSION` (`".desktop"`) and the `Shortcut` interface are exported too.
 
-`replaces.ts` (not in the barrel; AppsService, RouterService and OfflineService import it):
+`replaces.ts` (not in the barrel; AppsService, RouterService and StoreService import it):
 
 | Function | Behaviour |
 |----------|-----------|
@@ -141,7 +141,7 @@ A manifest's `replaces: { app, props? }[]` names ids it took over. An id that is
 
 - `launch(id, props)` and the `.desktop` / `.widget` paths of `open()` (a shortcut to the old id still opens);
 - RouterService for `#/app/` and `#/solo/` links, before it validates props ([router](router.md)); the solo shell's header names the app that opened, not the link's id;
-- `init()` for the installed list and OfflineService for the offline picks (`current_ids`: the old id becomes every replacing app).
+- `init()` for the installed list and StoreService for the offline picks (`current_ids`: the old id becomes every replacing app).
 - Single launch targets resolve to the app a bare launch opens (`current_list`, `current_target`): `load_recent()` for the recent list, and `init()` for the taskbar pins and the `file_defaults` values in settings. Pins and defaults are rewritten in settings only when one changed, so settings saves the new shape; the recent list saves it with the next launch.
 - SessionService for saved windows (by props) and frames, and the desktop folder for `.desktop` shortcuts and `.widget` files on the desktop and the mobile home ([session](session.md), [desktop](desktop.md)). Shortcut and widget files aren't rewritten.
 

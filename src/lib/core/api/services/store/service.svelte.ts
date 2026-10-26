@@ -11,21 +11,21 @@ import { VERSION_STATE_PATH } from "../version/persistence";
 import { stale_caches } from "./lists";
 import { current_ids } from "../apps/replaces";
 import { OFFLINE_STATE_PATH, PICKED_PATH, parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
-import { OfflineStatus, type OfflineService as IOfflineService } from "./type";
+import { StoreStatus, type StoreService as IStoreService } from "./type";
 
 const SYNC_LOCK = "webos.offline.sync";
-const SENDER = "offline";
+const SENDER = "store";
 const work = () => import("./sync");
 
 const parent_of = (path: string) => path.slice(0, path.lastIndexOf("/"));
 
-export class OfflineService implements IOfflineService {
-  name = "OfflineService";
+export class StoreService implements IStoreService {
+  name = "StoreService";
   description = "Which apps work offline: the picked ones and the ones opened this build, downloaded whole";
   inspector = () => import("./inspector.svelte");
 
   to_string(): string {
-    return `OfflineService: ${this.picked.size} picked, ${this.saved.size} saved`;
+    return `StoreService: ${this.picked.size} picked, ${this.saved.size} saved`;
   }
 
   public online = $state(true);
@@ -132,10 +132,10 @@ export class OfflineService implements IOfflineService {
     return this.online || this.is_saved(id);
   }
 
-  public status(id: AppId): OfflineStatus {
-    if (this.apps_service.get(id)?.system) return OfflineStatus.SYSTEM;
-    if (this.downloading.has(id)) return OfflineStatus.DOWNLOADING;
-    return this.saved.has(id) ? OfflineStatus.SAVED : OfflineStatus.NOT_SAVED;
+  public status(id: AppId): StoreStatus {
+    if (this.apps_service.get(id)?.system) return StoreStatus.SYSTEM;
+    if (this.downloading.has(id)) return StoreStatus.DOWNLOADING;
+    return this.saved.has(id) ? StoreStatus.SAVED : StoreStatus.NOT_SAVED;
   }
 
   public set_picked(id: AppId, keep: boolean): void {
@@ -153,7 +153,7 @@ export class OfflineService implements IOfflineService {
     const running = navigator.locks
       .request(SYNC_LOCK, (): Promise<void> => this.run_sync())
       .then(() => {})
-      .catch((error: unknown) => console.error("[OfflineService] Sync failed:", error))
+      .catch((error: unknown) => console.error("[StoreService] Sync failed:", error))
       .finally(() => {
         this.running = null;
         this.syncing = false;
@@ -211,7 +211,7 @@ export class OfflineService implements IOfflineService {
       const stale = stale_caches(await caches.keys(), this.build);
       await Promise.all(stale.map((key) => caches.delete(key)));
     } catch (error) {
-      console.warn("[OfflineService] Couldn't delete older builds' caches", error);
+      console.warn("[StoreService] Couldn't delete older builds' caches", error);
     }
   }
 
@@ -233,7 +233,7 @@ export class OfflineService implements IOfflineService {
       this.add_saved([id]);
     } catch (error) {
       this.opened.delete(id);
-      console.warn(`[OfflineService] Couldn't keep ${id} for offline`, error);
+      console.warn(`[StoreService] Couldn't keep ${id} for offline`, error);
     } finally {
       this.downloading.delete(id);
     }

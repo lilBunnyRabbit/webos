@@ -21,7 +21,7 @@ const STEP_LABELS: Record<string, string> = {
   shortcuts: "Shortcuts",
   scheduler: "Alarms",
   tasks: "Tasks",
-  offline: "Offline apps",
+  store: "Apps",
   backup: "Backup",
   ai: "On-device AI",
   speech: "Speech",

@@ -1,6 +1,6 @@
-# OfflineService
+# StoreService
 
-Key `offline` · Depends on: `files`, `apps`, `tasks`, `notifications`, `windows` · ADR: [ADR-065](../../adrs/065-apps-on-demand.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/offline/`, `tooling/vite-plugin-offline.ts`, `src/lib/core/components/apps/offline-{actions.ts,note.svelte}`, Settings `sections/offline.svelte` · Inspector: `inspector.svelte` (ADR-020)
+Key `store` · Depends on: `files`, `apps`, `tasks`, `notifications`, `windows` · ADR: [ADR-065](../../adrs/065-apps-on-demand.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/store/`, `tooling/vite-plugin-offline.ts`, `src/lib/core/components/apps/offline-{actions.ts,note.svelte}`, Settings `sections/offline.svelte` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
