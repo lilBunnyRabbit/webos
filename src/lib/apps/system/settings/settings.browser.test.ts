@@ -31,6 +31,7 @@ const STUBS = {
     list: () => [shortcut(ShortcutCategory.WINDOW), shortcut(ShortcutCategory.APPS), shortcut(ShortcutCategory.SYSTEM)],
   }),
   shell: stub_service("shell", {}),
+  speech: stub_service("speech", { supported: true, voices: [], speaking: null, queued: 0, speak: () => {}, stop: () => {} }),
   offline: stub_service("offline", { online: true, syncing: false, picked: new Set(), is_picked: () => false, status: () => "not-saved" }),
 };
 
