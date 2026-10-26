@@ -110,6 +110,7 @@ What are the implications of this decision?
 | [074](./074-speech-service.md) | Speech Service | 2026-10-26 | Implemented |
 | [075](./075-docs-app.md) | Docs App | 2026-10-26 | Implemented |
 | [076](./076-paste-to-open.md) | Paste to Open | 2026-10-26 | Implemented |
+| [077](./077-app-store.md) | App Store | 2026-10-26 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

@@ -10,7 +10,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
-**Next (owner, 2026-10-21): App store.** The owner builds it, next. Apps load into the cache only when installed, only installed apps show, per-app versions, auto-update when closed (the [import map](brainstorm/2026-10-21_slow-updates.md) already keeps an app's chunks apart from core). Needs a brainstorm and an ADR first; see Needs Brainstorm.
+**Next (owner, 2026-10-21): App store.** Designed 2026-10-26 as [ADR-077](adrs/077-app-store.md): installed = cached, a build catalogue so boot follows installed apps only, app updates without an OS reload. Three stages, each its own release.
 
 1. [x] **Foundations**
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
@@ -695,7 +695,7 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
 - [ ] App isolation via Shadow DOM
 - [ ] Kernel custom events with zod-validated payloads
 - [ ] Window events for file upload (and similar app-level events)
-- [ ] "App store" (next, owner builds it): load apps into cache, only show loaded apps, per-app versions, auto-update when closed
+- [-] "App store": designed 2026-10-26 as [ADR-077](adrs/077-app-store.md) ([brainstorm](brainstorm/2026-10-26_app-store.md)). Installed = cached, catalogue and flat boot, app updates without reload; three stages, none built
 
 ---
 
