@@ -20,6 +20,7 @@ export const CHANGELOG: Release[] = [
       },
       { kind: IMPROVED, text: "WebOS starts faster: only the apps you installed load at startup." },
       { kind: IMPROVED, apps: ["app-library"], text: "The App Store shows each app's version, the release it last changed in." },
+      { kind: IMPROVED, text: "The update screen shows what's new in the version it's installing." },
     ],
   },
   {

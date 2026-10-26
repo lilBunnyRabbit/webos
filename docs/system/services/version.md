@@ -71,7 +71,7 @@ interface Pipeline { state: PipelineState; sha: string; title: string; created: 
 | `core` | The core hash: what a new service worker would precache, normalized so a rebuild of the same tree gives the same value. `"dev"` on the dev server. |
 | `notes` | `{ version, date, title, changes: [{ kind, text }] }[]`: the top `CHANGELOG` release plus every release newer than the deployed catalogue's `release`. On the dev server, or without a previous catalogue, the top release only. |
 
-Nothing reads `core` or `notes` yet; the update overlay will (ADR-077).
+The update overlay shows `notes` ([below](#update-progress)); nothing reads `core` yet (stage 3's hot updates will).
 
 The bundle and `version.json` always carry the same `buildTimestamp`. Only a new build (or a dev server restart) produces a newer one.
 
@@ -228,7 +228,7 @@ Timing (constants in `service.svelte.ts`):
 
 A worker that activates at any point before those reloads as before. Restart now and the automatic give-ups resolve the same `given_up` promise the activation races against; the `finally` aborts the polling and clears the timers. A worker that goes `redundant` rejects and also clears. The clearing path wipes the precache, so the next boot downloads it again in the background; that's why the wait is patient as long as files keep landing.
 
-`UpdateOverlay` (`components/update/update-overlay.svelte`, in `os.svelte`, so both shells) keeps the three-step list. Under the active "Downloading the new version" step it shows a `role="progressbar"` (`bg-primary` on `bg-foreground/12`, the same inline bar as Getting started and toasts) once `total` is known, and a mono line `progress_line()`: "212 of 606 files · 14 s", or only "14 s" while the total is unknown or zero. Elapsed seconds tick from a local 1 s interval. With `slow`, a short text and a secondary **Restart now** button sit under the list.
+`UpdateOverlay` (`components/update/update-overlay.svelte`, in `os.svelte`, so both shells) shows from → to (`v3.74.0 → v3.75.0`), then **What's new**: the changes of every `update_available.notes` release newer than the running one, a dot per change in its kind's tone (`primary` new, `info` improved, `success` fixed, as Settings › What's new), each line clamped to two, at most five and "and N more in What's new" past that; the heading carries the release title when there's one release. No notes (an older `version.json`), no section. The column is `max-w-sm` and scrolls when a short phone can't fit it. Then the three-step list. Under the active "Downloading the new version" step it shows a `role="progressbar"` (`bg-primary` on `bg-foreground/12`, the same inline bar as Getting started and toasts) once `total` is known, and a mono line `progress_line()`: "212 of 606 files · 14 s", or only "14 s" while the total is unknown or zero. Elapsed seconds tick from a local 1 s interval. With `slow`, a short text and a secondary **Restart now** button sit under the list.
 
 ## Divergence from ADR
 
