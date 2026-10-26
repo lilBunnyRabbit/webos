@@ -1,6 +1,12 @@
-# WebOS
+<a href="https://lilbunnyrabbit.github.io/webos/"><img src=".github/readme/banner.svg" alt="WebOS: a desktop environment in the browser" width="100%"></a>
 
-**Open it: [lilbunnyrabbit.github.io/webos](https://lilbunnyrabbit.github.io/webos/)**
+<p align="center">
+  <a href="https://lilbunnyrabbit.github.io/webos/"><img src=".github/readme/open-webos.svg" alt="Open WebOS" height="48"></a>
+  &nbsp;
+  <a href="docs/system/README.md"><img src=".github/readme/read-the-docs.svg" alt="Read the docs" height="48"></a>
+</p>
+
+# WebOS
 
 A desktop environment in the browser: windows, a taskbar, a desktop grid, a sandboxed file system, and apps that load on demand. Built with Svelte 5 runes, TypeScript, Tailwind v4 and Vite. The file system is the Origin Private File System. Hosting is static (GitHub Pages) with no backend.
 
