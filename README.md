@@ -26,7 +26,7 @@ First test run needs `bunx playwright install chromium`.
 
 ## How it's built
 
-A small kernel holds a registry of 20 services: settings, windows, files, notifications, dialogs, apps, desktop, session, extract, clipboard, ui, shell, shortcuts, scheduler, tasks, offline, backup, ai, router and version. Each declares its dependencies, and `kernel.init()` builds them in that order while the splash shows progress. Components reach a service by name, so one implementation can be swapped for another: phones get their own windows and desktop services and their own shell, and each device downloads only its own shell. Apps are folders with a `define_app()` manifest. The manifest is discovered by glob and the app's component loads lazily. Everything persistent lives in the Origin Private File System under a Unix-lite tree.
+A small kernel holds a registry of 21 services: settings, windows, files, notifications, dialogs, apps, desktop, session, extract, clipboard, ui, shell, shortcuts, scheduler, tasks, offline, backup, ai, speech, router and version. Each declares its dependencies, and `kernel.init()` builds them in that order while the splash shows progress. Components reach a service by name, so one implementation can be swapped for another: phones get their own windows and desktop services and their own shell, and each device downloads only its own shell. Apps are folders with a `define_app()` manifest. The manifest is discovered by glob and the app's component loads lazily. Everything persistent lives in the Origin Private File System under a Unix-lite tree.
 
 ```mermaid
 flowchart TD
@@ -56,6 +56,7 @@ flowchart TD
     offline["offline<br/>apps kept offline"]
     backup["backup<br/>zip to the device"]
     ai["ai<br/>on-device model"]
+    speech["speech<br/>read aloud"]
     router["router"]
     version["version"]
 
@@ -91,6 +92,8 @@ flowchart TD
     backup --> tasks
     ai --> tasks
     ai --> files
+    speech --> settings
+    speech --> windows
     router --> session
     router --> clipboard
     version --> apps

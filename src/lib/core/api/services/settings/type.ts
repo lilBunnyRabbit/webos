@@ -16,6 +16,8 @@ export interface SettingsService extends IService {
   live_options: LiveOptions;
   /** Whether usage stats may use cookies (ADR-070). Mirrored to localStorage so `index.html` can read it before OPFS. */
   analytics: AnalyticsConsent;
+  /** Voice and speed every app's speech uses (ADR-074). */
+  speech: SpeechSettings;
   /** Copies the image (a path or a device file) to `/var/lib/wallpaper/` and makes it the wallpaper, keeping fit, dim and blur. */
   set_wallpaper_image(source: string | File): Promise<void>;
   /**
@@ -27,6 +29,13 @@ export interface SettingsService extends IService {
   remove_font(name: string): Promise<void>;
   /** Font files in `/etc/fonts/`, by name. */
   installed_fonts(): Promise<string[]>;
+}
+
+export interface SpeechSettings {
+  /** A voice's `voiceURI`; `null` is the browser's default for the page language. */
+  voice: string | null;
+  /** 0.5 to 2; 1 is normal speed. */
+  rate: number;
 }
 
 export const AnalyticsConsent = {

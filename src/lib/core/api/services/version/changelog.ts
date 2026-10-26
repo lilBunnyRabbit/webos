@@ -5,6 +5,28 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.71.0",
+    date: "2026-10-26",
+    title: "Read aloud",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["ask"],
+        text: "Ask can read its answers aloud: turn on the speaker beside Send to hear each answer as it's written, or play any answer later.",
+      },
+      {
+        kind: NEW,
+        apps: ["settings"],
+        text: "Settings has a Speech page to pick the voice and speed WebOS reads with, and try them out.",
+      },
+      {
+        kind: NEW,
+        apps: ["terminal"],
+        text: "The terminal can read text and Markdown files aloud with say, and speech stop quiets it.",
+      },
+    ],
+  },
+  {
     version: "3.70.1",
     date: "2026-10-26",
     title: "Portfolio, always fresh",

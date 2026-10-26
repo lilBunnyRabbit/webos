@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { DEFAULT_APPEARANCE } from "./appearance";
-import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_analytics, parse_appearance, parse_live_options, parse_settings, parse_wallpaper } from "./persistence";
+import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_analytics, parse_appearance, parse_live_options, parse_settings, parse_speech, parse_wallpaper } from "./persistence";
 import { DEFAULT_TURRETS_OPTIONS } from "$lib/core/components/desktop/live/turrets/options";
 import { derive_surfaces, legacy_surface } from "./themes";
 
@@ -133,5 +133,17 @@ describe("analytics", () => {
     expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.analytics).toBe("unasked");
     expect(parse_analytics("yes")).toBe("unasked");
     expect(parse_analytics(true)).toBe("unasked");
+  });
+});
+
+describe("parse_speech", () => {
+  test("a save from before speech loads the defaults", () => {
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION }))!.speech).toEqual({ voice: null, rate: 1 });
+  });
+
+  test("keeps valid values; a bad field falls back on its own", () => {
+    expect(parse_speech({ voice: "Samantha", rate: 1.5 })).toEqual({ voice: "Samantha", rate: 1.5 });
+    expect(parse_speech({ voice: 3, rate: 1.5 })).toEqual({ voice: null, rate: 1.5 });
+    expect(parse_speech({ voice: "Samantha", rate: 9 })).toEqual({ voice: "Samantha", rate: 1 });
   });
 });

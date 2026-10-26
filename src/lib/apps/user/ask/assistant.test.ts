@@ -3,6 +3,7 @@ import { z } from "zod";
 import { define_command } from "$lib/core/api/services/shell/define";
 import { tokenize } from "$lib/core/api/services/shell/tokenize";
 import {
+  EnabledSchema,
   NONE,
   breakdown,
   catalogue_line,
@@ -70,5 +71,15 @@ describe("memory", () => {
     expect(parts).toEqual({ window: 6000, instructions: 200, conversation: 800, free: 5000 });
     expect(questions_left(parts, 2)).toBe(12);
     expect(questions_left(parts, 0)).toBeNull();
+  });
+});
+
+describe("commands.json", () => {
+  test("version 1 reads as version 2 with speaking off", () => {
+    expect(EnabledSchema.parse({ version: 1, on: ["list items"] })).toEqual({ version: 2, on: ["list items"], speak: false });
+  });
+
+  test("version 2 keeps its speak switch", () => {
+    expect(EnabledSchema.parse({ version: 2, on: [], speak: true })).toEqual({ version: 2, on: [], speak: true });
   });
 });

@@ -9,6 +9,7 @@ import {
   MapTrifold as MapTrifoldIcon,
   Palette as PaletteIcon,
   Sparkle as SparkleIcon,
+  SpeakerHigh as SpeakerHighIcon,
   SquareSplitVertical as SquareSplitVerticalIcon,
   TextAa as TextAaIcon,
 } from "phosphor-svelte";
@@ -30,6 +31,7 @@ export const PAGES: PageEntry[] = [
   { value: "interface", label: "Text & interface", icon: TextAaIcon, group: "Personalise" },
   { value: "taskbar", label: "Taskbar", icon: SquareSplitVerticalIcon, group: "Personalise", platform: Platform.DESKTOP },
   { value: "notifications", label: "Notifications", icon: BellIcon, group: "System" },
+  { value: "speech", label: "Speech", icon: SpeakerHighIcon, group: "System" },
   { value: "files", label: "Default apps", icon: AppWindowIcon, group: "System" },
   { value: "shortcuts", label: "Shortcuts", icon: KeyboardIcon, group: "System" },
   { value: "backup", label: "Backup & reset", icon: ArchiveIcon, group: "System" },
@@ -54,6 +56,7 @@ export const RELATED: Partial<Record<Page, RelatedLink[]>> = {
   interface: [{ page: "theme" }, { app: "font-maker", label: "Make a font in Font Maker" }, { app: "font-viewer", label: "Browse fonts in Font Viewer" }],
   taskbar: [{ page: "shortcuts" }],
   notifications: [{ app: "clock", label: "Alarms and timers in Clock" }],
+  speech: [{ app: "ask", label: "Ask reads its answers aloud" }, { app: "terminal", label: "Say something in Terminal" }],
   files: [{ app: "file-explorer", label: "Open files in File Explorer" }],
   shortcuts: [{ page: "taskbar" }, { app: "terminal", label: "Run commands in Terminal" }],
   backup: [{ app: "activity-monitor", label: "Storage in Activity Monitor", props: { section: "storage" } }],

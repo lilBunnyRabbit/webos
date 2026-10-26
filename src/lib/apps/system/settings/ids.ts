@@ -4,6 +4,7 @@ export const PAGE_IDS = [
   "interface",
   "taskbar",
   "notifications",
+  "speech",
   "files",
   "shortcuts",
   "backup",

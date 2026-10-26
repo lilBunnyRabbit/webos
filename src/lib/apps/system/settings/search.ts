@@ -55,6 +55,11 @@ export const SETTINGS: SettingEntry[] = [
   { id: "notification-test", page: "notifications", label: "Send a test notification", keywords: ["try", "test"] },
   { id: "notification-closed", page: "notifications", label: "Alerts with every tab closed", keywords: ["background", "triggers", "closed"] },
 
+  page_entry("speech", ["text to speech", "tts", "read aloud", "voice", "narrator"]),
+  { id: "speech-voice", page: "speech", label: "Voice", keywords: ["text to speech", "tts", "read aloud", "narrator", "language"] },
+  { id: "speech-rate", page: "speech", label: "Speech speed", keywords: ["rate", "faster", "slower", "read aloud"] },
+  { id: "speech-test", page: "speech", label: "Test speech", keywords: ["try", "preview", "read aloud"] },
+
   page_entry("files", ["file types", "associations"]),
   { id: "default-apps", page: "files", label: "Remembered choices", keywords: ["open with", "always use", "forget", "file types"] },
 

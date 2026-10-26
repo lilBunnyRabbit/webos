@@ -18,3 +18,4 @@ export * from "./extract";
 export * from "./ai";
 export * from "./scheduler";
 export * from "./offline";
+export * from "./speech";

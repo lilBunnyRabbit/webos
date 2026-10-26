@@ -4,6 +4,7 @@ import { Mode } from "./mode";
 import type {
   AiService as IAiService,
   DesktopService as IDesktopService,
+  SpeechService as ISpeechService,
   WindowsService as IWindowsService,
 } from "../services";
 // App manifests load with AppsService and read WindowFlag through the barrel, which is still mid-cycle here. The windows
@@ -61,7 +62,11 @@ async function mode_services(mode: Mode) {
 }
 
 export async function register_default_services(kernel: Kernel) {
-  const [platform, mode] = await Promise.all([platform_services(kernel.platform), mode_services(kernel.mode)]);
+  const [platform, mode, speech] = await Promise.all([
+    platform_services(kernel.platform),
+    mode_services(kernel.mode),
+    import("../services/speech/service.svelte"),
+  ]);
 
   kernel.register("settings", {
     instance: SettingsService,
@@ -156,6 +161,12 @@ export async function register_default_services(kernel: Kernel) {
   kernel.register<IAiService>("ai", {
     instance: platform.ai,
     dependencies: ["files", "tasks", "notifications"],
+  });
+
+  // Same class on every platform and in solo (ADR-074), loaded beside the boot chunk like ai.
+  kernel.register<ISpeechService>("speech", {
+    instance: speech.SpeechService,
+    dependencies: ["settings", "windows", "files"],
   });
 
   kernel.register("router", {

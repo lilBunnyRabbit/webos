@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { AiAvailability, AiFeature, type AiMessage, type AiService, type AiUsage, type ClipboardService, type FilesService, type ShellService } from "$lib/core/api";
+  import kernel, { AiAvailability, AiFeature, type AiMessage, type AiService, type AiUsage, type ClipboardService, type FilesService, type ShellService, type SpeechService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
@@ -13,6 +13,8 @@
     FolderOpen as FolderOpenIcon,
     NotePencil as NotePencilIcon,
     PaperPlaneRight as PaperPlaneRightIcon,
+    SpeakerHigh as SpeakerHighIcon,
+    SpeakerSlash as SpeakerSlashIcon,
     Stop as StopIcon,
     Trash as TrashIcon,
     Warning as WarningIcon,
@@ -43,6 +45,7 @@
   const ai = $derived(kernel.service<AiService>("ai"));
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
   const shell = $derived(kernel.service<ShellService>("shell"));
+  const speech = $derived(kernel.service<SpeechService>("speech"));
   const enabled = storage.file(ENABLED_FILE, EMPTY_ENABLED, EnabledSchema);
 
   let source = $state.raw<(AskSource & { path: string | null }) | null>(null);
@@ -57,11 +60,13 @@
   let choosing = $state(false);
   let usage = $state.raw<AiUsage | null>(null);
   let instructions = $state(0);
+  let spoken = $state<number | null>(null);
 
   const busy = $derived(controller !== null);
   const catalogue = $derived(eligible(shell.commands).filter((command) => (command.available?.() ?? true) === true));
   const on = $derived(catalogue.filter((command) => enabled.value.on.includes(command.id)));
   const questions = $derived(turns.filter((turn) => turn.role === "user").length);
+  const speaking = $derived(speech.speaking === win.id);
 
   untrack(() => void shell.load());
 
@@ -77,6 +82,21 @@
   function toggle(id: string, value: boolean) {
     const rest = enabled.value.on.filter((other) => other !== id);
     enabled.value = { ...enabled.value, on: value ? [...rest, id] : rest };
+  }
+
+  function toggle_speak() {
+    const speak = !enabled.value.speak;
+    enabled.value = { ...enabled.value, speak };
+    if (!speak) speech.stop(win.id);
+  }
+
+  function read_aloud(index: number) {
+    if (speaking && spoken === index) {
+      speech.stop(win.id);
+      return;
+    }
+    spoken = index;
+    speech.speak(win.id, turns[index].content, { markdown: true });
   }
 
   function previous(): Previous | null {
@@ -126,6 +146,7 @@
 
   function new_chat() {
     controller?.abort();
+    speech.stop(win.id);
     turns = [];
     error = null;
     usage = null;
@@ -137,6 +158,7 @@
     if (!question || busy) return;
     draft = "";
     error = null;
+    speech.stop(win.id);
 
     const instructions_text = system_prompt(source);
     const earlier: AiMessage[] = turns.map(({ role, content, sent }) => ({ role, content: sent ?? content }));
@@ -147,6 +169,11 @@
     const answer = turns[turns.length - 1];
     const own = new AbortController();
     controller = own;
+    const index = turns.length - 1;
+    let fed = false;
+    if (enabled.value.speak) spoken = index;
+    // Stopped, preempted by another speaker, or switched to another answer: the rest of this one stays quiet.
+    const aloud = () => spoken === index && (!fed || speaking);
 
     try {
       let ran: Ran | null = null;
@@ -166,11 +193,17 @@
       let step = await stream.next();
       while (!step.done) {
         answer.content += step.value;
+        if (aloud()) {
+          speech.feed(win.id, step.value, { markdown: true });
+          fed = true;
+        }
         step = await stream.next();
       }
+      if (fed && aloud()) speech.end(win.id);
       usage = step.value;
       if (!instructions) instructions = (await ai.measure(instructions_text)).used;
     } catch (reason) {
+      if (spoken === index) speech.stop(win.id);
       if (own.signal.aborted) {
         answer.stopped = true;
         if (!answer.content && turns.at(-1) === answer) turns.splice(-2, 2);
@@ -194,13 +227,14 @@
 
   function stop() {
     controller?.abort();
+    speech.stop(win.id);
   }
 
   function on_keydown(event: KeyboardEvent) {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
       send();
-    } else if (event.key === "Escape" && busy) {
+    } else if (event.key === "Escape" && (busy || speaking)) {
       event.preventDefault();
       stop();
     }
@@ -297,7 +331,14 @@
                   {#if turn.stopped || (turn.content && !(busy && index === turns.length - 1))}
                     <div class="flex items-center gap-1 text-2xs text-foreground/65">
                       {#if turn.stopped}<span class="px-1">Stopped</span>{/if}
-                      {#if turn.content}<CopyButton text={turn.content} label="Copy answer" />{/if}
+                      {#if turn.content}
+                        <CopyButton text={turn.content} label="Copy answer" />
+                        {#if speech.supported}
+                          <IconButton size="sm" label={speaking && spoken === index ? "Stop speaking" : "Speak answer"} onclick={() => read_aloud(index)}>
+                            {#if speaking && spoken === index}<StopIcon weight="fill" />{:else}<SpeakerHighIcon weight="bold" />{/if}
+                          </IconButton>
+                        {/if}
+                      {/if}
                     </div>
                   {/if}
                 </li>
@@ -323,6 +364,16 @@
           class="max-h-40 min-h-9 flex-1 resize-none field-sizing-content pointer-coarse:min-h-10"
           onkeydown={on_keydown}
         />
+        {#if speech.supported}
+          <IconButton
+            label={enabled.value.speak ? "Reading answers aloud" : "Read answers aloud"}
+            pressed={enabled.value.speak}
+            class="pointer-coarse:size-10"
+            onclick={toggle_speak}
+          >
+            {#if enabled.value.speak}<SpeakerHighIcon weight="bold" />{:else}<SpeakerSlashIcon weight="bold" />{/if}
+          </IconButton>
+        {/if}
         {#if busy}
           <Button onclick={stop}><StopIcon weight="fill" /> Stop</Button>
         {:else}

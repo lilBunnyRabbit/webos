@@ -18,6 +18,7 @@
   import Related from "./sections/related.svelte";
   import Roadmap from "./sections/roadmap.svelte";
   import Shortcuts from "./sections/shortcuts.svelte";
+  import Speech from "./sections/speech.svelte";
   import Taskbar from "./sections/taskbar.svelte";
   import Theme from "./sections/theme.svelte";
   import Wallpaper from "./sections/wallpaper.svelte";
@@ -181,6 +182,8 @@
         <Shortcuts />
       {:else if current.value === "notifications"}
         <Notifications />
+      {:else if current.value === "speech"}
+        <Speech />
       {:else if current.value === "backup"}
         <Backup />
       {:else if current.value === "offline"}

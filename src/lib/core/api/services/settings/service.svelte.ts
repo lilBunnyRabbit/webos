@@ -1,4 +1,4 @@
-import type { AnalyticsConsent, Appearance, FileDefaults, FontChoice, LiveOptions, SavedTheme, SettingsService as ISettingsService, Taskbar, Theme, Wallpaper } from "./type";
+import type { AnalyticsConsent, Appearance, FileDefaults, FontChoice, LiveOptions, SavedTheme, SettingsService as ISettingsService, SpeechSettings, Taskbar, Theme, Wallpaper } from "./type";
 import { FontRole, TaskbarPosition, TaskbarSize } from "./type";
 import { BRAND_DARK } from "./themes";
 import { DEFAULT_APPEARANCE, RADIUS_SCALE, SHADOW_STRENGTH, TEXT_SCALE } from "./appearance";
@@ -12,6 +12,7 @@ import type { FaceSource } from "$lib/core/utils/font-loader";
 import { LatestWriter } from "../files/latest-writer";
 import { write_var_lib } from "../desktop/folder.svelte";
 import {
+  DEFAULT_SPEECH,
   DEFAULT_WALLPAPER,
   SETTINGS_PATH,
   SETTINGS_VERSION,
@@ -43,6 +44,7 @@ export class SettingsService implements ISettingsService {
   public appearance = $state<Appearance>({ ...DEFAULT_APPEARANCE });
   public live_options = $state<LiveOptions>({});
   public analytics = $state<AnalyticsConsent>("unasked");
+  public speech = $state<SpeechSettings>({ ...DEFAULT_SPEECH });
 
   private files_service!: FilesService;
   private dispose_effects?: () => void;
@@ -75,6 +77,7 @@ export class SettingsService implements ISettingsService {
       this.appearance = saved.appearance;
       this.live_options = saved.live_options;
       this.analytics = saved.analytics;
+      this.speech = saved.speech;
     }
     this.prune_wallpapers().catch((error) => console.error("[SettingsService] Failed to prune wallpapers", error));
 
@@ -129,6 +132,7 @@ export class SettingsService implements ISettingsService {
             appearance: this.appearance,
             live_options: this.live_options,
             analytics: this.analytics,
+            speech: this.speech,
           })
         );
       });

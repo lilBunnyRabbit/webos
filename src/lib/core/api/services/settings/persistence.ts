@@ -13,6 +13,7 @@ import {
   type FileDefaults,
   type LiveOptions,
   type SavedTheme,
+  type SpeechSettings,
   type Taskbar,
   type Theme,
   type ThemeToken,
@@ -30,6 +31,9 @@ export const SETTINGS_PATH = `${PATHS.etc}/settings.json`;
 /** Wallpaper images are copies the OS owns, so moving or deleting the original doesn't break the wallpaper. */
 export const WALLPAPER_DIRECTORY_NAME = "wallpaper";
 export const WALLPAPER_DIRECTORY = `${PATHS.var_lib}/${WALLPAPER_DIRECTORY_NAME}`;
+
+export const DEFAULT_SPEECH: SpeechSettings = { voice: null, rate: 1 };
+export const SPEECH_RATE = { min: 0.5, max: 2 } as const;
 
 export const DEFAULT_WALLPAPER: Wallpaper = { kind: "preset", preset: WallpaperPreset.GRID };
 
@@ -60,6 +64,7 @@ export interface PersistedSettings {
   appearance: Appearance;
   live_options: LiveOptions;
   analytics: AnalyticsConsent;
+  speech: SpeechSettings;
 }
 
 // Merged over defaults so tokens added after the save still get a value.
@@ -89,6 +94,7 @@ export function parse_settings(raw: string): PersistedSettings | null {
       appearance: parse_appearance(data.appearance),
       live_options: parse_live_options(data.live_options),
       analytics: parse_analytics(data.analytics),
+      speech: parse_speech(data.speech),
     };
   } catch (error) {
     console.error("Failed to load settings:", error);
@@ -190,6 +196,17 @@ export function parse_appearance(saved: unknown): Appearance {
 // Added after version 1 shipped: anything but a known answer means the question is still open.
 export function parse_analytics(saved: unknown): AnalyticsConsent {
   return Object.values(AnalyticsConsent).find((answer) => answer === saved) ?? AnalyticsConsent.UNASKED;
+}
+
+const speech_schema = z.object({
+  voice: z.string().min(1).nullable().catch(DEFAULT_SPEECH.voice),
+  rate: z.number().min(SPEECH_RATE.min).max(SPEECH_RATE.max).catch(DEFAULT_SPEECH.rate),
+});
+
+// Added after version 1 shipped; each field falls back on its own.
+export function parse_speech(saved: unknown): SpeechSettings {
+  const result = speech_schema.safeParse(typeof saved === "object" && saved !== null ? saved : {});
+  return result.success ? result.data : { ...DEFAULT_SPEECH };
 }
 
 export function serialize_settings(settings: PersistedSettings): string {

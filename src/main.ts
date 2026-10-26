@@ -24,6 +24,7 @@ const STEP_LABELS: Record<string, string> = {
   offline: "Offline apps",
   backup: "Backup",
   ai: "On-device AI",
+  speech: "Speech",
   extract: "Windows",
   router: "Links",
   version: "Updates",

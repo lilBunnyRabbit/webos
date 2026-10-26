@@ -7,9 +7,11 @@ import { to_text } from "$lib/core/api/services/shell/values";
 export const APP_ID = "ask";
 export const ENABLED_FILE = "commands.json";
 export const ENABLED_PATH = `/var/lib/apps/${APP_ID}/${ENABLED_FILE}`;
-export const EnabledSchema = z.object({ version: z.literal(1), on: z.array(z.string()) });
-export type Enabled = z.infer<typeof EnabledSchema>;
-export const EMPTY_ENABLED: Enabled = { version: 1, on: [] };
+const EnabledV2 = z.object({ version: z.literal(2), on: z.array(z.string()), speak: z.boolean() });
+const EnabledV1 = z.object({ version: z.literal(1), on: z.array(z.string()) });
+export type Enabled = z.infer<typeof EnabledV2>;
+export const EnabledSchema = z.union([EnabledV2, EnabledV1.transform(({ on }): Enabled => ({ version: 2, on, speak: false }))]);
+export const EMPTY_ENABLED: Enabled = { version: 2, on: [], speak: false };
 
 export const NONE = "none";
 const MAX_ARGS = 6;

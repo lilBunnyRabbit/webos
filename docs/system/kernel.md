@@ -75,6 +75,7 @@ Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_
 | `offline` | `OfflineService` | `files`, `apps`, `tasks`, `notifications`, `windows` (an app's first open saves it, ADR-065) |
 | `backup` | `BackupService` | `files`, `dialogs`, `notifications`, `windows`, `tasks` |
 | `ai` | `AiService` | `files`, `tasks`, `notifications`. `MobileAiService` on mobile, picked by `platform_services` (ADR-046) |
+| `speech` | `SpeechService` | `settings`, `windows`, `files`. One class everywhere, `import()`ed beside the boot chunk like `ai` (ADR-074) |
 | `scheduler` | `SchedulerService` | `files`, `notifications`, `apps`, `shell`. The same class in solo (ADR-062) |
 | `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
 | `extract` | `ExtractService` | `windows`, `dialogs`, `notifications`. Desktop only: registered by `platform_services` (ADR-043) |
@@ -94,6 +95,7 @@ files, apps, tasks, notifications, windows ─────────► offlin
 files, notifications, apps, shell ──────────────────► scheduler
 files, dialogs, notifications, windows, tasks ──────► backup
 files, tasks, notifications ────────────────────────► ai
+settings, windows, files ───────────────────────────► speech
 windows, apps, session, clipboard, notifications ───► router
 windows, dialogs, notifications ────────────────────► extract (desktop)
 files, notifications, dialogs, apps, session, settings ► version
@@ -104,10 +106,10 @@ files, notifications, dialogs, apps, session, settings ► version
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files` and `notifications`, so both are pushed before it. With the registrations above, the order is:
 
 ```
-files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → scheduler → tasks → offline → backup → ai → router → version
+files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → scheduler → tasks → offline → backup → ai → speech → router → version
 ```
 
-Shutdown runs the reverse: `version → router → ai → backup → offline → tasks → scheduler → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
+Shutdown runs the reverse: `version → router → speech → ai → backup → offline → tasks → scheduler → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
 
 `version` is registered last on purpose: its `init()` requests the introduction after SessionService requested the Restore dialog, so the introduction is the topmost modal at boot and Restore shows once it closes (ADR-026).
 
@@ -145,6 +147,7 @@ Which services implement which hooks today:
 | offline | `online`/`offline` and `visibilitychange` listeners; read `/etc/offline.json` and `/var/lib/offline/state.json` (a new build resets the saved set; the migration toast on an existing install), the folder-revision and open-windows effects, then a sync on idle after an update or with picked apps left to save ([offline](services/offline.md#lifecycle)) | remove the listeners, dispose the effects |
 | apps, clipboard, tasks, backup | none | none |
 | ai | asks the browser which features it has, **without awaiting** (every feature reads `no` until it answers) ([ai](services/ai.md#lifecycle)); the mobile variant has no `init` | destroy kept model sessions |
+| speech | lists the browser's voices and listens for `voiceschanged`; starts the effect that stops a closed window's speech ([speech](services/speech.md#lifecycle)) | cancel speech, remove the listener |
 | extract | `pointerdown` / `keydown` (capture) listeners on `window` for `input_inside`, an `$effect.root` that closes a closed window's mini window; while one is out, a `pagehide` listener and two `MutationObserver`s ([extract](services/extract.md)) | dispose it, close the mini window |
 
 ### Test kernel
@@ -159,7 +162,7 @@ Which services implement which hooks today:
 
 `main.ts` passes `on_step` to `kernel.init()` (ADR-036). The kernel stays serial (ADR-002); the callback only reports.
 
-- **Splash.** `index.html` has `#splash-progress` under the logo: a 160px, 3px track (`#splash-bar`, `transform: scaleX(done / total)`, 150 ms ease-out) and a 12px label (`#splash-label`, `Loading` until the first step). Colours are Brand Dark tokens hardcoded as OKLCH (track `background_lightest`, bar `primary`, label `foreground`), since no theme exists before boot and the brand keeps the splash dark. `main.ts` maps each key to a short label (`files` → "Files", `ui` → "Interface", `scheduler` → "Alarms", `tasks` → "Tasks", `offline` → "Offline apps", `backup` → "Backup", `ai` → "On-device AI", `extract` → "Windows", `router` → "Links", `version` → "Updates"; an unknown key shows as-is). The splash knows keys only, no service logic. Before any of this, `src/boot.ts` runs the browser support check and may hold `main.ts` behind the warning screen ([compat](compat.md#boot)); the splash stays underneath it.
+- **Splash.** `index.html` has `#splash-progress` under the logo: a 160px, 3px track (`#splash-bar`, `transform: scaleX(done / total)`, 150 ms ease-out) and a 12px label (`#splash-label`, `Loading` until the first step). Colours are Brand Dark tokens hardcoded as OKLCH (track `background_lightest`, bar `primary`, label `foreground`), since no theme exists before boot and the brand keeps the splash dark. `main.ts` maps each key to a short label (`files` → "Files", `ui` → "Interface", `scheduler` → "Alarms", `tasks` → "Tasks", `offline` → "Offline apps", `backup` → "Backup", `ai` → "On-device AI", `speech` → "Speech", `extract` → "Windows", `router` → "Links", `version` → "Updates"; an unknown key shows as-is). The splash knows keys only, no service logic. Before any of this, `src/boot.ts` runs the browser support check and may hold `main.ts` behind the warning screen ([compat](compat.md#boot)); the splash stays underneath it.
 - **Warm.** On each step `main.ts` runs the warmers whose service is already initialised. The `desktop` warmer `import()`s the widget component of every widget in `desktop.items()` (the mobile home lists no widgets, so nothing). SessionService warms the components of the saved session's apps itself, in its `init()`. Warms are fire-and-forget and ignore errors; the real import retries. Nothing renders before mount.
 - **Shell.** `main.ts` starts `load_shell(kernel.platform, kernel.mode)` alongside `kernel.init()` and awaits both, then passes the component to `App` as the `shell` prop (`App` → `web-os` → `os.svelte`). It renders in the same frame the splash goes.
 - **Errors.** A failed shell import rejects `main()` like a failed init: the splash shows the boot error and `#splash-progress` is removed.
