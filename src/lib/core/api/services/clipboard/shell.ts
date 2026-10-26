@@ -4,10 +4,20 @@ import { define_command } from "../shell/define";
 import { ShellError, type ShellContribution } from "../shell/type";
 import { assert_writable, file_value, is_file_value } from "../files/shell";
 import { resolve_path } from "../files/path";
+import { format_bytes } from "$lib/core/utils";
 import type { ClipboardService } from "./type";
+
+const paste = () => import("$lib/core/components/clipboard/paste");
 
 export function clipboard_shell(clipboard: ClipboardService): ShellContribution {
   return {
+    values: {
+      clip: {
+        columns: ["name", "type", "size"],
+        cell: (value, column) => (column === "size" ? format_bytes(Number(value.size)) : String(value[column] ?? "")),
+        text: (value) => `${String(value.name)}  ${String(value.type)}  (system clipboard)`,
+      },
+    },
     commands: [
       define_command({
         id: "copy",
@@ -27,6 +37,23 @@ export function clipboard_shell(clipboard: ClipboardService): ShellContribution 
           }
           if (paths.length > 0) clipboard.copy_files(paths);
           if (lines.length > 0) await clipboard.copy_text(lines.join("\n"));
+        },
+      }),
+      define_command({
+        id: "clip ls",
+        description: "What's on the clipboard: the system clipboard's item when the browser shows it, then files copied in WebOS",
+        yields: "file",
+        async *run() {
+          const { clipboard_items, read_system } = await paste();
+          for (const item of await clipboard_items(await read_system())) {
+            if (item.kind === "text") {
+              yield { $type: "clip", name: item.text.split("\n")[0].slice(0, 80), type: "text", size: item.text.length };
+            } else if (item.path === null) {
+              yield { $type: "clip", name: item.file.name, type: item.file.type, size: item.file.size };
+            } else {
+              yield file_value(item.path, "file", item.file.size, item.file.lastModified);
+            }
+          }
         },
       }),
       define_command({

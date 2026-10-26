@@ -5,6 +5,21 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.73.0",
+    date: "2026-10-26",
+    title: "Paste to open",
+    changes: [
+      {
+        kind: NEW,
+        text: "Every Open… can paste: a Paste button shows what's on the clipboard and lets you pick, and Ctrl+V while it's open pastes straight in.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Files copied in Explorer paste into any Open…, and the terminal's clip ls shows what's on the clipboard.",
+      },
+    ],
+  },
+  {
     version: "3.72.0",
     date: "2026-10-26",
     title: "The docs, as an app",

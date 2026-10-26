@@ -19,6 +19,7 @@ export interface FilesClipboard {
 export interface ClipboardService extends IService {
   readonly content: FilesClipboard | null;
 
+  /** Also writes `paths`, newline-separated, to the system clipboard, so a paste can tell this copy is the newest (ADR-076). */
   copy_files(paths: string[]): void;
   cut_files(paths: string[]): void;
   /** `true` if `path` is waiting to be moved by a paste (shown dimmed). */

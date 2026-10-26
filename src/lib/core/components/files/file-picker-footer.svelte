@@ -3,9 +3,11 @@
   import type { DirectoryHandler } from "$lib/core/api/services/files/service.svelte";
   import { join_path, split_path } from "$lib/core/api/services/files/path";
   import { is_read_only_path, PATHS } from "$lib/core/api/services/files/hierarchy";
-  import { Devices as DevicesIcon, HardDrives as HardDrivesIcon } from "phosphor-svelte";
+  import { get_app_context } from "$lib/core/contexts/app";
+  import { ClipboardText as ClipboardTextIcon, Devices as DevicesIcon, HardDrives as HardDrivesIcon } from "phosphor-svelte";
   import { Button, Input } from "../ui";
-  import { import_device_files, type PickerMode } from "./picker";
+  import { import_device_files, pasted_paths, type PickerMode } from "./picker";
+  import { choose_from_clipboard } from "../clipboard/paste";
   import { mount_folder } from "./file-actions";
   import { report_file_error } from "./file-explorer.errors";
 
@@ -19,6 +21,7 @@
   let { handler, picker, selected, onnavigatepath }: Props = $props();
 
   const files = $derived(kernel.service<FilesService>("files"));
+  const { window_id } = get_app_context();
 
   // Places is hidden below 48rem, which the picker sheet always is, so the other two sources live here.
   async function from_device() {
@@ -27,6 +30,15 @@
       if (paths.length > 0) picker.onchoose(paths);
     } catch (error) {
       report_file_error(picker.multiple ? "Couldn't read the files" : "Couldn't read the file", error);
+    }
+  }
+
+  async function from_clipboard() {
+    try {
+      const items = await choose_from_clipboard(window_id, { accept: picker.accept, multiple: picker.multiple });
+      if (items?.length) picker.onchoose(await pasted_paths(items));
+    } catch (error) {
+      report_file_error("Couldn't paste", error);
     }
   }
 
@@ -54,6 +66,7 @@
 {#snippet sources()}
   {#if picker.kind === "file"}
     <Button variant="quiet" size="sm" onclick={from_device}><DevicesIcon weight="bold" /> This device…</Button>
+    <Button variant="quiet" size="sm" onclick={from_clipboard}><ClipboardTextIcon weight="bold" /> Paste…</Button>
   {/if}
   {#if files.can_mount}
     <Button variant="quiet" size="sm" onclick={from_disk}><HardDrivesIcon weight="bold" /> Folder on disk…</Button>
@@ -68,7 +81,7 @@
       if (save_path) picker.onchoose([save_path]);
     }}
   >
-    {#if files.can_mount}<div class="flex w-full items-center gap-1">{@render sources()}</div>{/if}
+    {#if files.can_mount}<div class="flex w-full flex-wrap items-center gap-1">{@render sources()}</div>{/if}
     <Input bind:value={name} aria-label="File name" placeholder="File name" class="min-w-48 flex-1" autofocus />
     {#if system}
       <span class="shrink-0 text-2xs text-error">{handler.path === PATHS.mnt ? "Open a mounted folder first" : "System folders are read-only"}</span>
@@ -82,7 +95,7 @@
   </form>
 {:else}
   <div class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-t border-foreground/8 bg-background-light px-3 py-2.5">
-    {#if picker.kind === "file" || files.can_mount}<div class="flex w-full items-center gap-1">{@render sources()}</div>{/if}
+    {#if picker.kind === "file" || files.can_mount}<div class="flex w-full flex-wrap items-center gap-1">{@render sources()}</div>{/if}
     <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80" title={choices.join("\n") || undefined}>
       {choices.length > 1 ? `${choices.length} files` : (choices[0] ?? empty_label)}
     </span>

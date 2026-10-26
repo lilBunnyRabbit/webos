@@ -165,7 +165,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 | session | `win reopen` | | |
 | settings | `theme get`, `theme list`, `theme set`, `theme random`, `theme save`, `theme delete` | `theme` | `theme` |
 | notifications | `notify`, `notifications` | | `notification` |
-| clipboard | `copy`, `paste` | | |
+| clipboard | `copy`, `paste`, `clip ls` (the system item as a `clip` value, then WebOS-copied files as `file` values) | | `clip` |
 | version | `version`, `changelog [-c] [--apps]`, `install`, `ci status` | | `release`, `new-app` (click launches), `ci-job` (click opens the job on GitHub) |
 | router | `link [id] [-c] [-s]` | | |
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |

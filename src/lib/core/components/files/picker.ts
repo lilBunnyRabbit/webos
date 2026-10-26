@@ -3,6 +3,7 @@ import type { FileSystemItem } from "$lib/core/api/services/files";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { get_directory_handle } from "$lib/core/api/services/files/opfs";
 import { pick_device_files } from "$lib/core/utils/device-file";
+import type { PasteFile } from "../clipboard/paste";
 
 /** File Explorer in picker mode (ADR-025): a window sheet that returns a path instead of opening things. */
 export interface PickerMode {
@@ -43,4 +44,11 @@ export async function store_device_files(files: FilesService, picked: File[]): P
   if (!tmp) throw new Error(`${PATHS.tmp} doesn't exist`);
   await get_directory_handle(tmp, "device", { create: true });
   return files.import_entries(DEVICE_PATH, picked);
+}
+
+/** Pasted files as picker paths: WebOS copies keep their own, device data lands in `DEVICE_PATH` (ADR-076). */
+export async function pasted_paths(items: PasteFile[]): Promise<string[]> {
+  const device = items.filter((item) => item.path === null).map((item) => item.file);
+  const stored = await store_device_files(kernel.service<FilesService>("files"), device);
+  return [...items.flatMap((item) => (item.path === null ? [] : [item.path])), ...stored];
 }

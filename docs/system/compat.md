@@ -169,6 +169,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `custom-highlight` | Custom highlights | Find highlights in Warren and the kerning highlight in Font Maker. | `warren` `font-maker` | 105 | 149 | 17.2 |
 | `web-share` | Web Share | Share buttons. | `cards` `p2p-transfer` `proposals` | 128 | no | 12.1 |
 | `clipboard-image` | Copying images | Copying an image to the clipboard. | `image-tools` `qr-studio` | 76 | 127 | 13.1 |
+| `clipboard-read` | Reading the clipboard | The Paste button in Open… can't show the system clipboard; Ctrl+V still pastes. | | 76 | 127 | 13.1 |
 | `barcode-detector` | Barcode detection | Cards reads EAN, UPC, Code 128 and Code 39 itself; other barcode types need typing. QR codes still work. | `cards` | 88 | no | no |
 | `passkey-prf` | Passkey encryption (PRF) | Unlocking Moonrabbit with a passkey. PIN, pattern and phrase still work. | `moonrabbit` | 133 | 139 | 18 |
 | `webhid` | WebHID | The HID device inspector. | `hid-lab` | 89 | no | no |

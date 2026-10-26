@@ -11,7 +11,7 @@ Copy, cut and paste for files and folders across File Explorer windows and the d
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `content` | `FilesClipboard \| null` | `$state`: `{ kind: "files", mode: "copy" \| "cut", paths: string[] }` (absolute paths). In memory only |
-| `copy_files` | `(paths: string[]) => void` | Replaces the content. Empty `paths` clears it |
+| `copy_files` | `(paths: string[]) => void` | Replaces the content. Empty `paths` clears it. Also writes the paths, newline-separated, to the system clipboard (ADR-076) |
 | `cut_files` | `(paths: string[]) => void` | Same, in `cut` mode. Callers dim cut entries |
 | `is_cut` | `(path: string) => boolean` | Reactive; File Explorer rows and desktop icons use it to dim |
 | `clear` | `() => void` | |
@@ -32,6 +32,10 @@ Copy, cut and paste for files and folders across File Explorer windows and the d
 
 The caller shows the conflict question: File Explorer as a window sheet (`ConflictDialog`, `dismissible: false`, Keep both focused), the desktop as a system dialog.
 
+### The system clipboard (ADR-076)
+
+Copy and cut write the paths as text to the system clipboard, fire and forget (a refusal is a `console.warn`), replacing whatever was there, as a real OS does. That text is how a paste in an app or the picker tells the two clipboards apart: text equal to `content.paths.join("\n")` means the WebOS copy is the newest thing copied, anything else means the system clipboard is newer. The logic lives in `core/components/clipboard/` ([files: clipboard view](files.md#clipboard-view-adr-076)); `clear()` leaves the system clipboard alone.
+
 ## Lifecycle
 
 No `init` or `destroy`.
@@ -42,7 +46,7 @@ None. A reload empties the clipboard, as on a real OS.
 
 ## Shell
 
-Contributes `copy` (text, or piped files onto the file clipboard) and `paste` (`clipboard/shell.ts`). See [shell](shell.md#contributions).
+Contributes `copy` (text, or piped files onto the file clipboard), `paste` and `clip ls` (`clipboard/shell.ts`). `clip ls` lists the clipboard newest first: the system clipboard's item as a `clip` value (`name`, `type`, `size`; text shows its first line) when the browser lets it be read and it isn't WebOS's own paths, then the WebOS copy as `file` values, so `clip ls | open` opens them. Its body imports `core/components/clipboard/paste.ts` on first run. See [shell](shell.md#contributions).
 
 ## Known gaps
 

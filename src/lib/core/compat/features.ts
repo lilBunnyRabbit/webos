@@ -423,6 +423,15 @@ export const FEATURES: Feature[] = [
     probe: () => global("ClipboardItem"),
   },
   {
+    // Images come back as PNG from Chrome 76; Ctrl+V reads the paste event instead and still works without it.
+    id: "clipboard-read",
+    name: "Reading the clipboard",
+    lost: "The Paste button in Open… can't show the system clipboard; Ctrl+V still pastes.",
+    level: Level.SHELL,
+    min: min("76", "127", "13.1"),
+    probe: () => proto("Clipboard", "read"),
+  },
+  {
     // Exposed on macOS, ChromeOS and Android Chrome only; QR codes fall back to a library everywhere.
     id: "barcode-detector",
     name: "Barcode detection",
