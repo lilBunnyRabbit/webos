@@ -1,5 +1,6 @@
 <script lang="ts">
   import kernel, {
+    is_core_app,
     app_history,
     ChangeKind,
     NotificationType,
@@ -175,7 +176,7 @@
           {#if manifest.widget}<Button size="sm" onclick={add_widget}><StickerIcon weight="bold" /> Add widget</Button>{/if}
         {/if}
         <Button size="sm" onclick={copy_link}><LinkSimpleIcon weight="bold" /> Copy solo link</Button>
-        {#if installed && !manifest.system}
+        {#if installed && !is_core_app(manifest.id)}
           <Button size="sm" variant="quiet" onclick={(event) => void uninstall_app(manifest.id, { x: event.clientX, y: event.clientY })}>
             <PackageIcon weight="bold" /> Uninstall…
           </Button>

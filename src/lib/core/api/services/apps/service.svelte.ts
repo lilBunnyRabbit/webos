@@ -37,6 +37,7 @@ import { catalogue_source, type CatalogueSource } from "./source";
 import { current_ids, current_list, current_target, resolve_replaced } from "./replaces";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
 import { without_pin } from "../settings/taskbar";
+import { is_core_app } from "./helpers";
 import { track_launch } from "$lib/core/utils/analytics";
 import { on_idle } from "$lib/core/utils/idle";
 import { ActiveTime } from "./active-time.svelte";
@@ -61,7 +62,7 @@ export class AppsService implements IAppsService {
 
   /** Every app known so far: its manifest once its code is here, a stub from its catalogue entry until then (ADR-077). */
   readonly registry: Map<string, AppManifest> = new SvelteMap();
-  /** User apps only: system apps are always installed (ADR-040). Ids no entry names yet stay, so they're saved back. */
+  /** Everything installed but the core apps, which always are (ADR-077). Ids no entry names yet stay, so they're saved back. */
   private readonly installed = new SvelteSet<AppId>();
   private readonly entries = new SvelteMap<AppId, CatalogueApp>();
   private readonly code = new SvelteMap<AppId, AppManifest>();
@@ -180,9 +181,11 @@ export class AppsService implements IAppsService {
     const header = this.header;
     if (!header) return null;
     if (!this.complete && [...this.installed].some((id) => !this.entries.has(id))) return null;
-    const ids = [...this.list({ installed: true })].map(([id]) => id);
-    if (ids.some((id) => this.foreign.has(id))) return null;
-    return { ...header, apps: ids.map((id) => this.entries.get(id)!) };
+    const ids = new Set(Array.from(this.list({ installed: true }), ([id]) => id));
+    // System apps that aren't installed still open on demand from what boot knows: a file's default, Docs from Kernel.
+    for (const [id, entry] of this.entries) if (entry.system) ids.add(id);
+    if ([...ids].some((id) => this.foreign.has(id))) return null;
+    return { ...header, apps: [...ids].map((id) => this.entries.get(id)!) };
   }
 
   public load(id: AppId): Promise<AppManifest | undefined> {
@@ -276,10 +279,11 @@ export class AppsService implements IAppsService {
     if (saved) {
       // Only the full catalogue tells a replaced id from one the slice doesn't name; until then every id stays.
       const known = (id: AppId) => !this.complete || this.registry.has(id);
-      for (const id of current_ids(this.registry.values(), saved, known)) this.installed.add(id);
+      for (const id of current_ids(this.registry.values(), saved.ids, known)) this.installed.add(id);
+      if (!saved.system) await this.keep_used_system_apps();
       return;
     }
-    // No list yet. A first boot starts with the system apps (the intro adds the picked interests); a device from before
+    // No list yet. A first boot starts with the core apps (the intro adds the picked interests); a device from before
     // installs existed keeps what it ever used, once.
     const first_boot = (await this.read(VERSION_STATE_PATH)) === null;
     if (!first_boot && (await this.catalogue())) {
@@ -289,6 +293,27 @@ export class AppsService implements IAppsService {
       const commands = await command_apps(this.registry.values());
       this.tidy([...this.registry.keys()], used_apps(this.registry.values(), signals, commands));
     }
+    this.writer.write(serialize_installed(this.installed));
+  }
+
+  /**
+   * A list from before ADR-077's core apps names user apps only, since every system app was installed. The optional
+   * system apps stay installed where past use points to them (ADR-040's signals), once. Without the full catalogue
+   * (offline) they all count as installed for this boot, unsaved, and the next boot decides.
+   */
+  private async keep_used_system_apps(): Promise<void> {
+    const optional = [...this.registry.values()].filter((manifest) => manifest.system && !is_core_app(manifest.id));
+    if (!this.complete) {
+      for (const manifest of optional) this.installed.add(manifest.id);
+      return;
+    }
+    const { command_apps, read_usage, used_apps } = await import("./usage");
+    const signals = await read_usage(this.files_service, this.settings_service.file_defaults);
+    const commands = await command_apps(optional).catch((error: unknown) => {
+      console.warn("[AppsService] Couldn't read system apps' commands for the move to core apps", error);
+      return [];
+    });
+    for (const id of used_apps(optional, signals, commands)) this.installed.add(id);
     this.writer.write(serialize_installed(this.installed));
   }
 
@@ -347,7 +372,7 @@ export class AppsService implements IAppsService {
 
   public is_installed(id: AppId): boolean {
     const manifest = this.registry.get(id);
-    return manifest !== undefined && (manifest.system === true || this.installed.has(id));
+    return manifest !== undefined && (is_core_app(id) || this.installed.has(id));
   }
 
   public install(ids: AppId | AppId[]): AppId[] {
@@ -362,7 +387,7 @@ export class AppsService implements IAppsService {
   public async uninstall(id: AppId, options: UninstallOptions = {}): Promise<void> {
     const manifest = this.registry.get(id);
     if (!manifest) throw new Error(`App ${id} not found`);
-    if (manifest.system) throw new Error(`${manifest.name} is part of WebOS and can't be uninstalled`);
+    if (is_core_app(id)) throw new Error(`${manifest.name} is part of WebOS and can't be uninstalled`);
     this.installed.delete(id);
     this.writer.write(serialize_installed(this.installed));
     if (this.settings_service.taskbar.pinned.includes(id)) this.settings_service.taskbar.pinned = without_pin(this.settings_service.taskbar.pinned, id);

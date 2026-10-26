@@ -58,7 +58,8 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
         (shell.commands ?? []).map((command) => ({
           ...command,
           app: id,
-          available: () => (apps.is_installed(id) ? (command.available?.() ?? true) : not_installed(apps.get(id)!)),
+          // A system app's commands (`docs`, `tour`) open it on demand like a file does, installed or not (ADR-077).
+          available: () => (apps.is_installed(id) || apps.get(id)?.system ? (command.available?.() ?? true) : not_installed(apps.get(id)!)),
         }))
       ),
     };

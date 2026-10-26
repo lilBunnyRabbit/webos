@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, {
     format_keys,
+    is_core_app,
     group_apps,
     search_apps,
     type AiService,
@@ -106,7 +107,7 @@
               ? { id: "unpin-taskbar", label: "Unpin from taskbar", icon: PushPinSimpleSlashIcon }
               : { id: "pin-taskbar", label: "Pin to taskbar", icon: PushPinSimpleIcon },
             ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
-            ...(manifest.system ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
+            ...(is_core_app(manifest.id) ? [] : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
           ]
         : [OPEN_ITEM, INSTALL_ITEM],
       { anchor }

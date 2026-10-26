@@ -1,7 +1,7 @@
 import { build_aliases, page_id, resolve_page, suggest_pages } from "./catalog";
 
 const LOADERS = import.meta.glob<string>(["/docs/{system,adrs,design,apps}/**/*.md", "/docs/ROADMAP.md"], {
-  query: "?raw",
+  query: "?raw&content",
   import: "default",
 });
 

@@ -28,9 +28,12 @@ let loading: Promise<Library> | null = null;
 
 /** Every page's title and headings, and the ADR index with revision counts. Loads all page chunks once per app session. */
 export function load_library(): Promise<Library> {
-  loading ??= Promise.all(PAGE_IDS.map(async (id) => [id, await load_page(id)] as const)).then((loaded) => {
+  // Pages load on read (ADR-077): offline, the ones never read are missing and the next open tries them again.
+  loading ??= Promise.allSettled(PAGE_IDS.map(async (id) => [id, await load_page(id)] as const)).then((settled) => {
+    const loaded = settled.flatMap((result) => (result.status === "fulfilled" ? [result.value] : []));
+    if (loaded.length < settled.length) loading = null;
     const texts = new Map(loaded);
-    const pages = new Map(loaded.map(([id, text]) => [id, { id, group: group_of(id), ...outline(text, fallback_title(id)) }]));
+    const pages = new Map(PAGE_IDS.map((id) => [id, texts.has(id) ? { id, group: group_of(id), ...outline(texts.get(id)!, fallback_title(id)) } : placeholder_info(id)]));
     const adrs = parse_adr_index(texts.get(ADR_INDEX_ID) ?? "").map((entry) => ({
       ...entry,
       revisions: count_revisions(texts.get(entry.id) ?? ""),

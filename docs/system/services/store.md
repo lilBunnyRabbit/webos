@@ -8,7 +8,7 @@ Keeps installed apps on the device. One state per app (ADR-077): installed means
 
 - when the app is installed (App Store, search, a menu's Install, the "{App} isn't installed" toast, the intro's interests);
 - after every update, for every installed app (unchanged files are copied from the previous build's cache, so only renamed ones download);
-- on a fresh install, the system apps (always installed), on the first idle moment after boot.
+- on a fresh install, the core apps (App Store, Settings, File Explorer, Terminal; the only ones installed by default), on the first idle moment after boot.
 
 Uninstalling deletes the app's files from the cache, except the ones another installed app's list also holds (chunks are shared).
 
@@ -34,9 +34,10 @@ AppsService owns the installed set ([apps](apps.md#init-the-installed-list-adr-0
 - **Roots.** For each `src/lib/apps/{system,user}/{id}/index.ts`, its manifest chunk (`{id}.manifest-<hash>.js`, the entry the catalogue plugin emits, which AppsService loads first; a facade when the app's component imports its own manifest) and the chunks of every module the manifest `import()`s: the component, `commands`, `highlights`, `preview`, `widget`, `on_fire`, `on_uninstall_data`, `meta` (never loaded at runtime, a few hundred bytes). `core` is never a root.
 - **Edges.** A chunk's `imports` and `dynamicImports`, its `importedCss` and `importedAssets`, and the hashed file names its code mentions that are assets (worker scripts, `?url` files). Vite's `__vite__mapDeps` preload table is stripped first: it lists every `import()`'s deps, apps' included. Assets (worker bundles, CSS) are scanned for hashed names too.
 - **Core** (`offline/core.json`): everything `index.html` and the entry (`boot.ts`; the manifest entries don't count) reach without entering a root. That is the shell, `main`, `core`, their lazy chunks (the changelog among them) and the fonts the CSS names. A chunk an app shares with core (File Explorer's components, which the file picker uses) stays in core.
-- **Apps** (`offline/{id}.json`): everything the app's roots reach without entering core. System apps get a list like user apps (ADR-077).
+- **Apps** (`offline/{id}.json`): everything the app's roots reach without entering core or content. System apps get a list like user apps (ADR-077).
+- **Content** (ADR-077): a chunk whose every module was imported with the `content` query (`?raw&content`, Docs' pages) is never entered. The list file names the content the app's files import apart, `content`; nothing downloads it, it loads when read and the runtime rule keeps it ([overview](../overview.md#build--deploy)).
 - Both leave out what other runtime rules cache (`*.wasm`, `*.onnx`, `*.ttf|ttc`, `*.aff|dic`, `assets/mammoth-*.js`).
-- Each file is `{ "build": <buildTimestamp>, "files": ["assets/…", …] }`, sorted. The build stamp is computed once in `vite.config.ts` (`get_version_info`) and shared with `version_plugin`, so `version.json`, `BUILD_INFO` and the cache name agree. The catalogue plugin copies each list into its app's `files` ([overview](../overview.md)).
+- Each file is `{ "build": <buildTimestamp>, "files": ["assets/…", …], "content"?: [...] }`, sorted. The build stamp is computed once in `vite.config.ts` (`get_version_info`) and shared with `version_plugin`, so `version.json`, `BUILD_INFO` and the cache name agree. The catalogue plugin copies each list into its app's `files` ([overview](../overview.md)).
 
 Measured at 3.58.0: the precache went from 844 entries (12.4 MB) to 305 (4.2 MB). At 3.74.0, with system apps out of core: 202 entries (2.7 MB), 105 app lists. A fresh preview boot fetched no file of any system app's list before an app opened.
 
@@ -121,4 +122,4 @@ None (ADR-065, ADR-077: no new commands).
 - Uninstall fetches every installed app's list to know which files are shared: a request per installed app, once per uninstall.
 - An app opened without installing has its `commands`, `widget` and `on_fire` chunks load only online.
 - Cache Storage can be evicted by the browser; `saved` doesn't notice until the next build.
-- A fresh install downloads every system app on first idle (Docs alone is 170 files), on phone data too.
+- A Docs page read once is in this build's cache; the next update deletes that cache, so it's fetched again on the next read.

@@ -1,4 +1,5 @@
 import kernel, {
+  is_core_app,
   NotificationType,
   type AppId,
   type AppManifest,
@@ -34,7 +35,7 @@ export function install_items(id: AppId): (typeof INSTALL_ITEM)[] {
  */
 export async function uninstall_app(id: AppId, anchor?: Position): Promise<boolean> {
   const manifest = apps().get(id);
-  if (!manifest || manifest.system || !apps().is_installed(id)) return false;
+  if (!manifest || is_core_app(id) || !apps().is_installed(id)) return false;
   const dialog = (await import("./uninstall-dialog.svelte")).default;
   const choice = await dialogs().show(dialog, { manifest }, { anchor });
   if (!choice) return false;
@@ -78,7 +79,7 @@ export async function app_menu(
       ? [
           { id: "pin", label: "Add to home screen", icon: PushPinIcon, disabled: pinned },
           ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
-          ...(manifest.system
+          ...(is_core_app(manifest.id)
             ? []
             : [{ separator: true } as const, { id: "uninstall", label: "Uninstall…", icon: TrashIcon, danger: true }]),
         ]

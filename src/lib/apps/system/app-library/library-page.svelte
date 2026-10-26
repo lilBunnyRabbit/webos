@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppListing, type AppsService, type StoreService } from "$lib/core/api";
+  import kernel, { is_core_app, type AppListing, type AppsService, type StoreService } from "$lib/core/api";
   import { format_usage } from "$lib/core/api/services/apps/active-time";
   import { uninstall_app } from "$lib/core/components/apps/app-actions";
   import { EmptyState, IconButton, Select } from "$lib/core/components/ui";
@@ -70,10 +70,10 @@
             {#if size !== null}· <span class="font-mono">{format_bytes(size)}</span>{/if}
             {#if usage}· {is_game(manifest) ? "Played" : "Used"} {format_usage(usage.seconds)}<span class="hidden @md:inline">, last {format_date(new Date(usage.last))}</span>{/if}
             {#if waiting_download(store, manifest.id)}· <span class="text-warning">Not offline yet</span>{/if}
-            {#if manifest.system}· Part of WebOS{/if}
+            {#if is_core_app(manifest.id)}· Part of WebOS{/if}
           {/snippet}
           {#snippet actions()}
-            {#if !manifest.system}
+            {#if !is_core_app(manifest.id)}
               <IconButton label="Uninstall {manifest.name}…" size="sm" onclick={(event) => void uninstall_app(manifest.id, { x: event.clientX, y: event.clientY })}>
                 <TrashIcon weight="bold" />
               </IconButton>

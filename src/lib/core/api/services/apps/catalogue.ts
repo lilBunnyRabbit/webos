@@ -16,6 +16,8 @@ export interface CatalogueApp {
   manifest: string;
   entry: string;
   files: string[];
+  /** Files fetched when read and cached then, never installed: Docs' pages (ADR-077). */
+  content?: string[];
   associations?: string[];
   tools?: string[];
   description?: string;
@@ -38,7 +40,7 @@ export interface CatalogueApp {
   on_uninstall_data?: boolean;
 }
 
-export type CatalogueData = Omit<CatalogueApp, "version" | "hash" | "manifest" | "entry" | "files">;
+export type CatalogueData = Omit<CatalogueApp, "version" | "hash" | "manifest" | "entry" | "files" | "content">;
 
 export interface Catalogue {
   version: 1;

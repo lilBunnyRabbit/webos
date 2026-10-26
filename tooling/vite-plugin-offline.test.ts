@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { named_files, offline_lists, type BundleFile } from "./vite-plugin-offline";
+import { is_content_chunk, named_files, offline_lists, type BundleFile } from "./vite-plugin-offline";
 
 const file = (name: string, imports: string[] = [], refs: string[] = []): BundleFile => ({ name, imports, refs });
 
@@ -48,6 +48,24 @@ describe("offline_lists", () => {
   test("an app reached only through a core file stays out of core", () => {
     const shared = offline_lists([...bundle, file("assets/late-m.js", ["assets/paint.app-d.js"])], ["index.html", "assets/late-m.js"], roots);
     expect(shared.core).not.toContain("assets/paint.app-d.js");
+  });
+});
+
+describe("content (ADR-077)", () => {
+  test("content chunks stay out of the install list and are listed apart", () => {
+    const pages = file("assets/pages-n.js", ["assets/roadmap-o.js", "assets/adr-p.js"]);
+    const docs = file("assets/docs.app-q.js", ["assets/core-b.js", "assets/pages-n.js"]);
+    const page = (name: string): BundleFile => ({ ...file(name), content: true });
+    const lists = offline_lists([...bundle, docs, pages, page("assets/roadmap-o.js"), page("assets/adr-p.js")], ["index.html"], new Map([...roots, ["docs", new Set(["assets/docs.app-q.js"])]]));
+    expect(lists.apps.docs).toEqual(["assets/docs.app-q.js", "assets/pages-n.js"]);
+    expect(lists.content.docs).toEqual(["assets/adr-p.js", "assets/roadmap-o.js"]);
+    expect(lists.content.paint).toBeUndefined();
+  });
+
+  test("a chunk is content when every module in it was imported with the content query", () => {
+    expect(is_content_chunk(["/r/docs/a.md?raw&content", "/r/docs/b.md?raw&content"])).toBe(true);
+    expect(is_content_chunk(["/r/docs/a.md?raw&content", "/r/src/x.ts"])).toBe(false);
+    expect(is_content_chunk(["/r/docs/a.md?raw"])).toBe(false);
   });
 });
 

@@ -237,9 +237,11 @@ async function with_node_loader<T>(config: ResolvedConfig, run: (load: Load) => 
   }
 }
 
-function list_file(out_dir: string, name: string): string[] {
+function list_file(out_dir: string, name: string): { files: string[]; content: string[] } {
   const file = path.join(out_dir, "offline", `${name}.json`);
-  return existsSync(file) ? (JSON.parse(readFileSync(file, "utf8")) as { files: string[] }).files : [];
+  if (!existsSync(file)) return { files: [], content: [] };
+  const list = JSON.parse(readFileSync(file, "utf8")) as { files: string[]; content?: string[] };
+  return { files: list.files, content: list.content ?? [] };
 }
 
 /**
@@ -322,7 +324,7 @@ export function catalogue_plugin(info: VersionInfo) {
         if (notes_chunk?.type === "chunk" && notes_chunk.moduleIds.length > 1) {
           throw new Error(`catalogue: ${notes_chunk.fileName} holds more than the changelog, so the core hash would skip code`);
         }
-        const core_files = list_file(out_dir, "core").filter((name) => name !== notes_chunk?.fileName);
+        const core_files = list_file(out_dir, "core").files.filter((name) => name !== notes_chunk?.fileName);
         const core = sha([
           hash_files(core_files, read, normalize),
           hash_files(public_files, (name) => readFileSync(path.join(config.publicDir, name)), normalize),
@@ -334,8 +336,9 @@ export function catalogue_plugin(info: VersionInfo) {
           build: info.buildTimestamp,
           release: info.version,
           apps: apps.map((app) => {
-            const files = list_file(out_dir, app.data.id);
-            const hash = sha([hash_files(files, read, normalize), ...own_hash(app)]);
+            const { files, content } = list_file(out_dir, app.data.id);
+            // Content isn't installed, but a changed page is still a new version of the app.
+            const hash = sha([hash_files([...files, ...content], read, normalize), ...own_hash(app)]);
             return {
               ...app.data,
               version: app_version(app.data.id, hash, before, info.version),
@@ -343,6 +346,7 @@ export function catalogue_plugin(info: VersionInfo) {
               manifest: this.getFileName(refs.get(app.data.id)!),
               entry: chunk_of(path.resolve(config.root, app.component)),
               files,
+              ...(content.length > 0 ? { content } : {}),
             };
           }),
         };

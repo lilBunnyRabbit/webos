@@ -128,3 +128,11 @@ Boot reads only `/var/lib/apps/catalogue.json`; installed apps' code loads after
 - **Versions:** `AppManifest.version` is the catalogue's; the App Store details say "Version 3.67.0". What `define_app` is given is ignored but still required.
 - **Update screen:** from → to, the notes of every release in `version.json` newer than the running one (a dot per change by kind, at most five lines, "and N more"), file progress as before.
 - Not done here: the `define_app` version field and the import rule for manifests (the barrel cycle it guarded is gone) stay as they are; both are the owner's to lift.
+
+### 2026-10-27: core apps and content built
+Round 5 shipped in 3.74.0 ([apps](../system/services/apps.md#init-the-installed-list-adr-040), [overview](../system/overview.md#build--deploy)). Decided within scope:
+- **One constant:** `CORE_APPS` and `is_core_app()` in `services/apps/helpers.ts` (barrel-exported). `is_installed`, `uninstall`'s guard and every Uninstall menu read it instead of `manifest.system`; `system` now only means "listed under System".
+- **The slice names every system app**, installed or not. A file's default app (Text Editor, the viewers), Kernel's Docs link, the `docs` and `tour` commands and the taskbar's task indicator open them on demand from what boot knows, offline included, with the usual Install toast. Search's Not installed group lists them.
+- **System apps' shell commands stay available when the app isn't installed** (they open it on demand); user apps' still don't.
+- **Migration:** `installed.json` gains `"system": true`. A list without it keeps the optional system apps ADR-040's tidy signals point to, once, with the full catalogue; offline they count as installed for that boot, unsaved. No toast.
+- **Content convention:** the `content` query parameter (`?raw&content`). The offline plugin leaves content chunks out of every install list and writes them apart (`content` in `offline/{id}.json` and in the catalogue entry); the app hash covers them. Docs' pages are content; Kernel shares them. Measured: Docs 172 files / 851 KB gz → 20 / 59 KB, Kernel 158 / 803 KB → 6 / 11 KB, Style Guide unchanged (29 / 102 KB, no content). Docs shows "This page needs a connection" for a page not cached offline, and its search index keeps unread pages as placeholders.

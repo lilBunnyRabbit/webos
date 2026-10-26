@@ -19,6 +19,8 @@ import { glob_source, type CatalogueSource } from "./source";
 import { TEST_APPS, TestAppsService } from "./test-apps";
 import type { AppsService } from "./type";
 import { serialize_widget } from "./widget";
+import { serialize_shortcut } from "./shortcut";
+import { CORE_APPS } from "./helpers";
 
 let shutdown: () => Promise<void>;
 
@@ -50,7 +52,7 @@ const user_apps = (kernel: Kernel) => [...apps(kernel).list()].filter(([, manife
 
 async function on_disk(kernel: Kernel): Promise<string[] | null> {
   const file = await kernel.service<FilesService>("files").get_file(INSTALLED_PATH);
-  return parse_installed(file ? await file.text() : null);
+  return parse_installed(file ? await file.text() : null)?.ids ?? null;
 }
 
 beforeEach(async () => {
@@ -60,10 +62,12 @@ beforeEach(async () => {
 afterEach(async () => await shutdown?.());
 
 describe("AppsService installed apps", () => {
-  test("a first boot starts with the system apps only, quietly", async () => {
+  test("a first boot starts with the core apps only, quietly (ADR-077)", async () => {
     const kernel = await boot();
     expect(user_apps(kernel).some((id) => apps(kernel).is_installed(id))).toBe(false);
-    expect(apps(kernel).is_installed("settings")).toBe(true);
+    for (const id of CORE_APPS) expect(apps(kernel).is_installed(id)).toBe(true);
+    expect(apps(kernel).is_installed("docs")).toBe(false);
+    expect(apps(kernel).is_installed("text-editor")).toBe(false);
     await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual([]));
     expect(toasts(kernel)).toEqual([]);
   });
@@ -84,6 +88,31 @@ describe("AppsService installed apps", () => {
     expect(toast.title).toMatch(/^Tidied \d+ apps you never opened$/);
     toast.actions!.find((action) => action.label === "Undo")!.on_click();
     expect(user_apps(kernel).every((id) => apps(kernel).is_installed(id))).toBe(true);
+  });
+
+  test("a list from before core apps keeps the system apps past use points to, once (ADR-077)", async () => {
+    await write(INSTALLED_PATH, JSON.stringify({ version: 1, installed: ["notes"] }));
+    localStorage.setItem("app.calculator.memory", "4");
+    await write("/home/Desktop/Kernel.desktop", serialize_shortcut({ app_id: "kernel" }));
+    const kernel = await boot();
+    expect(apps(kernel).is_installed("calculator")).toBe(true);
+    expect(apps(kernel).is_installed("kernel")).toBe(true);
+    expect(apps(kernel).is_installed("docs")).toBe(false);
+    expect(apps(kernel).is_installed("notes")).toBe(true);
+    await vi.waitFor(async () => {
+      const file = await kernel.service<FilesService>("files").get_file(INSTALLED_PATH);
+      expect(parse_installed(await file!.text())).toEqual({ ids: ["calculator", "kernel", "notes"], system: true });
+    });
+  });
+
+  test("system apps other than the core ones uninstall; the slice still names them", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["docs"]));
+    const kernel = await boot();
+    expect(apps(kernel).is_installed("docs")).toBe(true);
+    await apps(kernel).uninstall("docs");
+    expect(apps(kernel).is_installed("docs")).toBe(false);
+    expect(apps(kernel).installed_catalogue()?.apps.map(({ id }) => id)).toContain("docs");
+    await expect(apps(kernel).uninstall("file-explorer")).rejects.toThrow(/can't be uninstalled/);
   });
 
   test("a saved list loads as is and drops unknown ids", async () => {

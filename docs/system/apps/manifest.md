@@ -79,7 +79,7 @@ How it loads: it doesn't, at runtime. The build calls `meta()` in Node and write
 
 `AppCategory` is a const object: `PRODUCTIVITY`, `MEDIA`, `UTILITIES`, `DEVELOPER`, `GAMES`. One per app, required, closed: a new kind is a core edit. Labels live in `APP_CATEGORY_LABELS` (`search.ts`).
 
-Whether an app is a system app is where it lives, not what it declares. A system app still sets a `category`; it only feeds search, since every system app is grouped under System.
+Whether an app is a system app is where it lives, not what it declares. A system app still sets a `category`; it only feeds search, since every system app is grouped under System. Being a system app doesn't make it installed: only the core apps (`CORE_APPS`: App Store, Settings, File Explorer, Terminal) are always installed and locked (ADR-077).
 
 ### Launcher search and sections (`search.ts`)
 

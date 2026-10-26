@@ -34,12 +34,12 @@ export interface AppsService extends IService {
   get(id: AppId): AppManifest | undefined;
   /** Every registered app, or only the installed (`true`) or not installed (`false`) ones (ADR-040). */
   list(filter?: AppsFilter): IterableIterator<[AppId, AppManifest]>;
-  /** System apps always are; unknown ids never. */
+  /** The core apps (`CORE_APPS`) always are; unknown ids never. */
   is_installed(id: AppId): boolean;
   /** Installs the ones that aren't yet and saves the list. Resolves to the newly installed ids. */
   install(ids: AppId | AppId[]): AppId[];
   /**
-   * Takes a user app out of the installed list (system apps throw). With `data`, also deletes its `app.{id}.*`
+   * Takes an app out of the installed list (core apps throw). With `data`, also deletes its `app.{id}.*`
    * localStorage and `/var/lib/apps/{id}/`; never anything in `/home`. Windows and desktop entries are the caller's.
    */
   uninstall(id: AppId, options?: UninstallOptions): Promise<void>;
@@ -62,7 +62,10 @@ export interface AppsService extends IService {
    * unknown id; rejects when the chunk can't load.
    */
   load(id: AppId): Promise<AppManifest | undefined>;
-  /** The installed apps' entries for `/var/lib/apps/catalogue.json`, `null` while some aren't this build's or known. */
+  /**
+   * The entries boot reads (`/var/lib/apps/catalogue.json`): the installed apps' and every system app's, so what opens a
+   * system app on demand finds it. `null` while some aren't this build's or known.
+   */
   installed_catalogue(): Catalogue | null;
   /**
    * User apps `launch()` opened lately, newest first, each once, at most 16; never system apps, and apps uninstalled

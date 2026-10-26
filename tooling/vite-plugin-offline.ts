@@ -7,20 +7,33 @@ export interface BundleFile {
   name: string;
   imports: string[];
   refs: string[];
+  /** Every module in it is content (`CONTENT_QUERY`): fetched when read, never installed. */
+  content?: boolean;
 }
 
 export interface OfflineLists {
   core: string[];
   apps: Record<string, string[]>;
+  /** Per app: the content files its code imports, left out of its install list (ADR-077). */
+  content: Record<string, string[]>;
 }
 
 export interface OfflineListFile {
   build: number;
   files: string[];
+  content?: string[];
 }
 
 /** Cached by their own runtime rules in `vite.config.ts` (or never), so never part of a list. */
 export const RUNTIME_CACHED = /(\.(wasm|onnx|ttf|ttc|aff|dic)$)|(^assets\/mammoth-[^/]+\.js$)/;
+
+/**
+ * The build convention for content (ADR-077): a module imported with the `content` query parameter
+ * (`import.meta.glob("/docs/**\/*.md", { query: "?raw&content" })`) lands in no install list. The app fetches it when
+ * it's read, and the service worker's runtime rule caches it then.
+ */
+export const CONTENT_QUERY = /[?&]content(?:&|=|$)/;
+export const is_content_chunk = (module_ids: string[]) => module_ids.length > 0 && module_ids.every((id) => CONTENT_QUERY.test(id));
 
 const APP_INDEX = /\/apps\/(?:system|user)\/([^/]+)\/index\.ts$/;
 const SHARED_CHUNKS = new Set(["core"]);
@@ -45,14 +58,20 @@ function reach(files: Map<string, BundleFile>, start: Iterable<string>, stop: (n
 export function offline_lists(files: BundleFile[], boot: string[], app_roots: Map<string, Set<string>>): OfflineLists {
   const by_name = new Map(files.map((file) => [file.name, file]));
   const roots = new Set([...app_roots.values()].flatMap((set) => [...set]));
-  const core = reach(by_name, boot, (name) => roots.has(name));
+  const is_content = (name: string) => by_name.get(name)?.content === true;
+  const core = reach(by_name, boot, (name) => roots.has(name) || is_content(name));
   const keep = (name: string) => !core.has(name) && !RUNTIME_CACHED.test(name);
 
   const apps: Record<string, string[]> = {};
+  const content: Record<string, string[]> = {};
   for (const [id, own] of [...app_roots].sort(([a], [b]) => a.localeCompare(b))) {
-    apps[id] = [...reach(by_name, own, (name) => core.has(name))].filter(keep).sort();
+    const installed = reach(by_name, own, (name) => core.has(name) || is_content(name));
+    apps[id] = [...installed].filter(keep).sort();
+    const starts = [...installed].flatMap((name) => [...by_name.get(name)!.imports, ...by_name.get(name)!.refs].filter(is_content));
+    const read = [...reach(by_name, starts, (name) => core.has(name) || installed.has(name))].filter(keep).sort();
+    if (read.length > 0) content[id] = read;
   }
-  return { core: [...core].filter((name) => !RUNTIME_CACHED.test(name)).sort(), apps };
+  return { core: [...core].filter((name) => !RUNTIME_CACHED.test(name)).sort(), apps, content };
 }
 
 export function named_files(source: string, by_base: Map<string, string>): string[] {
@@ -77,6 +96,7 @@ function to_bundle_files(bundle: Rollup.OutputBundle): BundleFile[] {
         name: file.fileName,
         imports: [...file.imports, ...file.dynamicImports],
         refs: [...(meta?.importedCss ?? []), ...(meta?.importedAssets ?? []), ...named],
+        content: is_content_chunk(file.moduleIds) || undefined,
       };
     }
     const text = typeof file.source === "string" ? file.source : /\.(m?js|css|html)$/.test(file.fileName) ? new TextDecoder().decode(file.source) : "";
@@ -124,10 +144,10 @@ export function offline_plugin(build: number) {
 
       const dir = path.join(out_dir, "offline");
       mkdirSync(dir, { recursive: true });
-      const write = (name: string, files: string[]) =>
-        writeFileSync(path.join(dir, `${name}.json`), JSON.stringify({ build, files } satisfies OfflineListFile));
+      const write = (name: string, files: string[], content?: string[]) =>
+        writeFileSync(path.join(dir, `${name}.json`), JSON.stringify({ build, files, ...(content ? { content } : {}) } satisfies OfflineListFile));
       write("core", lists.core);
-      for (const [id, files] of Object.entries(lists.apps)) write(id, files);
+      for (const [id, files] of Object.entries(lists.apps)) write(id, files, lists.content[id]);
     },
   };
 

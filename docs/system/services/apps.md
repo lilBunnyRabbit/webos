@@ -4,12 +4,12 @@ Key `apps` · Depends on: `windows`, `notifications`, `files`, `settings`, `dial
 
 ## Purpose
 
-The app registry. Holds every app the catalogue names (ADR-077): boot knows only the installed apps' entries, the rest arrive with the full catalogue, and each app's manifest code loads on its own. It holds which user apps are installed, launches an app into a new window with validated props, and resolves a file path to the app that should open it. A `.desktop` shortcut file resolves to the app it points at.
+The app registry. Holds every app the catalogue names (ADR-077): boot knows only the installed apps' entries, the rest arrive with the full catalogue, and each app's manifest code loads on its own. It holds which apps are installed (the core apps always are), launches an app into a new window with validated props, and resolves a file path to the app that should open it. A `.desktop` shortcut file resolves to the app it points at.
 
 | File | Contents |
 |------|----------|
 | `type.ts` | `AppsService` interface, `AppManifest`, `AppDefinition`, `AppConfig`, `AppInstance`, `OpenOptions`, `AppsFilter`, `UninstallOptions`, `AppCategory`, `AppProps`, `AppMeta`, `AppListing`, `AppAuthor`, `AppPitch`, `AppHighlight`, `DailyRank` (re-exported by the games kit, ADR-048), `WidgetSize`, `WidgetSizeLimits`, `WidgetProps` |
-| `helpers.ts` | `define_app()`, `FILE_PROPS` |
+| `helpers.ts` | `define_app()`, `FILE_PROPS`, `CORE_APPS` and `is_core_app()` (App Store, Settings, File Explorer, Terminal: always installed, never uninstalled, ADR-077) |
 | `authors.ts` | `OWNER`, `app_authors()`, `author_link()`, `author_names()`, `credits()`, `Credit`: who made an app (the meta's `authors`, else the owner) |
 | `associations.ts` | Pure matching: `file_extension()`, `association_tier()`, `best_apps_for()`, `apps_for()`, `tools_for()` |
 | `shortcut.ts` | `.desktop` shortcut files: `SHORTCUT_EXTENSION`, `Shortcut`, `parse_shortcut()`, `serialize_shortcut()`, `shortcut_label()` (ADR-022) |
@@ -40,13 +40,13 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `registry` | `Map<string, AppManifest>` (a `SvelteMap`) | Public on the class, not on the interface. Reactive. Every known app: its manifest once its code loaded, a [stub](#stubs) until then |
 | `complete` | `boolean` | Public on the class. `$state`: the full catalogue of this build arrived |
 | `list(filter?)` | `(filter?: { installed?: boolean }): IterableIterator<[AppId, AppManifest]>` | Iterator over `registry`, insertion order. `installed: true` only installed apps (the start menu, the mobile home and app list, `app list`), `false` only the others (search's Not installed group) |
-| `is_installed(id)` | `(id: AppId): boolean` | System apps always; unknown ids never. Reactive |
+| `is_installed(id)` | `(id: AppId): boolean` | The core apps (`CORE_APPS`) always; other system apps like user apps; unknown ids never. Reactive |
 | `install(ids)` | `(ids: AppId \| AppId[]): AppId[]` | Adds the ones not installed yet, saves, returns them. No toast |
-| `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for system and unknown apps. Unpins it from the taskbar's quick launch (ADR-042). `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`, then awaits the manifest's `on_uninstall_data` if it has one (a throw is logged and toasted "Some of {App}'s data is left"; the uninstall stands). Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
+| `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for core and unknown apps. Unpins it from the taskbar's quick launch (ADR-042). `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`, then awaits the manifest's `on_uninstall_data` if it has one (a throw is logged and toasted "Some of {App}'s data is left"; the uninstall stands). Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
 | `get(id)` | `(id: AppId): AppManifest \| undefined` | The manifest, or the stub while its code hasn't loaded. `undefined` for an app the device doesn't know yet: call `catalogue()` first where that matters |
 | `catalogue()` | `(): Promise<boolean>` | Fetches the full catalogue once and registers every app in it. `true` when this build's catalogue is known; `false` offline with no copy, or with another build's copy, whose apps are listed but can't open. A later call tries again. [Catalogue](#catalogue-adr-077) |
 | `load(id)` | `(id: AppId): Promise<AppManifest \| undefined>` | The manifest with its code (one import per app, shared). Rejects when the chunk can't load or the entry is another build's |
-| `installed_catalogue()` | `(): Catalogue \| null` | The installed apps' entries for `/var/lib/apps/catalogue.json`; `null` while one isn't known or is another build's. Reactive. StoreService writes it |
+| `installed_catalogue()` | `(): Catalogue \| null` | The installed apps' entries plus every system app's, for `/var/lib/apps/catalogue.json`; `null` while one isn't known or is another build's. Reactive. StoreService writes it |
 | `register(manifest)` | `(manifest: AppManifest): void` | An app whose code is already here (tests' stand-ins): its entry comes from `manifest_data`, without meta. Same id overwrites silently. No `unregister` |
 | `launch(id, props?, options?)` | `(id: AppId, props?: unknown, options?: LaunchOptions): WindowId` | An id no app has opens the app that [replaces](#replaced-app-ids-adr-071) it; throws `App ${id} not found` when none does. An app that isn't installed opens without installing (ADR-077) and toasts "{App} isn't installed" with **Install**, unless `options.offer_install` is `false` (the App Store, which shows Install beside Open). Always opens a new window, at once even before the app's code is here |
 | `create_instance(id, props?, state?)` | `(id: AppId, props?: unknown, state?: Record<string, unknown>): AppInstance \| null` | The instance `launch()` would open, without a window and without toasts; `null` until the app's code has loaded (`load(id)` first). Used by session restore. See below |
@@ -103,7 +103,7 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 
 - `registry`, filled in `init()` from the catalogue ([below](#catalogue-adr-077)), a manifest or stub per entry.
 - `entries`, a private `SvelteMap` of `CatalogueApp`, and `code`, a private `SvelteMap` of the manifests whose chunk loaded; `loading` (the import in flight per app), `failed` (a load failed: the tile stops pulsing; coming online retries installed ones) and `foreign` (entries from another build's catalogue, listed and never run).
-- `installed`, a private `SvelteSet` of user app ids (system apps are never stored), filled by `init()`.
+- `installed`, a private `SvelteSet` of installed app ids other than the core apps (which are never stored), filled by `init()`.
 - `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping only installed user apps, is what `recent` returns.
 - `active_time`, a private `ActiveTime` holding the usage record (`$state.raw`), read by `usage()` ([Active time](#active-time)).
 - `all_listings`, a private `$derived` over `registry` and `entries`: each manifest or stub merged with its entry's text and `daily`. `listings()` returns it, filtered when asked.
@@ -112,8 +112,8 @@ The constructor only wires `$derived` references to its five dependencies. `dest
 
 ### `init()`: the installed list (ADR-040)
 
-1. `/var/lib/apps/installed.json` parses → load it through `current_ids`: an id an app [replaces](#replaced-app-ids-adr-071) becomes every app replacing it, any other unknown id drops. Only with the full catalogue: booted from the installed slice, every id stays, since an id the slice lacks isn't unknown (and `init()` then fetches the catalogue in the background to list it). The file isn't rewritten; the next install or uninstall saves the mapped list. Done.
-2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → only the system apps, quietly. The intro's interests page installs the rest (`INTERESTS` in `suggestions.ts`).
+1. `/var/lib/apps/installed.json` parses → load it through `current_ids`: an id an app [replaces](#replaced-app-ids-adr-071) becomes every app replacing it, any other unknown id drops. Only with the full catalogue: booted from the installed slice, every id stays, since an id the slice lacks isn't unknown (and `init()` then fetches the catalogue in the background to list it). The file isn't rewritten; the next install or uninstall saves the mapped list. A list without `"system": true` is from before ADR-077's core apps, when every system app was installed: `keep_used_system_apps()` installs the optional system apps the signals of step 3 point to (their commands loaded for this one pass) and saves, once. Without the full catalogue (offline) they all count as installed for that boot, unsaved. Done.
+2. Missing or invalid, and no `/var/lib/version/state.json` (a first boot) → only the core apps, quietly. The intro's interests page installs the rest (`INTERESTS` in `suggestions.ts`).
 3. Missing, but the version state exists (a device from before installed apps) → `catalogue()` (skipped offline), then a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Store**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), matched against ids from `command_apps()`, which loads every app's `commands.ts` for this one pass, and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
 4. Steps 2 and 3 save the list.
 
@@ -125,9 +125,9 @@ Constructed by the kernel after its dependencies. Nothing registers in the const
 
 ## Persistence
 
-`/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[] }`, sorted, user apps only, written through a `LatestWriter` on every change.
+`/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[], "system": true }`, sorted, every installed app but the core ones, written through a `LatestWriter` on every change. `system` marks a list that covers system apps (ADR-077).
 
-`/var/lib/apps/catalogue.json` (ADR-077): `{ "version": 1, "core", "build", "release", "apps": CatalogueApp[] }`, the installed apps' entries (system apps included) sorted by id. This service only reads it, at boot; StoreService writes it ([store](store.md#the-installed-apps-catalogue)).
+`/var/lib/apps/catalogue.json` (ADR-077): `{ "version": 1, "core", "build", "release", "apps": CatalogueApp[] }`, the installed apps' entries and every system app's, sorted by id. System apps are always there, installed or not, so a file's default viewer, Kernel's Docs link or the `docs` command opens one on demand from what boot knows. This service only reads it, at boot; StoreService writes it ([store](store.md#the-installed-apps-catalogue)).
 
 `/var/lib/apps/usage.json`: `{ "version": 1, "apps": { [id]: { "seconds", "last", "days" } } }`, ids sorted, minified, through a `LatestWriter` with a 2 s delay ([Active time](#active-time)). Missing or invalid reads as empty; an entry without `days` counts one. Backed up with `/var/lib`, never sent anywhere.
 
@@ -280,6 +280,7 @@ Details on tiers, the dropdown and remembered defaults: [apps/file-associations.
 
 - ADR-001's glob is `./**/index.ts`. The dev and test glob is `./system/*/index.ts` and `./user/*/index.ts`, one level deep; a build reads the catalogue instead (ADR-077).
 - ADR-077 says StoreService owns the catalogue. AppsService fetches and holds it, since boot needs it before StoreService exists (store depends on apps) and the registry is AppsService's; StoreService writes the installed slice. Revision note 2026-10-26.
+- ADR-077 names the installed apps' entries as the slice; it also holds every system app's, so what opens a system app on demand works without the full catalogue. Revision note 2026-10-27.
 - ADR-077 compares catalogues by core hash; stage 2 compares the slice's `build` with the page's, since every release still reloads and file names change with any build. Stage 3 moves the check to the core hash. Revision note 2026-10-26.
 - ADR-018's resolution matches the code. The `open()` JSDoc says it resolves `null` "when the file is missing or no app matches (both notify)"; it also resolves `null`, silently, when the chooser is dismissed.
 
@@ -289,7 +290,7 @@ Contributes `app list|info|launch`, `app find <words…>` (`ai: "read"`: the str
 
 The shell never installs (ADR-040):
 
-- An app's commands get `available: () => installed ? (own available ?? true) : "{App} isn't installed. Install it in the App Store"`, so an uninstalled app's commands leave the palette and completion, and running one fails with that reason.
+- An app's commands get `available: () => installed ? (own available ?? true) : "{App} isn't installed. Install it in the App Store"`, so an uninstalled app's commands leave the palette and completion, and running one fails with that reason. System apps are the exception (ADR-077): their commands (`docs`, `tour`) stay available and open the app on demand, with the Install toast, since boot always knows their entries.
 - `app list` and the `app` completer list installed apps only; `app info` takes any app; `app launch` on one that isn't installed fails with the same message.
 - `open` is a file open: the file's app opens through `launch`, installed or not, and isn't installed by it.
 

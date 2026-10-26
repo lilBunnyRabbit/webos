@@ -1,4 +1,5 @@
 import kernel, {
+  is_core_app,
   type AppsService,
   type ClipboardService,
   type ConflictChoice,
@@ -53,11 +54,11 @@ const clipboard = () => kernel.service<ClipboardService>("clipboard");
 
 export const desktop_path = (item: DesktopItem): string => `${PATHS.desktop}/${item.name}`;
 
-/** The "Uninstall {app}…" item for a shortcut or widget of an installed user app, else none (ADR-040). */
+/** The "Uninstall {app}…" item for a shortcut or widget of an installed app other than a core one, else none (ADR-040). */
 export function uninstall_item(item: DesktopItem): MenuItem[] {
   if (item.kind !== "shortcut" && item.kind !== "widget") return [];
   const manifest = apps().get(item.app_id);
-  if (!manifest || manifest.system || !apps().is_installed(item.app_id)) return [];
+  if (!manifest || is_core_app(item.app_id) || !apps().is_installed(item.app_id)) return [];
   return [{ id: "uninstall", label: `Uninstall ${manifest.name}…`, icon: PackageIcon, danger: true }];
 }
 

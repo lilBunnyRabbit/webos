@@ -1,7 +1,7 @@
 <script lang="ts">
   import { EmptyState, Spinner } from "$lib/core/components/ui";
   import { error_message } from "$lib/core/utils";
-  import { FileX as FileXIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
+  import { CloudSlash as CloudSlashIcon, FileX as FileXIcon, Sparkle as SparkleIcon } from "phosphor-svelte";
   import { tick, untrack } from "svelte";
   import { adr_header } from "./adr-index";
   import { ADR_INDEX_ID, GROUP_LABELS, group_of, ROADMAP_ID } from "./catalog";
@@ -39,11 +39,13 @@
   }
 
   let rendered = $state<Rendered | null>(null);
-  let failed = $state<{ id: string; message: string } | null>(null);
+  let failed = $state<{ id: string; message: string; offline: boolean } | null>(null);
   let root: HTMLElement | null = $state(null);
+  let attempt = $state(0);
 
   $effect(() => {
     const target = id;
+    void attempt;
     let live = true;
     failed = null;
     load_page(target)
@@ -54,7 +56,8 @@
         untrack(() => onoutline(headings, title));
       })
       .catch((error) => {
-        if (live) failed = { id: target, message: error_message(error) };
+        // Pages aren't installed with Docs (ADR-077): one never read before needs the network.
+        if (live) failed = { id: target, message: error_message(error), offline: !navigator.onLine };
       });
     return () => {
       live = false;
@@ -97,6 +100,10 @@
     return () => observer.disconnect();
   });
 
+  function retry_online() {
+    if (failed?.offline) attempt++;
+  }
+
   function onlink(event: MouseEvent) {
     const anchor = (event.target as HTMLElement).closest("a");
     if (!anchor || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey) return;
@@ -110,8 +117,12 @@
   }
 </script>
 
+<svelte:window ononline={retry_online} />
+
 <div bind:this={root} class="mx-auto flex w-full max-w-3xl scroll-mt-4 flex-col gap-5 px-5 py-6 @lg:px-8">
-  {#if failed && failed.id === id}
+  {#if failed && failed.id === id && failed.offline}
+    <EmptyState icon={CloudSlashIcon} title="This page needs a connection" description="Pages you've read before work offline. This one opens once you're back online." />
+  {:else if failed && failed.id === id}
     <EmptyState icon={FileXIcon} tone="error" title="This page didn't load" description="Try opening it again from the sidebar." details={failed.message} />
   {:else if !ready}
     <div class="grid place-items-center py-16"><Spinner label="Loading the page" /></div>
