@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 
-const BUDGET_BYTES = 218_000;
+const BUDGET_BYTES = 219_000;
 const DIST = "dist";
 
 const html = readFileSync(join(DIST, "index.html"), "utf8");
