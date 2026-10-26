@@ -156,7 +156,7 @@
         </h2>
         <p class="text-ui text-foreground/80">{category_label(manifest)}</p>
         <AppByline {manifest} />
-        <StoreButton {manifest} size="md" with_open primary class="mt-2 flex-wrap" />
+        <StoreButton {manifest} size="md" labelled primary class="mt-2 flex-wrap" />
       </div>
     </div>
 

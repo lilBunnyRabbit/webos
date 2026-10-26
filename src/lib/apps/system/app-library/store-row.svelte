@@ -31,7 +31,7 @@
     </div>
   </div>
   <div class="relative flex shrink-0 items-center gap-1">
-    <StoreButton {manifest} />
+    <StoreButton {manifest} reserve />
     {@render actions?.()}
   </div>
 </li>

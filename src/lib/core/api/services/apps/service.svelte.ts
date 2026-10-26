@@ -8,6 +8,7 @@ import type {
   AppProps,
   AppsFilter,
   AppCategory,
+  LaunchOptions,
   OpenOptions,
   UninstallOptions,
 } from "./type";
@@ -405,14 +406,14 @@ export class AppsService implements IAppsService {
     return this.registry.get(id);
   }
 
-  public launch(requested: AppId, requested_props?: unknown): WindowId {
+  public launch(requested: AppId, requested_props?: unknown, options: LaunchOptions = {}): WindowId {
     const { id, props } = this.target(requested, requested_props) ?? { id: requested, props: requested_props };
     const manifest = this.registry.get(id);
     if (!manifest) {
       throw new Error(`App ${id} not found`);
     }
     // Opening isn't installing (ADR-077): the app runs on demand, out of the menus and not offline, until Install.
-    if (!this.is_installed(id)) this.offer_install(manifest);
+    if (!this.is_installed(id) && options.offer_install !== false) this.offer_install(manifest);
 
     const code = this.code.get(id);
     const window_id = code

@@ -8,13 +8,19 @@ import type { OnFire } from "../scheduler/type";
 import type { Catalogue } from "./catalogue";
 import type { AppUsage } from "./active-time";
 
+export interface LaunchOptions {
+  /** Toast "{App} isn't installed" with Install when the app isn't installed. Default true. */
+  offer_install?: boolean;
+}
+
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
   /**
    * Props are validated against the manifest's `props` schema; anything else is discarded (ADR-008). An app that isn't
-   * installed opens without installing, with a toast offering Install (ADR-077).
+   * installed opens without installing, with a toast offering Install (ADR-077), unless `options.offer_install` is
+   * false (the App Store, which shows Install beside Open).
    */
-  launch(id: AppId, props?: unknown): WindowId;
+  launch(id: AppId, props?: unknown, options?: LaunchOptions): WindowId;
   /**
    * The instance `launch()` would open, without opening a window or reporting problems: `null` when the app is unknown
    * or the props fail its schema. Used by session restore (ADR-023).

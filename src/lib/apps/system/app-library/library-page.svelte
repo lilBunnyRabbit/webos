@@ -77,6 +77,8 @@
               <IconButton label="Uninstall {manifest.name}…" size="sm" onclick={(event) => void uninstall_app(manifest.id, { x: event.clientX, y: event.clientY })}>
                 <TrashIcon weight="bold" />
               </IconButton>
+            {:else}
+              <span aria-hidden="true" class="w-7 shrink-0 pointer-coarse:w-9"></span>
             {/if}
           {/snippet}
         </StoreRow>

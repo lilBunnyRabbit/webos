@@ -67,7 +67,7 @@
               </h3>
             </div>
             <p class="max-w-md text-sm text-pretty">{card.tagline}</p>
-            <StoreButton manifest={card.manifest} size="md" with_open class="relative mt-auto pt-2" />
+            <StoreButton manifest={card.manifest} size="md" class="relative mt-auto pt-2" />
           </div>
         </li>
       {/each}

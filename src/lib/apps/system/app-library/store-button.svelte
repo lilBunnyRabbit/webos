@@ -2,7 +2,7 @@
   import kernel, { type AppListing, type AppsService, type StoreService } from "$lib/core/api";
   import { Mode } from "$lib/core/api/kernel/mode";
   import { RouteKind, route_url } from "$lib/core/api/services/router/route";
-  import { Button, button } from "$lib/core/components/ui";
+  import { Button, IconButton, button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { waiting_download } from "./waiting";
   import { ArrowSquareOut as ArrowSquareOutIcon, ArrowsClockwise as ArrowsClockwiseIcon, DownloadSimple as DownloadSimpleIcon, Play as PlayIcon } from "phosphor-svelte";
@@ -10,14 +10,16 @@
   interface Props {
     manifest: AppListing;
     size?: "sm" | "md";
-    /** Next to Install, Open runs the app without installing it (ADR-077). */
-    with_open?: boolean;
+    /** Install with its label (the app page); tiles, rows and cards show the icon alone. */
+    labelled?: boolean;
+    /** Keep the icon's slot when there's no Install or Update, so Open lines up down a list. */
+    reserve?: boolean;
     /** The view's one primary action (the app page); tiles, rows and hero cards sit many to a view. */
     primary?: boolean;
     class?: string;
   }
 
-  let { manifest, size = "sm", with_open = false, primary = false, class: class_name }: Props = $props();
+  let { manifest, size = "sm", labelled = false, reserve = false, primary = false, class: class_name }: Props = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const store = $derived(kernel.service<StoreService>("store"));
@@ -61,18 +63,25 @@
       </svg>
       {percent}%
     </span>
-  {:else if !installed}
-    <Button {variant} {size} onclick={() => apps.install(manifest.id)} aria-label="Install {manifest.name}">
-      <DownloadSimpleIcon weight="bold" /> Install
-    </Button>
-    {#if with_open}
-      <Button {size} onclick={() => apps.launch(manifest.id)} aria-label="Open {manifest.name} without installing"><PlayIcon weight="fill" /> Open</Button>
-    {/if}
-  {:else if waiting}
-    <Button {variant} {size} onclick={() => void store.sync()} aria-label="Update {manifest.name}">
-      <ArrowsClockwiseIcon weight="bold" /> Update
-    </Button>
   {:else}
-    <Button {size} onclick={() => apps.launch(manifest.id)} aria-label="Open {manifest.name}"><PlayIcon weight="fill" /> Open</Button>
+    <!-- Open works without installing (ADR-077); Install only keeps the app in your apps and offline, so it never stands alone. -->
+    <Button {variant} {size} onclick={() => apps.launch(manifest.id, undefined, { offer_install: false })} aria-label="Open {manifest.name}">
+      <PlayIcon weight="fill" /> Open
+    </Button>
+    {#if !installed}
+      {#if labelled}
+        <Button {size} onclick={() => apps.install(manifest.id)} aria-label="Install {manifest.name}"><DownloadSimpleIcon weight="bold" /> Install</Button>
+      {:else}
+        <IconButton variant="secondary" {size} label="Install {manifest.name}" onclick={() => apps.install(manifest.id)}>
+          <DownloadSimpleIcon weight="bold" />
+        </IconButton>
+      {/if}
+    {:else if waiting}
+      <IconButton variant="secondary" {size} label="Update {manifest.name}" onclick={() => void store.sync()}>
+        <ArrowsClockwiseIcon weight="bold" />
+      </IconButton>
+    {:else if reserve}
+      <span aria-hidden="true" class="w-7 shrink-0 pointer-coarse:w-9"></span>
+    {/if}
   {/if}
 </div>
