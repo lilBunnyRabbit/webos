@@ -39,6 +39,9 @@ OfflineService becomes StoreService. It owns the catalogue, downloads, versions,
 ### App updates without reload
 - The poll compares the new core hash with the running one. Different: a full update as today. Same: only apps changed, no reload.
 - Apps load by URL from the catalogue entry, not from a filename baked into the boot bundle.
+- **An app never runs on a core it wasn't built with.** Each catalogue is built against one core hash, and an app update is offered only when that hash equals the running core's. There's no "update the app, keep the old core": a new core means the full update first, then the apps.
+- **While a core update waits** (the user hasn't reloaded), the tab keeps the apps it has. GitHub Pages serves only the latest deploy, so the old build's files for an app that isn't cached are gone: Install or Open of such an app says "Update WebOS to open {App}" with Restart instead of failing. Pruning never deletes files the running tab's catalogue still lists.
+- Loosening this (stable core export names plus a versioned core API, so apps run on a range of cores) is rejected for now: a bigger core and a compatibility promise on every core change.
 - One version per app per tab. Open windows keep the old module; the window's titlebar shows an "Update" button (owner, 2026-10-26: "window of the app should probably have a 'new version' button") and the taskbar item "Update ready", both running Restart app; new windows open the old version until every window of that app is closed, then the next open loads the new one.
 - After an app-only update: "Snake and 2 more updated" with What's new.
 - One asset cache pruned against the installed apps' lists replaces the cache per build.
