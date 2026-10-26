@@ -1,6 +1,6 @@
 import { LinkKind, Publication, type MoreProject, type Project } from "./types";
 
-const { OK, DRAFT } = Publication;
+const { OK } = Publication;
 const { WEBOS, LIVE, SOURCE, NPM, DOCS, SITE } = LinkKind;
 
 const PAGES = "https://lilbunnyrabbit.github.io";
@@ -213,7 +213,7 @@ export const PACKAGES: Project[] = [
     name: "chromatics",
     badge: "npm",
     kicker: "@lilbunnyrabbit/chromatics",
-    status: DRAFT,
+    status: OK,
     tagline: "70 colour models in TypeScript, converted through one graph.",
     points: [
       "CSS Color 4, OKLCH, CIE Lab and Luv, CAM16 and HCT, HDR, ACES, video and print models.",
