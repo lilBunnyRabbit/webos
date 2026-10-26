@@ -16,7 +16,7 @@
   import { flushSync, onMount, tick, untrack } from "svelte";
   import { cubicOut, quintOut } from "svelte/easing";
   import { fade } from "svelte/transition";
-  import { ALSO, MORE } from "./content/projects";
+  import { ALSO, MORE, PACKAGES } from "./content/projects";
   import { tile_count } from "./desk/project-more";
   import Backdrop from "./desk/backdrop.svelte";
   import ContactWindow from "./desk/contact-window.svelte";
@@ -52,7 +52,7 @@
   const STACKED_LANDING = 300;
   const PHONE_LINGER = 300;
   const PHONE_WORK_HOLD = 2200;
-  const SMALLER = tile_count([...MORE, ...ALSO]);
+  const SMALLER = tile_count([...PACKAGES, ...MORE, ...ALSO]);
   const MODIFIERS = new Set(["Shift", "Control", "Alt", "Meta", "CapsLock"]);
   const LABELS: Record<string, string> = {
     [Win.IDENTITY]: "Who I am",
@@ -289,7 +289,7 @@
       });
   }
 
-  // The header's count is the way to the smaller projects, which sit under the featured cards inside the window.
+  // The header's count is the way to the packages and smaller projects, which sit under the featured cards inside the window.
   function to_smaller() {
     const target = stage?.querySelector<HTMLElement>(`:scope > [data-window="${Win.PROJECTS}"] [data-smaller]`);
     const body = target?.closest<HTMLElement>(".body");
@@ -338,7 +338,7 @@
   <span class="flex min-w-0 items-center gap-1 pr-1 text-xs whitespace-nowrap text-foreground/65 tabular-nums">
     <span class="truncate">{PROJECTS.length} featured,</span>
     <button class="smaller -mx-1 inline-flex h-7 shrink-0 pointer-coarse:h-10 items-center gap-1 rounded-md px-1.5 text-foreground/80 transition-colors hover:bg-foreground/6 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-cottontail" onclick={to_smaller}>
-      {SMALLER} smaller<ArrowDownIcon class="size-3" weight="bold" />
+      {SMALLER} more<ArrowDownIcon class="size-3" weight="bold" />
     </button>
   </span>
 {/snippet}

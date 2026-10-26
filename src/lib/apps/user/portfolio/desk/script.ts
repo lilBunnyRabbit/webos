@@ -1,7 +1,7 @@
 import { JOBS } from "../content/experience";
 import { PRINCIPLES } from "../content/principles";
 import { PROFILE } from "../content/profile";
-import { ALSO, IN_PROGRESS, MORE } from "../content/projects";
+import { ALSO, IN_PROGRESS, MORE, PACKAGES } from "../content/projects";
 import { tile_count } from "./project-more";
 import { SocialKind } from "../content/types";
 import { subject_of } from "./contact";
@@ -97,7 +97,7 @@ const COMMANDS = HELP.map((usage) => usage.name).concat("help");
 
 const PRINCIPLE_IDS = PRINCIPLES.map((p) => p.id);
 const JOB_IDS = JOBS.map((job) => job.id);
-const PROJECT_IDS = [...PROJECTS, ...IN_PROGRESS, ...MORE].map((p) => p.id);
+const PROJECT_IDS = [...PROJECTS, ...PACKAGES, ...IN_PROGRESS, ...MORE].map((p) => p.id);
 
 const CLOSE_NAMES: Record<string, string[]> = {
   all: WINDOWS,
@@ -210,7 +210,7 @@ const WINDOW_TITLES: Record<string, string> = {
 const ARG_DETAILS: Record<string, Record<string, string>> = {
   how: { "--i-build": "Every principle", ...Object.fromEntries(PRINCIPLES.map((p) => [p.id, p.title])) },
   work: { "--timeline": "Both jobs", ...Object.fromEntries(JOBS.map((job) => [job.id, job.company])) },
-  projects: Object.fromEntries([...PROJECTS, ...IN_PROGRESS, ...MORE].map((p) => [p.id, p.name])),
+  projects: Object.fromEntries([...PROJECTS, ...PACKAGES, ...IN_PROGRESS, ...MORE].map((p) => [p.id, p.name])),
   close: Object.fromEntries(Object.entries(CLOSE_NAMES).map(([name, wins]) => [name, name === "all" ? "Every window" : WINDOW_TITLES[wins[0]]])),
 };
 
@@ -259,6 +259,7 @@ const YEARS = SPAN.replace(/[A-Z][a-z]{2} /g, "").replace(" – ", "–");
 const EMPLOYERS = JOBS.map((job) => job.company.split(",")[0]).join(" and ");
 // `whoami` answers with the name, the handle after it and the role under: the first line read in the terminal is who this is.
 const HANDLE = PROFILE.socials.find((social) => social.kind === SocialKind.GITHUB)?.handle ?? "";
+const PACKAGE_TILES = tile_count(PACKAGES);
 const SMALLER = tile_count([...MORE, ...ALSO]);
 
 const { INLINE, BELOW } = RowLayout;
@@ -274,7 +275,7 @@ export function summary(action: Action, tour = true): Row[] {
   if (first === Win.IDENTITY) return [{ text: HANDLE ? `${PROFILE.name} (${HANDLE})` : PROFILE.name, detail: PROFILE.role, short: PROFILE.name, layout: BELOW }];
   if (first === Win.TIMELINE) return [{ text: "Work", detail: `${EMPLOYERS}, ${SPAN}`, short: `Work: ${YEARS}`, layout: INLINE }];
   if (first === Win.CONTACT) return [{ text: "Contact", detail: PROFILE.email, short: "Contact: email and links", layout: INLINE }];
-  return [{ text: "Projects", detail: `${PROJECTS.length} featured, ${SMALLER} smaller`, short: `Projects: ${PROJECTS.length} + ${SMALLER} more`, layout: INLINE }];
+  return [{ text: "Projects", detail: `${PROJECTS.length} featured, ${PACKAGE_TILES} packages, ${SMALLER} smaller`, short: `Projects: ${PROJECTS.length} + ${PACKAGE_TILES + SMALLER} more`, layout: INLINE }];
 }
 
 export function reply(action: Action): Row[] {
@@ -285,7 +286,7 @@ export function reply(action: Action): Row[] {
     const picked = JOBS.filter((job) => !action.job || job.id === action.job);
     return picked.map((job) => ({ text: job.company, detail: `${job.title}, ${job.period}`, run: `work ${job.id}`, layout: BELOW }));
   }
-  const picked = action.project ? [...PROJECTS, ...IN_PROGRESS, ...MORE].filter((p) => p.id === action.project) : [...PROJECTS, ...IN_PROGRESS];
+  const picked = action.project ? [...PROJECTS, ...PACKAGES, ...IN_PROGRESS, ...MORE].filter((p) => p.id === action.project) : [...PROJECTS, ...IN_PROGRESS];
   return picked.map((p) => ({ text: p.name, detail: p.kicker, run: `projects ${p.id}`, layout: BELOW }));
 }
 

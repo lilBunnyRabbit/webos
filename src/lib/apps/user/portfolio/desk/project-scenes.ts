@@ -63,27 +63,6 @@ export function palette_frame(t: number): PaletteFrame {
   };
 }
 
-export const ROUTE_DURATION = 2700;
-/** `oklch(70% 0.15 30).to(Rec2020)` as the package routes it, each hop's value from the package itself, rounded. */
-export const ROUTE = [
-  { model: "Oklch", value: "0.7 0.15 30" },
-  { model: "Oklab", value: "0.7 0.13 0.075" },
-  { model: "Xyz65", value: "0.437 0.319 0.160" },
-  { model: "Rec2020", value: "0.806 0.539 0.448" },
-];
-export const HOP = { at: 500, every: 600, length: 420 } as const;
-
-export interface RouteFrame {
-  /** Where the colour is along the route: 0 at the first model, `ROUTE.length - 1` at the last. */
-  position: number;
-  reached: number;
-}
-
-export function route_frame(t: number): RouteFrame {
-  const position = ROUTE.slice(1).reduce((sum, _, index) => sum + ease_out(progress(t, HOP.at + index * HOP.every, HOP.length)), 0);
-  return { position, reached: Math.floor(position + 1e-9) };
-}
-
 export const TASKS_DURATION = 2300;
 export const TASKS = [
   { name: "fetch", start: 0, length: 700 },

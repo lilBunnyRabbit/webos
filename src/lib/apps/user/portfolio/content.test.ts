@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { engagement_line, JOBS } from "./content/experience";
 import { PROFILE } from "./content/profile";
-import { ALSO, FEATURED, IN_PROGRESS, MORE, WEBOS_CARD } from "./content/projects";
+import { ALSO, FEATURED, IN_PROGRESS, MORE, PACKAGES, WEBOS_CARD } from "./content/projects";
 import { SKILLS } from "./content/skills";
 import { LinkKind, Publication, type Link } from "./content/types";
 import { CASE_STUDIES } from "./content/work";
@@ -13,7 +13,7 @@ const ADRS = new Set(Object.keys(import.meta.glob("/docs/adrs/*.md")).map((path)
 
 const APP_SOURCES = import.meta.glob(["/src/lib/apps/user/portfolio/{desk,particles}/**/*.{ts,svelte}", "/src/lib/apps/user/portfolio/*.{ts,svelte}", "!**/*.test.ts"], { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 
-const CONTENT = { PROFILE, JOBS, CASE_STUDIES, FEATURED, MORE, ALSO, IN_PROGRESS, WEBOS_CARD, SKILLS, PRINCIPLES, PRINCIPLES_INTRO };
+const CONTENT = { PROFILE, JOBS, CASE_STUDIES, FEATURED, PACKAGES, MORE, ALSO, IN_PROGRESS, WEBOS_CARD, SKILLS, PRINCIPLES, PRINCIPLES_INTRO };
 const TEXT = JSON.stringify(CONTENT);
 
 // The never-publish list from the cv repo's portfolio brief (§5), as phrases a slip would contain.
@@ -71,7 +71,7 @@ describe("portfolio content", () => {
 
   test("every project's `shows` names a real principle", () => {
     const ids = new Set(PRINCIPLES.map((principle) => principle.id));
-    const keys = [WEBOS_CARD, ...FEATURED, ...MORE, ...IN_PROGRESS].flatMap((project) => Object.keys(project.shows ?? {}));
+    const keys = [WEBOS_CARD, ...FEATURED, ...PACKAGES, ...MORE, ...IN_PROGRESS].flatMap((project) => Object.keys(project.shows ?? {}));
     expect(keys.length).toBeGreaterThan(0);
     expect(keys.filter((key) => !ids.has(key))).toEqual([]);
   });

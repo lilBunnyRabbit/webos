@@ -3,8 +3,8 @@
   import { cn } from "$lib/core/utils";
   import { motion_reduced } from "$lib/core/utils/motion";
   import { untrack } from "svelte";
-  import { ALSO, IN_PROGRESS, MORE } from "../content/projects";
-  import type { Project } from "../content/types";
+  import { ALSO, IN_PROGRESS, MORE, PACKAGES } from "../content/projects";
+  import type { MoreProject, Project } from "../content/types";
   import DraftMark from "../draft-mark.svelte";
   import { principles_for_project, PROJECTS, PROVING } from "./evidence";
   import PrincipleMarks from "./principle-marks.svelte";
@@ -38,16 +38,17 @@
   const proven = Object.fromEntries(PROVING.map((project) => [project.id, principles_for_project(project.id)]));
   // Cards light one after another in reading order, never all at once: a beat that lights four cards reads as a sweep.
   const WAVE = 90;
-  const more = MORE.map((project) => more_row(project, desktop));
-  const also = ALSO.map((project) => more_row(project, desktop));
-  // Each package gets its own tile, and the three close the shelf together instead of splitting it.
-  const smaller: Tile[] = [...more, ...also]
-    .sort((a, b) => Number(a.layout === MoreLayout.GROUPED) - Number(b.layout === MoreLayout.GROUPED))
-    .flatMap<Tile>((row) =>
-      row.layout === MoreLayout.GROUPED
-        ? row.groups.map((group, i) => ({ key: group.name, owner: row.id, first: i === 0, name: group.name, mono: true, row, line: group.line, links: group.links }))
-        : [{ key: row.id, owner: row.id, first: true, name: row.name, mono: false, row, line: row.line, links: row.links }]
-    );
+  // A project that groups several packages gets a tile per package.
+  const tiles = (projects: (Project | MoreProject)[], mono = false): Tile[] =>
+    projects
+      .map((project) => more_row(project, desktop))
+      .flatMap<Tile>((row) =>
+        row.layout === MoreLayout.GROUPED
+          ? row.groups.map((group, i) => ({ key: group.name, owner: row.id, first: i === 0, name: group.name, mono: true, row, line: group.line, links: group.links }))
+          : [{ key: row.id, owner: row.id, first: true, name: row.name, mono, row, line: row.line, links: row.links }]
+      );
+  const packages = tiles(PACKAGES, true);
+  const smaller = tiles([...MORE, ...ALSO]);
 
   let rail: HTMLElement | null = $state(null);
   let current = $state(0);
@@ -162,7 +163,7 @@
 </script>
 
 {#snippet tile(item: Tile)}
-  {@const marks = item.mono ? [] : (proven[item.owner] ?? [])}
+  {@const marks = item.key === item.owner ? (proven[item.owner] ?? []) : []}
   <li
     class={cn("tile flex min-w-0 flex-col rounded-lg bg-(--portfolio-card) ring-1 transition-[box-shadow] duration-300", lit_projects.includes(item.owner) || flashed === item.owner ? "ring-primary/55" : "ring-foreground/8")}
     {@attach (node) => {
@@ -228,17 +229,24 @@
     </div>
   </div>
 
+  <section class="flex flex-col gap-2.5" aria-labelledby="{uid}-packages" data-smaller>
+    <h3 id="{uid}-packages" class="px-0.5 text-ui font-semibold text-foreground outline-none" tabindex="-1">npm packages</h3>
+    <ul class="smalls">
+      {#each packages as item (item.key)}{@render tile(item)}{/each}
+    </ul>
+  </section>
+
+  <section class="flex flex-col gap-2.5" aria-labelledby="{uid}-smaller">
+    <h3 id="{uid}-smaller" class="px-0.5 text-ui font-semibold text-foreground">Smaller things</h3>
+    <ul class="smalls">
+      {#each smaller as item (item.key)}{@render tile(item)}{/each}
+    </ul>
+  </section>
+
   <section class="flex flex-col gap-2.5" aria-labelledby="{uid}-building">
     <h3 id="{uid}-building" class="px-0.5 text-ui font-semibold text-foreground">In progress</h3>
     <ul class="buildings">
       {#each IN_PROGRESS as project (project.id)}{@render building(project)}{/each}
-    </ul>
-  </section>
-
-  <section class="flex flex-col gap-2.5" aria-labelledby="{uid}-smaller" data-smaller>
-    <h3 id="{uid}-smaller" class="px-0.5 text-ui font-semibold text-foreground outline-none" tabindex="-1">Smaller things</h3>
-    <ul class="smalls">
-      {#each smaller as item (item.key)}{@render tile(item)}{/each}
     </ul>
   </section>
 </div>
@@ -331,7 +339,7 @@
       --tile: 7rem;
     }
 
-    .cards.tiled > .item:is(:nth-child(1), :nth-child(8)) {
+    .cards.tiled > .item:is(:nth-child(1), :nth-child(4), :nth-child(7)) {
       grid-column: span 2;
       --tile: 10rem;
     }
@@ -347,7 +355,7 @@
       --tile: 7rem;
     }
 
-    .cards.stacked > .item:is(:nth-child(1), :nth-child(8)) {
+    .cards.stacked > .item:is(:nth-child(1), :nth-child(4), :nth-child(7)) {
       grid-column: span 2;
       --tile: 10rem;
     }
@@ -358,7 +366,12 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
-    .cards:is(.tiled, .stacked) > .item:is(:nth-child(1), :nth-child(8)) {
+    .cards:is(.tiled, .stacked) > .item:nth-child(5) {
+      grid-column: span 2;
+      --tile: 10rem;
+    }
+
+    .cards:is(.tiled, .stacked) > .item:nth-child(7) {
       grid-column: span 3;
     }
   }

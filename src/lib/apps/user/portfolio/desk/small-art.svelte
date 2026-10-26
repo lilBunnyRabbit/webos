@@ -4,7 +4,7 @@
   let { id, name }: { id: string; name: string } = $props();
 
   const SWATCHES = [0.32, 0.45, 0.58, 0.71, 0.84];
-  const LISTENERS = 3;
+  const FANS = [6, 24, 42];
   const HELPERS = ["fn", "{}", "[]", "<>", "?.", "=>"];
   const DAYS = [0.55, 0.8, 0.7, 0.9, 0.35];
   const NOTES = [
@@ -12,6 +12,7 @@
     { done: false, text: "flaky login test" },
     { done: false, text: "idea: offline sync" },
   ];
+  const MODELS = ["Oklch", "Lab", "Hsl", "Hct", "Rgb", "Xyz"];
   const FRAMES = 7;
   const RESETS = [0.08, 0.3, 0.38, 0.66, 0.9];
   const shade = (l: number) => `oklch(from var(--primary) ${l} c h)`;
@@ -63,6 +64,12 @@
       <span class="clip absolute -top-1 -bottom-1 rounded-sm"></span>
       <span class="gif absolute -top-2 right-0 rounded-sm px-1 font-mono text-[0.5625rem] leading-3 font-semibold">GIF</span>
     </span>
+  {:else if id === "chromatics-package"}
+    <span class="grid grid-cols-2 gap-1 font-mono text-[0.5625rem] leading-none">
+      {#each MODELS as model, i (model)}
+        <span class="model flex h-4.5 items-center gap-1 rounded-sm px-1.5" style:--i={i}><span class="size-1.5 shrink-0 rounded-full bg-primary"></span>{model}</span>
+      {/each}
+    </span>
   {:else if id === "optional"}
     <span class="flex items-end gap-4 font-mono text-[0.625rem] leading-none">
       <span class="flex flex-col items-center gap-1.5">
@@ -75,16 +82,14 @@
       </span>
     </span>
   {:else if id === "event-emitter"}
-    <span class="flex items-center gap-1">
-      <span class="emitter size-4 shrink-0 rounded-full"></span>
-      <span class="flex flex-col gap-2">
-        {#each { length: LISTENERS } as _, i (i)}
-          <span class="flex items-center" style:--i={i}>
-            <span class="wire h-px w-8"></span>
-            <span class="listener size-2 rounded-full"></span>
-          </span>
+    <span class="flex items-center gap-2 font-mono text-[0.5625rem] leading-none">
+      <span class="emit rounded-sm px-1.5 py-1">emit</span>
+      <svg class="h-12 w-10 shrink-0 overflow-visible" viewBox="0 0 40 48" fill="none">
+        {#each FANS as y, i (y)}
+          <path class="wire" style:--i={i} d="M0 24 C 20 24, 20 {y}, 36 {y}" />
+          <circle class="listener" style:--i={i} cx="37" cy={y} r="3" />
         {/each}
-      </span>
+      </svg>
     </span>
   {:else if id === "utils"}
     <span class="grid grid-cols-3 gap-1 font-mono text-[0.625rem] leading-none">
@@ -214,6 +219,13 @@
     color: var(--background);
   }
 
+  .model {
+    background: var(--portfolio-card);
+    color: color-mix(in oklch, var(--foreground) 70%, transparent);
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 10%, transparent);
+    transition: translate 220ms var(--ease-out) calc(var(--i) * 40ms);
+  }
+
   .slot {
     box-shadow: 0 0 0 1px color-mix(in oklch, var(--foreground) 22%, transparent);
   }
@@ -229,20 +241,25 @@
     transition: scale 220ms var(--ease-out);
   }
 
-  .emitter {
+  .emit {
     background: var(--primary);
+    color: var(--background);
+    font-weight: 600;
   }
 
   .wire {
-    background: color-mix(in oklch, var(--foreground) 22%, transparent);
-    transition: background-color 200ms var(--ease-out) calc(var(--i) * 70ms);
+    stroke: color-mix(in oklch, var(--foreground) 25%, transparent);
+    stroke-width: 1;
+    transition: stroke 200ms var(--ease-out) calc(var(--i) * 70ms);
   }
 
   .listener {
-    box-shadow: 0 0 0 1.5px color-mix(in oklch, var(--foreground) 45%, transparent);
+    fill: var(--portfolio-inset);
+    stroke: color-mix(in oklch, var(--foreground) 45%, transparent);
+    stroke-width: 1.5;
     transition:
-      background-color 200ms var(--ease-out) calc(var(--i) * 70ms + 120ms),
-      box-shadow 200ms var(--ease-out) calc(var(--i) * 70ms + 120ms);
+      fill 200ms var(--ease-out) calc(var(--i) * 70ms + 120ms),
+      stroke 200ms var(--ease-out) calc(var(--i) * 70ms + 120ms);
   }
 
   .helper {
@@ -325,17 +342,21 @@
       color: var(--primary);
     }
 
+    :global(.tile:is(:hover, :focus-within)) .art .model {
+      translate: 0 -0.125rem;
+    }
+
     :global(.tile:is(:hover, :focus-within)) .art .value {
       scale: 1.15;
     }
 
     :global(.tile:is(:hover, :focus-within)) .art .wire {
-      background: var(--primary);
+      stroke: var(--primary);
     }
 
     :global(.tile:is(:hover, :focus-within)) .art .listener {
-      background: var(--primary);
-      box-shadow: 0 0 0 1.5px var(--primary);
+      fill: var(--primary);
+      stroke: var(--primary);
     }
 
     :global(.tile:is(:hover, :focus-within)) .art .helper {
@@ -371,6 +392,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .swatch,
+    .model,
     .safe,
     .proof,
     .clip,

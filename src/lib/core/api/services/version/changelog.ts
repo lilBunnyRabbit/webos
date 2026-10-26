@@ -27,7 +27,7 @@ export const CHANGELOG: Release[] = [
       },
       {
         kind: IMPROVED,
-        text: "The Portfolio gives the chromatics colour library its own card, with a graphic that follows one colour through its conversions.",
+        text: "The Portfolio gets an npm packages section under the featured projects, with the chromatics colour library beside the other packages, and In progress moves to the end.",
       },
     ],
   },

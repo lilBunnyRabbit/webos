@@ -1,11 +1,11 @@
 import { JOBS } from "../content/experience";
 import { PRINCIPLES } from "../content/principles";
-import { FEATURED, MORE, WEBOS_CARD } from "../content/projects";
+import { FEATURED, MORE, PACKAGES, WEBOS_CARD } from "../content/projects";
 import { Publication, type CaseBlock, type Principle, type Project } from "../content/types";
 import { CASE_STUDIES } from "../content/work";
 
 export const PROJECTS = [WEBOS_CARD, ...FEATURED];
-export const PROVING: Project[] = [...PROJECTS, ...MORE];
+export const PROVING: Project[] = [...PROJECTS, ...PACKAGES, ...MORE];
 
 export interface Evidence {
   jobs: string[];

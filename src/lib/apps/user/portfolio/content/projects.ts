@@ -52,32 +52,6 @@ export const FEATURED: Project[] = [
     ],
   },
   {
-    id: "chromatics-package",
-    name: "chromatics",
-    badge: "npm",
-    kicker: "@lilbunnyrabbit/chromatics",
-    status: DRAFT,
-    tagline: "Every colour model in TypeScript: 70 of them, one class each, converted through one graph, with every formula cited.",
-    points: [
-      "CSS Color 4, OKLCH, CIE Lab and Luv, CAM16 and HCT, HDR, ACES, video and print models.",
-      "Conversions route through a graph; the RGB matrices are derived in exact rational arithmetic from the published primaries.",
-      "Every expected value in the tests comes from an independent, cited source, and every suite runs on V8 and JavaScriptCore.",
-      "Nothing is clamped behind your back: out-of-gamut values stay until you ask for CSS Color 4 gamut mapping.",
-      "An import path per model bundles only the conversions that model reaches. One runtime dependency.",
-    ],
-    stack: ["TypeScript", "Vitest", "fast-check", "Bun"],
-    shows: {
-      decisions: "The chromatics package's API is decided in ADRs: its classes, the conversion graph, the numeric policy.",
-      performance: "The chromatics package has an import path per colour model, so an app bundles only the conversions that model reaches.",
-      tested: "The chromatics package runs every suite on both V8 and JavaScriptCore, and every expected value in it comes from an independent, cited source.",
-    },
-    links: [
-      { kind: NPM, url: `${NPM_PACKAGE}/chromatics` },
-      { kind: SOURCE, url: `${REPO}/chromatics/tree/master/packages/chromatics` },
-      { kind: WEBOS, app: "colour-atlas", label: "Play it in WebOS" },
-    ],
-  },
-  {
     id: "agtc",
     name: "AGTC",
     badge: "Terminal",
@@ -229,6 +203,36 @@ export const MORE: Project[] = [
       tested: "chrome-safe-inset is a tool I built to test notch and home-bar layouts in desktop Chrome, without a phone.",
     },
     links: [{ kind: SOURCE, url: `${REPO}/chrome-safe-inset` }],
+  },
+];
+
+/** The npm packages, one small tile each, under the featured cards. */
+export const PACKAGES: Project[] = [
+  {
+    id: "chromatics-package",
+    name: "chromatics",
+    badge: "npm",
+    kicker: "@lilbunnyrabbit/chromatics",
+    status: DRAFT,
+    tagline: "70 colour models in TypeScript, converted through one graph.",
+    points: [
+      "CSS Color 4, OKLCH, CIE Lab and Luv, CAM16 and HCT, HDR, ACES, video and print models.",
+      "Conversions route through a graph; the RGB matrices are derived in exact rational arithmetic from the published primaries.",
+      "Every expected value in the tests comes from an independent, cited source, and every suite runs on V8 and JavaScriptCore.",
+      "Nothing is clamped behind your back: out-of-gamut values stay until you ask for CSS Color 4 gamut mapping.",
+      "An import path per model bundles only the conversions that model reaches. One runtime dependency.",
+    ],
+    stack: ["TypeScript", "Vitest", "fast-check", "Bun"],
+    shows: {
+      decisions: "The chromatics package's API is decided in ADRs: its classes, the conversion graph, the numeric policy.",
+      performance: "The chromatics package has an import path per colour model, so an app bundles only the conversions that model reaches.",
+      tested: "The chromatics package runs every suite on both V8 and JavaScriptCore, and every expected value in it comes from an independent, cited source.",
+    },
+    links: [
+      { kind: NPM, url: `${NPM_PACKAGE}/chromatics` },
+      { kind: SOURCE, url: `${REPO}/chromatics/tree/master/packages/chromatics` },
+      { kind: WEBOS, app: "colour-atlas", label: "Play it in WebOS" },
+    ],
   },
   {
     id: "packages",

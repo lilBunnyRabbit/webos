@@ -4,6 +4,7 @@ import { PROFILE } from "../content/profile";
 import { SKILLS } from "../content/skills";
 import { Publication, SocialKind, type Job } from "../content/types";
 import { evidence_names } from "./evidence";
+import { PACKAGES } from "../content/projects";
 import { IN_PROGRESS, PROJECTS, Win } from "./script";
 import { studies_of } from "./work-more";
 
@@ -78,7 +79,7 @@ export const HITS: Hit[] = [
     job: job.id,
     terms: [job.company, job.title, job.place, ...(job.progression ?? []), job_text(job), ...implied_by(job_text(job))].join(" "),
   })),
-  ...[...PROJECTS, ...IN_PROGRESS].map((project) => ({
+  ...[...PROJECTS, ...PACKAGES, ...IN_PROGRESS].map((project) => ({
     key: `project-${project.id}`,
     kind: HitKind.PROJECT,
     label: project.name,

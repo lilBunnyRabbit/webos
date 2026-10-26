@@ -2,7 +2,6 @@
   const DESCRIPTIONS: Record<string, string> = {
     webos: "Two windows open from the taskbar on a small desktop, then snap side by side, one to each half.",
     chromatics: "A line of colour script is typed and resolves into a row of five shades of one colour, which then tint a small interface.",
-    "chromatics-package": "A colour travels from Oklch through Oklab and XYZ to Rec. 2020, each model lighting as it arrives, with the colour's value in that model shown under the route.",
     "task-manager": "Three tasks: the first runs on its own, then two run in parallel, each bar filling to done.",
     petrace: "A phone showing a faint drawing of a house, and beside it a sheet of paper where a pencil traces the same house line by line.",
     "series-tracker": "Two seasons of episodes as a grid, ticked off one by one, with the next episode marked.",
@@ -16,7 +15,6 @@
   import GraphicChromatics from "./graphic-chromatics.svelte";
   import GraphicHq from "./graphic-hq.svelte";
   import GraphicPetrace from "./graphic-petrace.svelte";
-  import GraphicRoute from "./graphic-route.svelte";
   import GraphicSeasons from "./graphic-seasons.svelte";
   import GraphicTasks from "./graphic-tasks.svelte";
   import GraphicWebos from "./graphic-webos.svelte";
@@ -31,8 +29,6 @@
     <GraphicWebos {player} />
   {:else if id === "chromatics"}
     <GraphicChromatics {player} />
-  {:else if id === "chromatics-package"}
-    <GraphicRoute {player} />
   {:else if id === "task-manager"}
     <GraphicTasks {player} />
   {:else if id === "petrace"}

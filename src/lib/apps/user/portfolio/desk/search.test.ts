@@ -7,7 +7,7 @@ describe("search", () => {
     expect(search("chrom")[0]).toMatchObject({ kind: HitKind.PROJECT, window: Win.PROJECTS, project: "chromatics" });
   });
 
-  test("the colour library has its own card, found by name, npm name and what it is", () => {
+  test("the colour library has its own tile, found by name, npm name and what it is", () => {
     expect(search("chrom").map((hit) => hit.project)).toContain("chromatics-package");
     expect(search("@lilbunnyrabbit/chromatics")[0]).toMatchObject({ kind: HitKind.PROJECT, window: Win.PROJECTS, project: "chromatics-package" });
     expect(search("colour model")[0]).toMatchObject({ kind: HitKind.PROJECT, project: "chromatics-package" });
@@ -23,7 +23,7 @@ describe("search", () => {
 
   test("a principle lights up its evidence instead of opening a window, and names where it shows up", () => {
     const [hit] = search("where it runs");
-    expect(hit).toMatchObject({ kind: HitKind.PRINCIPLE, principle: "tested", detail: "Astra AI, WebOS, chromatics, Petrace, hq, chrome-safe-inset" });
+    expect(hit).toMatchObject({ kind: HitKind.PRINCIPLE, principle: "tested", detail: "Astra AI, WebOS, Petrace, hq, chromatics, chrome-safe-inset" });
     expect(hit.window).toBeUndefined();
   });
 
