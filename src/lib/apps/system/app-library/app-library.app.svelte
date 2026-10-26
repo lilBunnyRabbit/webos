@@ -7,99 +7,96 @@
     type AppListing,
     type AppsService,
     type SessionService,
+    type StoreService,
     type VersionService,
     type WindowsService,
   } from "$lib/core/api";
+  import { FEATURED } from "$lib/core/api/services/apps/featured";
+  import { INTERESTS } from "$lib/core/api/services/apps/suggestions";
   import { get_app_context } from "$lib/core/contexts/app";
-  import AppBadge from "$lib/core/components/apps/app-badge.svelte";
-  import AppProgress from "$lib/core/components/apps/app-progress.svelte";
-  import { set_drag_app } from "$lib/core/components/apps/drag";
   import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";
-  import { Badge, Button, EmptyState, IconButton, Input, Segmented, Select, SideNav, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Input, SideNav, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
-    ClockCounterClockwise as ClockCounterClockwiseIcon,
-    DownloadSimple as DownloadSimpleIcon,
-    Files as FilesIcon,
-    ListBullets as ListBulletsIcon,
+    ArrowLeft as ArrowLeftIcon,
+    ArrowsClockwise as ArrowsClockwiseIcon,
+    Books as BooksIcon,
+    Compass as CompassIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     Sparkle as SparkleIcon,
     SquaresFour as SquaresFourIcon,
-    Sticker as StickerIcon,
-    Storefront as StorefrontIcon,
-    TerminalWindow as TerminalWindowIcon,
+    WifiSlash as WifiSlashIcon,
     X as XIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import AppDetails from "./app-details.svelte";
+  import AppPage from "./app-page.svelte";
+  import { AppSizes } from "./app-sizes.svelte";
+  import Browse from "./browse.svelte";
   import { CATEGORY_ICONS } from "./category-icons";
-  import { APP_LIBRARY_PROPS, LibraryView } from "./props";
-  import Showcase from "./showcase.svelte";
-  import ShowcaseDetail from "./showcase-detail.svelte";
+  import Discover from "./discover.svelte";
+  import { app_updates, collections, hero_cards, LibrarySortBy, new_apps, recently_updated, type Shelf } from "./discover";
   import {
     category_counts,
-    category_label,
-    has_filter,
+    category_of,
     LIBRARY_CATEGORIES,
     library_sections,
     LibraryCategory,
     LibraryFilter,
     LibrarySort,
     SearchSection,
-    showcase_sections,
+    ViewMode,
   } from "./library";
-
-  const ViewMode = { GRID: "grid", LIST: "list" } as const;
-  type ViewMode = (typeof ViewMode)[keyof typeof ViewMode];
-
-  const VIEWS = [
-    { value: LibraryView.SHOWCASE, label: "Showcase", icon: SparkleIcon },
-    { value: LibraryView.STORE, label: "Store", icon: StorefrontIcon },
-  ];
-
-  const FILTERS = [
-    { id: LibraryFilter.WIDGET, label: "Has widget", icon: StickerIcon },
-    { id: LibraryFilter.FILES, label: "Opens files", icon: FilesIcon },
-    { id: LibraryFilter.COMMANDS, label: "Has commands", icon: TerminalWindowIcon },
-    { id: LibraryFilter.USED, label: "Used before", icon: ClockCounterClockwiseIcon },
-    { id: LibraryFilter.NOT_INSTALLED, label: "Not installed", icon: DownloadSimpleIcon },
-  ];
+  import LibraryPage from "./library-page.svelte";
+  import { APP_LIBRARY_PROPS, place_of, StorePlace } from "./props";
+  import StoreRow from "./store-row.svelte";
+  import Updates from "./updates.svelte";
+  import { waiting_download } from "./waiting";
 
   let { view: initial_view, app: initial_app }: Partial<z.infer<typeof APP_LIBRARY_PROPS>> = $props();
 
   const { window: win, storage } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const store = $derived(kernel.service<StoreService>("store"));
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const session = $derived(kernel.service<SessionService>("session"));
   const version = $derived(kernel.service<VersionService>("version"));
   const ai = $derived(kernel.service<AiService>("ai"));
   void kernel.service<VersionService>("version").load_changelog();
 
+  const place = storage.window<StorePlace>(
+    "place",
+    untrack(() => (initial_view ? place_of(initial_view) : StorePlace.DISCOVER)),
+    z.enum(Object.values(StorePlace))
+  );
   const category = storage.window<LibraryCategory>("category", LibraryCategory.ALL, z.enum(Object.values(LibraryCategory)));
   const filters = storage.window<LibraryFilter[]>("filters", [], z.array(z.enum(Object.values(LibraryFilter))));
   const sort = storage.window<LibrarySort>("sort", LibrarySort.NAME, z.enum(Object.values(LibrarySort)));
   const view = storage.window<ViewMode>("view", ViewMode.GRID, z.enum(Object.values(ViewMode)));
+  const library_sort = storage.window<LibrarySortBy>("library_sort", LibrarySortBy.RECENT, z.enum(Object.values(LibrarySortBy)));
   const selected_id = storage.window<string | null>("selected", untrack(() => initial_app) ?? null, z.string().nullable());
-  const page = storage.window<LibraryView>("page", untrack(() => initial_view) ?? LibraryView.STORE, z.enum(Object.values(LibraryView)));
-  const showcase = $derived(page.value === LibraryView.SHOWCASE);
-  const showcase_category = storage.window<LibraryCategory>("showcase_category", LibraryCategory.ALL, z.enum(Object.values(LibraryCategory)));
+  const collection_id = storage.window<string | null>("collection", null, z.string().nullable());
 
   let query = $state("");
+  let base: HTMLElement | null = $state(null);
 
   // Boot knows only the installed apps (ADR-077): the Store asks for the rest, again when the connection comes back.
   const CatalogueState = { LOADING: "loading", READY: "ready", OFFLINE: "offline" } as const;
   type CatalogueState = (typeof CatalogueState)[keyof typeof CatalogueState];
   let catalogue = $state<CatalogueState>(CatalogueState.LOADING);
   function load_catalogue() {
+    if (catalogue === CatalogueState.READY) return;
+    catalogue = CatalogueState.LOADING;
     void apps.catalogue().then((ready) => (catalogue = ready ? CatalogueState.READY : CatalogueState.OFFLINE));
   }
   load_catalogue();
 
   const manifests = $derived(apps.listings());
+  const installed_list = $derived(apps.listings({ installed: true }));
+  const installed = $derived(new Set(installed_list.map((manifest) => manifest.id)));
   const selected = $derived(selected_id.value ? (manifests.find((manifest) => manifest.id === selected_id.value) ?? null) : null);
 
-  // No usage log exists; an open window, a recently closed one or a remembered window frame is what the OS already knows.
+  // No usage log for the filter; an open window, a recently closed one or a remembered window frame is what the OS already knows.
   const used = $derived(
     new Set([
       ...windows.list().flatMap((id) => windows.get(id)?.app.id ?? []),
@@ -108,302 +105,240 @@
     ])
   );
 
-  const installed = $derived(new Set([...apps.list({ installed: true })].map(([id]) => id)));
-
   const sentence = new SentenceSearch<AppListing>({
     apps: () => manifests,
     query: () => query,
     shown: () => search_apps(manifests, query),
     ai: () => ai,
   });
-  const found = $derived({ related: sentence.related, suggested: sentence.suggested });
 
-  const filter_query = $derived({ query, filters: filters.value, used, installed, ...found });
-  const counts = $derived(category_counts(manifests, filter_query));
-  const sections = $derived(
-    library_sections(manifests, { ...filter_query, category: category.value, sort: sort.value, changelog: version.changelog })
+  const searching = $derived(query.trim().length > 0);
+  const results = $derived(
+    library_sections(manifests, {
+      query,
+      filters: [],
+      used,
+      installed,
+      category: LibraryCategory.ALL,
+      sort: LibrarySort.NAME,
+      related: sentence.related,
+      suggested: sentence.suggested,
+    })
   );
+  const counts = $derived(category_counts(manifests, { query: "", filters: [], used, installed }));
+  const sections = $derived(
+    library_sections(manifests, { query: "", filters: filters.value, used, installed, category: category.value, sort: sort.value, changelog: version.changelog })
+  );
+
+  // Waits for the notes and the catalogue: cards arriving in front would leave the carousel snapped to a later one.
+  const hero = $derived(version.changelog.length && catalogue !== CatalogueState.LOADING ? hero_cards(manifests, version.changelog, FEATURED) : []);
+  const shelves = $derived(
+    [
+      { id: "new", label: "New apps", description: "The latest to join WebOS", apps: new_apps(manifests, version.changelog) },
+      { id: "updated", label: "Recently updated", description: "Changed in the latest releases", apps: recently_updated(manifests, version.changelog) },
+      ...collections(manifests, INTERESTS),
+    ].filter((shelf) => shelf.apps.length > 0)
+  );
+  const collection = $derived(collection_id.value ? (shelves.find((shelf) => shelf.id === collection_id.value) ?? null) : null);
+
+  const waiting = $derived(installed_list.filter((manifest) => waiting_download(store, manifest.id) || store.progress(manifest.id) !== null));
+  const recent_updates = $derived(app_updates(installed_list, version.changelog));
+
   // Only for this session, like What's new's "New to you": nothing records which apps were looked at.
   const fresh = $derived(new Set(introduced_apps(version.unseen).map(({ app }) => app)));
   const updated = $derived(updated_apps(version.unseen));
-  const showcase_list = $derived(showcase_sections(manifests, { query, category: showcase_category.value, ...found }));
-  const showcase_counts = $derived(category_counts(manifests, { query, filters: [], used: new Set(), installed: new Set(), ...found }));
-  const shown = $derived((showcase ? showcase_list : sections).reduce((sum, section) => sum + section.apps.length, 0));
-  const first = $derived(sections[0]?.apps[0]);
 
-  const nav_items = $derived(LIBRARY_CATEGORIES.map(({ id, label }) => ({ value: id, label, icon: CATEGORY_ICONS[id], count: counts[id] })));
+  const sizes = new AppSizes();
+  $effect(() => {
+    if (place.value !== StorePlace.LIBRARY && !selected) return;
+    const slice = apps.installed_catalogue();
+    if (store.syncing || !slice) return;
+    untrack(() => void sizes.measure(slice.apps.map(({ id, files }) => ({ id, files }))));
+  });
 
-  function toggle(filter: LibraryFilter) {
-    filters.value = filters.value.includes(filter) ? filters.value.filter((value) => value !== filter) : [...filters.value, filter];
+  const related = $derived(
+    selected
+      ? manifests
+          .filter((manifest) => manifest.id !== selected.id && category_of(manifest) === category_of(selected))
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .slice(0, 12)
+      : []
+  );
+
+  type NavValue = StorePlace | Exclude<LibraryCategory, "all">;
+  const nav_items = $derived([
+    { value: StorePlace.DISCOVER as NavValue, label: "Discover", icon: CompassIcon },
+    { value: StorePlace.APPS as NavValue, label: "All apps", icon: SquaresFourIcon, count: counts[LibraryCategory.ALL] },
+    { value: StorePlace.LIBRARY as NavValue, label: "Library", icon: BooksIcon, count: installed.size },
+    { value: StorePlace.UPDATES as NavValue, label: "Updates", icon: ArrowsClockwiseIcon, count: waiting.length || undefined },
+    ...LIBRARY_CATEGORIES.filter(({ id }) => id !== LibraryCategory.ALL).map(({ id, label }) => ({
+      value: id as NavValue,
+      label,
+      icon: CATEGORY_ICONS[id],
+      count: counts[id],
+      group: "Categories",
+    })),
+  ]);
+  const nav_value = $derived<NavValue>(
+    place.value === StorePlace.APPS && category.value !== LibraryCategory.ALL ? (category.value as NavValue) : place.value
+  );
+
+  function go(value: NavValue) {
+    selected_id.value = null;
+    collection_id.value = null;
+    query = "";
+    if (value === StorePlace.APPS) category.value = LibraryCategory.ALL;
+    if ((Object.values(StorePlace) as string[]).includes(value)) place.value = value as StorePlace;
+    else {
+      category.value = value as LibraryCategory;
+      place.value = StorePlace.APPS;
+    }
+    base?.scrollTo({ top: 0 });
   }
 
   function select(manifest: AppListing) {
     selected_id.value = manifest.id;
   }
 
+  function open_shelf(shelf: Shelf) {
+    collection_id.value = shelf.id;
+  }
+
   $effect(() =>
     win.on_back(() => {
-      if (!selected_id.value) return false;
-      selected_id.value = null;
+      if (selected_id.value) selected_id.value = null;
+      else if (query) query = "";
+      else if (collection_id.value) collection_id.value = null;
+      else return false;
       return true;
     })
   );
+
+  const middle = $derived(searching || collection !== null);
+  const browse_title = $derived(category.value === LibraryCategory.ALL ? "All apps" : (LIBRARY_CATEGORIES.find(({ id }) => id === category.value)?.label ?? "All apps"));
 </script>
 
-{#snippet icon_tile(manifest: AppListing, size: "sm" | "md")}
-  <span
-    class={cn(
-      "relative grid shrink-0 place-items-center bg-background-light shadow-raised ring-1 ring-foreground/10",
-      size === "md" ? "size-11 rounded-xl pointer-coarse:size-14 pointer-coarse:rounded-2xl" : "size-6 rounded-md pointer-coarse:size-8"
-    )}
-  >
-    <manifest.icon class={size === "md" ? "size-6 pointer-coarse:size-7" : "size-4 pointer-coarse:size-5"} weight="duotone" />
-    {#if size === "md"}<AppProgress app_id={manifest.id} /><AppBadge app_id={manifest.id} />{/if}
-  </span>
-{/snippet}
-
-{#snippet freshness(manifest: AppListing)}
-  {#if !installed.has(manifest.id)}
-    <Badge tone="primary">Install</Badge>
-  {:else if fresh.has(manifest.id)}
-    <Badge tone="primary">New</Badge>
-  {:else if updated.has(manifest.id)}
-    <Badge tone="info">Updated</Badge>
-  {/if}
-{/snippet}
-
-{#snippet tiles(list: AppListing[])}
-  {#if view.value === ViewMode.GRID}
-    <ul class="grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-1">
-      {#each list as manifest (manifest.id)}
-        <li>
-          <button
-            aria-current={manifest.id === selected_id.value ? "true" : undefined}
-            title={manifest.description}
-            class={cn(
-              "flex w-full flex-col items-center gap-1.5 rounded-xl px-1 pt-3 pb-2 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-cottontail",
-              manifest.id === selected_id.value ? "bg-primary/14" : "hover:bg-foreground/8"
-            )}
-            onclick={() => select(manifest)}
-            ondblclick={() => apps.launch(manifest.id)}
-            draggable="true"
-            ondragstart={(event) => set_drag_app(event, manifest.id)}
-          >
-            {@render icon_tile(manifest, "md")}
-            <span class="line-clamp-2 max-w-full text-center text-2xs leading-tight font-medium pointer-coarse:text-xs">{manifest.name}</span>
-            {@render freshness(manifest)}
-          </button>
-        </li>
-      {/each}
-    </ul>
-  {:else}
-    <ul class="flex flex-col">
-      <li aria-hidden="true" class="flex h-7 items-center gap-2.5 px-2 text-2xs text-foreground/55">
-        <span class="ml-auto flex shrink-0 items-center gap-1.5">
-          {#each FILTERS.slice(0, 3) as filter (filter.id)}
-            <span title={filter.label}><filter.icon class="size-3.5" weight="bold" /></span>
-          {/each}
-          <span class="hidden w-20 text-right @md:block">Category</span>
-        </span>
-      </li>
-      {#each list as manifest (manifest.id)}
-        <li>
-          <button
-            aria-current={manifest.id === selected_id.value ? "true" : undefined}
-            class={cn(
-              "flex h-9 w-full items-center gap-2.5 rounded-md px-2 text-left transition-colors duration-150 pointer-coarse:h-12 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-cottontail",
-              manifest.id === selected_id.value ? "bg-primary/14" : "hover:bg-foreground/6"
-            )}
-            onclick={() => select(manifest)}
-            ondblclick={() => apps.launch(manifest.id)}
-            draggable="true"
-            ondragstart={(event) => set_drag_app(event, manifest.id)}
-          >
-            {@render icon_tile(manifest, "sm")}
-            <span class="flex w-36 shrink-0 items-center gap-1.5 @lg:w-44">
-              <span class="truncate text-ui font-medium">{manifest.name}</span>
-              {@render freshness(manifest)}
-            </span>
-            <span class="hidden min-w-0 flex-1 truncate text-ui text-foreground/65 @lg:block">{manifest.description ?? ""}</span>
-            <span class="ml-auto flex shrink-0 items-center gap-1.5 text-foreground/65">
-              {#each FILTERS.slice(0, 3) as filter (filter.id)}
-                <span title={has_filter(manifest, filter.id, filter_query) ? filter.label : undefined}>
-                  <filter.icon class={cn("size-3.5", !has_filter(manifest, filter.id, filter_query) && "invisible")} aria-label={has_filter(manifest, filter.id, filter_query) ? filter.label : undefined} />
-                </span>
-              {/each}
-              <span class="hidden w-20 truncate text-right text-2xs @md:block">{category_label(manifest)}</span>
-            </span>
-          </button>
-        </li>
-      {/each}
-    </ul>
-  {/if}
-{/snippet}
-
-{#snippet search(onenter: () => void)}
-  <Input
-    bind:value={query}
-    size="sm"
-    class="min-w-36 flex-1"
-    placeholder="Search apps"
-    aria-label="Search apps"
-    onkeydown={(event) => {
-      if (event.key === "Enter" && query.trim()) onenter();
-    }}
-  >
-    {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
-    {#snippet trailing()}
-      {#if query}
-        <IconButton label="Clear search" size="sm" class="size-5 pointer-coarse:size-7" onclick={() => (query = "")}><XIcon weight="bold" /></IconButton>
-      {/if}
-    {/snippet}
-  </Input>
-{/snippet}
-
-{#snippet view_switch()}
-  <Segmented size="sm" label="App Store view" options={VIEWS} bind:value={page.value} />
+{#snippet back_bar(label: string, onback: () => void)}
+  <div class="mx-auto flex w-full max-w-4xl items-center gap-2 px-4 pt-3 @2xl:px-8">
+    <IconButton label="Back" class="-ml-1" onclick={onback}><ArrowLeftIcon weight="bold" /></IconButton>
+    <h2 class="truncate text-lg font-semibold">{label}</h2>
+  </div>
 {/snippet}
 
 <svelte:window ononline={load_catalogue} />
 
 <div class="flex h-full flex-col">
-  {#if showcase}
-    <div class={cn("min-h-0 flex-1 flex-col", selected ? "hidden" : "flex")}>
-      <Toolbar>
-        {@render view_switch()}
-        {@render search(() => {
-          const top = showcase_list[0]?.apps[0];
-          if (top) select(top);
-        })}
-      </Toolbar>
-      <Showcase
-        sections={showcase_list}
-        counts={showcase_counts}
-        bind:category={showcase_category.value}
-        total={manifests.length}
-        {query}
-        {fresh}
-        {updated}
-        onselect={select}
-        onclear={() => {
-          query = "";
-          showcase_category.value = LibraryCategory.ALL;
-        }}
-      />
-    </div>
-    {#if selected}
-      {#key selected.id}
-        <ShowcaseDetail manifest={selected} onback={() => (selected_id.value = null)} onstore={() => (page.value = LibraryView.STORE)} />
-      {/key}
-    {/if}
-  {:else}
-    <div class="flex min-h-0 flex-1">
-      <div class={cn("min-w-0 flex-1 flex-col", selected ? "hidden @4xl:flex" : "flex")}>
-        <Toolbar>
-          {@render view_switch()}
-          {@render search(() => first && apps.launch(first.id))}
-          <Select
-            bind:value={sort.value}
-            size="sm"
-            class="w-auto"
-            aria-label="Sort"
-            options={[
-              { value: LibrarySort.NAME, label: "A–Z" },
-              { value: LibrarySort.CATEGORY, label: "By category" },
-              { value: LibrarySort.RECENT, label: "Recently added / updated" },
-            ]}
-          />
-          <div role="group" aria-label="View" class="flex">
-            <IconButton label="Grid" size="sm" pressed={view.value === ViewMode.GRID} onclick={() => (view.value = ViewMode.GRID)}><SquaresFourIcon /></IconButton>
-            <IconButton label="List" size="sm" pressed={view.value === ViewMode.LIST} onclick={() => (view.value = ViewMode.LIST)}><ListBulletsIcon /></IconButton>
-          </div>
-        </Toolbar>
-  
-        <div class="flex min-h-0 flex-1 flex-col @2xl:flex-row">
-          <!-- Remounts when the details view closes, so a narrow window's tab row scrolls the active category back into view. -->
-          {#key selected === null}
-            <SideNav bind:value={category.value} items={nav_items} label="Categories" />
-          {/key}
-  
-          <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-            <div role="group" aria-label="Filters" class="flex shrink-0 gap-1 overflow-x-auto px-3 pt-2.5 pb-1">
-              {#each FILTERS as filter (filter.id)}
-                <Button size="sm" variant="quiet" pressed={filters.value.includes(filter.id)} onclick={() => toggle(filter.id)}>
-                  <filter.icon weight={filters.value.includes(filter.id) ? "fill" : "regular"} />
-                  {filter.label}
-                </Button>
-              {/each}
-            </div>
-  
-            <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-1 pb-3">
-              {#if sections.length === 0 && !sentence.pending}
-                <EmptyState
-                  icon={MagnifyingGlassIcon}
-                  title="No apps match"
-                  description={query ? `Nothing called "${query}" with these filters.` : "No app here has everything the filters ask for."}
-                  class="py-10"
-                >
-                  {#snippet actions()}
-                    {#if filters.value.length || query}
-                      <Button
-                        size="sm"
-                        onclick={() => {
-                          filters.value = [];
-                          query = "";
-                        }}>Clear search and filters</Button
-                      >
-                    {/if}
-                  {/snippet}
-                </EmptyState>
-              {:else}
-                <div class="flex flex-col gap-3">
-                  {#each sections as section (section.id)}
-                    <section>
-                      {#if section.label}
-                        <p class="flex items-center gap-1 px-1 pb-1.5 text-2xs font-medium tracking-wide text-foreground/80 uppercase">
-                          {#if section.id === SearchSection.SUGGESTED}<SparkleIcon weight="fill" class="size-3 text-primary" />{/if}{section.label}
-                        </p>
-                      {/if}
-                      {@render tiles(section.apps)}
-                    </section>
-                  {/each}
-                </div>
-              {/if}
-            </div>
-          </div>
-        </div>
-      </div>
-  
-      <aside
-        aria-label="App details"
-        class={cn(
-          "min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-contain bg-background @4xl:w-80 @4xl:flex-none @4xl:border-l @4xl:border-foreground/8",
-          selected ? "flex" : "hidden @4xl:flex"
-        )}
-      >
-        {#if selected}
-          {#key selected.id}
-            <AppDetails
-              manifest={selected}
-              freshness={fresh.has(selected.id) ? "new" : updated.has(selected.id) ? "updated" : null}
-              onback={() => (selected_id.value = null)}
-            />
-          {/key}
-        {:else}
-          <EmptyState icon={SquaresFourIcon} title="Pick an app" description="Its details, the files it opens and its commands show here." />
+  <Toolbar>
+    <Input
+      bind:value={query}
+      size="sm"
+      class="min-w-36 flex-1 @2xl:max-w-md"
+      placeholder="Search apps"
+      aria-label="Search apps"
+      onkeydown={(event) => {
+        const first = results[0]?.apps[0];
+        if (event.key === "Enter" && first) select(first);
+      }}
+    >
+      {#snippet leading()}<MagnifyingGlassIcon weight="bold" />{/snippet}
+      {#snippet trailing()}
+        {#if query}
+          <IconButton label="Clear search" size="sm" class="size-5 pointer-coarse:size-7" onclick={() => (query = "")}><XIcon weight="bold" /></IconButton>
         {/if}
-      </aside>
+      {/snippet}
+    </Input>
+  </Toolbar>
+
+  {#if catalogue === CatalogueState.OFFLINE}
+    <div class="flex shrink-0 items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-1.5 text-ui">
+      <WifiSlashIcon class="size-4 shrink-0 text-warning" weight="fill" />
+      <span class="min-w-0 flex-1">Offline: only the apps this device knows show. The rest come back with the connection.</span>
+      <Button size="sm" onclick={load_catalogue}>Try again</Button>
     </div>
   {/if}
 
+  <div class="flex min-h-0 flex-1 flex-col @2xl:flex-row">
+    <SideNav bind:value={() => nav_value, go} items={nav_items} label="App Store" />
+
+    <div class="relative min-h-0 min-w-0 flex-1">
+      <main bind:this={base} class={cn("absolute inset-0 overflow-y-auto overscroll-contain", (middle || selected) && "hidden")}>
+        {#if place.value === StorePlace.DISCOVER}
+          <Discover {hero} {shelves} {counts} total={manifests.length} onselect={select} oncategory={go} onshelf={open_shelf} />
+        {:else if place.value === StorePlace.APPS}
+          <Browse
+            title={browse_title}
+            {sections}
+            bind:filters={filters.value}
+            bind:sort={sort.value}
+            bind:view={view.value}
+            {fresh}
+            {updated}
+            onselect={select}
+          />
+        {:else if place.value === StorePlace.LIBRARY}
+          <LibraryPage installed={installed_list} {sizes} bind:sort={library_sort.value} onselect={select} />
+        {:else}
+          <Updates {waiting} recent={recent_updates} onselect={select} />
+        {/if}
+      </main>
+
+      {#if middle}
+        <div class={cn("absolute inset-0 overflow-y-auto overscroll-contain", selected && "hidden")}>
+          {#if searching}
+            <div class="mx-auto flex max-w-4xl flex-col gap-4 px-4 pt-5 pb-8 @2xl:px-8">
+              <h2 class="text-lg font-semibold">Results for “{query.trim()}”</h2>
+              {#if results.length === 0 && !sentence.pending}
+                <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10">
+                  {#snippet actions()}<Button size="sm" onclick={() => (query = "")}>Clear search</Button>{/snippet}
+                </EmptyState>
+              {/if}
+              {#each results as section (section.id)}
+                <section class="flex flex-col gap-1">
+                  {#if section.label}
+                    <h3 class="flex items-center gap-1 pt-2 text-2xs font-medium tracking-wide text-foreground/65 uppercase">
+                      {#if section.id === SearchSection.SUGGESTED}<SparkleIcon weight="fill" class="size-3 text-primary" />{/if}{section.label}
+                    </h3>
+                  {/if}
+                  <ul class="flex flex-col">
+                    {#each section.apps as manifest (manifest.id)}<StoreRow {manifest} onselect={select} />{/each}
+                  </ul>
+                </section>
+              {/each}
+            </div>
+          {:else if collection}
+            {@render back_bar(collection.label, () => (collection_id.value = null))}
+            <div class="mx-auto flex max-w-4xl flex-col gap-2 px-4 pt-1 pb-8 @2xl:px-8">
+              {#if collection.description}<p class="text-ui text-foreground/80">{collection.description}</p>{/if}
+              <ul class="flex flex-col">
+                {#each collection.apps as manifest (manifest.id)}<StoreRow {manifest} onselect={select} />{/each}
+              </ul>
+            </div>
+          {/if}
+        </div>
+      {/if}
+
+      {#if selected}
+        <div class="absolute inset-0 overflow-y-auto overscroll-contain">
+          {#key selected.id}
+            <AppPage
+              manifest={selected}
+              size={sizes.get(selected.id)}
+              {related}
+              freshness={fresh.has(selected.id) ? "new" : updated.has(selected.id) ? "updated" : null}
+              onback={() => (selected_id.value = null)}
+              onselect={select}
+            />
+          {/key}
+        </div>
+      {/if}
+    </div>
+  </div>
+
   <StatusBar>
-    <span>{shown} of {manifests.length} apps · {installed.size} installed</span>
+    <span>{manifests.length} apps · {installed.size} installed</span>
     {#if catalogue === CatalogueState.LOADING}
       <span class="flex items-center gap-1.5"><Spinner label="Loading every app" /> Loading every app…</span>
-    {:else if catalogue === CatalogueState.OFFLINE}
-      <span class="truncate">Offline: installed apps only</span>
     {/if}
-    {#if !showcase && filters.value.length}<span class="hidden @sm:inline">{filters.value.length} filter{filters.value.length === 1 ? "" : "s"}</span>{/if}
-    {#if selected}<span class="ml-auto">{selected.id}</span>{/if}
+    {#if selected}<span class="ml-auto hidden @sm:inline">{selected.id}</span>{/if}
   </StatusBar>
 </div>

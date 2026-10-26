@@ -38,6 +38,8 @@ import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./rece
 import { without_pin } from "../settings/taskbar";
 import { track_launch } from "$lib/core/utils/analytics";
 import { on_idle } from "$lib/core/utils/idle";
+import { ActiveTime } from "./active-time.svelte";
+import type { AppUsage } from "./active-time";
 import CatalogueIcon, { type CatalogueIconSource } from "$lib/core/components/apps/catalogue-icon.svelte";
 
 export class AppsService implements IAppsService {
@@ -76,6 +78,7 @@ export class AppsService implements IAppsService {
 
   private writer = new LatestWriter(() => this.files_service, INSTALLED_PATH, "installed apps");
   private recent_writer = new LatestWriter(() => this.files_service, RECENT_PATH, "recent apps");
+  private readonly active_time = new ActiveTime(() => this.files_service, () => this.windows_service);
   /** As saved: can hold apps uninstalled since, which `recent` leaves out until they're reinstalled. */
   private recent_ids: AppId[] = $state.raw([]);
   private readonly recent_listed: AppId[] = $derived(this.recent_ids.filter((id) => this.is_recent_candidate(id)));
@@ -110,6 +113,12 @@ export class AppsService implements IAppsService {
     // An installed id the slice doesn't name (a crash between two writes): the full catalogue brings its entry back.
     if ([...this.installed].some((id) => !this.entries.has(id))) void this.catalogue();
     this.cleanups.push(on_idle(() => this.preload_installed()));
+    void this.active_time.start();
+    this.cleanups.push(() => this.active_time.destroy());
+  }
+
+  public usage(id: AppId): AppUsage | null {
+    return this.active_time.get(id);
   }
 
   destroy(): void {

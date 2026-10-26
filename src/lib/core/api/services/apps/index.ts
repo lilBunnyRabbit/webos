@@ -5,3 +5,4 @@ export * from "./shortcut";
 export * from "./type";
 export * from "./search";
 export * from "./widget";
+export * from "./active-time";

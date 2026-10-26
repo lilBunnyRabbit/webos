@@ -14,7 +14,6 @@ import {
   LibraryFilter,
   LibrarySort,
   SearchSection,
-  showcase_sections,
 } from "./library";
 
 const app = (name: string, extra: Partial<AppListing> = {}) =>
@@ -153,27 +152,6 @@ describe("details", () => {
   test("file types split into opens and works on, extensions first", () => {
     expect(app_file_types(APPS[3])).toEqual({ opens: [".md", "text/*"], works_on: [] });
     expect(app_file_types(APPS[5])).toEqual({ opens: [], works_on: [".txt"] });
-  });
-});
-
-describe("showcase_sections", () => {
-  test("one section per category in the nav's order, System last, apps A–Z", () => {
-    const sections = showcase_sections(APPS, { query: "", category: LibraryCategory.ALL });
-    expect(sections.map((section) => section.id)).toEqual([AppCategory.PRODUCTIVITY, AppCategory.UTILITIES, AppCategory.DEVELOPER, AppCategory.GAMES, LibraryCategory.SYSTEM]);
-    expect(sections.find((section) => section.id === AppCategory.GAMES)?.apps.map((manifest) => manifest.name)).toEqual(["Snake", "Sudoku"]);
-    expect(sections[0].label).toBe("Productivity");
-  });
-
-  test("a category keeps only its own section, and the search narrows", () => {
-    expect(names(showcase_sections(APPS, { query: "", category: AppCategory.GAMES }))).toEqual(["Snake", "Sudoku"]);
-    expect(names(showcase_sections(APPS, { query: "sudoku", category: LibraryCategory.ALL }))).toEqual(["Sudoku"]);
-    expect(showcase_sections(APPS, { query: "", category: AppCategory.MEDIA })).toEqual([]);
-  });
-
-  test("a search keeps its order and ends with the related apps", () => {
-    const sections = showcase_sections(APPS, { query: "s", category: LibraryCategory.ALL, related: [APPS[5]] });
-    expect(sections.find((section) => section.id === AppCategory.GAMES)?.apps.map((manifest) => manifest.name)).toEqual(["Snake", "Sudoku"]);
-    expect(sections.at(-1)).toMatchObject({ id: SearchSection.RELATED, label: "Related", apps: [APPS[5]] });
   });
 });
 

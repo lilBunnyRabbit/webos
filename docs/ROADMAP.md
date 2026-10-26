@@ -702,6 +702,7 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
   - [x] Stage 1 (2026-10-26, 3.74.0): installed means downloaded and kept offline, StoreService, Install and Open, App Library renamed App Store, system apps out of the precache
   - [x] Stage 2 (2026-10-26, 3.74.0): the build writes the catalogue, icon sprite and a chunk per manifest; boot reads only the installed apps' entries and loads their code after first paint; the full catalogue on demand (Store, search, Open with, links, intro, announcements, Game Hub); sprite icons for apps that aren't installed; versions per app; release notes on the update screen; a core hash that holds across app-only releases. Boot 218.7 → 164.2 KB gz
   - [ ] Stage 3: app updates without reload
+  - [x] Store redesign (2026-10-27, 3.74.0, [brainstorm](brainstorm/2026-10-27_app-store-design.md)): Discover (featured carousel, shelves, categories), All apps and categories, Library (size, time used, Uninstall) and Updates (Update all) as places, an Install / Open / Update / progress button on every app, a store-like app page with goals; the OS counts each app's active time (`/var/lib/apps/usage.json`)
 
 ---
 

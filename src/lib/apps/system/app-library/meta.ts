@@ -2,7 +2,7 @@ import type { AppMeta } from "$lib/core/api";
 
 export default {
   description:
-    "Every app by category, with a showcase of what each one solves, filters, details and what each one opens.",
+    "Discover featured apps and collections, browse every app by category, and keep your library and updates in one place.",
   keywords: ["apps", "all apps", "launcher", "catalog", "programs", "applications", "browse", "showcase", "store"],
   pitch: {
     problem: "With dozens of apps, it's hard to know what's there or what each one is for.",

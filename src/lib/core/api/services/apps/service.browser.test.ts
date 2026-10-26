@@ -13,6 +13,7 @@ import { BUILD_INFO } from "../version/build-info";
 import { serialize_slice } from "./catalogue";
 import { CATALOGUE_PATH, INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
 import { parse_recent, RECENT_PATH, serialize_recent } from "./recent";
+import { add_time, parse_usage, serialize_usage, USAGE_PATH } from "./active-time";
 import { AppsService as AppsServiceClass } from "./service.svelte";
 import { glob_source, type CatalogueSource } from "./source";
 import { TEST_APPS, TestAppsService } from "./test-apps";
@@ -430,5 +431,34 @@ describe("AppsService catalogue (ADR-077)", () => {
     await apps(kernel).uninstall("example");
     expect(ids()).not.toContain("example");
     expect(ids()).toEqual(expect.arrayContaining(await system_ids()));
+  });
+});
+
+describe("AppsService active time", () => {
+  async function usage_on_disk(kernel: Kernel) {
+    const file = await kernel.service<FilesService>("files").get_file(USAGE_PATH);
+    return parse_usage(file ? await file.text() : null);
+  }
+
+  test("the saved time loads", async () => {
+    await write(USAGE_PATH, serialize_usage(add_time({}, "board", 7200, new Date(2026, 9, 1))));
+    const kernel = await boot();
+    await vi.waitFor(() => expect(apps(kernel).usage("board")?.seconds).toBe(7200));
+    expect(apps(kernel).usage("notes")).toBeNull();
+  });
+
+  test("a focused window's time is counted and saved when focus leaves it", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
+    const kernel = await boot();
+    const windows = kernel.service<WindowsService>("windows");
+    const board = apps(kernel).launch("board");
+    await vi.waitFor(() => expect(windows.get_focused()).toBe(board));
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    apps(kernel).launch("notes");
+    flushSync();
+
+    expect(apps(kernel).usage("board")?.seconds).toBeGreaterThanOrEqual(1);
+    expect(apps(kernel).usage("board")?.days).toBe(1);
+    await vi.waitFor(async () => expect((await usage_on_disk(kernel)).board?.seconds).toBeGreaterThanOrEqual(1), { timeout: 4000 });
   });
 });

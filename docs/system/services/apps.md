@@ -23,6 +23,9 @@ The app registry. Holds every app the catalogue names (ADR-077): boot knows only
 | `source.ts` | `CatalogueSource` and its two implementations: `bundle_source()` (the built site) and `glob_source(manifests)` (dev server and tests); `catalogue_source()` picks one by `import.meta.env.DEV` ([below](#catalogue-sources)) |
 | `recent.ts` | `RECENT_PATH`, `RECENT_LIMIT` (16), `parse_recent()` (tolerant: a broken file is `[]`, non-string and repeated entries drop out), `serialize_recent()`, `with_recent(ids, id)` (moves `id` to the front, capped) |
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
+| `active-time.ts` | `USAGE_PATH`, `AppUsage`, `parse_usage()` (tolerant: a broken file is `{}`), `serialize_usage()`, `add_time(usage, id, seconds, now)` (adds a stretch, stamps `last`, counts a new local day once), `format_usage()` ("under a minute", "25 min", "1.5 h", "12 h") and `milestones(usage, game)` (the App Store's goals). Unit tests in `active-time.test.ts` |
+| `active-time.svelte.ts` | `ActiveTime`, the tracker ([below](#active-time)) |
+| `featured.ts` | `FEATURED`: the App Store's hand-picked hero cards, an id and an optional tagline each. Data only |
 | `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked. The intro hides a group with none of its apps registered |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP`, `TEST_APPS` and `TestAppsService`, whose glob source holds the system apps and these, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |
@@ -52,6 +55,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `listings(filter?)` | `(filter?: AppsFilter): AppListing[]` | Every known app (or the installed / not installed ones, like `list`), its manifest or stub merged with its entry's text and `daily`. Reactive. [App text](#app-text) |
 | `recent` | `readonly AppId[]` (getter) | User apps `launch()` opened lately, newest first, each once, at most 16. Installed ones only: an uninstalled app drops out (and comes back if reinstalled). Reactive. [Recent apps](#recent-apps) |
 | `clear_recent()` | `(): void` | Empties the list and saves it |
+| `usage(id)` | `(id): AppUsage \| null` | `{ seconds, last, days }`: time the app was in front, when it last was (ISO) and on how many local days. `null` before its first use. Reactive. [Active time](#active-time) |
 
 `OpenOptions` is `{ anchor?: Position }`: the viewport point the "Open with" dropdown anchors to.
 
@@ -101,6 +105,7 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 - `entries`, a private `SvelteMap` of `CatalogueApp`, and `code`, a private `SvelteMap` of the manifests whose chunk loaded; `loading` (the import in flight per app), `failed` (a load failed: the tile stops pulsing; coming online retries installed ones) and `foreign` (entries from another build's catalogue, listed and never run).
 - `installed`, a private `SvelteSet` of user app ids (system apps are never stored), filled by `init()`.
 - `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping only installed user apps, is what `recent` returns.
+- `active_time`, a private `ActiveTime` holding the usage record (`$state.raw`), read by `usage()` ([Active time](#active-time)).
 - `all_listings`, a private `$derived` over `registry` and `entries`: each manifest or stub merged with its entry's text and `daily`. `listings()` returns it, filtered when asked.
 
 The constructor only wires `$derived` references to its five dependencies. `destroy()` removes the `online` listener and the idle callback.
@@ -123,6 +128,8 @@ Constructed by the kernel after its dependencies. Nothing registers in the const
 `/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[] }`, sorted, user apps only, written through a `LatestWriter` on every change.
 
 `/var/lib/apps/catalogue.json` (ADR-077): `{ "version": 1, "core", "build", "release", "apps": CatalogueApp[] }`, the installed apps' entries (system apps included) sorted by id. This service only reads it, at boot; StoreService writes it ([store](store.md#the-installed-apps-catalogue)).
+
+`/var/lib/apps/usage.json`: `{ "version": 1, "apps": { [id]: { "seconds", "last", "days" } } }`, ids sorted, minified, through a `LatestWriter` with a 2 s delay ([Active time](#active-time)). Missing or invalid reads as empty; an entry without `days` counts one. Backed up with `/var/lib`, never sent anywhere.
 
 `/var/lib/apps/recent.json`: `{ "version": 1, "ids": AppId[] }`, newest first, at most 16, written through its own `LatestWriter` when a launch changes the list and on `clear_recent()`. Missing or invalid reads as empty. Missing or invalid means "not decided yet" (see `init()`). Backed up with `/var/lib` (ADR-037). `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
 
@@ -192,6 +199,16 @@ The Recent row in the start menu, the Recent rows on the mobile home, and `app r
 - **Reading.** `load_recent()` runs at the end of `init()`, after the installed list: it parses the file and drops ids no app has and system apps. `recent` also leaves out apps that aren't installed at read time, so an uninstall hides the app without rewriting the file.
 - **Clearing.** `clear_recent()` (the tile menu's "Clear recent", `app recent --clear`) empties and saves.
 - **Inspector.** A Recent count; detailed mode adds the list, newest first, and the file path.
+
+### Active time
+
+Every app's time in front, for the App Store's "Used 3 h" / "Played 3 h", Library's recent-use sort and the goals on an app's page ([brainstorm](../../brainstorm/2026-10-27_app-store-design.md)). `ActiveTime` (`active-time.svelte.ts`) is a private field of the service; `init()` starts it without awaiting it, and `destroy()` stops it.
+
+- **What counts.** A stretch runs while one window of the app is focused (`windows.get_focused()`, so on a phone the app on screen) and the page is visible (`visibilitychange`). An effect follows the focused window's app; a change ends the running stretch and starts the next.
+- **Saving.** Each ended stretch goes through `add_time()` into the `$state.raw` record and a write with a 2 s delay. A long stretch is committed every minute (`setInterval`), so a crash loses at most that. Hiding the page ends the stretch synchronously, so the writers' `pagehide` flush saves it.
+- **Days.** `days` counts distinct local days: a stretch on a day other than `last`'s adds one.
+- **Reading.** `usage(id)` reads the record; it isn't live within a running stretch.
+- Solo tabs count too. A popped-out window (ADR-043) counts while the main page is visible.
 
 ### Sentence search
 

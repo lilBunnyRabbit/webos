@@ -29,6 +29,9 @@ export const LibrarySort = {
 } as const;
 export type LibrarySort = (typeof LibrarySort)[keyof typeof LibrarySort];
 
+export const ViewMode = { GRID: "grid", LIST: "list" } as const;
+export type ViewMode = (typeof ViewMode)[keyof typeof ViewMode];
+
 export const SearchSection = { RELATED: "related", SUGGESTED: "suggested" } as const;
 export type SearchSection = (typeof SearchSection)[keyof typeof SearchSection];
 
@@ -144,21 +147,6 @@ function recent_sections(list: AppListing[], changelog: readonly Release[], orde
         apps: apps.sort(order),
       };
     });
-}
-
-export function showcase_sections(
-  apps: Iterable<AppListing>,
-  { query, category, related, suggested }: Pick<LibraryQuery, "query" | "category" | "related" | "suggested">
-): LibrarySection[] {
-  const list = search_apps(apps, query);
-  const order = order_of(query, list);
-  const in_category = (manifest: AppListing) => category === LibraryCategory.ALL || category_of(manifest) === category;
-  return [
-    ...LIBRARY_CATEGORIES.filter(({ id }) => id !== LibraryCategory.ALL && (category === LibraryCategory.ALL || id === category))
-      .map(({ id, label }) => ({ id, label, apps: list.filter((manifest) => category_of(manifest) === id).sort(order) }))
-      .filter((section) => section.apps.length > 0),
-    ...search_sections({ query, filters: [], used: new Set(), installed: new Set(), related, suggested }, in_category),
-  ];
 }
 
 export function app_story(manifest: AppListing): { problem: string | null; solution: string } {

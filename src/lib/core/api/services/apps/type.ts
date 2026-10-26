@@ -6,6 +6,7 @@ import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
 import type { OnFire } from "../scheduler/type";
 import type { Catalogue } from "./catalogue";
+import type { AppUsage } from "./active-time";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
@@ -63,6 +64,11 @@ export interface AppsService extends IService {
    */
   readonly recent: AppId[];
   clear_recent(): void;
+  /**
+   * Time the app was in front (a window of it focused, the page visible), when it last was and on how many days.
+   * `null` before its first use. Reactive. Saved in `/var/lib/apps/usage.json`, never sent anywhere.
+   */
+  usage(id: AppId): AppUsage | null;
 }
 
 export interface AppsFilter {
