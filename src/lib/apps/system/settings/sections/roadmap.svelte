@@ -2,7 +2,7 @@
   import { Segmented, Spinner } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { CheckCircle as CheckCircleIcon, Circle as CircleIcon, CircleHalf as CircleHalfIcon } from "phosphor-svelte";
-  import { count_status, ItemStatus, parse_roadmap, type RoadmapSection } from "../roadmap";
+  import { count_status, ItemStatus, parse_roadmap, type RoadmapSection } from "$kit/utils/roadmap";
 
   const Filter = { ALL: "all", OPEN: "open", DONE: "done" } as const;
   type Filter = (typeof Filter)[keyof typeof Filter];
