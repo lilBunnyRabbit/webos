@@ -323,6 +323,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Text Editor: Text Viewer renamed and rebuilt on CodeMirror 6, save / save as / new, close guard, disk-change reload and banner (2026-10-13, ADR-030)
 - [x] Open from device: every Open… gets a secondary device action, read in memory with no OPFS copy (2026-10-13, ADR-031)
 - [x] Style Guide (component showcase)
+- [x] Docs (2026-10-26, [ADR-075](adrs/075-docs-app.md), [brainstorm](brainstorm/2026-10-26_docs-app.md)): the repo's `docs/` (system, ADRs, design, apps, roadmap) as a system app, read in place with a sidebar, search over titles and headings and a table of contents; generated visuals from the docs' own tables and live registries: the service graph and each service's neighbourhood from the running kernel, the ADR timeline with revision counts, the app atlas, the persistence map and roadmap progress; `docs [topic]`; Kernel's Open docs. Next: the owner picks home A (overview) or B (map), full-text search
 
 ### Games
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)

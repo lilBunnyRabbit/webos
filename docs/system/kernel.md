@@ -44,6 +44,7 @@ There's a `// TODO: kernel to interface` in `type.ts`. `ServiceDescriptor` refer
 | `init` | `init(on_step?: (step: BootStep) => void): Promise<Kernel>` | Idempotent while initialized. Resolves the order of what was registered, then for each key: `on_step?.({ key, done, total })`, `new descriptor.instance(this)`, `await instance.init?.()`, `services.set(key, instance)`. `done` counts the services already initialised, `total` is the length of the order; the splash uses it ([Boot progress](#boot-progress)). Sets `is_initialized`. If a construction or `init()` throws, it tears down what already initialized and rethrows (see [Failed init](#failed-init)). |
 | `register` | `register<T extends IService>(name: string, descriptor: ServiceDescriptor<T>): void` | Records a descriptor only, constructing nothing. Throws if called after init. Warns `Overwriting service "x"` on a duplicate key. |
 | `service` | `service<T extends IService>(name: string): T` | Synchronous lookup. Throws `Service "x" not found` if absent. Unchecked cast to `T`. |
+| `dependencies` | `dependencies(name: string): readonly string[]` | The keys `name` was registered as depending on, `[]` for an unknown key. Read-only; Docs draws the service graph from it in `services`' order (ADR-075). |
 | `shutdown` | `shutdown(): void` | No-op unless initialized. Runs the private `teardown()`, then clears `is_initialized`. |
 
 Private: `is_initialized`, `descriptors: Map<string, ServiceDescriptor>`, `init_order: string[]`, `resolve_order()`, `teardown()`.

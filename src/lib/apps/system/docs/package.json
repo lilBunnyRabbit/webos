@@ -1,0 +1,7 @@
+{
+  "name": "@webos/docs",
+  "private": true,
+  "dependencies": {
+    "marked": "^18.1.1"
+  }
+}

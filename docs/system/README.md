@@ -80,7 +80,7 @@ Most utils are listed in the [overview's source map](overview.md#source-map); th
 | [apps/app-context.md](apps/app-context.md) | `get_app_context()`: window and storage handles |
 | [apps/file-associations.md](apps/file-associations.md) | How `open(path)` picks an app |
 | [apps/writing-an-app.md](apps/writing-an-app.md) | Building a new app, step by step |
-| [system-apps.md](system-apps.md) | File Explorer, Settings, Kernel, Text Editor, Media Preview, PDF Viewer, HTML Preview, CSV Viewer, Activity Monitor, Style Guide, Calculator, App Library, Terminal, Getting started |
+| [system-apps.md](system-apps.md) | File Explorer, Settings, Kernel, Text Editor, Media Preview, PDF Viewer, HTML Preview, CSV Viewer, Activity Monitor, Style Guide, Calculator, App Library, Terminal, Docs, Getting started |
 
 ## Page shape
 

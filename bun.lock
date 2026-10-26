@@ -51,6 +51,12 @@
         "vitest": "5.0.1",
       },
     },
+    "src/lib/apps/system/docs": {
+      "name": "@webos/docs",
+      "dependencies": {
+        "marked": "^18.1.1",
+      },
+    },
     "src/lib/apps/system/text-editor": {
       "name": "@webos/text-editor",
       "dependencies": {
@@ -735,6 +741,8 @@
     "@webos/color-tools": ["@webos/color-tools@workspace:src/lib/apps/user/color-tools"],
 
     "@webos/diff": ["@webos/diff@workspace:src/lib/apps/user/diff"],
+
+    "@webos/docs": ["@webos/docs@workspace:src/lib/apps/system/docs"],
 
     "@webos/markdown-pdf": ["@webos/markdown-pdf@workspace:src/lib/apps/user/markdown-pdf"],
 

@@ -64,6 +64,11 @@ export class Kernel {
     return this.services.get(name)! as T;
   }
 
+  /** The keys `name` was registered as depending on; empty for an unknown key. Read by the Docs app's service graph. */
+  public dependencies(name: string): readonly string[] {
+    return this.descriptors.get(name)?.dependencies ?? [];
+  }
+
   public shutdown() {
     if (!this.is_initialized) {
       return;

@@ -19,6 +19,7 @@ All of them live in `src/lib/apps/system/`, so discovery sets `system: true`: th
 | `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell (`tilde_path` from `services/files/path` for display, no files service) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
 | `app-library` | App Library | none | `{ view?, app? }`: `showcase` or `store`, and an app whose details open | min 340×360 | apps, windows, session, desktop, notifications, version, clipboard | window: `page`, `category`, `showcase_category`, `filters`, `sort`, `view`, `selected` |
+| `docs` | Docs | none | `{ page? }`: a page id or short name, optionally with `#anchor` | min 340×360 | apps (atlas, Open), the kernel registry (graph) | window: `location`, `home` |
 | `getting-started` | Getting started | none | `{ topic? }`: scrolls to that card | min 340×360 | shell, apps, desktop, files, router, shortcuts, notifications | `storage.file("progress.json")`: `{ tried }` |
 
 "None" for window defaults means the windows service fallback applies ([windows](services/windows.md)). `FILE_PROPS` is `z.object({ path: z.string() })`, an absolute OPFS path (ADR-018). Manifests import it from `services/apps/helpers`, not from the barrel, to avoid the TDZ problem described in [CONVENTIONS](../CONVENTIONS.md#apps). "window:" keys are `storage.window()` state, per window and saved with the session ([app context](apps/app-context.md#window)). Others are `storage.persisted()` cells, localStorage `app.{id}.{key}` shared by every window of the app ([persistence](persistence.md#app-storage-handle)).
@@ -160,6 +161,7 @@ Every write goes straight to service state. Persistence is the settings service'
 |--------|--------|
 | Click a card header | Toggles that card between basic and detailed. `aria-expanded`/`aria-controls` are set. |
 | Expand all / Collapse all | Opens every card, or closes all of them when all are open. |
+| Open docs | Under each service with a page in `docs/system/services/`: launches Docs on `system/services/{key}` (checked with Docs' `has_page`). |
 
 **Persistence.** The set of open cards is `storage.window("expanded", string[])`: per Kernel window, restored with the session.
 
@@ -191,7 +193,7 @@ Inspector building blocks (`components/inspector/`) follow the kit's type scale:
 - Inspectors are read-only. Whether they get actions (check for updates, close a window) is still open.
 - The files inspector reads storage once per mount. It doesn't read `files.revision("/")`, so root changes made through the service don't refresh it either.
 - The desktop inspector only sees the visible grid, so icons that are hidden on a small screen don't show up.
-- No dependency graph view.
+- The dependency graph lives in Docs (`system/kernel`), not here.
 
 ---
 
@@ -601,6 +603,39 @@ Ctrl means the Control key on every platform; Cmd+C still copies.
 **Ways in.** The launcher and the `>` palette (Open in Terminal), the desktop and phone-home icon (new devices only: the seed runs once), the taskbar button, Alt+Shift+↵, File Explorer (toolbar and folder menu) and the desktop menu (Open Terminal here, in `~/Desktop`).
 
 **Known gaps.** iOS Safari ignores `interactive-widget`, so the keyboard can cover the key row there. The popup sits at the start of the prompt row, not at the completed word. Long lines scroll the field and hide the ghost text.
+
+## Docs
+
+`docs` · own `icon.svelte` · source `system/docs/` · [ADR-075](../adrs/075-docs-app.md) · `marked` in its own `package.json` (ADR-045)
+
+**Purpose.** The repo's documentation as an app: `docs/system`, `docs/adrs`, `docs/design`, `docs/apps` and `docs/ROADMAP.md`, read in place, with the tables those pages hold and the running system drawn as visuals. The markdown stays the one source; nothing is written twice.
+
+**Content.** `pages.ts` globs the files as `?raw` with lazy loaders, so each page is its own chunk (precached with the other system apps, ADR-065). A page id is the path under `docs/` without `.md` (`system/services/windows`, `adrs/047-solo-app-open`, `ROADMAP`). `catalog.ts` (pure, Node-tested) groups ids (System, Services, Shell, ADRs, Design, Apps, Roadmap), builds short names and resolves a topic: an exact id, a folder word (`apps`, `adrs`, `design`, `roadmap`), an ADR number (`adr 47`, `ADR-047`, `47`), then any path suffix or slug (`windows`, `shell/desktop`, `solo-app-open`). Services claim a short name first, then system, shell, design, apps, ADRs. `#anchor` after a topic scrolls to that heading. Brainstorms are left out.
+
+**Rendering.** `markdown.ts` runs `marked` with a renderer: headings get GitHub's slugs (`outline.ts`, so `#behaviour--invariants` links land), the first `#` is drawn by the page header instead, relative links to another doc open in place (`data-doc`), anchors scroll, anything else (brainstorms, source files, CLAUDE.md) opens on GitHub (`blob/master`). An ADR's `**Date:**` / `**Status:**` lines become a status chip and date, `> **Revision …**` quotes become `primary` callouts, tables scroll in a hairline card with overline headers, code blocks sit on the field surface with their language. The HTML is the repo's own, so it's rendered without a sandbox. `docs-prose.svelte` holds the styles, tokens only.
+
+**Visuals** (`visuals/`), each on top of the page it's drawn from, marked "Live from…" or "Drawn from…":
+
+| Page | Visual | Source |
+|------|--------|--------|
+| `system/kernel` (and home A) | Service graph: one node per service in dependency layers, init order on each, swapped classes outlined in `secondary`; hover or focus lights a node's edges; a node opens its page | `kernel.services` (init order) and `kernel.dependencies(key)` (`live.ts`, `graph.ts`) |
+| `system/services/{key}` | Needs → service → needed by, start position, swapped badge | same |
+| `adrs/README` | Status bar, filter (All, Implemented, Accepted), timeline by month with number, title, status chip and revision count | `adr-index.ts`: the index table's rows; `count_revisions` over each ADR (`> **Revision`, `## Revision`, dated bullets under `## Revisions`) |
+| `apps/README` | App atlas by category (System first): icon, name, id, Read (the internals page, or the app's section here for system apps) and Open; "With a page" / "All apps" | `apps.list()` joined with `docs/apps/{id}.md`; apps missing in a fork aren't there |
+| `system/persistence` | OPFS by area (`/etc`, `/var/lib`, `/home`, `/tmp`) and the other stores, each entry with its owner; an owner that's a running service or a documented app opens its page | `persistence.ts`: the storage map and app keys tables |
+| `ROADMAP` | Done percentage, status bar, a bar per `##` group | `$kit/utils/roadmap` |
+
+`parsers.test.ts` runs the parsers on the real files, so a change to a shape they read (the ADR index row, the storage map's header, the roadmap's checklist) fails a test instead of emptying a visual.
+
+**Home.** Two variations behind a **temporary** switch in the toolbar (a `warning` "Temporary" badge and a `Segmented` A · Overview / B · Map) until the owner picks one. A: header, four counts, entry cards per group, the service graph, the latest decisions and roadmap progress. B (`home-map.svelte`, layout in `map-layout.ts`): one zoomable map of WebOS, the kernel's services in their layers in the middle, the shell pages left, the system apps and a user-apps node right, design and decisions above, storage areas below, dashed links where a cluster goes through a service (`windows`, `apps`, `files`, tokens). Drag pans (pointer capture after 4 px, ends on `lostpointercapture`), the wheel or a pinch zooms (`$kit/utils/view`), arrows, `+`, `-` and `0` work on the focused map, a box opens its page. A view too small for the whole map starts zoomed in on the kernel.
+
+**Layout.** Toolbar: Pages (below `@3xl`), Back, Home, the title with its short name, then On this page (below `@5xl`) and Open on GitHub. The sidebar (`@3xl` and up) has a search field and the groups (the current group opens; ADRs newest first, collapsed by default); search covers titles and `##`/`###` headings once `library.ts` has loaded every page. The page is a `max-w-3xl` column in a container of its own; the table of contents (`@5xl` and up) follows the scroll (IntersectionObserver). Narrow: Pages is a drawer from the left over the scrim, On this page a bottom sheet with a grabber and swipe to dismiss; Esc and the phone's Back close them, then Back walks the page history (Alt+← too).
+
+**Ways in.** The launcher, `docs [topic]` (manifest command; completion over short names, ids and aliases; an unknown topic fails with near names), `#/app/docs?page=…` and solo links, and Kernel's **Open docs** under each service that has a page.
+
+**Persistence.** `storage.window("location")` (`{ id, hash }`) and `storage.window("home")`. No files.
+
+**Known gaps.** No full-text search. Search loads every page once per window. A `docs/` change shows on the next build. The home switch goes once the owner picks.
 
 ## Getting started
 

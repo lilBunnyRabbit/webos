@@ -3,7 +3,7 @@
 <p align="center">
   <a href="https://lilbunnyrabbit.github.io/webos/"><img src=".github/readme/open-webos.svg" alt="Open WebOS" height="48"></a>
   &nbsp;
-  <a href="docs/system/README.md"><img src=".github/readme/read-the-docs.svg" alt="Read the docs" height="48"></a>
+  <a href="https://lilbunnyrabbit.github.io/webos/#/solo/docs"><img src=".github/readme/read-the-docs.svg" alt="Read the docs" height="48"></a>
 </p>
 
 # WebOS

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import kernel, { type InspectorProps } from "$lib/core/api";
+  import kernel, { type AppsService, type InspectorProps } from "$lib/core/api";
+  import { has_page } from "../docs/pages";
   import LogoMark from "$lib/core/components/brand/logo-mark.svelte";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
@@ -9,6 +10,7 @@
   import {
     ArrowsInSimple as ArrowsInSimpleIcon,
     ArrowsOutSimple as ArrowsOutSimpleIcon,
+    BookOpenText as BookOpenTextIcon,
     CaretRight as CaretRightIcon,
   } from "phosphor-svelte";
 
@@ -16,6 +18,7 @@
   const expanded = storage.window("expanded", [] as string[], z.array(z.string()));
 
   const services = $derived([...kernel.services.entries()]);
+  const apps = $derived(kernel.service<AppsService>("apps"));
   const all_expanded = $derived(services.length > 0 && services.every(([key]) => expanded.value.includes(key)));
 
   function toggle(key: string) {
@@ -70,6 +73,11 @@
             {/await}
           {:else}
             <pre class="overflow-x-auto font-mono text-sm text-foreground/80">{service.to_string()}</pre>
+          {/if}
+          {#if has_page(`system/services/${key}`)}
+            <Button size="sm" variant="quiet" class="self-start" onclick={() => apps.launch("docs", { page: `system/services/${key}` })}>
+              <BookOpenTextIcon weight="bold" /> Open docs
+            </Button>
           {/if}
         </div>
       </li>
