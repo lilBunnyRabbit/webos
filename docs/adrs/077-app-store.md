@@ -39,7 +39,7 @@ OfflineService becomes StoreService. It owns the catalogue, downloads, versions,
 ### App updates without reload
 - The poll compares the new core hash with the running one. Different: a full update as today. Same: only apps changed, no reload.
 - Apps load by URL from the catalogue entry, not from a filename baked into the boot bundle.
-- One version per app per tab. Open windows keep the old module; the taskbar shows "Update ready" with Restart app; new windows open the old version until every window of that app is closed, then the next open loads the new one.
+- One version per app per tab. Open windows keep the old module; the window's titlebar shows an "Update" button (owner, 2026-10-26: "window of the app should probably have a 'new version' button") and the taskbar item "Update ready", both running Restart app; new windows open the old version until every window of that app is closed, then the next open loads the new one.
 - After an app-only update: "Snake and 2 more updated" with What's new.
 - One asset cache pruned against the installed apps' lists replaces the cache per build.
 - Two tabs: the Web Lock holder downloads; each tab swaps its own apps when their windows close.
