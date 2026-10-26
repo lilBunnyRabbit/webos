@@ -18,7 +18,8 @@ Discussion: [2026-10-26 app store](../brainstorm/2026-10-26_app-store.md).
 - Store buttons on a not-installed app: **Install** and **Open**. Open runs the full app without keeping it (loaded on demand, not in menus, not offline). Opening a file, a deep link or an announcement for a not-installed app opens it the same way and no longer installs silently (ADR-040 change).
 - After an update, installed apps download right away: only renamed files, unchanged ones copied. One progress toast, a progress ring on each updating app's icon (start menu, taskbar, desktop, Store). No full-screen wait for apps.
 - Uninstall deletes the app's files from the cache, except files another installed app's list also holds.
-- System apps are apps like any other: installed by default and locked. They leave the precache, which becomes core only.
+- System apps are apps like any other and leave the precache, which becomes core only. Only App Store, Settings, File Explorer and Terminal are installed by default and locked; the other system apps install and uninstall like any app (owner, 2026-10-26, round 5).
+- Heavy content (Docs' markdown pages and similar content globs) is left out of an app's install list: fetched when opened, then cached. Pages read before work offline; the rest need a connection.
 - Migration: picked apps join the installed set once; `/etc/offline.json` is deleted.
 
 ### StoreService (`store`)
