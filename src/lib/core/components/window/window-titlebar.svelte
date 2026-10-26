@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    ArrowCircleUp as ArrowCircleUpIcon,
     CornersIn as CornersInIcon,
     CornersOut as CornersOutIcon,
     Browser as BrowserIcon,
@@ -9,9 +10,9 @@
     Plus as PlusIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import kernel, { type DialogsService, type ExtractService, RouteKind, type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
+  import kernel, { type AppsService, type DialogsService, type ExtractService, RouteKind, type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
-  import { IconButton } from "../ui";
+  import { Button, IconButton } from "../ui";
   import { view_transition } from "$lib/core/utils/view-transition";
 
   let { zoom = $bindable(), window_id, focused }: { zoom: number; window_id: WindowId; focused: boolean } = $props();
@@ -19,6 +20,7 @@
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const router = $derived(kernel.service<RouterService>("router"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
   const instance = $derived(windows.get(window_id)!);
   const shareable = $derived(router.link_for(window_id) !== null);
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
@@ -74,6 +76,18 @@
     </IconButton>
   </div>
 
+  {#if apps.update_ready(instance.app.id)}
+    <Button
+      data-window-button
+      size="sm"
+      pressed
+      class="mr-1"
+      title="A new version of {instance.app.manifest.name} is ready. Restarts its windows."
+      onclick={() => void apps.restart(instance.app.id)}
+    >
+      <ArrowCircleUpIcon weight="bold" /> Update
+    </Button>
+  {/if}
   {#if shareable}
     <IconButton data-window-button label="Copy link" size="sm" aria-haspopup="menu" onclick={(event: MouseEvent) => void share(event)}>
       <LinkIcon weight="bold" />

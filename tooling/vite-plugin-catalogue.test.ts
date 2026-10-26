@@ -16,6 +16,7 @@ import {
   parse_catalogue,
   release_notes,
   content_normalizer,
+  with_core_meta,
   type Catalogue,
   type ReleaseNote,
 } from "./vite-plugin-catalogue";
@@ -151,8 +152,12 @@ describe("release_notes", () => {
     expect(release_notes(changelog, "3.9.0").map((note) => note.version)).toEqual(["3.10.0", "3.9.1"]);
   });
 
-  test("notes carry kind and text only", () => {
-    expect(release_notes(changelog, null)[0]).toEqual({ version: "3.10.0", date: "2026-10-26", title: "3.10.0", changes: [{ kind: "new", text: "3.10.0" }] });
+  test("notes carry kind, text and the apps a line is about, nothing else", () => {
+    expect(release_notes(changelog, null)[0]).toEqual({ version: "3.10.0", date: "2026-10-26", title: "3.10.0", changes: [{ kind: "new", text: "3.10.0", apps: ["x"] }] });
+  });
+
+  test("the core hash goes into index.html's head", () => {
+    expect(with_core_meta("<html><head><title>x</title></head></html>", "abc")).toContain('<head>\n    <meta name="webos-core" content="abc" />');
   });
 });
 

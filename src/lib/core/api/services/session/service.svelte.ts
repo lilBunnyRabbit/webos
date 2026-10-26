@@ -14,9 +14,10 @@ import { WindowFlag } from "../windows/type";
 import RestoreSessionDialog from "$lib/core/components/dialogs/restore-session-dialog.svelte";
 import { LatestWriter } from "../files/latest-writer";
 import { current_records, current_target } from "../apps/replaces";
-import { SESSION_FLAGS, SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session, shows_mount, type SessionFile } from "./persistence";
+import { SESSION_PATH, parse_session, remove_legacy_view_keys, serialize_session, shows_mount, type SessionFile } from "./persistence";
 import { SessionStatus, type SessionService as ISessionService } from "./type";
 import { session_shell } from "./shell";
+import { snapshot_window } from "./snapshot.svelte";
 
 const MAX_CLOSED = 10;
 
@@ -179,16 +180,6 @@ export class SessionService implements ISessionService {
     return this.windows_service
       .sorted_list(([, a], [, b]) => a.order - b.order)
       .filter(([, instance]) => instance.app.manifest.restore !== false && !shows_mount(instance.app.props))
-      .map(([id, instance]) => [
-        id,
-        {
-          app_id: instance.app.id,
-          props: $state.snapshot(instance.app.props),
-          bounds: { ...instance.bounds },
-          flags: [...instance.flags].filter((flag) => SESSION_FLAGS.includes(flag)),
-          snap_zone: instance.snap_zone,
-          ...(Object.keys(instance.app.state).length > 0 && { state: $state.snapshot(instance.app.state) }),
-        },
-      ]);
+      .map(([id, instance]) => [id, snapshot_window(instance)]);
   }
 }

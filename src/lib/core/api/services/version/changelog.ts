@@ -32,6 +32,7 @@ export const CHANGELOG: Release[] = [
         text: "WebOS keeps track of how long you've used each app, on this device only: the App Store shows it, sorts your library by it and turns it into goals.",
       },
       { kind: IMPROVED, text: "A fresh WebOS downloads only its core apps; Docs, Kernel and the viewers install when you want them." },
+      { kind: NEW, text: "Apps update without restarting WebOS: an open app shows Update when a new version is ready." },
     ],
   },
   {

@@ -84,3 +84,6 @@ Use a build-generated `version.json` file with polling-based update detection.
 - Version must be manually bumped in `package.json` before deploying.
 - Detection has a delay (up to polling interval), mitigated by `visibilitychange` check.
 - No external dependencies or authentication required.
+
+## Revision 2026-10-27: app-only updates ([ADR-077](077-app-store.md))
+`version.json` carries the core hash. The poll compares it with the running core (the build writes it into `index.html`): a different core is the update above (toast, overlay, reload); the same core means only apps changed, and the new catalogue is taken without a reload. Open windows of a changed app show Update. The new release's notes join What's new from `version.json`. `sw.js` still changes on such a deploy (build stamp in `main`, changelog chunk); see ADR-077.

@@ -51,6 +51,9 @@ export interface Catalogue {
   apps: CatalogueApp[];
 }
 
+/** `<meta name="webos-core">` in `index.html`: the build writes the core hash there, the page reads its own from it. */
+export const CORE_META = "webos-core";
+
 export const LAZY_PARTS = ["shell", "widget", "highlights", "preview", "on_fire", "on_uninstall_data"] as const;
 export type LazyPart = (typeof LAZY_PARTS)[number];
 

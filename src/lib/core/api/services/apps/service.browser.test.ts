@@ -15,7 +15,8 @@ import { CATALOGUE_PATH, INSTALLED_PATH, parse_installed, serialize_installed } 
 import { parse_recent, RECENT_PATH, serialize_recent } from "./recent";
 import { add_time, parse_usage, serialize_usage, USAGE_PATH } from "./active-time";
 import { AppsService as AppsServiceClass } from "./service.svelte";
-import { glob_source, type CatalogueSource } from "./source";
+import { DEV_CORE, glob_source, type CatalogueSource } from "./source";
+import type { Catalogue } from "./catalogue";
 import { TEST_APPS, TestAppsService } from "./test-apps";
 import type { AppsService } from "./type";
 import { serialize_widget } from "./widget";
@@ -343,21 +344,23 @@ describe("AppsService catalogue (ADR-077)", () => {
     fetches: number;
     online: boolean;
     open: () => void;
+    /** What the next fetch answers instead of the glob's catalogue: a later deploy. */
+    next?: (catalogue: Catalogue) => Catalogue;
   }
 
-  async function sourced(build_of_fetch = BUILD_INFO.buildTimestamp): Promise<{ service: typeof AppsServiceClass; gate: Gate }> {
+  async function sourced(): Promise<{ service: typeof AppsServiceClass; gate: Gate }> {
     const { apps: glob } = await import("$lib/apps");
     const base = glob_source([...glob.filter((manifest) => manifest.system), ...TEST_APPS]);
     let open = () => {};
     const ready = new Promise<void>((resolve) => (open = resolve));
     const gate: Gate = { fetches: 0, online: true, open: () => open() };
     const source: CatalogueSource = {
-      build: BUILD_INFO.buildTimestamp,
+      core: DEV_CORE,
       async fetch() {
         gate.fetches += 1;
         if (!gate.online) return null;
-        const catalogue = await base.fetch();
-        return catalogue && { ...catalogue, build: build_of_fetch };
+        const catalogue = (await base.fetch())!;
+        return gate.next ? gate.next(catalogue) : catalogue;
       },
       async manifest(entry) {
         await ready;
@@ -385,11 +388,20 @@ describe("AppsService catalogue (ADR-077)", () => {
     return booted.kernel;
   }
 
-  async function write_slice(build: number, ids: string[]) {
+  async function write_slice(core: string, ids: string[]) {
     const { apps: glob } = await import("$lib/apps");
     const full = (await glob_source([...glob.filter((manifest) => manifest.system), ...TEST_APPS]).fetch())!;
-    await write(CATALOGUE_PATH, serialize_slice({ ...full, build }, full.apps.filter((entry) => ids.includes(entry.id))));
+    await write(CATALOGUE_PATH, serialize_slice({ ...full, core }, full.apps.filter((entry) => ids.includes(entry.id))));
   }
+
+  /** The same core, a later build, with new files for the given apps. */
+  const deploy =
+    (...changed: string[]) =>
+    (catalogue: Catalogue): Catalogue => ({
+      ...catalogue,
+      build: catalogue.build + 1,
+      apps: catalogue.apps.map((entry) => (changed.includes(entry.id) ? { ...entry, hash: "new", files: ["assets/new.js"] } : entry)),
+    });
 
   const system_ids = async () => (await import("$lib/apps")).apps.filter((manifest) => manifest.system).map((manifest) => manifest.id);
 
@@ -397,7 +409,7 @@ describe("AppsService catalogue (ADR-077)", () => {
     const { service, gate } = await sourced();
     await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
     await write(INSTALLED_PATH, serialize_installed(["example"]));
-    await write_slice(BUILD_INFO.buildTimestamp, [...(await system_ids()), "example"]);
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
     const kernel = await boot_with(service);
     expect(gate.fetches).toBe(0);
     expect(user_apps(kernel)).toEqual(["example"]);
@@ -408,28 +420,31 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(gate.fetches).toBe(1);
   });
 
-  test("another build's slice fetches the full catalogue at boot, and keeps every installed id", async () => {
+  test("another core's slice fetches the full catalogue at boot, and keeps every installed id", async () => {
     const { service, gate } = await sourced();
     await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
     await write(INSTALLED_PATH, serialize_installed(["example", "notes"]));
-    await write_slice(1, [...(await system_ids()), "example"]);
+    await write_slice("old-core", [...(await system_ids()), "example"]);
     const kernel = await boot_with(service);
     expect(gate.fetches).toBe(1);
     expect(apps(kernel).is_installed("notes")).toBe(true);
     expect(apps(kernel).installed_catalogue()?.apps.map(({ id }) => id)).toContain("notes");
   });
 
-  test("offline with another build's slice, its apps are listed but don't open", async () => {
+  test("offline with another core's slice, its apps are listed but don't open, and Open offers the update", async () => {
     const { service, gate } = await sourced();
     gate.online = false;
     await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
     await write(INSTALLED_PATH, serialize_installed(["example"]));
-    await write_slice(1, [...(await system_ids()), "example"]);
+    await write_slice("old-core", [...(await system_ids()), "example"]);
     const kernel = await boot_with(service);
     gate.open();
     expect(apps(kernel).is_installed("example")).toBe(true);
     await expect(apps(kernel).load("example")).rejects.toThrow(/updated since this page loaded/);
     expect(apps(kernel).installed_catalogue()).toBeNull();
+    const window_id = apps(kernel).launch("example");
+    kernel.service<WindowsService>("windows").get(window_id)?.app.component.catch(() => {});
+    expect(toasts(kernel)).toContain("Update WebOS to open Example");
   });
 
   test("before its code lands an app is a stub: a launch opens at once and checks the props once it lands", async () => {
@@ -447,6 +462,82 @@ describe("AppsService catalogue (ADR-077)", () => {
     await vi.waitFor(() => expect(toasts(kernel)).toContain("Example opened without its data"));
     expect(windows.get(good)?.app.props).toEqual({ count: 3 });
     expect(windows.get(bad)?.app.props).toBeUndefined();
+  });
+
+  test("a newer build on the same core: closed apps switch at once, an open one waits for its last window (stage 3)", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    apps(kernel).install(["example", "board"]);
+    await apps(kernel).load("example");
+    await apps(kernel).load("board");
+    const windows = kernel.service<WindowsService>("windows");
+    const first = apps(kernel).launch("example", { count: 1 });
+    const old = apps(kernel).get("example");
+
+    gate.next = deploy("example", "board");
+    expect((await apps(kernel).refresh()).sort()).toEqual(["board", "example"]);
+    expect(apps(kernel).last_update?.changed.sort()).toEqual(["board", "example"]);
+    expect(apps(kernel).update_ready("example")).toBe(true);
+    expect(apps(kernel).update_ready("board")).toBe(false);
+    expect(apps(kernel).installed_catalogue()?.apps.find(({ id }) => id === "example")?.hash).toBe("new");
+
+    const second = apps(kernel).launch("example", { count: 2 });
+    expect(apps(kernel).get("example")).toBe(old);
+    await windows.close(first);
+    expect(apps(kernel).update_ready("example")).toBe(true);
+    await windows.close(second);
+    flushSync();
+    await vi.waitFor(() => expect(apps(kernel).update_ready("example")).toBe(false));
+  });
+
+  test("Restart app reopens the app's windows on the new version with their props and frames", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    await apps(kernel).load("example");
+    const windows = kernel.service<WindowsService>("windows");
+    const id = apps(kernel).launch("example", { count: 4 });
+    const bounds = { ...windows.get(id)!.bounds };
+    gate.next = deploy("example");
+    await apps(kernel).refresh();
+    expect(apps(kernel).update_ready("example")).toBe(true);
+
+    expect(await apps(kernel).restart("example")).toBe(true);
+    const reopened = windows.list().map((window_id) => windows.get(window_id)!);
+    expect(reopened).toHaveLength(1);
+    expect(reopened[0].app).toMatchObject({ id: "example", props: { count: 4 } });
+    expect(reopened[0].bounds).toEqual(bounds);
+    expect(apps(kernel).update_ready("example")).toBe(false);
+  });
+
+  test("refresh skips the fetch when the build it's told about isn't newer, and ignores another core", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    const fetches = gate.fetches;
+    expect(await apps(kernel).refresh(BUILD_INFO.buildTimestamp)).toEqual([]);
+    expect(gate.fetches).toBe(fetches);
+    gate.next = (catalogue) => ({ ...deploy("example")(catalogue), core: "other" });
+    expect(await apps(kernel).refresh()).toEqual([]);
+    expect(apps(kernel).last_update).toBeNull();
+  });
+
+  test("files_in_use keeps installed apps' files and the old files of an app still running", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    gate.next = (catalogue) => ({ ...catalogue, apps: catalogue.apps.map((entry) => (entry.id === "example" ? { ...entry, files: ["assets/old.js"], content: ["assets/page.js"] } : entry)) });
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    apps(kernel).install("example");
+    await apps(kernel).load("example");
+    apps(kernel).launch("example", { count: 1 });
+    gate.next = deploy("example");
+    await apps(kernel).refresh();
+    expect([...apps(kernel).files_in_use()].sort()).toEqual(["assets/new.js", "assets/old.js", "assets/page.js"]);
   });
 
   test("installed_catalogue follows installs and uninstalls", async () => {

@@ -1,43 +1,32 @@
 import { createTask, createTaskGroup, type ExecutableTask } from "@lilbunnyrabbit/task-manager";
 import type { TaskContext } from "../tasks/type";
 import type { AppId } from "../apps/type";
-import { assets_cache, parse_list, pool, unshared } from "./lists";
+import { ASSETS_CACHE, pool, unshared, unused } from "./lists";
 
 // Requests, not bytes, are what an update costs on a phone (ADR-065): a few in flight, never the whole list at once.
 const LANES = 6;
 
-export interface ListOptions {
-  build: number;
+export interface SaveOptions {
   base: string;
   signal?: AbortSignal;
-}
-
-export interface SaveOptions extends ListOptions {
   on_file?: (done: number, total: number) => void;
-}
-
-async function fetch_list(id: AppId, { build, base, signal }: ListOptions): Promise<string[]> {
-  const response = await fetch(`${base}offline/${id}.json`, { cache: "no-cache", signal });
-  if (!response.ok) throw new Error(`No file list for ${id} (${response.status})`);
-  const files = parse_list(await response.text(), build);
-  if (!files) throw new Error("WebOS was updated since this page loaded. Reload to finish downloading apps.");
-  return files;
 }
 
 const file_url = (base: string, file: string) => new URL(base + file, location.origin).href;
 
-export async function save_app(id: AppId, options: SaveOptions): Promise<void> {
-  const { build, base, signal } = options;
-  const files = await fetch_list(id, options);
-  const cache = await caches.open(assets_cache(build));
+export async function save_app(name: string, files: string[], options: SaveOptions): Promise<void> {
+  const { base, signal } = options;
+  const cache = await caches.open(ASSETS_CACHE);
   let done = 0;
   options.on_file?.(0, files.length);
   await pool(files, LANES, async (file) => {
     signal?.throwIfAborted();
     const url = file_url(base, file);
     if (!(await cache.match(url, { ignoreVary: true }))) {
-      // A file the update didn't rename is still in the previous build's cache (or the precache): copy, don't download.
+      // Still in a cache from before one cache held every release (or in the precache): copy, don't download.
       const answer = (await caches.match(url, { ignoreVary: true })) ?? (await fetch(url, { signal }));
+      // The host keeps only the latest deploy: a missing file means WebOS changed since this page loaded.
+      if (answer.status === 404) throw new Error(`WebOS was updated since this page loaded. Update WebOS to install ${name}.`);
       if (!answer.ok) throw new Error(`${file}: ${answer.status}`);
       await cache.put(url, answer);
     }
@@ -45,26 +34,33 @@ export async function save_app(id: AppId, options: SaveOptions): Promise<void> {
   });
 }
 
-export async function drop_app(id: AppId, keep: AppId[], options: ListOptions): Promise<number> {
-  const own = await fetch_list(id, options);
-  const others: string[][] = [];
-  await pool(keep, LANES, async (other) => void others.push(await fetch_list(other, options)));
-  const cache = await caches.open(assets_cache(options.build));
+export async function drop_files(own: string[], others: string[][], base: string): Promise<number> {
+  const cache = await caches.open(ASSETS_CACHE);
   let removed = 0;
   for (const file of unshared(own, others)) {
-    if (await cache.delete(file_url(options.base, file), { ignoreVary: true })) removed++;
+    if (await cache.delete(file_url(base, file), { ignoreVary: true })) removed++;
   }
   return removed;
+}
+
+export async function prune_files(keep: ReadonlySet<string>, base: string): Promise<number> {
+  const cache = await caches.open(ASSETS_CACHE);
+  const prefix = new URL(base, location.origin).href;
+  const requests = await cache.keys();
+  const by_file = new Map(requests.filter((request) => request.url.startsWith(prefix)).map((request) => [request.url.slice(prefix.length), request]));
+  const stale = unused([...by_file.keys()], keep);
+  await Promise.all(stale.map((file) => cache.delete(by_file.get(file)!, { ignoreVary: true })));
+  return stale.length;
 }
 
 export interface SyncApp {
   id: AppId;
   name: string;
+  files: string[];
 }
 
 export interface SyncPlan {
   apps: SyncApp[];
-  build: number;
   base: string;
   on_start: (id: AppId) => void;
   on_progress: (id: AppId, fraction: number) => void;
@@ -80,8 +76,7 @@ export function sync_task(plan: SyncPlan, context: TaskContext): ExecutableTask 
         plan.on_start(app.id);
         let saved = false;
         try {
-          await save_app(app.id, {
-            build: plan.build,
+          await save_app(app.name, app.files, {
             base: plan.base,
             signal: context.signal,
             on_file: (done, total) => {

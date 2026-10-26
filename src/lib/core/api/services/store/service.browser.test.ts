@@ -9,6 +9,7 @@ import { StoreService } from "./service.svelte";
 import { StoreStatus } from "./type";
 import { CATALOGUE_PATH } from "../apps/installed";
 import { parse_catalogue_text } from "../apps/catalogue";
+import { running_core } from "../apps/source";
 
 const BUILD = BUILD_INFO.buildTimestamp;
 const APPS: Record<string, { system: boolean; name: string; replaces?: { app: string }[] }> = {
@@ -34,6 +35,7 @@ async function open_tab(installed: string[] = ["paint"]) {
     for (const id of [ids].flat()) set.add(id);
     return [ids].flat();
   });
+  const refresh = vi.fn(async () => [] as string[]);
   const entries = () => Object.entries(APPS).map(([id, app]) => [id, { id, ...app }] as const);
   const booted = await boot_test_kernel({
     files: FilesService,
@@ -47,6 +49,9 @@ async function open_tab(installed: string[] = ["paint"]) {
           [Symbol.iterator]()) as never,
       is_installed: (id: string) => set.has(id),
       catalogue: async () => true,
+      refresh,
+      last_update: null,
+      files_in_use: () => new Set<string>(),
       installed_catalogue: () => ({ version: 1, core: "c", build: BUILD, release: "1.0.0", apps: [...set].sort().map(entry_of) }),
     }),
     tasks: stub_service("tasks", {}),
@@ -58,6 +63,7 @@ async function open_tab(installed: string[] = ["paint"]) {
     store: booted.kernel.service<StoreService>("store"),
     notifications: booted.kernel.service<NotificationsService>("notifications"),
     install,
+    refresh,
   };
 }
 
@@ -133,5 +139,18 @@ describe("installed apps' catalogue (ADR-077)", () => {
       expect(slice?.build).toBe(BUILD);
       expect(slice?.apps.map(({ id }) => id)).toEqual(["paint", "settings"]);
     });
+  });
+});
+
+describe("app-only updates (ADR-077 stage 3)", () => {
+  test("another tab's apps-ready message on this core makes this tab take the new catalogue", async () => {
+    const tab = await open_tab();
+    const other = new BroadcastChannel("webos:store");
+    other.postMessage({ type: "apps-ready", core: running_core(), apps: ["paint"] });
+    await vi.waitFor(() => expect(tab.refresh).toHaveBeenCalledTimes(1));
+    other.postMessage({ type: "apps-ready", core: "another-core", apps: ["paint"] });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(tab.refresh).toHaveBeenCalledTimes(1);
+    other.close();
   });
 });

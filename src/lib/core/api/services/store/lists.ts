@@ -1,28 +1,14 @@
-const CACHE_PREFIX = "webos-assets-";
+/** One cache for every app's files, across releases (ADR-077 stage 3); `vite.config.ts` names the same one. */
+export const ASSETS_CACHE = "webos-assets";
+const LEGACY_PREFIX = "webos-assets-";
 
-export function assets_cache(build: number): string {
-  return `${CACHE_PREFIX}${build}`;
+/** The per-build caches from before. Only `webos-assets-*`: every lilbunnyrabbit site on the host shares the origin. */
+export function legacy_caches(keys: string[]): string[] {
+  return keys.filter((key) => key.startsWith(LEGACY_PREFIX));
 }
 
-/** Only `webos-assets-*`: every lilbunnyrabbit site on the same host shares the origin's Cache Storage. */
-export function stale_caches(keys: string[], build: number): string[] {
-  return keys.filter((key) => key.startsWith(CACHE_PREFIX) && key !== assets_cache(build));
-}
-
-/**
- * `null` when the list belongs to another build: a tab that missed an update would otherwise save the new build's
- * files under its own cache and call the app saved.
- */
-export function parse_list(text: string, build: number): string[] | null {
-  try {
-    const data: unknown = JSON.parse(text);
-    if (typeof data !== "object" || data === null) return null;
-    const { build: list_build, files } = data as { build?: unknown; files?: unknown };
-    if (list_build !== build || !Array.isArray(files) || !files.every((file) => typeof file === "string")) return null;
-    return files;
-  } catch {
-    return null;
-  }
+export function unused(cached: string[], keep: ReadonlySet<string>): string[] {
+  return cached.filter((file) => !keep.has(file));
 }
 
 export async function pool<T>(items: T[], size: number, work: (item: T) => Promise<void>): Promise<void> {

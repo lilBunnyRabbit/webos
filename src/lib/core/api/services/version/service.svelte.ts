@@ -13,7 +13,8 @@ import { ArrowCircleUp as ArrowCircleUpIcon, ChartBar as ChartBarIcon, Sparkle a
 import { LatestWriter } from "../files/latest-writer";
 import { SessionStatus } from "../session/type";
 import { AnalyticsConsent } from "../settings/type";
-import { introduced_apps } from "./history";
+import { introduced_apps, with_notes } from "./history";
+import { running_core } from "../apps/source";
 import { VERSION_STATE_PATH, parse_seen, serialize_seen } from "./persistence";
 import { compare_versions } from "./semver";
 import { scope_caches, strip_update_param, with_update_param } from "./update";
@@ -64,9 +65,20 @@ export class VersionService implements IVersionService {
 
   public changelog = $state.raw<Release[]>([]);
   private loading: Promise<Release[]> | null = null;
+  private bundled: Release[] | null = null;
+  /** Releases an app-only update brought, which this core's changelog chunk doesn't have. */
+  private notes: Release[] = [];
 
   public load_changelog(): Promise<Release[]> {
-    return (this.loading ??= import("./changelog").then(({ CHANGELOG }) => (this.changelog = CHANGELOG)));
+    return (this.loading ??= import("./changelog").then(({ CHANGELOG }) => {
+      this.bundled = CHANGELOG;
+      return (this.changelog = with_notes(CHANGELOG, this.notes));
+    }));
+  }
+
+  private take_notes(notes: Release[]): void {
+    this.notes = with_notes(this.notes, notes);
+    if (this.bundled) this.changelog = with_notes(this.bundled, this.notes);
   }
   public unseen = $state<Release[]>([]);
   public announced = $state<AppIntroduction[]>([]);
@@ -189,10 +201,15 @@ export class VersionService implements IVersionService {
       if (!response?.ok) return;
 
       const remote: RemoteVersion = await response.json();
-      if (remote.buildTimestamp > this.info.buildTimestamp) {
-        this.update_available = remote;
-        this.notify_update_available(remote);
+      if (remote.buildTimestamp <= this.info.buildTimestamp) return;
+      // Same core: only apps changed (ADR-077 stage 3). They update in place and the page stays.
+      if (remote.core && remote.core === running_core()) {
+        this.take_notes(remote.notes ?? []);
+        await this.apps_service.refresh(remote.buildTimestamp);
+        return;
       }
+      this.update_available = remote;
+      this.notify_update_available(remote);
     } catch (error) {
       console.error("Failed to check for updates:", error);
     } finally {

@@ -75,7 +75,7 @@ States:
 
 The indicator sits under the button when horizontal and to its left when vertical, so it's on the same side whether the bar is at the top or the bottom (left or right). It animates between bar and dot over 200ms.
 
-Right-click a one-window item (ADR-042) for **Pin to taskbar** (or Unpin from taskbar when its app is pinned), first **Install** when its app isn't installed (`install_items` in `components/apps/app-actions.ts`, ADR-077), then, on desktop with Picture-in-Picture, **Bring back** while the window is popped out or **Pop out** otherwise (disabled while dirty, [extract](../services/extract.md)), then **Close window** (`windows.close`, so the close guard still asks). Right-click a group for Install (not installed), Pin/Unpin, then **Close all** (`windows.close` on each member, so each dirty one asks).
+While an app-only update waits for the app's windows (`apps.update_ready`, ADR-077 stage 3), the item carries a small `primary` `ArrowCircleUp` in its bottom-left corner, its label ends in ", update ready", and its menu starts with **Update ready**, which runs `apps.restart(id)`. Right-click a one-window item (ADR-042) for **Pin to taskbar** (or Unpin from taskbar when its app is pinned), first **Install** when its app isn't installed (`install_items` in `components/apps/app-actions.ts`, ADR-077), then, on desktop with Picture-in-Picture, **Bring back** while the window is popped out or **Pop out** otherwise (disabled while dirty, [extract](../services/extract.md)), then **Close window** (`windows.close`, so the close guard still asks). Right-click a group for Install (not installed), Pin/Unpin, then **Close all** (`windows.close` on each member, so each dirty one asks).
 
 Click a group for its window list: `dialogs.menu` anchored beside the item, 8px off it, away from the screen edge, one entry per member in open order, labelled with the window title or the app name, with the app icon (a popped-out member shows the PiP icon). Choosing one restores it in a view transition when it's minimized (the button first takes that member's view-transition name, so the picked window is the one that flies out), focuses it plus the mini window (`extract.focus()`) when it's popped out, else focuses it. Per-window actions (Pop out, Close) stay on the windows themselves.
 
@@ -130,14 +130,14 @@ Contents (`start-menu-popover.svelte`):
 | Input | Target | Result |
 |-------|--------|--------|
 | Click | Group (several windows) | Opens the window list; an entry restores, focuses or brings up that window |
-| Right-click | Group | Install (not installed), Pin to taskbar / Unpin, Close all |
+| Right-click | Group | Update ready (an update waits), Install (not installed), Pin to taskbar / Unpin, Close all |
 | Click | Window item, minimized | `windows.toggle_minimize(id)`. Restores and focuses it in one click. |
 | Click | Window item, focused | `windows.toggle_minimize(id)`. Minimizes it; focus moves to the next visible window. |
 | Click | Window item, visible but not focused | `windows.focus(id)`. Raises it. |
 | Click | Quick launch icon | Focus the app's latest window, else launch it; Shift or middle click launches a new one |
 | Drag | App tile / App Store card onto quick launch | Pin at the gap |
 | Drag | Quick launch icon | Reorder within the zone; out of the taskbar unpins |
-| Right-click | Window item (one window) | Install (not installed), Pin to taskbar / Unpin, Pop out / Bring back, Close window |
+| Right-click | Window item (one window) | Update ready (an update waits), Install (not installed), Pin to taskbar / Unpin, Pop out / Bring back, Close window |
 | Hover / focus | Auto-hidden bar's 4px edge | Reveal; hides 2s after leaving |
 | Drag | Anything over the auto-hidden bar's edge | Reveal while the drag is over it |
 | Click | Start button | Toggle the start menu |

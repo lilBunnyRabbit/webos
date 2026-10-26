@@ -1,5 +1,6 @@
 import type { AppId } from "../apps/type";
 import type { AppIntroduction, Change, Release } from "./type";
+import { compare_versions } from "./semver";
 
 export interface AppChange {
   release: Release;
@@ -11,6 +12,17 @@ export interface AppHistory {
   added: Release | null;
   updated: Release | null;
   changes: AppChange[];
+}
+
+/**
+ * The bundled changelog plus releases only `version.json` knows: an app-only update leaves the running core, and its
+ * changelog chunk, as they were (ADR-077 stage 3).
+ */
+export function with_notes(changelog: readonly Release[], notes: readonly Release[]): Release[] {
+  const known = new Set(changelog.map((release) => release.version));
+  const extra = notes.filter((release) => !known.has(release.version));
+  if (extra.length === 0) return [...changelog];
+  return [...extra, ...changelog].sort((a, b) => compare_versions(b.version, a.version));
 }
 
 export function app_history(changelog: readonly Release[], app: AppId): AppHistory {

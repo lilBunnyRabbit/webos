@@ -4,7 +4,7 @@ import path from "node:path";
 import { createServer, type Plugin, type ResolvedConfig, type ViteDevServer } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { VersionInfo } from "./vite-plugin-version";
-import { manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
+import { CORE_META, manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
 
 export { json_safe, manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "../src/lib/core/api/services/apps/catalogue";
 
@@ -25,7 +25,7 @@ export interface ReleaseNote {
   version: string;
   date: string;
   title: string;
-  changes: { kind: string; text: string }[];
+  changes: { kind: string; text: string; apps?: string[] }[];
 }
 
 export interface VersionFields {
@@ -86,6 +86,12 @@ export function component_import(source: string): string | null {
   return COMPONENT_IMPORT.exec(source)?.[1] ?? null;
 }
 
+/** The page reads its own core hash from this (`running_core()`), so it can tell which catalogues its apps run on. */
+export function with_core_meta(html: string, core: string): string {
+  if (!html.includes("<head>")) throw new Error("catalogue: index.html has no <head>");
+  return html.replace("<head>", `<head>\n    <meta name="${CORE_META}" content="${core}" />`);
+}
+
 export function unhashed(text: string): string {
   return text.replace(HASHED_NAME, "$1$2");
 }
@@ -131,7 +137,12 @@ export function app_version(id: string, hash: string, previous: Catalogue | null
 /** The top release, plus every one newer than the deployed catalogue's release. */
 export function release_notes(changelog: ReleaseNote[], previous_release: string | null): ReleaseNote[] {
   const notes = changelog.filter((entry, index) => index === 0 || (previous_release !== null && compare_versions(entry.version, previous_release) > 0));
-  return notes.map(({ version, date, title, changes }) => ({ version, date, title, changes: changes.map(({ kind, text }) => ({ kind, text })) }));
+  return notes.map(({ version, date, title, changes }) => ({
+    version,
+    date,
+    title,
+    changes: changes.map(({ kind, text, apps }) => ({ kind, text, ...(apps?.length ? { apps } : {}) })),
+  }));
 }
 
 export async function fetch_previous(url: string): Promise<Catalogue | null> {
@@ -351,6 +362,9 @@ export function catalogue_plugin(info: VersionInfo) {
           }),
         };
         fields = { core, notes: release_notes(changelog, before?.release ?? null) };
+        // After hashing: the hash reads index.html without it, so the next build of the same core hashes the same.
+        const index = path.join(out_dir, "index.html");
+        writeFileSync(index, with_core_meta(readFileSync(index, "utf8"), core));
 
         const dir = path.join(out_dir, "store");
         mkdirSync(dir, { recursive: true });

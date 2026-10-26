@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { CHANGELOG } from "./changelog";
-import { app_history, introduced_apps, recency, updated_apps } from "./history";
+import { app_history, introduced_apps, recency, updated_apps, with_notes } from "./history";
 import { ChangeKind, type Release } from "./type";
 
 const { NEW, IMPROVED, FIXED } = ChangeKind;
@@ -104,5 +104,13 @@ describe("CHANGELOG app tags", () => {
     for (const release of CHANGELOG)
       for (const app of release.introduces ?? [])
         expect(release.changes.some((change) => change.apps?.includes(app)), `${app} in ${release.version}`).toBe(true);
+  });
+});
+
+describe("with_notes (ADR-077 stage 3)", () => {
+  test("releases only version.json knows join the changelog in order; known ones aren't doubled", () => {
+    const notes: Release[] = [{ version: "0.3.1", date: "2026-01-04", title: "Snake", changes: [{ kind: FIXED, text: "Fixed", apps: ["snake"] }] }, LOG[0]];
+    expect(with_notes(LOG, notes).map((release) => release.version)).toEqual(["0.3.1", ...LOG.map((release) => release.version)]);
+    expect(with_notes(LOG, [])).toEqual(LOG);
   });
 });

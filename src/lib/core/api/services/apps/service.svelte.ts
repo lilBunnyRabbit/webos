@@ -8,6 +8,7 @@ import type {
   AppProps,
   AppsFilter,
   AppCategory,
+  AppsUpdate,
   LaunchOptions,
   OpenOptions,
   UninstallOptions,
@@ -18,11 +19,12 @@ import type {
   Kernel,
   NotificationsService,
   SettingsService,
+  VersionService,
   WindowsService,
   WindowId,
   WindowOptions,
 } from "$lib/core/api";
-import type { Component } from "svelte";
+import { untrack, type Component } from "svelte";
 import { best_apps_for, file_extension, has_compound_match } from "./associations";
 import { parse_shortcut, SHORTCUT_EXTENSION } from "./shortcut";
 import { parse_widget, WIDGET_EXTENSION } from "./widget";
@@ -42,6 +44,7 @@ import { track_launch } from "$lib/core/utils/analytics";
 import { on_idle } from "$lib/core/utils/idle";
 import { ActiveTime } from "./active-time.svelte";
 import type { AppUsage } from "./active-time";
+import { snapshot_window } from "../session/snapshot.svelte";
 import CatalogueIcon, { type CatalogueIconSource } from "$lib/core/components/apps/catalogue-icon.svelte";
 
 export class AppsService implements IAppsService {
@@ -68,11 +71,17 @@ export class AppsService implements IAppsService {
   private readonly code = new SvelteMap<AppId, AppManifest>();
   private readonly loading = new Map<AppId, Promise<AppManifest>>();
   private readonly failed = new SvelteSet<AppId>();
-  /** Entries from another build's catalogue: listed, never run, since their files and core aren't this page's. */
+  /** Entries from a catalogue built on another core: listed, never run, since their files and core aren't this page's. */
   private readonly foreign = new SvelteSet<AppId>();
+  /**
+   * Apps whose code here is older than their entry (ADR-077 stage 3): the entry they were loaded from. One version per
+   * app per tab, so the old code runs every window until the last one closes.
+   */
+  private readonly stale = new SvelteMap<AppId, CatalogueApp>();
   private readonly icons = new Map<AppId, Component>();
   private header: Omit<Catalogue, "apps"> | null = $state.raw(null);
   public complete = $state(false);
+  public last_update: AppsUpdate | null = $state.raw(null);
   private fetching: Promise<boolean> | null = null;
   private wanted = false;
   private source!: CatalogueSource;
@@ -117,6 +126,17 @@ export class AppsService implements IAppsService {
     this.cleanups.push(on_idle(() => this.preload_installed()));
     void this.active_time.start();
     this.cleanups.push(() => this.active_time.destroy());
+    this.cleanups.push(
+      $effect.root(() => {
+        $effect(() => {
+          if (this.stale.size === 0) return;
+          const open = new Set(this.windows_service.list().map((id) => this.windows_service.get(id)?.app.id));
+          untrack(() => {
+            for (const id of [...this.stale.keys()]) if (!open.has(id)) this.swap(id);
+          });
+        });
+      })
+    );
   }
 
   public usage(id: AppId): AppUsage | null {
@@ -138,7 +158,8 @@ export class AppsService implements IAppsService {
    */
   private async boot_catalogue(): Promise<void> {
     const slice = parse_catalogue_text(await this.read(CATALOGUE_PATH));
-    if (slice && slice.build === this.source.build) {
+    // Another release on the same core is still this core's (ADR-077 stage 3): an app-only update keeps the page.
+    if (slice && slice.core === this.source.core) {
       this.add(slice, true);
       return;
     }
@@ -158,15 +179,104 @@ export class AppsService implements IAppsService {
   private async fetch_catalogue(): Promise<boolean> {
     const catalogue = await this.source.fetch();
     if (!catalogue) return false;
-    const own = catalogue.build === this.source.build;
-    this.add(catalogue, own);
+    const own = catalogue.core === this.source.core;
+    if (own && this.header && catalogue.build > this.header.build) this.adopt(catalogue);
+    else if (own && this.header && catalogue.build < this.header.build) this.add({ ...catalogue, apps: catalogue.apps.filter((entry) => !this.entries.has(entry.id)) }, true, false);
+    else this.add(catalogue, own);
     if (own) this.complete = true;
     return own;
   }
 
-  private add(catalogue: Catalogue, own: boolean): void {
+  public async refresh(newer_than = 0): Promise<AppId[]> {
+    if (this.header && newer_than > 0 && newer_than <= this.header.build) return [];
+    const catalogue = await this.source.fetch();
+    if (!catalogue || catalogue.core !== this.source.core) return [];
+    if (this.header && catalogue.build <= this.header.build) return [];
+    const changed = this.adopt(catalogue);
+    this.complete = true;
+    return changed;
+  }
+
+  /**
+   * A newer catalogue of the running core (ADR-077 stage 3). Apps not running here take their new entry at once; an
+   * app with open windows keeps its code, and the entry waits in `stale` until its last window closes.
+   */
+  private adopt(catalogue: Catalogue): AppId[] {
     const { apps, ...header } = catalogue;
-    if (own) this.header = header;
+    const changed: AppId[] = [];
+    const swapped: AppId[] = [];
+    for (const entry of apps) {
+      const before = this.foreign.has(entry.id) ? undefined : this.entries.get(entry.id);
+      const same_files = before !== undefined && same_install(before, entry);
+      if (before && before.hash !== entry.hash) changed.push(entry.id);
+      if (before && !same_files) swapped.push(entry.id);
+      this.entries.set(entry.id, entry);
+      this.foreign.delete(entry.id);
+      const loaded = this.code.get(entry.id);
+      if (same_files && loaded) {
+        this.registry.set(entry.id, { ...loaded, version: entry.version });
+      } else if (loaded && this.has_windows(entry.id)) {
+        if (!this.stale.has(entry.id) && before) this.stale.set(entry.id, before);
+      } else {
+        this.swap(entry.id);
+      }
+    }
+    this.header = header;
+    this.last_update = { build: header.build, changed, swapped };
+    return changed;
+  }
+
+  private has_windows(id: AppId): boolean {
+    return this.windows_service.list().some((window_id) => this.windows_service.get(window_id)?.app.id === id);
+  }
+
+  /** The app's next load imports its current entry's manifest by URL; an installed one starts loading now. */
+  private swap(id: AppId): void {
+    this.stale.delete(id);
+    this.code.delete(id);
+    this.loading.delete(id);
+    this.failed.delete(id);
+    const entry = this.entries.get(id);
+    if (!entry) return;
+    this.registry.set(id, this.stub(entry));
+    if (this.is_installed(id)) void this.load(id).catch(() => {});
+  }
+
+  public update_ready(id: AppId): boolean {
+    return this.stale.has(id);
+  }
+
+  public async restart(id: AppId): Promise<boolean> {
+    const windows = this.windows_service;
+    // Dirty windows first: keeping one cancels before any other window closed.
+    const ids = windows
+      .list()
+      .filter((window_id) => windows.get(window_id)?.app.id === id)
+      .sort((a, b) => Number(windows.get(b)?.dirty) - Number(windows.get(a)?.dirty));
+    if (ids.length === 0) return false;
+    const snapshots = ids.map((window_id) => snapshot_window(windows.get(window_id)!)).reverse();
+    for (const window_id of ids) if (!(await windows.close(window_id))) return false;
+    if (this.stale.has(id)) this.swap(id);
+    await this.load(id);
+    const { restored } = windows.restore(snapshots, ({ app_id, props, state }) => this.create_instance(app_id, props, state));
+    const last = restored.at(-1);
+    if (last) windows.focus(last);
+    return true;
+  }
+
+  public files_in_use(): Set<string> {
+    const files = new Set<string>();
+    const add = (entry: CatalogueApp | undefined) => {
+      for (const file of [...(entry?.files ?? []), ...(entry?.content ?? [])]) files.add(file);
+    };
+    for (const [id] of this.list({ installed: true })) add(this.entries.get(id));
+    for (const id of this.code.keys()) add(this.stale.get(id) ?? this.entries.get(id));
+    return files;
+  }
+
+  private add(catalogue: Catalogue, own: boolean, current = true): void {
+    const { apps, ...header } = catalogue;
+    if (own && current) this.header = header;
     for (const entry of apps) {
       if (!own && this.entries.has(entry.id) && !this.foreign.has(entry.id)) continue;
       this.entries.set(entry.id, entry);
@@ -196,9 +306,11 @@ export class AppsService implements IAppsService {
     if (this.foreign.has(id)) return Promise.reject(new Error(`WebOS was updated since this page loaded. Update WebOS to open ${entry.name}.`));
     let pending = this.loading.get(id);
     if (!pending) {
-      pending = this.source
+      const loading: Promise<AppManifest> = this.source
         .manifest(entry)
         .then((definition) => {
+          // A newer entry arrived while this one loaded: its code would be the old version.
+          if (this.entries.get(id) !== entry) return this.require(id);
           const manifest: AppManifest = { ...definition, system: entry.system, version: entry.version };
           this.code.set(id, manifest);
           this.registry.set(id, manifest);
@@ -209,7 +321,10 @@ export class AppsService implements IAppsService {
           this.failed.add(id);
           throw error;
         })
-        .finally(() => this.loading.delete(id));
+        .finally(() => {
+          if (this.loading.get(id) === loading) this.loading.delete(id);
+        });
+      pending = loading;
       this.loading.set(id, pending);
     }
     return pending;
@@ -376,7 +491,10 @@ export class AppsService implements IAppsService {
   }
 
   public install(ids: AppId | AppId[]): AppId[] {
-    const added = [ids].flat().filter((id) => this.registry.has(id) && !this.is_installed(id));
+    const wanted = [ids].flat();
+    // Its files are another core's, which this page can't run or keep: it installs after the update.
+    for (const id of wanted) if (this.foreign.has(id)) this.offer_update(this.registry.get(id)!);
+    const added = wanted.filter((id) => this.registry.has(id) && !this.is_installed(id) && !this.foreign.has(id));
     if (added.length === 0) return [];
     for (const id of added) this.installed.add(id);
     this.writer.write(serialize_installed(this.installed));
@@ -438,7 +556,8 @@ export class AppsService implements IAppsService {
       throw new Error(`App ${id} not found`);
     }
     // Opening isn't installing (ADR-077): the app runs on demand, out of the menus and not offline, until Install.
-    if (!this.is_installed(id) && options.offer_install !== false) this.offer_install(manifest);
+    if (this.foreign.has(id)) this.offer_update(manifest);
+    else if (!this.is_installed(id) && options.offer_install !== false) this.offer_install(manifest);
 
     const code = this.code.get(id);
     const window_id = code
@@ -470,6 +589,14 @@ export class AppsService implements IAppsService {
       title: `${manifest.name} isn't installed`,
       message: "Install it to keep it in your apps and use it offline.",
       actions: [{ label: "Install", on_click: () => void this.install(manifest.id) }],
+    });
+  }
+
+  protected offer_update(manifest: AppManifest): void {
+    this.notifications_service.notify("apps", {
+      title: `Update WebOS to open ${manifest.name}`,
+      message: "WebOS changed since this page opened, and this app needs the new version.",
+      actions: [{ label: "Restart", on_click: () => void this.kernel.service<VersionService>("version").apply_update() }],
     });
   }
 
@@ -587,6 +714,10 @@ export class AppsService implements IAppsService {
     });
     return undefined;
   }
+}
+
+function same_install(a: CatalogueApp, b: CatalogueApp): boolean {
+  return a.manifest === b.manifest && a.files.join() === b.files.join() && (a.content ?? []).join() === (b.content ?? []).join();
 }
 
 function as_props(props: unknown): AppProps | undefined {

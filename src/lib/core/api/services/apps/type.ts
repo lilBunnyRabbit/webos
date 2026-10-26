@@ -68,6 +68,24 @@ export interface AppsService extends IService {
    */
   installed_catalogue(): Catalogue | null;
   /**
+   * Fetches the catalogue and takes it when it's a newer build of the running core (ADR-077 stage 3): an app-only
+   * update, no reload. Skipped when `newer_than` (a build stamp) isn't newer than the catalogue held. Resolves to the
+   * apps whose version changed. Apps not running here switch at once; one with open windows keeps its code until
+   * every window is closed (`update_ready`).
+   */
+  refresh(newer_than?: number): Promise<AppId[]>;
+  /** The last catalogue `refresh()` (or a fetch) took on this core, with what changed. Reactive. */
+  readonly last_update: AppsUpdate | null;
+  /** Open windows run an older version of the app than its entry. Reactive. */
+  update_ready(id: AppId): boolean;
+  /**
+   * Restart app: closes the app's windows (guarded: a kept one cancels, resolving `false`), loads its current version
+   * and reopens them with the same props, frames and window state.
+   */
+  restart(id: AppId): Promise<boolean>;
+  /** Files of installed apps and of apps whose code runs in this tab: what pruning the app cache must keep. */
+  files_in_use(): Set<string>;
+  /**
    * User apps `launch()` opened lately, newest first, each once, at most 16; never system apps, and apps uninstalled
    * since drop out. Reactive. Saved in `/var/lib/apps/recent.json`; always empty in solo mode (ADR-047).
    */
@@ -78,6 +96,14 @@ export interface AppsService extends IService {
    * `null` before its first use. Reactive. Saved in `/var/lib/apps/usage.json`, never sent anywhere.
    */
   usage(id: AppId): AppUsage | null;
+}
+
+export interface AppsUpdate {
+  build: number;
+  /** Apps whose version changed. */
+  changed: AppId[];
+  /** Apps whose files changed: installed ones download again. */
+  swapped: AppId[];
 }
 
 export interface AppsFilter {

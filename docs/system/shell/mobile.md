@@ -47,7 +47,7 @@ Escape also closes an open layer, unless a menu or system dialog is up (a modal 
 `mobile-windows.svelte` renders every window in `windows.list()` order, keyed, so switching modes never remounts an app.
 
 - **Normal:** each window is `absolute inset-0`; only the focused one shows (`hidden` otherwise, still mounted, like a minimized desktop window). It runs `animate-pop-in` each time it appears. With nothing focused, the layer is `pointer-events-none` and home takes the taps.
-- **Switcher:** the same elements become a horizontal scroll-snap row on the scrim with `backdrop-blur-xl`. Cards are the live windows: a box of `66cqw × 66cqh` holding the window at full stage size (`100cqw × 100cqh`) with `scale: 0.66` (`--card-scale`), `inert`. CSS `order` sorts them by `windows.recent()`, most recent first. Each has a header (icon, name, close button) and a transparent button over the card:
+- **Switcher:** the same elements become a horizontal scroll-snap row on the scrim with `backdrop-blur-xl`. Cards are the live windows: a box of `66cqw × 66cqh` holding the window at full stage size (`100cqw × 100cqh`) with `scale: 0.66` (`--card-scale`), `inert`. CSS `order` sorts them by `windows.recent()`, most recent first. Each has a header (icon, name, **Update** while `apps.update_ready` (an app-only update waits for the app's windows; `apps.restart`, ADR-077 stage 3), **Install** while not installed, close button) and a transparent button over the card:
   - tap opens it;
   - a flick up past 96px closes the app (the card follows the finger and fades);
   - sideways is the browser scrolling the row (`touch-action: pan-x`). The first clear direction decides.

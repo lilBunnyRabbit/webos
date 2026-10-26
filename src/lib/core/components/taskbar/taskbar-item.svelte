@@ -12,7 +12,7 @@
     with_pin,
     without_pin,
   } from "$lib/core/api";
-  import { ArrowSquareIn as ArrowSquareInIcon, PictureInPicture as PictureInPictureIcon, PushPinSimple as PushPinSimpleIcon, PushPinSimpleSlash as PushPinSimpleSlashIcon, X as XIcon } from "phosphor-svelte";
+  import { ArrowCircleUp as ArrowCircleUpIcon, ArrowSquareIn as ArrowSquareInIcon, PictureInPicture as PictureInPictureIcon, PushPinSimple as PushPinSimpleIcon, PushPinSimpleSlash as PushPinSimpleSlashIcon, X as XIcon } from "phosphor-svelte";
   import { cn } from "$lib/core/utils";
   import type { Position } from "$lib/core/utils/type";
   import { flushSync } from "svelte";
@@ -37,9 +37,12 @@
   const active = $derived(group.some((instance) => windows.is_focused(instance.id) && !minimized(instance)));
   const all_minimized = $derived(group.every(minimized));
   const is_out = $derived(group.some((instance) => extract?.current === instance.id));
+  const update_ready = $derived(apps.update_ready(app.id));
   const label = $derived(
-    single ? (single.title ? `${single.title} — ${app.manifest.name}` : app.manifest.name) : `${app.manifest.name}, ${group.length} windows`
+    (single ? (single.title ? `${single.title} — ${app.manifest.name}` : app.manifest.name) : `${app.manifest.name}, ${group.length} windows`) +
+      (update_ready ? ", update ready" : "")
   );
+  const UPDATE_ITEM = { id: "update", label: "Update ready", icon: ArrowCircleUpIcon };
 
   let button: HTMLButtonElement | null = $state(null);
   /** Set while this item's menu is open or a window flies into it, so an auto-hidden bar shows (`:has([data-reveal])`). */
@@ -134,6 +137,7 @@
     const choice = await open_menu(
       single
         ? [
+            ...(update_ready ? [UPDATE_ITEM, { separator: true } as const] : []),
             ...install_items(app.id),
             pin_item,
             { separator: true },
@@ -144,12 +148,19 @@
                 : []),
             { id: "close", label: "Close window", icon: XIcon },
           ]
-        : [...install_items(app.id), pin_item, { separator: true }, { id: "close-all", label: "Close all", icon: XIcon }],
+        : [
+            ...(update_ready ? [UPDATE_ITEM, { separator: true } as const] : []),
+            ...install_items(app.id),
+            pin_item,
+            { separator: true },
+            { id: "close-all", label: "Close all", icon: XIcon },
+          ],
       { anchor: { x: event.clientX, y: event.clientY } }
     );
     if (choice === "pin") settings.taskbar.pinned = with_pin(settings.taskbar.pinned, app.id);
     else if (choice === "unpin") settings.taskbar.pinned = without_pin(settings.taskbar.pinned, app.id);
     else if (choice === INSTALL_ITEM.id) apps.install(app.id);
+    else if (choice === UPDATE_ITEM.id) void apps.restart(app.id);
     else if (choice === "back") void extract?.bring_back();
     else if (choice === "pop" && single) void extract?.pop(single.id);
     else if (choice === "close" && single) void windows.close(single.id);
@@ -177,6 +188,9 @@
   <app.manifest.icon class="size-[calc(var(--taskbar-item)*0.55)]" weight={active ? "fill" : "duotone"} />
   <AppProgress app_id={app.id} />
   <AppBadge app_id={app.id} class="top-0.5 right-0.5 ring-background-light" />
+  {#if update_ready}
+    <ArrowCircleUpIcon class="absolute bottom-0.5 left-0.5 size-3.5 rounded-full bg-background-light text-primary" weight="fill" aria-hidden="true" />
+  {/if}
   {#if is_out}
     <PictureInPictureIcon class="absolute bottom-0.5 left-0.5 size-3.5 text-primary" weight="fill" aria-label="Popped out" />
   {/if}

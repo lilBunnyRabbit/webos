@@ -151,15 +151,16 @@ export default defineConfig({
             handler: "NetworkFirst",
             options: { cacheName: "webos-store", networkTimeoutSeconds: 4, cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 4 } },
           },
-          // Last, so the rules above keep their files. One cache per build: StoreService fills it with the installed apps
-          // and deletes older ones after a sync (ADR-077). No expiration, which could evict an installed app.
+          // Last, so the rules above keep their files. One cache for every release, so an app-only deploy leaves sw.js
+          // alone: StoreService fills it with the installed apps and prunes what no app lists (ADR-077). No expiration,
+          // which could evict an installed app.
           {
             urlPattern: new RegExp(`^[^?#]*${BASE}assets/`),
             handler: "CacheFirst",
             // ignoreVary: StoreService stores files it fetched itself, and a server's `Vary: Origin` would make a module
             // import miss them. The names are content-hashed, so any stored copy is the right one.
             options: {
-              cacheName: `webos-assets-${info.buildTimestamp}`,
+              cacheName: "webos-assets",
               cacheableResponse: { statuses: [200] },
               matchOptions: { ignoreVary: true },
             },

@@ -11,14 +11,14 @@ Knows which build is running and detects when a newer build has been deployed, b
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `info` | `info: VersionInfo` | The running build. Initialized from `BUILD_INFO` (`build-info.ts`), the only reader of the compile-time constant `__VERSION_INFO__`; it changes every build, so it stays out of the shared `core` chunk ([overview](../overview.md#build--deploy)). `$state`, but never reassigned. |
-| `update_available` | `update_available: RemoteVersion \| null` | The remote `version.json` (`VersionInfo` plus `core` and `notes`, both optional: older builds wrote neither), set when `remote.buildTimestamp > info.buildTimestamp`. Never reset to `null`. |
+| `update_available` | `update_available: RemoteVersion \| null` | The remote `version.json` (`VersionInfo` plus `core` and `notes`, both optional: older builds wrote neither), set when `remote.buildTimestamp > info.buildTimestamp` and its `core` isn't the running one (a core update). Never reset to `null`. |
 | `is_checking` | `is_checking: boolean` | True while a `check()` is in flight. |
 | `check` | `check(): Promise<void>` | Re-entrancy guarded: returns at once if a check is already running, or when `navigator.onLine` is false. Fetches `${import.meta.env.BASE_URL}version.json` (`/webos/version.json` in production) with `cache: "no-store"`. A non-OK response or a fetch that fails (offline, unreachable) is ignored silently; the next poll asks again. A parse error or anything else goes to `console.error`. Never throws. |
 | `apply_update` | `apply_update(): Promise<void>` | Walks `update_stage` through `installing` → (`clearing`) → `reloading` while the update overlay shows it. `registration.update()`; (15 s timeout); a new worker that activates means a reload into its precache, with `update_progress` following its download meanwhile. No new worker, a timeout, a stall, Restart now or an error falls through to clearing: unregister this app's registration and delete only Cache Storage keys containing its scope (`scope_caches`, `update.ts`). Every path ends in `location.replace(?__upd=<now>)`; `init()` strips the parameter again. A second call while one runs is ignored. See [Service worker](#service-worker). |
 | `update_stage` | `UpdateStage` (`idle` \| `installing` \| `clearing` \| `reloading`) | `$state`, read by `components/update/update-overlay.svelte` in `os.svelte` |
 | `update_progress` | `UpdateProgress \| null` | `$state`. `{ started, done, total, slow }` while `installing`, `null` in every other stage. `total` is the number of files the new worker downloads, `null` until its manifest is read (or when it can't be); `slow` turns true after 8 s. See [Update progress](#update-progress) |
 | `restart_update` | `restart_update(): void` | The overlay's Restart now: stops waiting for the new worker and runs the clearing path. No-op outside `installing` |
-| `changelog` | `Release[]` | `$state.raw`, empty until `load_changelog()` resolves, then `CHANGELOG` from `changelog.ts`, newest first |
+| `changelog` | `Release[]` | `$state.raw`, empty until `load_changelog()` resolves, then `CHANGELOG` from `changelog.ts`, newest first, plus the releases an app-only update's `version.json` brought (`with_notes`, `history.ts`): the running core's changelog chunk doesn't have them |
 | `load_changelog` | `(): Promise<Release[]>` | Imports `changelog.ts` once (the promise is kept) and fills `changelog`. `init()` awaits it only after an update; Settings › What's new, App Store and the `changelog` command call it themselves. It's the largest module WebOS has and grows every release, so it stays out of the boot chunk |
 | `unseen` | `Release[]` | `$state`. Releases newer than the seen marker read at boot and not newer than `info.version`. Set once in `init()`, kept for the session |
 | `announced` | `AppIntroduction[]` | `$state`. `introduced_apps(unseen)` limited to registered apps (installed or not; Open installs through `launch`): what the announcement shows. Set once in `init()`, kept for the session; empty on first boot |
@@ -71,11 +71,20 @@ interface Pipeline { state: PipelineState; sha: string; title: string; created: 
 | `core` | The core hash: what a new service worker would precache, normalized so a rebuild of the same tree gives the same value. `"dev"` on the dev server. |
 | `notes` | `{ version, date, title, changes: [{ kind, text }] }[]`: the top `CHANGELOG` release plus every release newer than the deployed catalogue's `release`. On the dev server, or without a previous catalogue, the top release only. |
 
-The update overlay shows `notes` ([below](#update-progress)); nothing reads `core` yet (stage 3's hot updates will).
+The update overlay shows `notes` ([below](#update-progress)); `check()` compares `core` with the running one ([below](#app-only-updates)).
 
 The bundle and `version.json` always carry the same `buildTimestamp`. Only a new build (or a dev server restart) produces a newer one.
 
 `get_version_info()` reads `package.json`, runs `git rev-parse --short HEAD` and `--abbrev-ref HEAD` (falling back to `"unknown"`), and stamps `new Date()`.
+
+## App-only updates
+
+ADR-077 stage 3. `check()` finds a newer `buildTimestamp`, then compares `remote.core` with `running_core()` (the `<meta name="webos-core">` the build wrote into `index.html`, `"dev"` on the dev server):
+
+- **Same core**: only apps changed. No toast, no overlay, no reload: the release's `notes` join `changelog` (`take_notes`) and `apps.refresh(remote.buildTimestamp)` takes the new catalogue, which skips the fetch once it holds that build. StoreService downloads the changed installed apps and toasts "Snake and 2 more updated" ([store](store.md#hot-updates-adr-077-stage-3)). Open windows of a changed app show Update ([window](../shell/window.md)).
+- **Another core, or no `core`** (an older build): today's full update, `update_available`, the "A new version is ready" toast and the overlay.
+
+`info` stays the bundle's: after an app-only update, Settings › About shows the core's release until a reload under a new service worker brings a newer `main` (see [Known gaps](#known-gaps)).
 
 ## State
 
@@ -251,3 +260,5 @@ Contributes `version`, `changelog`, `install`, `ci status` and the `release`, `n
 - The SW can activate a new build in the background (the browser's own update check) while a tab still runs the old one. Nothing tells VersionService. The banner still appears on the next `check()`, and the tab keeps running old code until reloaded; "Update and reload" then just reloads (above).
 - Progress counts files, not bytes; a few large chunks can make the bar move unevenly.
 - The manifest is read with a regex over `generateSW`'s minified output. A Workbox upgrade that writes it differently leaves only the elapsed time (no error).
+- An app-only deploy still changes `sw.js`: `main` carries the build stamp and the changelog chunk is precached core, so the browser's own update check installs a new precache in the background (6 files). Until the owner decides how the running release is known without them (ADR-077 revision 2026-10-27), `info.version` after an app-only update is the core build's, and the overlay's "from" version too.
+- The notes of an app-only release live only in `version.json`; a later app-only release's `version.json` no longer lists them, so What's new loses them until a core release bundles them.

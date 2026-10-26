@@ -1,24 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { assets_cache, parse_list, pool, stale_caches, unshared } from "./lists";
+import { ASSETS_CACHE, legacy_caches, pool, unshared, unused } from "./lists";
 import { parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
 
 describe("caches", () => {
-  test("one cache per build, and only older webos-assets caches are stale", () => {
-    expect(assets_cache(42)).toBe("webos-assets-42");
-    const keys = ["webos-assets-41", "webos-assets-42", "webos-wasm", "workbox-precache-v2-https://x/webos/", "webos-assets-7", "other-site"];
-    expect(stale_caches(keys, 42)).toEqual(["webos-assets-41", "webos-assets-7"]);
-  });
-});
-
-describe("parse_list", () => {
-  test("the files of a list from this build", () => {
-    expect(parse_list(JSON.stringify({ build: 5, files: ["assets/a.js", "assets/a.css"] }), 5)).toEqual(["assets/a.js", "assets/a.css"]);
+  test("one cache for every release; only the per-build caches from before are legacy", () => {
+    expect(ASSETS_CACHE).toBe("webos-assets");
+    const keys = ["webos-assets-41", "webos-assets", "webos-wasm", "workbox-precache-v2-https://x/webos/", "webos-assets-7", "other-site"];
+    expect(legacy_caches(keys)).toEqual(["webos-assets-41", "webos-assets-7"]);
   });
 
-  test("another build's list, or a broken one, is null", () => {
-    expect(parse_list(JSON.stringify({ build: 6, files: [] }), 5)).toBeNull();
-    expect(parse_list(JSON.stringify({ build: 5, files: [1] }), 5)).toBeNull();
-    expect(parse_list("<!doctype html>", 5)).toBeNull();
+  test("unused leaves what an app still lists", () => {
+    expect(unused(["assets/a.js", "assets/b.js", "assets/page.js"], new Set(["assets/a.js", "assets/page.js"]))).toEqual(["assets/b.js"]);
   });
 });
 

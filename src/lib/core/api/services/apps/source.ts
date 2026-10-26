@@ -1,19 +1,25 @@
 import type { AppDefinition, AppManifest } from "./type";
-import { manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "./catalogue";
+import { CORE_META, manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "./catalogue";
 import { BUILD_INFO } from "../version/build-info";
 
 export interface CatalogueSource {
-  /** Only a catalogue of the same build has entries whose code runs here. */
-  readonly build: number;
+  /** Only a catalogue built against this core has entries whose code runs here (ADR-077). */
+  readonly core: string;
   fetch(): Promise<Catalogue | null>;
   manifest(entry: CatalogueApp): Promise<AppDefinition>;
 }
 
 const CATALOGUE_URL = "store/catalogue.json";
+export const DEV_CORE = "dev";
+
+export function running_core(): string {
+  if (import.meta.env.DEV) return DEV_CORE;
+  return document.querySelector<HTMLMetaElement>(`meta[name="${CORE_META}"]`)?.content ?? "";
+}
 
 export function bundle_source(base: string = import.meta.env.BASE_URL): CatalogueSource {
   return {
-    build: BUILD_INFO.buildTimestamp,
+    core: running_core(),
     async fetch() {
       try {
         const response = await fetch(`${base}${CATALOGUE_URL}`, { cache: "no-cache" });
@@ -45,11 +51,11 @@ export function glob_source(manifests: AppManifest[]): CatalogueSource {
     };
   };
   return {
-    build: BUILD_INFO.buildTimestamp,
+    core: DEV_CORE,
     fetch: () =>
       (catalogue ??= Promise.all(manifests.map(entry)).then((apps) => ({
         version: 1,
-        core: "dev",
+        core: DEV_CORE,
         build: BUILD_INFO.buildTimestamp,
         release: BUILD_INFO.version,
         apps,

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import kernel, { type AppListing, type StoreService } from "$lib/core/api";
+  import kernel, { type AppListing, type AppsService, type StoreService } from "$lib/core/api";
   import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
   import { format_date } from "$lib/core/utils";
-  import { ArrowsClockwise as ArrowsClockwiseIcon, CheckCircle as CheckCircleIcon } from "phosphor-svelte";
+  import { ArrowCircleUp as ArrowCircleUpIcon, ArrowsClockwise as ArrowsClockwiseIcon, CheckCircle as CheckCircleIcon } from "phosphor-svelte";
   import type { AppUpdate } from "./discover";
   import StoreRow from "./store-row.svelte";
 
@@ -15,6 +15,9 @@
   let { waiting, recent, onselect }: Props = $props();
 
   const store = $derived(kernel.service<StoreService>("store"));
+  const apps = $derived(kernel.service<AppsService>("apps"));
+  /** Open windows still run the version before an app-only update; Update restarts them on the new one (ADR-077). */
+  const ready = $derived(apps.listings().filter((manifest) => apps.update_ready(manifest.id)));
   const day = (date: string) => format_date(new Date(`${date}T00:00`));
 </script>
 
@@ -23,6 +26,24 @@
     <h2 class="text-lg font-semibold">Updates</h2>
     <p class="text-2xs text-foreground/80">Installed apps update on their own after every release, then work offline.</p>
   </header>
+
+  {#if ready.length}
+    <section class="flex flex-col gap-2" aria-labelledby="updates-ready">
+      <h3 id="updates-ready" class="text-sm font-semibold">Update ready · {ready.length}</h3>
+      <ul class="flex flex-col">
+        {#each ready as manifest (manifest.id)}
+          <StoreRow {manifest} {onselect}>
+            {#snippet detail()}A new version is ready · open windows restart on it{/snippet}
+            {#snippet actions()}
+              <Button size="sm" variant="primary" onclick={() => void apps.restart(manifest.id)}>
+                <ArrowCircleUpIcon weight="bold" /> Update
+              </Button>
+            {/snippet}
+          </StoreRow>
+        {/each}
+      </ul>
+    </section>
+  {/if}
 
   <section class="flex flex-col gap-2" aria-labelledby="updates-waiting">
     <div class="flex flex-wrap items-center gap-2">

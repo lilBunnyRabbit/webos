@@ -1,4 +1,4 @@
-import type { AppId, AppsService, FilesService, Kernel, TasksService } from "$lib/core/api";
+import type { AppId, AppsService, AppsUpdate, FilesService, Kernel, TasksService } from "$lib/core/api";
 import { untrack } from "svelte";
 import { SvelteMap, SvelteSet } from "svelte/reactivity";
 import { error_message } from "$lib/core/utils";
@@ -7,22 +7,31 @@ import { Mode } from "../../kernel/mode";
 import { LatestWriter } from "../files/latest-writer";
 import { TaskJobStatus } from "../tasks/type";
 import { BUILD_INFO } from "../version/build-info";
-import { stale_caches } from "./lists";
+import { legacy_caches } from "./lists";
 import { current_ids } from "../apps/replaces";
-import { serialize_slice } from "../apps/catalogue";
+import { serialize_slice, type CatalogueApp } from "../apps/catalogue";
 import { CATALOGUE_PATH } from "../apps/installed";
+import { running_core } from "../apps/source";
 import { LEGACY_PICKED_PATH, LEGACY_STATE_DIR, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_picked, parse_state, serialize_state } from "./persistence";
 import { StoreStatus, type StoreService as IStoreService } from "./type";
 
 const SYNC_LOCK = "webos.store.sync";
+const CHANNEL = "webos:store";
 const SENDER = "store";
 const work = () => import("./sync");
 
 const parent_of = (path: string) => path.slice(0, path.lastIndexOf("/"));
 const split = (path: string) => [parent_of(path), path.slice(path.lastIndexOf("/") + 1)] as const;
 
-const SyncReason = { SETUP: "setup", UPDATE: "update", INSTALL: "install" } as const;
+const SyncReason = { SETUP: "setup", UPDATE: "update", APPS: "apps", INSTALL: "install" } as const;
 type SyncReason = (typeof SyncReason)[keyof typeof SyncReason];
+
+/** Another tab downloaded an app-only update (ADR-077 stage 3): this one takes the same catalogue right away. */
+interface AppsReady {
+  type: "apps-ready";
+  core: string;
+  apps: AppId[];
+}
 
 export class StoreService implements IStoreService {
   name = "StoreService";
@@ -38,10 +47,15 @@ export class StoreService implements IStoreService {
   private readonly saved = new SvelteSet<AppId>();
   private readonly downloading = new SvelteMap<AppId, number>();
   private installed = new Set<AppId>();
+  /** Last known entry per app, kept after an uninstall so its files can still be told apart. */
+  private readonly entries = new Map<AppId, CatalogueApp>();
   private reason: SyncReason = SyncReason.INSTALL;
-  private readonly build = BUILD_INFO.buildTimestamp;
+  private updated: AppId[] = [];
+  /** The catalogue the saved set is for: the build's own, or a newer one taken on the same core. */
+  private build = BUILD_INFO.buildTimestamp;
   private readonly base = import.meta.env.BASE_URL;
   private running: Promise<void> | null = null;
+  private channel: BroadcastChannel | null = null;
   private cleanups: Array<() => void> = [];
   private destroyed = false;
 
@@ -77,10 +91,15 @@ export class StoreService implements IStoreService {
       window.removeEventListener("offline", on_offline);
       document.removeEventListener("visibilitychange", on_visibility);
     });
+    this.listen();
 
+    const catalogue = this.apps_service.installed_catalogue();
+    if (catalogue) this.remember(catalogue.apps);
     const state_text = await this.read(STORE_STATE_PATH);
     this.state_writer.seed(state_text);
     const state = parse_state(state_text) ?? (state_text === null ? await this.migrate_state() : null);
+    // Unknown (offline with another core's slice): keep what the file says until the catalogue arrives.
+    this.build = catalogue?.build ?? state?.build ?? this.build;
     const new_build = state?.build !== this.build;
     if (!new_build) this.add_saved(state.apps);
     else this.write_state();
@@ -104,10 +123,19 @@ export class StoreService implements IStoreService {
           const ids = this.installed_ids();
           untrack(() => this.follow_installed(ids));
         });
-        // Boot reads only this (ADR-077), so it follows every install and uninstall, and a new build's catalogue.
+        // Boot reads only this (ADR-077), so it follows every install and uninstall, a new build's catalogue and an
+        // app-only update.
         $effect(() => {
           const slice = this.apps_service.installed_catalogue();
-          if (slice) untrack(() => this.catalogue_writer.write(serialize_slice(slice, slice.apps)));
+          if (!slice) return;
+          untrack(() => {
+            this.remember(slice.apps);
+            this.catalogue_writer.write(serialize_slice(slice, slice.apps));
+          });
+        });
+        $effect(() => {
+          const update = this.apps_service.last_update;
+          if (update) untrack(() => void this.take_update(update));
         });
       })
     );
@@ -118,6 +146,7 @@ export class StoreService implements IStoreService {
 
   destroy(): void {
     this.destroyed = true;
+    this.channel?.close();
     for (const cleanup of this.cleanups.splice(0)) cleanup();
   }
 
@@ -150,6 +179,37 @@ export class StoreService implements IStoreService {
     return running;
   }
 
+  private listen(): void {
+    if (typeof BroadcastChannel === "undefined") return;
+    this.channel = new BroadcastChannel(CHANNEL);
+    this.channel.onmessage = (event: MessageEvent<AppsReady>) => {
+      if (event.data?.type === "apps-ready" && event.data.core === running_core()) void this.apps_service.refresh();
+    };
+  }
+
+  /**
+   * An app-only update this tab took (ADR-077 stage 3). Apps whose files changed download again; another tab that took
+   * it first already wrote the state file for the new catalogue, so its saved set counts.
+   */
+  private async take_update(update: AppsUpdate): Promise<void> {
+    if (update.build === this.build) return;
+    const state = parse_state(await this.read(STORE_STATE_PATH));
+    this.build = update.build;
+    if (state?.build === update.build) {
+      this.saved.clear();
+      this.add_saved(state.apps.filter((id) => this.installed.has(id)));
+    } else {
+      for (const id of update.swapped) this.saved.delete(id);
+      this.write_state();
+    }
+    // The toast names a user app first: system apps change with every release whose docs name it.
+    const system = (id: AppId) => (this.apps_service.get(id)?.system ? 1 : 0);
+    this.updated = update.changed.filter((id) => this.installed.has(id)).sort((a, b) => system(a) - system(b));
+    if (this.pending().length === 0) return;
+    this.reason = SyncReason.APPS;
+    void this.sync();
+  }
+
   /** System apps first: the OS's own windows should work offline before anything else. */
   private pending(): AppId[] {
     const ids = [...this.installed].filter((id) => !this.saved.has(id));
@@ -159,6 +219,10 @@ export class StoreService implements IStoreService {
 
   private installed_ids(): Set<AppId> {
     return new Set(Array.from(this.apps_service.list({ installed: true }), ([id]) => id));
+  }
+
+  private remember(entries: CatalogueApp[]): void {
+    for (const entry of entries) this.entries.set(entry.id, entry);
   }
 
   private follow_installed(ids: Set<AppId>): void {
@@ -173,18 +237,20 @@ export class StoreService implements IStoreService {
     // The tab that held the lock before may have saved them already.
     await this.reload();
     while (!this.destroyed && this.online && this.pending().length > 0) {
+      // Entries arrive with the catalogue; offline with another core's slice there's nothing to download from.
+      if (!this.apps_service.installed_catalogue()) break;
       this.syncing = true;
       const { sync_task } = await work();
       const first = this.pending();
       const reason = this.reason;
+      const updated = this.updated;
       const name = (id: AppId) => this.apps_service.get(id)?.name ?? id;
       const job = this.tasks_service.run(
         SENDER,
         (context) =>
           sync_task(
             {
-              apps: this.pending().map((id) => ({ id, name: name(id) })),
-              build: this.build,
+              apps: this.pending().map((id) => ({ id, name: name(id), files: this.entries.get(id)?.files ?? [] })),
               base: this.base,
               on_start: (id) => this.downloading.set(id, 0),
               on_progress: (id, fraction) => this.downloading.set(id, fraction),
@@ -197,7 +263,7 @@ export class StoreService implements IStoreService {
           ),
         {
           title: job_title(reason, first.map(name)),
-          done: () => job_done(reason, first.map(name)),
+          done: () => this.job_done(reason, (reason === SyncReason.APPS && updated.length > 0 ? updated : first).map(name)),
           failed: (error, cancelled) => ({
             title: cancelled ? "Stopped downloading apps" : "Couldn't download apps",
             message: cancelled ? "They open while you're online. Retry in Activity Monitor › Tasks." : error_message(error),
@@ -205,34 +271,59 @@ export class StoreService implements IStoreService {
         }
       );
       await job.done;
-      if (job.status !== TaskJobStatus.DONE) return;
+      if (job.status !== TaskJobStatus.DONE) break;
+      if (reason === SyncReason.APPS) this.announce(updated);
       this.reason = SyncReason.INSTALL;
     }
-    // Only once nothing is left: a retry still copies unchanged files out of the old build's cache.
+    this.reason = SyncReason.INSTALL;
+    // Only once nothing is left: a retry still copies unchanged files out of the old caches.
     if (this.pending().length === 0) await this.prune();
+  }
+
+  private announce(apps: AppId[]): void {
+    this.channel?.postMessage({ type: "apps-ready", core: running_core(), apps } satisfies AppsReady);
+  }
+
+  private job_done(reason: SyncReason, names: string[]) {
+    if (reason !== SyncReason.APPS) return job_done(reason, names);
+    const [first, ...rest] = names;
+    return {
+      title: rest.length === 0 ? `${first} updated` : `${first} and ${rest.length} more updated`,
+      message: "They work offline too.",
+      actions: [{ label: "What's new", on_click: () => void this.apps_service.launch("settings", { section: "whats-new" }) }],
+    };
   }
 
   private async drop(id: AppId): Promise<void> {
     if (this.saved.delete(id)) this.write_state();
-    if (import.meta.env.DEV || this.destroyed || !this.online) return;
+    if (import.meta.env.DEV || this.destroyed) return;
+    const own = this.entries.get(id);
+    if (!own) return;
     await navigator.locks.request(SYNC_LOCK, async () => {
       if (this.apps_service.is_installed(id)) return;
       try {
-        const { drop_app } = await work();
-        await drop_app(id, [...this.installed], { build: this.build, base: this.base });
+        const { drop_files } = await work();
+        const others = [...this.installed].map((other) => [...(this.entries.get(other)?.files ?? []), ...(this.entries.get(other)?.content ?? [])]);
+        await drop_files([...own.files, ...(own.content ?? [])], others, this.base);
       } catch (error) {
-        // Left in the cache until the next update deletes this build's cache.
         console.warn(`[StoreService] Couldn't delete ${id}'s files`, error);
       }
     });
   }
 
+  /**
+   * Drops the caches from before one cache held every release, then every file no installed app and nothing running
+   * here lists. Skipped when another tab took a newer catalogue: its new files aren't in this tab's lists.
+   */
   private async prune(): Promise<void> {
     try {
-      const stale = stale_caches(await caches.keys(), this.build);
-      await Promise.all(stale.map((key) => caches.delete(key)));
+      await Promise.all(legacy_caches(await caches.keys()).map((key) => caches.delete(key)));
+      const state = parse_state(await this.read(STORE_STATE_PATH));
+      if (state && state.build !== this.build) return;
+      const { prune_files } = await work();
+      await prune_files(this.apps_service.files_in_use(), this.base);
     } catch (error) {
-      console.warn("[StoreService] Couldn't delete older builds' caches", error);
+      console.warn("[StoreService] Couldn't delete unused app files", error);
     }
   }
 
@@ -292,7 +383,7 @@ export class StoreService implements IStoreService {
 function job_title(reason: SyncReason, names: string[]): string {
   const what = names.length === 1 ? names[0] : `${names.length} apps`;
   if (reason === SyncReason.SETUP) return "Setting up apps";
-  return reason === SyncReason.UPDATE ? `Updating ${what}` : `Installing ${what}`;
+  return reason === SyncReason.UPDATE || reason === SyncReason.APPS ? `Updating ${what}` : `Installing ${what}`;
 }
 
 function job_done(reason: SyncReason, names: string[]): { title: string; message: string } {

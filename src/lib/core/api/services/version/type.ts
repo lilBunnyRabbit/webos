@@ -62,7 +62,7 @@ export interface ReleaseNote {
   version: string;
   date: string;
   title: string;
-  changes: Pick<Change, "kind" | "text">[];
+  changes: Pick<Change, "kind" | "text" | "apps">[];
 }
 
 /** `version.json`: the build stamp, the core hash and the new release's notes (ADR-077); older builds have neither. */
