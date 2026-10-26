@@ -40,7 +40,7 @@ Measured at 3.58.0 (production build): the precache went from 844 entries (12.4 
 Still `generateSW` (`vite.config.ts`):
 
 - `manifestTransforms` keeps an entry when it's outside `assets/` (`index.html`, `registerSW.js`, `sw-notifications.js`, icons, manifest) or in core (`offline.precached(url)`).
-- The Portfolio path (`/webos/portfolio/`, written by `vite-plugin-portfolio-path.ts` when the Portfolio app exists) is a copy of `index.html` left out of the precache (`globIgnores`) and of the navigation fallback (`navigateFallbackDenylist`), so it always comes from the network and boots the deployed build. Its one extra script defaults a bare visit to `#/solo/portfolio`. Offline it doesn't load.
+- The Portfolio path (`/webos/portfolio/`, written by `vite-plugin-portfolio-path.ts` when the Portfolio app exists) is a copy of `index.html` left out of the precache (`globIgnores`) and of the navigation fallback (`navigateFallbackDenylist`), so it always comes from the network and boots the deployed build. Its one extra script defaults a bare visit to `#/solo/portfolio` and drops the query (the `portfolio` repo's redirect adds `?t=` to skip the HTTP cache, and carries the hash so a worker from before 3.70.1, which still answers the path with its cached shell, opens Portfolio rather than the desktop). Offline it doesn't load.
 - The last `runtimeCaching` rule is `CacheFirst` for `^[^?#]*/webos/assets/` into `webos-assets-{buildTimestamp}`, 200 responses only, no expiration (it could evict a picked app). Earlier rules keep the wasm, model, font, dictionary and mammoth files in their own caches.
 
 ## Sync

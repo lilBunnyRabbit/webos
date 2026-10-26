@@ -5,9 +5,9 @@ import type { Plugin } from "vite";
 export const PORTFOLIO_PATH = "portfolio";
 const ROUTE = "#/solo/portfolio";
 
-/** The shell's HTML, defaulting a bare visit to the Portfolio link. */
+/** The shell's HTML, defaulting a bare visit to the Portfolio link and dropping the redirect's cache-busting query. */
 export function portfolio_html(index: string): string {
-  const script = `<script>if (!location.hash) history.replaceState(null, "", location.pathname + "${ROUTE}");</script>`;
+  const script = `<script>history.replaceState(null, "", location.pathname + (location.hash || "${ROUTE}"));</script>`;
   return index.replace("</head>", `  ${script}\n  </head>`);
 }
 
