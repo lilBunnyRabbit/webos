@@ -32,7 +32,7 @@
 
   const os_link = $derived(
     (current && router.link_for(current)) ??
-      (route && !broken ? route_url({ kind: RouteKind.APP, id: route.id, props: route.props }) : `${location.origin}${location.pathname}`)
+      (route && !broken ? route_url({ kind: RouteKind.APP, id: route.id, props: route.props }) : `${location.origin}${import.meta.env.BASE_URL}`)
   );
 
   // Solo never polls, and a link to an app or prop added after this build was cached looks broken here: ask once.

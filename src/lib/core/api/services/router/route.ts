@@ -48,9 +48,9 @@ export function serialize_route(route: Route): string {
   return `${PREFIXES[route.kind]}${encodeURIComponent(route.id)}${query}`;
 }
 
-/** The full URL of a route on this deployment. */
+/** The full URL of a route on this deployment, always at the shell's root (never the Portfolio path). */
 export function route_url(route: Route): string {
-  return `${location.origin}${location.pathname}${serialize_route(route)}`;
+  return `${location.origin}${import.meta.env.BASE_URL}${serialize_route(route)}`;
 }
 
 const DEVICE_PROPS = new Set(["path", "paths", "left", "right"]);

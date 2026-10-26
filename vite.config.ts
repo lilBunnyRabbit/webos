@@ -9,6 +9,7 @@ import { offline_plugin } from "./vite-plugin-offline";
 import { phosphor_imports_plugin, phosphor_plugin } from "./vite-plugin-phosphor";
 import { core_modules } from "./vite-core-chunk";
 import { import_map_plugin } from "./vite-plugin-import-map";
+import { PORTFOLIO_PATH, portfolio_path_plugin } from "./vite-plugin-portfolio-path";
 import path from "path";
 
 // The font is only discovered once the CSS has loaded; a preload starts it with the entry chunk. Hashed name, so build only.
@@ -99,6 +100,7 @@ export default defineConfig({
     version_plugin(info),
     import_map_plugin(),
     offline.plugin,
+    portfolio_path_plugin(process.cwd()),
     preload_font_plugin(/InterVariable-[^/]*\.woff2$/),
     preload_main_plugin(path.resolve("src/main.ts")),
     VitePWA({
@@ -110,7 +112,9 @@ export default defineConfig({
         globPatterns: ["**/*.{js,mjs,css,html,woff2}"],
         manifestTransforms: [async (entries) => ({ manifest: entries.filter((entry) => offline.precached(entry.url)), warnings: [] })],
         // mammoth (Warren's .docx import) is cached on first use instead, like the wasm.
-        globIgnores: ["**/mammoth-*.js"],
+        globIgnores: ["**/mammoth-*.js", `${PORTFOLIO_PATH}/**`],
+        // The Portfolio path always comes from the network, so it never boots a build older than the deploy.
+        navigateFallbackDenylist: [new RegExp(`^${BASE}${PORTFOLIO_PATH}/`)],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         // Notification clicks (ADR-062): relative to sw.js, so it follows the base.
         importScripts: ["sw-notifications.js"],

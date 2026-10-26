@@ -4,7 +4,7 @@ Id `portfolio` · Source: `src/lib/apps/user/portfolio/` · [Portfolio brainstor
 
 ## What it does
 
-The owner's portfolio, as an app: a terminal rail on the left types a short tour, and five windows tile in beside it as it goes. Who I am, Work, Projects, How I build, then Contact. A visitor can take over at any point by typing, searching with `/` or clicking. `https://lilbunnyrabbit.github.io/portfolio` redirects to the solo link `#/solo/portfolio`, so a visitor lands on it without the intro or Restore.
+The owner's portfolio, as an app: a terminal rail on the left types a short tour, and five windows tile in beside it as it goes. Who I am, Work, Projects, How I build, then Contact. A visitor can take over at any point by typing, searching with `/` or clicking. `https://lilbunnyrabbit.github.io/portfolio` redirects to `/webos/portfolio/`, a copy of the shell the service worker leaves alone, so a visitor always gets the deployed build; a bare visit there becomes `#/solo/portfolio`, without the intro or Restore. The old `/webos/#/solo/portfolio` link still works, from the cached build.
 
 The layout was picked from the Portfolio Lab's concept rounds ("split A: Terminal rail"); the lab and every other concept app are gone (see the brainstorm).
 

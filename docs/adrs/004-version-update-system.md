@@ -2,6 +2,8 @@
 **Date:** 2026-01-27
 **Status:** Implemented
 
+> **Revision 2026-10-26: one path from the network ([ADR-065](065-apps-on-demand.md) revision).** The shell's HTML is still never fetched by the page itself, but `/webos/portfolio/` is left out of the worker, so the browser loads it from the network on every visit and a public Portfolio link can't land on a build older than the deploy.
+
 > **Revision 2026-10-22: apps on demand ([ADR-065](065-apps-on-demand.md))**
 > The "every app works offline" promise of the PWA revision is superseded. The worker precaches the core and the system apps only (`offline/core.json`), so an update installs in seconds; user apps load on demand into a per-build runtime cache, and the ones the user keeps offline are downloaded after the reload by OfflineService. The update overlay, its timers and the fallback are unchanged; it now waits for the core files alone.
 

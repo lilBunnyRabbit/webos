@@ -14,7 +14,7 @@ Deep links. A URL like `/webos/#/app/settings?section=about` opens that app with
 |----------|------|
 | `parse_hash(hash)` | `Route \| null`. `null` for anything that isn't `#/app/{id}` or `#/solo/{id}` (empty, other prefixes, a `/` in the id, bad percent-encoding). Each query value is `JSON.parse`d and falls back to the raw string, so `count=3` is `3` and `section=about` is `"about"`. A string that looks like JSON (`"3"`, `"true"`) can't be expressed. No query means `props: undefined` |
 | `serialize_route(route)` | The inverse, prefix by `kind`: strings raw, everything else `JSON.stringify`, `URLSearchParams` encoding, no `?` without props |
-| `route_url(route)` | `origin + pathname + serialize_route(route)` |
+| `route_url(route)` | `origin + BASE_URL + serialize_route(route)`: always the shell's root, so a link copied on the Portfolio path (`/webos/portfolio/`) points at WebOS, not at that path |
 | `shareable_props(props)` | `{ props, dropped }`: the launch props without device paths (`path`, `paths`, `left`, `right`, or any string or string array starting with `/`). Owner, 2026-10-15: every window gets Copy link; a file window links to its app without the file |
 
 Props aren't validated here; the app's schema decides in the service.
