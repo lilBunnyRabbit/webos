@@ -154,7 +154,7 @@ Phosphor (`phosphor-svelte`) for everything that isn't an app icon, imported wit
 | `duotone` | Empty states, file types, feature cards |
 | `fill` | The selected item in a nav or the focused taskbar app |
 
-`thin` and `light` aren't available: a build plugin (`vite-plugin-phosphor.ts`) strips them from every icon component to keep the boot chunk small, and they render as `regular` (ADR-036).
+`thin` and `light` aren't available: a build plugin (`tooling/vite-plugin-phosphor.ts`) strips them from every icon component to keep the boot chunk small, and they render as `regular` (ADR-036).
 
 Sizes: `size-3.5` in small controls, `size-4` in rows and toolbars, `size-5`–`size-6` in tiles.
 

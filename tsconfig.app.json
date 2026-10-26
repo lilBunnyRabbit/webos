@@ -17,7 +17,7 @@
     "checkJs": true,
     "moduleDetection": "force",
 
-    /* Shadcn Svelte */
+    /* Path aliases */
     "baseUrl": ".",
     "paths": {
       "$lib": ["./src/lib"],

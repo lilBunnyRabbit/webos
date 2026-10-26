@@ -4,12 +4,12 @@ import type { Plugin } from "vite";
 import { playwright } from "@vitest/browser-playwright";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import { VitePWA } from "vite-plugin-pwa";
-import { get_version_info, version_plugin } from "./vite-plugin-version";
-import { offline_plugin } from "./vite-plugin-offline";
-import { phosphor_imports_plugin, phosphor_plugin } from "./vite-plugin-phosphor";
-import { core_modules } from "./vite-core-chunk";
-import { import_map_plugin } from "./vite-plugin-import-map";
-import { PORTFOLIO_PATH, portfolio_path_plugin } from "./vite-plugin-portfolio-path";
+import { get_version_info, version_plugin } from "./tooling/vite-plugin-version";
+import { offline_plugin } from "./tooling/vite-plugin-offline";
+import { phosphor_imports_plugin, phosphor_plugin } from "./tooling/vite-plugin-phosphor";
+import { core_modules } from "./tooling/vite-core-chunk";
+import { import_map_plugin } from "./tooling/vite-plugin-import-map";
+import { PORTFOLIO_PATH, portfolio_path_plugin } from "./tooling/vite-plugin-portfolio-path";
 import path from "path";
 
 // The font is only discovered once the CSS has loaded; a preload starts it with the entry chunk. Hashed name, so build only.
@@ -238,7 +238,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: "unit",
-          include: ["src/**/*.test.ts", "*.test.ts"],
+          include: ["src/**/*.test.ts", "tooling/**/*.test.ts"],
           exclude: ["src/**/*.browser.test.ts"],
           environment: "node",
           // Seeded puzzle generators run 2 s here and 2-3x that on the CI runner: the default 5 s fails them at random.

@@ -223,7 +223,7 @@ The rules:
 
 Current placements:
 
-- favicon and PWA icons (`public/logo.svg` → `bun run generate:pwa-assets`)
+- favicon and PWA icons (`public/logo.svg` → `bun run generate:pwa-assets`, config in `tooling/pwa-assets.config.ts`)
 - the boot splash in `index.html`
 - the start button
 - the start menu footer

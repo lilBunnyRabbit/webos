@@ -1,6 +1,6 @@
 # OfflineService
 
-Key `offline` · Depends on: `files`, `apps`, `tasks`, `notifications`, `windows` · ADR: [ADR-065](../../adrs/065-apps-on-demand.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/offline/`, `vite-plugin-offline.ts`, `src/lib/core/components/apps/offline-{actions.ts,note.svelte}`, Settings `sections/offline.svelte` · Inspector: `inspector.svelte` (ADR-020)
+Key `offline` · Depends on: `files`, `apps`, `tasks`, `notifications`, `windows` · ADR: [ADR-065](../../adrs/065-apps-on-demand.md), [ADR-071](../../adrs/071-split-color-games.md) · Source: `src/lib/core/api/services/offline/`, `tooling/vite-plugin-offline.ts`, `src/lib/core/components/apps/offline-{actions.ts,note.svelte}`, Settings `sections/offline.svelte` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -24,7 +24,7 @@ The scale rule (ADR-065): nothing here costs more with more apps installed. Boot
 
 ## Build: the file lists
 
-`vite-plugin-offline.ts` (`offline_plugin(build)`, registered in `vite.config.ts` after the import map) runs in `writeBundle`, so it sees final file names (core renamed after the import map), before vite-plugin-pwa writes `sw.js` in `closeBundle`.
+`tooling/vite-plugin-offline.ts` (`offline_plugin(build)`, registered in `vite.config.ts` after the import map) runs in `writeBundle`, so it sees final file names (core renamed after the import map), before vite-plugin-pwa writes `sw.js` in `closeBundle`.
 
 - **Roots.** For each `src/lib/apps/user/{id}/index.ts`, the chunks of every module its manifest `import()`s: the component, `commands`, `highlights`, `preview`, `widget`, `on_fire`, `on_uninstall_data`. Chunks named `core`, `app-boot` or `app-meta` are never roots.
 - **Edges.** A chunk's `imports` and `dynamicImports`, its `importedCss` and `importedAssets`, and the hashed file names its code mentions that are assets (worker scripts, `?url` files). Vite's `__vite__mapDeps` preload table is stripped first: it lists every `import()`'s deps, user apps' included. Assets (worker bundles, CSS) are scanned for hashed names too.
@@ -40,7 +40,7 @@ Measured at 3.58.0 (production build): the precache went from 844 entries (12.4 
 Still `generateSW` (`vite.config.ts`):
 
 - `manifestTransforms` keeps an entry when it's outside `assets/` (`index.html`, `registerSW.js`, `sw-notifications.js`, icons, manifest) or in core (`offline.precached(url)`).
-- The Portfolio path (`/webos/portfolio/`, written by `vite-plugin-portfolio-path.ts` when the Portfolio app exists) is a copy of `index.html` left out of the precache (`globIgnores`) and of the navigation fallback (`navigateFallbackDenylist`), so it always comes from the network and boots the deployed build. Its one extra script defaults a bare visit to `#/solo/portfolio` and drops the query (the `portfolio` repo's redirect adds `?t=` to skip the HTTP cache, and carries the hash so a worker from before 3.70.1, which still answers the path with its cached shell, opens Portfolio rather than the desktop). Offline it doesn't load.
+- The Portfolio path (`/webos/portfolio/`, written by `tooling/vite-plugin-portfolio-path.ts` when the Portfolio app exists) is a copy of `index.html` left out of the precache (`globIgnores`) and of the navigation fallback (`navigateFallbackDenylist`), so it always comes from the network and boots the deployed build. Its one extra script defaults a bare visit to `#/solo/portfolio` and drops the query (the `portfolio` repo's redirect adds `?t=` to skip the HTTP cache, and carries the hash so a worker from before 3.70.1, which still answers the path with its cached shell, opens Portfolio rather than the desktop). Offline it doesn't load.
 - The last `runtimeCaching` rule is `CacheFirst` for `^[^?#]*/webos/assets/` into `webos-assets-{buildTimestamp}`, 200 responses only, no expiration (it could evict a picked app). Earlier rules keep the wasm, model, font, dictionary and mammoth files in their own caches.
 
 ## Sync
