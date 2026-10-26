@@ -27,6 +27,7 @@ export const REPO_URL = "https://github.com/lilBunnyRabbit/webos/blob/master/";
 
 export const ROADMAP_ID = "ROADMAP";
 export const ADR_INDEX_ID = "adrs/README";
+export const MAP_ID = "map";
 
 const FOLDER_ALIASES: Record<string, string> = {
   system: "system/README",
@@ -62,6 +63,7 @@ export function adr_number(id: string): number | null {
 
 export function fallback_title(id: string): string {
   if (id === ROADMAP_ID) return "Roadmap";
+  if (id === MAP_ID) return "Map";
   const segments = id.split("/");
   const last = segments.at(-1)!;
   if (last === "README") return id === ADR_INDEX_ID ? "ADR index" : `${GROUP_LABELS[group_of(id)]} overview`;
@@ -88,6 +90,7 @@ export function build_aliases(ids: readonly string[]): Map<string, string> {
     if (key && !aliases.has(key)) aliases.set(key, id);
   };
   const known = new Set(ids);
+  claim(MAP_ID, MAP_ID);
   for (const [alias, id] of Object.entries(FOLDER_ALIASES)) if (known.has(id)) claim(alias, id);
 
   const ordered = [...ids].sort((a, b) => ALIAS_ORDER.indexOf(group_of(a)) - ALIAS_ORDER.indexOf(group_of(b)));

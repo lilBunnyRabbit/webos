@@ -58,6 +58,8 @@ describe("resolve_page", () => {
     ["services/apps", "system/services/apps"],
     ["roadmap", "ROADMAP"],
     ["design/shell", "design/shell"],
+    ["map", "map"],
+    ["Map", "map"],
   ])("%s → %s", (topic, id) => {
     expect(resolve_page(IDS, ALIAS, topic)).toBe(id);
   });
@@ -104,6 +106,7 @@ describe("the bundled docs", () => {
     expect(find_page("windows")).toBe("system/services/windows");
     expect(find_page("persistence")).toBe("system/persistence");
     expect(find_page("adr 47")).toMatch(/^adrs\/047-/);
+    expect(locate("map")).toEqual({ id: "map", hash: "" });
     expect(locate("persistence#storage-map")).toEqual({ id: "system/persistence", hash: "storage-map" });
     expect(PAGE_IDS.some((id) => id.startsWith("brainstorm/"))).toBe(false);
     expect(ALIASES.size).toBeGreaterThan(PAGE_IDS.length);

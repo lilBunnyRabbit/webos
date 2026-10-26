@@ -8,7 +8,7 @@ export default {
   commands: [
     define_command({
       id: "docs",
-      description: "Open Docs, optionally at a page: docs windows, docs adr 47, docs persistence",
+      description: "Open Docs, optionally at a page: docs windows, docs adr 47, docs map",
       args: z.object({ topic: z.array(z.string()).default([]).describe("A page id or short name") }),
       positional: ["topic"],
       complete: (field, partial) => (field === "topic" ? logic().then((module) => module.complete_page(partial)) : undefined),

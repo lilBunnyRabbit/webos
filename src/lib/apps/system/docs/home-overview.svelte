@@ -5,6 +5,7 @@
     Cpu as CpuIcon,
     Cube as CubeIcon,
     Gavel as GavelIcon,
+    Graph as GraphIcon,
     MapTrifold as MapTrifoldIcon,
     Monitor as MonitorIcon,
     PaintBrush as PaintBrushIcon,
@@ -12,7 +13,7 @@
   } from "phosphor-svelte";
   import type { Component } from "svelte";
   import { AdrStatus, STATUS_TONES } from "./adr-index";
-  import { ADR_INDEX_ID, group_of, ROADMAP_ID, type DocGroup } from "./catalog";
+  import { ADR_INDEX_ID, group_of, MAP_ID, ROADMAP_ID, type DocGroup } from "./catalog";
   import type { Library } from "./library";
   import { live_services } from "./live";
   import { load_page, PAGE_IDS } from "./pages";
@@ -33,22 +34,24 @@
   const roadmap = load_page(ROADMAP_ID);
 
   interface Entry {
-    group: DocGroup;
     icon: Component;
     title: string;
     text: string;
     page: string;
+    count?: number;
   }
 
   const ENTRIES: Entry[] = [
-    { group: "system", icon: CpuIcon, title: "System", text: "How the OS fits together: the kernel, the app model, storage, theming.", page: "system/README" },
-    { group: "services", icon: CubeIcon, title: "Services", text: "The services the kernel starts, one page each, with the graph.", page: "system/kernel" },
-    { group: "shell", icon: MonitorIcon, title: "Shell", text: "Desktop, taskbar and windows, the phone shell and solo links.", page: "system/shell/desktop" },
-    { group: "adrs", icon: GavelIcon, title: "Decisions", text: "Every architecture decision: when, why, and what changed after.", page: ADR_INDEX_ID },
-    { group: "design", icon: PaintBrushIcon, title: "Design", text: "Tokens, the UI kit, app patterns and how the shell looks.", page: "design/README" },
-    { group: "apps", icon: SquaresFourIcon, title: "Apps", text: "Every app in this build, and how the tricky ones work inside.", page: "apps/README" },
-    { group: "roadmap", icon: MapTrifoldIcon, title: "Roadmap", text: "What's built and what's next.", page: ROADMAP_ID },
+    { icon: GraphIcon, title: "Map", text: "The whole system on one zoomable canvas: services, shell, apps, storage.", page: MAP_ID },
+    { icon: CpuIcon, title: "System", text: "How the OS fits together: the kernel, the app model, storage, theming.", page: "system/README", count: counts.system },
+    { icon: CubeIcon, title: "Services", text: "The services the kernel starts, one page each, with the graph.", page: "system/kernel", count: counts.services },
+    { icon: MonitorIcon, title: "Shell", text: "Desktop, taskbar and windows, the phone shell and solo links.", page: "system/shell/desktop", count: counts.shell },
+    { icon: GavelIcon, title: "Decisions", text: "Every architecture decision: when, why, and what changed after.", page: ADR_INDEX_ID, count: counts.adrs },
+    { icon: PaintBrushIcon, title: "Design", text: "Tokens, the UI kit, app patterns and how the shell looks.", page: "design/README", count: counts.design },
+    { icon: SquaresFourIcon, title: "Apps", text: "Every app in this build, and how the tricky ones work inside.", page: "apps/README", count: counts.apps },
+    { icon: MapTrifoldIcon, title: "Roadmap", text: "What's built and what's next.", page: ROADMAP_ID },
   ];
+
 </script>
 
 <div class="mx-auto flex w-full max-w-4xl flex-col gap-6 px-5 py-6 @lg:px-8">
@@ -70,13 +73,13 @@
   </div>
 
   <ul class="grid gap-2 @lg:grid-cols-2 @3xl:grid-cols-3">
-    {#each ENTRIES as entry (entry.group)}
+    {#each ENTRIES as entry (entry.page)}
       {@const Icon = entry.icon}
       <li>
         <button class="flex h-full w-full items-start gap-3 rounded-xl bg-background-light p-3.5 text-left ring-1 ring-foreground/8 transition-colors hover:bg-foreground/6" onclick={() => onopen(entry.page)}>
           <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/12 text-primary"><Icon class="size-5" weight="duotone" /></span>
           <span class="flex min-w-0 flex-col gap-0.5">
-            <span class="flex items-baseline gap-2 text-sm font-semibold">{entry.title}{#if entry.group !== "roadmap"}<span class="font-mono text-2xs font-normal text-foreground/65 tabular-nums">{counts[entry.group] ?? 0}</span>{/if}</span>
+            <span class="flex items-baseline gap-2 text-sm font-semibold">{entry.title}{#if entry.count !== undefined}<span class="font-mono text-2xs font-normal text-foreground/65 tabular-nums">{entry.count}</span>{/if}</span>
             <span class="text-ui text-foreground/80">{entry.text}</span>
           </span>
         </button>

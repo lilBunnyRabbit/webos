@@ -7,8 +7,10 @@
 > - **Where the visuals sit.** Each one tops the page it's drawn from: the service graph on `system/kernel`, a service's neighbourhood (needs, needed by, start position, swapped class) on its `system/services/{key}` page, the ADR timeline on `adrs/README`, the app atlas on `apps/README`, the persistence map on `system/persistence`, roadmap progress on `ROADMAP`. The platform and solo swaps show as live class names (`MobileWindowsService`), outlined in the graph.
 > - **Props.** `page` also takes an anchor, `persistence#storage-map`; so does `docs`.
 > - **Roadmap parser** moved to `$kit/utils/roadmap`: Settings and Docs both read it.
-> - **Window state.** The open page and the home variation are `storage.window` state, restored with the session like Settings' section; nothing else is stored.
+> - **Window state.** The open page is `storage.window` state, restored with the session like Settings' section; nothing else is stored.
 > - **Search** loads every page chunk once per window to read titles and headings.
+
+> **Revision 2026-10-26: home picked.** The owner picked the overview (A) as the home. The zoomable map (B) became its own page, id `map`: a Map entry under Home in the sidebar, a card on the home, `docs map` and `?page=map`. The temporary switch and its stored `home` window state are gone. `Kernel.dependencies(key)` is approved as built.
 
 ## Context
 The WebOS docs are markdown in `docs/` and read like walls of text. The owner wants a visual way to explore them inside WebOS while the markdown stays the single source of truth ([brainstorm](../brainstorm/2026-10-26_docs-app.md)).
@@ -24,7 +26,7 @@ A system app, `docs` ("Docs").
   - Persistence map: parsed from `docs/system/persistence.md`'s storage tables.
   - Roadmap progress, reusing Settings' `parse_roadmap`.
   Parsers are pure `.ts` with tests that pin the table and heading shapes they read.
-- **Layout:** sidebar (groups, title/heading search) + page + table of contents; mobile: drawer + contents sheet. Home: two variations built (overview cards, zoomable map), one kept after the owner picks.
+- **Layout:** sidebar (groups, title/heading search) + page + table of contents; mobile: drawer + contents sheet. Home: two variations built (overview cards, zoomable map), one kept after the owner picks (revision: the overview is the home, the map its own page).
 - **Props:** `page?: string`.
 - **Shell:** `docs [topic]` (manifest `shell`), completion over page ids and aliases.
 - **Kernel:** each service inspector links "Open docs" to `system/services/{key}`.

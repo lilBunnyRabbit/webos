@@ -7,6 +7,7 @@
     Cube as CubeIcon,
     Cpu as CpuIcon,
     Gavel as GavelIcon,
+    Graph as GraphIcon,
     House as HouseIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
     MapTrifold as MapTrifoldIcon,
@@ -16,12 +17,12 @@
     X as XIcon,
   } from "phosphor-svelte";
   import type { Component } from "svelte";
-  import { adr_number, GROUP_LABELS, GROUP_ORDER, ROADMAP_ID, type DocGroup } from "./catalog";
+  import { adr_number, GROUP_LABELS, GROUP_ORDER, MAP_ID, ROADMAP_ID, type DocGroup } from "./catalog";
   import { search_library, type PageInfo } from "./library";
 
   interface Props {
     pages: PageInfo[];
-    current: string | null;
+    current: string | null | undefined;
     onopen: (id: string | null, hash?: string) => void;
   }
 
@@ -119,6 +120,16 @@
         onclick={() => onopen(null)}
       >
         <HouseIcon class={cn("size-4", current === null && "text-primary")} weight={current === null ? "fill" : "regular"} /> Home
+      </button>
+      <button
+        aria-current={current === MAP_ID ? "page" : undefined}
+        class={cn(
+          "flex h-8 w-full items-center gap-2.5 rounded-lg px-2.5 text-ui font-medium transition-colors pointer-coarse:h-10",
+          current === MAP_ID ? "bg-foreground/10" : "text-foreground/80 hover:bg-foreground/6 hover:text-foreground"
+        )}
+        onclick={() => onopen(MAP_ID)}
+      >
+        <GraphIcon class={cn("size-4", current === MAP_ID && "text-primary")} weight={current === MAP_ID ? "fill" : "regular"} /> Map
       </button>
 
       {#each groups as { group, pages: items } (group)}

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
-  import { Badge, Button, EmptyState, Grabber, IconButton, Segmented, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, Grabber, IconButton, Toolbar } from "$lib/core/components/ui";
   import { button } from "$lib/core/components/ui/variants";
   import { cn } from "$lib/core/utils";
   import { swipe_dismiss } from "$lib/core/utils/swipe-dismiss";
@@ -15,7 +15,7 @@
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
   import { z } from "zod";
-  import { fallback_title, file_path, REPO_URL, short_name } from "./catalog";
+  import { fallback_title, file_path, MAP_ID, REPO_URL, short_name } from "./catalog";
   import DocsReader from "./docs-reader.svelte";
   import DocsSidebar from "./docs-sidebar.svelte";
   import DocsToc from "./docs-toc.svelte";
@@ -42,14 +42,10 @@
   const location = storage.window<Location>(
     "location",
     requested ?? { id: null, hash: "" },
-    z.object({ id: z.string().nullable(), hash: z.string() }).refine((value) => value.id === null || PAGE_IDS.includes(value.id))
+    z.object({ id: z.string().nullable(), hash: z.string() }).refine((value) => value.id === null || value.id === MAP_ID || PAGE_IDS.includes(value.id))
   );
   let history = $state<Location[]>([]);
   let nav = $state(0);
-
-  const HomeVariant = { OVERVIEW: "overview", MAP: "map" } as const;
-  type HomeVariant = (typeof HomeVariant)[keyof typeof HomeVariant];
-  const home_variant = storage.window<HomeVariant>("home", HomeVariant.OVERVIEW, z.enum(HomeVariant));
 
   let library = $state<Library | null>(null);
   let headings = $state<Heading[]>([]);
@@ -58,6 +54,7 @@
   let sheet = $state(false);
 
   const current = $derived(location.value.id);
+  const doc_id = $derived(current !== null && current !== MAP_ID ? current : null);
   const pages = $derived(library ? [...library.pages.values()] : PAGE_IDS.map(placeholder_info));
   const title = $derived(current ? (library?.pages.get(current)?.title ?? fallback_title(current)) : null);
 
@@ -120,29 +117,17 @@
     <p class="min-w-0 flex-1 truncate px-1 text-ui font-medium">
       {#if current}
         {title}
-        <span class="ml-1 hidden font-mono text-2xs font-normal text-foreground/65 @lg:inline">{short_name(current, ALIASES)}</span>
+        {#if doc_id}<span class="ml-1 hidden font-mono text-2xs font-normal text-foreground/65 @lg:inline">{short_name(doc_id, ALIASES)}</span>{/if}
       {:else}
         Docs
       {/if}
     </p>
-    {#if current === null && !missing}
-      <Badge tone="warning" class="hidden @md:inline-flex">Temporary</Badge>
-      <Segmented
-        bind:value={home_variant.value}
-        options={[
-          { value: HomeVariant.OVERVIEW, label: "A · Overview" },
-          { value: HomeVariant.MAP, label: "B · Map" },
-        ]}
-        label="Home variation (temporary, for comparing)"
-        size="sm"
-      />
-    {/if}
-    {#if current}
+    {#if doc_id}
       <IconButton label="On this page" size="sm" class={cn("@5xl:hidden", headings.length === 0 && "hidden")} onclick={() => (sheet = true)}>
         <ListBulletsIcon weight="bold" />
       </IconButton>
       <a
-        href={REPO_URL + file_path(current)}
+        href={REPO_URL + file_path(doc_id)}
         target="_blank"
         rel="noopener noreferrer"
         class={button({ variant: "quiet", size: "sm", icon: true })}
@@ -154,10 +139,10 @@
 
   <div class="flex min-h-0">
     <aside class="hidden w-64 shrink-0 border-r border-foreground/8 bg-background-light @3xl:block">
-      <DocsSidebar {pages} {current} onopen={open} />
+      <DocsSidebar {pages} current={missing ? undefined : current} onopen={open} />
     </aside>
 
-    <div data-docs-main class={cn("@container min-w-0 flex-1", current === null && !missing && home_variant.value === HomeVariant.MAP ? "overflow-hidden" : "overflow-y-auto")}>
+    <div data-docs-main class={cn("@container min-w-0 flex-1", current === MAP_ID && !missing ? "overflow-hidden" : "overflow-y-auto")}>
       {#if missing}
         {@const near = near_pages(missing)}
         <EmptyState icon={MagnifyingGlassIcon} title="No page called “{missing}”" description={near.length > 0 ? "Maybe one of these:" : "Search the sidebar, or start from the home page."}>
@@ -169,14 +154,12 @@
           {/snippet}
         </EmptyState>
       {:else if current === null}
-        {#if home_variant.value === HomeVariant.MAP}
-          <HomeMap {library} onopen={open} />
-        {:else}
-          <HomeOverview {library} onopen={open} />
-        {/if}
-      {:else}
+        <HomeOverview {library} onopen={open} />
+      {:else if current === MAP_ID}
+        <HomeMap {library} onopen={open} />
+      {:else if doc_id}
         <DocsReader
-          id={current}
+          id={doc_id}
           hash={location.value.hash}
           {nav}
           {library}
@@ -187,7 +170,7 @@
       {/if}
     </div>
 
-    {#if current && headings.length > 0}
+    {#if doc_id && headings.length > 0}
       <aside class="hidden w-56 shrink-0 overflow-y-auto py-6 pr-4 @5xl:block" aria-label="On this page">
         <p class="mb-2 pl-3 text-2xs font-medium tracking-wide text-foreground/65 uppercase">On this page</p>
         <DocsToc {headings} {active} onpick={(slug) => open(current, slug)} />
@@ -203,7 +186,7 @@
           <p class="flex-1 text-sm font-semibold">Pages</p>
           <IconButton label="Close" size="sm" onclick={() => (drawer = false)}><XIcon weight="bold" /></IconButton>
         </div>
-        <div class="min-h-0 flex-1"><DocsSidebar {pages} {current} onopen={open} /></div>
+        <div class="min-h-0 flex-1"><DocsSidebar {pages} current={missing ? undefined : current} onopen={open} /></div>
       </div>
     </div>
   {/if}
