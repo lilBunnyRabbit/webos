@@ -1,6 +1,5 @@
 import type { Sketch } from "./model";
-import type { Orbit } from "./projection";
-import { export_scene, export_solid, type Palette } from "./svg";
+import { export_scene, type Palette } from "./svg";
 
 const PNG_DENSITY = 2;
 
@@ -33,9 +32,8 @@ export function theme_palette(): Palette {
   };
 }
 
-/** The 2D sketch, or the 3D view at `orbit`. */
-export function sketch_svg(sketch: Sketch, orbit: Orbit | null = null): string | null {
-  const built = orbit ? export_solid(sketch, orbit) : export_scene(sketch);
+export function sketch_svg(sketch: Sketch): string | null {
+  const built = export_scene(sketch);
   return built ? built.svg(theme_palette()) : null;
 }
 

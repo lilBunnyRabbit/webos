@@ -13,18 +13,21 @@
   } from "phosphor-svelte";
   import type { Component } from "svelte";
   import type { Editor } from "./editor.svelte";
-  import { DIRECTIONS, type Direction } from "./geometry";
+  import { DIRECTIONS, nearest_direction, snap_directions, snap_preset, SnapPreset, type Direction } from "./geometry";
+  import { rotate } from "./rotation";
   import TapeSketchKeys from "./tape-sketch-keys.svelte";
+  import TapeSketchRing from "./tape-sketch-ring.svelte";
 
   interface Props {
     editor: Editor;
     can_close: boolean;
+    rotation: number;
     onstep: (direction: Direction) => void;
     onclose: () => void;
     ondone: () => void;
   }
 
-  let { editor, can_close, onstep, onclose, ondone }: Props = $props();
+  let { editor, can_close, rotation, onstep, onclose, ondone }: Props = $props();
 
   const ICONS: Record<string, Component<{ class?: string; weight?: "bold" }>> = {
     nw: ArrowUpLeftIcon,
@@ -39,6 +42,14 @@
 
   const ready = $derived(!!editor.walk_from);
   const has_length = $derived(Number(editor.input) > 0);
+  const directions = $derived(snap_directions(editor.sketch.snap));
+  const grid = $derived(snap_preset(editor.sketch.snap) === SnapPreset.DEG_45);
+
+  // The pad shows directions as they look on screen, so a turned sketch walks the way the arrow points.
+  function step_toward(screen: Direction) {
+    const direction = nearest_direction(directions, rotate(screen, -rotation));
+    if (direction) onstep(direction);
+  }
 
   function keep_focus(event: PointerEvent) {
     event.preventDefault();
@@ -68,6 +79,7 @@
 
   <div class="grid grid-cols-2 gap-3">
     <TapeSketchKeys class="grid-rows-[repeat(4,2.75rem)]" onpress={(key) => editor.press(key)} />
+    {#if grid}
     <div class="grid grid-cols-3 grid-rows-[repeat(3,1fr)] gap-1.5" role="group" aria-label="Directions">
       {#each DIRECTIONS as direction, i (direction.id)}
         {@const Icon = ICONS[direction.id]}
@@ -79,11 +91,14 @@
           aria-label="Walk {direction.label.toLowerCase()}"
           disabled={!ready}
           onpointerdown={keep_focus}
-          onclick={() => onstep(direction)}
+          onclick={() => step_toward(direction)}
         >
           <Icon class="size-6" weight="bold" />
         </button>
       {/each}
     </div>
+    {:else}
+      <TapeSketchRing {directions} {rotation} disabled={!ready} armed={has_length} onpick={onstep} />
+    {/if}
   </div>
 </section>

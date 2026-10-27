@@ -11,16 +11,13 @@ export interface SketchPoint extends Point {
   id: string;
 }
 
-/**
- * `lengths[i]` is the edge from `points[i]` to the next point, wrapping to the first on a closed path. In mm, as is
- * `height`: how far the path rises off the floor, a room's walls or a fence's boards.
- */
+/** `lengths[i]` (mm) is the edge from `points[i]` to the next, wrapping on a closed path. `check` off: not a flat shape. */
 export interface SketchPath {
   id: string;
   points: string[];
   closed: boolean;
   lengths: (number | null)[];
-  height: number | null;
+  check: boolean;
 }
 
 export interface Dim {
@@ -44,9 +41,11 @@ export interface TextNote {
   text: string;
 }
 
+/** `snap`: the magnet's angles in degrees, counter-clockwise from right; each also stands for its opposite (+180°). */
 export interface Sketch {
-  version: 2;
+  version: 3;
   unit: Unit;
+  snap: number[];
   points: SketchPoint[];
   paths: SketchPath[];
   dims: Dim[];
@@ -54,11 +53,12 @@ export interface Sketch {
   notes: TextNote[];
 }
 
-export type Target =
-  { kind: "edge"; path: string; index: number } | { kind: "dim"; id: string } | { kind: "height"; path: string };
+export type Target = { kind: "edge"; path: string; index: number } | { kind: "dim"; id: string };
 
-export function create_sketch(unit: Unit = Unit.CM): Sketch {
-  return { version: 2, unit, points: [], paths: [], dims: [], markers: [], notes: [] };
+export const SNAP_45 = [0, 45, 90, 135];
+
+export function create_sketch(unit: Unit = Unit.CM, snap: number[] = SNAP_45): Sketch {
+  return { version: 3, unit, snap, points: [], paths: [], dims: [], markers: [], notes: [] };
 }
 
 export function new_id(): string {
@@ -78,7 +78,6 @@ export function same_target(a: Target | null, b: Target | null): boolean {
   if (!a || !b || a.kind !== b.kind) return false;
   if (a.kind === "edge" && b.kind === "edge") return a.path === b.path && a.index === b.index;
   if (a.kind === "dim" && b.kind === "dim") return a.id === b.id;
-  if (a.kind === "height" && b.kind === "height") return a.path === b.path;
   return false;
 }
 

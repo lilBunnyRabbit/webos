@@ -6,7 +6,7 @@
   import type { Editor } from "./editor.svelte";
   import { closure } from "./geometry";
   import { point_map, type Target } from "./model";
-  import TapeSketchKeys from "./tape-sketch-keys.svelte";
+  import TapeSketchKeys, { buzz } from "./tape-sketch-keys.svelte";
   import { format_length, input_for } from "./units";
 
   interface Props {
@@ -25,9 +25,7 @@
       const index = sketch.paths.findIndex((path) => path.id === target.path);
       return `Shape ${index + 1} · edge ${target.index + 1}`;
     }
-    if (target.kind === "dim") return `Dimension ${sketch.dims.findIndex((dim) => dim.id === target.id) + 1}`;
-    const path = target.path;
-    return `Shape ${sketch.paths.findIndex((each) => each.id === path) + 1} · height`;
+    return `Dimension ${sketch.dims.findIndex((dim) => dim.id === target.id) + 1}`;
   });
 
   const implied = $derived.by(() => {
@@ -85,8 +83,8 @@
   <div class="grid grid-cols-[3fr_1fr] gap-1.5">
     <TapeSketchKeys class="grid-rows-[repeat(4,3rem)]" onpress={(key) => editor.press(key)} />
     <div class="grid grid-rows-[3rem_1fr] gap-1.5">
-      <Button variant="secondary" class="h-full rounded-lg pointer-coarse:h-full" tabindex={-1} onclick={() => editor.clear_input()}>Clear</Button>
-      <Button variant="primary" class="h-full rounded-lg text-sm pointer-coarse:h-full" tabindex={-1} aria-label="Done (Enter)" onclick={() => editor.close_numpad()}>
+      <Button variant="secondary" class="h-full rounded-lg pointer-coarse:h-full" tabindex={-1} onpointerdown={buzz} onclick={() => editor.clear_input()}>Clear</Button>
+      <Button variant="primary" class="h-full rounded-lg text-sm pointer-coarse:h-full" tabindex={-1} onpointerdown={buzz} aria-label="Done (Enter)" onclick={() => editor.close_numpad()}>
         <CheckIcon class="size-6" weight="bold" />
       </Button>
     </div>

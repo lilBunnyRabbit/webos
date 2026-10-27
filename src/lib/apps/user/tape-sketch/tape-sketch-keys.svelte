@@ -1,3 +1,10 @@
+<script lang="ts" module>
+  // A key under a thumb gives no click; a short buzz says it took. Touch only: a mouse or pen already feels its press.
+  export function buzz(event: PointerEvent): void {
+    if (event.pointerType === "touch") navigator.vibrate?.(8);
+  }
+</script>
+
 <script lang="ts">
   import { button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
@@ -16,6 +23,7 @@
   // The sketch keeps keyboard focus, so typing on a desktop keyboard keeps working after a click on the pad.
   function keep_focus(event: PointerEvent) {
     event.preventDefault();
+    buzz(event);
   }
 </script>
 

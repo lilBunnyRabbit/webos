@@ -11,7 +11,9 @@ import {
   length_of,
   measure_targets,
   redraw_to_scale,
+  set_check,
   set_length,
+  set_snap,
   start_path,
   step_target,
   unmeasured_count,
@@ -86,25 +88,11 @@ describe("paths", () => {
 });
 
 describe("targets", () => {
-  test("lists each path's edges then its height, then dimensions", () => {
+  test("lists each path's edges, then dimensions", () => {
     let { sketch, corners } = square();
     sketch = add_dim(sketch, corners[0], corners[2], 10).sketch;
-    expect(measure_targets(sketch).map((target) => target.kind)).toEqual([
-      "edge",
-      "edge",
-      "edge",
-      "edge",
-      "height",
-      "dim",
-    ]);
-    expect(unmeasured_count(sketch)).toBe(6);
-  });
-
-  test("the height comes after the path's last edge when stepping", () => {
-    const { sketch, path } = square([1000, 2000, 1000, null]);
-    const last = step_target(sketch, null, 1)!;
-    expect(last).toEqual({ kind: "edge", path, index: 3 });
-    expect(step_target(sketch, last, 1)).toEqual({ kind: "height", path });
+    expect(measure_targets(sketch).map((target) => target.kind)).toEqual(["edge", "edge", "edge", "edge", "dim"]);
+    expect(unmeasured_count(sketch)).toBe(5);
   });
 
   test("← and → step through what's still unmeasured", () => {
@@ -112,23 +100,39 @@ describe("targets", () => {
     const first = step_target(sketch, null, 1)!;
     expect(first).toEqual({ kind: "edge", path, index: 1 });
     expect(step_target(sketch, first, 1)).toEqual({ kind: "edge", path, index: 3 });
-    expect(step_target(sketch, first, -1)).toEqual({ kind: "height", path });
+    expect(step_target(sketch, first, -1)).toEqual({ kind: "edge", path, index: 3 });
   });
 
   test("with everything measured they step through all of it", () => {
-    const { sketch: base, path } = square([1, 2, 3, 4]);
-    const sketch = set_length(base, { kind: "height", path }, 2500);
-    expect(step_target(sketch, { kind: "edge", path, index: 3 }, 1)).toEqual({ kind: "height", path });
-    expect(step_target(sketch, { kind: "height", path }, 1)).toEqual({ kind: "edge", path, index: 0 });
+    const { sketch, path } = square([1, 2, 3, 4]);
+    expect(step_target(sketch, { kind: "edge", path, index: 3 }, 1)).toEqual({ kind: "edge", path, index: 0 });
+    expect(step_target(sketch, { kind: "edge", path, index: 0 }, -1)).toEqual({ kind: "edge", path, index: 3 });
   });
 
   test("set_length writes the right slot", () => {
     let { sketch, path } = square();
     sketch = set_length(sketch, { kind: "edge", path, index: 2 }, 2450);
-    sketch = set_length(sketch, { kind: "height", path }, 900);
     expect(length_of(sketch, { kind: "edge", path, index: 2 })).toBe(2450);
-    expect(length_of(sketch, { kind: "height", path })).toBe(900);
     expect(sketch.paths[0].lengths[3]).toBeNull();
+  });
+});
+
+describe("settings on the sketch", () => {
+  test("a new path checks its lengths; turning it off is one edit, and a no-op isn't", () => {
+    const { sketch, path } = square();
+    expect(sketch.paths[0].check).toBe(true);
+    const off = set_check(sketch, path, false);
+    expect(off.paths[0].check).toBe(false);
+    expect(set_check(off, path, false)).toBe(off);
+  });
+
+  test("the magnet set is stored normalised, and the same set isn't a change", () => {
+    const sketch = create_sketch();
+    expect(sketch.snap).toEqual([0, 45, 90, 135]);
+    const iso = set_snap(sketch, [150, 30, 270, 0]);
+    expect(iso.snap).toEqual([0, 30, 90, 150]);
+    expect(set_snap(iso, [0, 30, 90, 150])).toBe(iso);
+    expect(set_snap(iso, [])).toBe(iso);
   });
 });
 

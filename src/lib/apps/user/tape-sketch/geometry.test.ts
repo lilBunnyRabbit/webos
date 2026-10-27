@@ -1,6 +1,20 @@
 import { describe, expect, test } from "vitest";
-import { align, closure, DIRECTIONS, measures, rebuild, sketch_scale, snap_45 } from "./geometry";
-import { create_sketch, point_map, type Sketch, type SketchPath } from "./model";
+import {
+  align,
+  closure,
+  DIRECTIONS,
+  measures,
+  nearest_direction,
+  normalize_snap,
+  parse_angles,
+  rebuild,
+  sketch_scale,
+  snap_dir,
+  snap_directions,
+  snap_preset,
+  SnapPreset,
+} from "./geometry";
+import { create_sketch, point_map, SNAP_45, type Sketch, type SketchPath } from "./model";
 
 function room(
   corners: [number, number][],
@@ -8,7 +22,7 @@ function room(
   closed = true
 ): { sketch: Sketch; path: SketchPath } {
   const points = corners.map(([x, y], i) => ({ id: `p${i}`, x, y }));
-  const path: SketchPath = { id: "room", points: points.map((point) => point.id), closed, lengths, height: null };
+  const path: SketchPath = { id: "room", points: points.map((point) => point.id), closed, lengths, check: true };
   return { sketch: { ...create_sketch(), points, paths: [path] }, path };
 }
 
@@ -19,16 +33,51 @@ const SQUARE: [number, number][] = [
   [0, 80],
 ];
 
-describe("snap_45", () => {
-  test("snaps to the nearest of 8 directions and keeps the reach along it", () => {
-    expect(snap_45({ x: 0, y: 0 }, { x: 100, y: 7 })).toEqual({ x: 100, y: 0 });
-    expect(snap_45({ x: 10, y: 10 }, { x: 10, y: -50 })).toEqual({ x: 10, y: -50 });
-    const diagonal = snap_45({ x: 0, y: 0 }, { x: 50, y: 46 });
+describe("snap_dir", () => {
+  const eight = snap_directions(SNAP_45);
+
+  test("snaps to the nearest of the set's directions and keeps the reach along it", () => {
+    expect(snap_dir({ x: 0, y: 0 }, { x: 100, y: 7 }, eight)).toEqual({ x: 100, y: 0 });
+    expect(snap_dir({ x: 10, y: 10 }, { x: 10, y: -50 }, eight)).toEqual({ x: 10, y: -50 });
+    const diagonal = snap_dir({ x: 0, y: 0 }, { x: 50, y: 46 }, eight);
     expect(diagonal.x).toBeCloseTo(diagonal.y);
   });
 
-  test("the pad's directions are unit vectors", () => {
-    for (const direction of DIRECTIONS) expect(Math.hypot(direction.x, direction.y)).toBeCloseTo(1);
+  test("the 45° set is the pad's 8 directions", () => {
+    expect(eight).toHaveLength(8);
+    for (const direction of DIRECTIONS)
+      expect(eight.some((each) => Math.hypot(each.x - direction.x, each.y - direction.y) < 1e-9)).toBe(true);
+  });
+
+  test("iso snaps to 30° up the page, its mirror, and the verticals", () => {
+    const iso = snap_directions([0, 30, 90, 150]);
+    expect(iso.map((each) => each.id)).toEqual(["0", "30", "90", "150", "180", "210", "270", "330"]);
+    const up_right = snap_dir({ x: 0, y: 0 }, { x: 100, y: -50 }, iso);
+    expect(Math.atan2(-up_right.y, up_right.x) * (180 / Math.PI)).toBeCloseTo(30);
+    const down_right = snap_dir({ x: 0, y: 0 }, { x: 100, y: 55 }, iso);
+    expect(Math.atan2(-down_right.y, down_right.x) * (180 / Math.PI)).toBeCloseTo(-30);
+  });
+
+  test("angles are folded into one half turn, rounded and deduplicated", () => {
+    expect(normalize_snap([180, 45, 225, -30, 22.5004, 360])).toEqual([0, 22.5, 45, 150]);
+  });
+
+  test("presets are recognised, anything else is custom", () => {
+    expect(snap_preset([135, 90, 45, 0])).toBe(SnapPreset.DEG_45);
+    expect(snap_preset([0, 30, 90, 150])).toBe(SnapPreset.ISO);
+    expect(snap_preset(Array.from({ length: 24 }, (_, i) => i * 15))).toBe(SnapPreset.DEG_15);
+    expect(snap_preset([0, 90, 22.5])).toBe(SnapPreset.CUSTOM);
+  });
+
+  test("typed angles parse with commas, spaces and degree signs", () => {
+    expect(parse_angles("0, 22.5 63°; 90")).toEqual([0, 22.5, 63, 90]);
+    expect(parse_angles("")).toBeNull();
+    expect(parse_angles("0, ten")).toBeNull();
+  });
+
+  test("the nearest direction to a pull", () => {
+    const iso = snap_directions([0, 30, 90, 150]);
+    expect(nearest_direction(iso, { x: 1, y: -0.4 })?.id).toBe("30");
   });
 });
 
@@ -139,6 +188,18 @@ describe("rebuild", () => {
   test("nothing to rebuild without a measured edge", () => {
     const { sketch, path } = room(SQUARE, [null, null, null, null]);
     expect(rebuild(path, point_map(sketch))).toBeNull();
+  });
+});
+
+describe("check lengths off", () => {
+  test("no closure, no implied length, no rebuild; perimeter but no area", () => {
+    const { sketch, path } = room(SQUARE, [4000, 3000, 3900, 3000]);
+    const off = { ...path, check: false };
+    const points = point_map(sketch);
+    expect(closure(off, points)).toBeNull();
+    expect(closure({ ...off, lengths: [4000, 3000, null, 3000] }, points)).toBeNull();
+    expect(rebuild(off, points)).toBeNull();
+    expect(measures(off, points)).toEqual({ perimeter: 13900, area: null, approximate: false });
   });
 });
 

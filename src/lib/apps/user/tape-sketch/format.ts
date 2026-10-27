@@ -1,7 +1,9 @@
 import { z } from "zod";
-import { edge_count, UNITS, type Sketch } from "./model";
+import { normalize_snap } from "./geometry";
+import { edge_count, new_id, SNAP_45, UNITS, type Marker, type Sketch, type Unit } from "./model";
+import { format_length } from "./units";
 
-export const VERSION = 2;
+export const VERSION = 3;
 export const EXTENSION = ".tapesketch";
 
 const Id = z.string().min(1).max(64);
@@ -22,10 +24,18 @@ const Common = {
 const SketchSchema = z.object({
   version: z.literal(VERSION),
   ...Common,
+  snap: z.array(z.number().finite()).min(1).max(180),
+  paths: z.array(PathV1.extend({ check: z.boolean() })),
+});
+
+// Version 2 had a height per path and a 3D view; each height becomes a note on the path's first corner.
+const SketchV2Schema = z.object({
+  version: z.literal(2),
+  ...Common,
   paths: z.array(PathV1.extend({ height: Length })),
 });
 
-// Version 1 had boxes, a W × D × H symbol; the 3D view replaced them and they aren't carried over.
+// Version 1 had boxes, a W × D × H symbol; they aren't carried over.
 const SketchV1Schema = z.object({
   version: z.literal(1),
   ...Common,
@@ -36,6 +46,7 @@ const SketchV1Schema = z.object({
 export interface Parsed {
   sketch: Sketch;
   dropped_boxes: number;
+  moved_heights: number;
 }
 
 function check_references(sketch: Sketch): void {
@@ -65,19 +76,54 @@ function invalid(error: z.ZodError): Error {
   return new Error(`This isn't a valid Tape Sketch file: ${issue.path.join(".") || "root"} ${issue.message}`);
 }
 
+/** A marker on the corner already gets the height appended to its note, so one point never carries two notes. */
+function heights_to_markers(
+  markers: readonly Marker[],
+  heights: readonly { point: string | undefined; height: number | null }[],
+  unit: Unit
+): Marker[] {
+  const out = [...markers];
+  for (const { point, height } of heights) {
+    if (height === null || !point) continue;
+    const note = `↑ ${format_length(height, unit)}`;
+    const at = out.findIndex((marker) => marker.point === point);
+    if (at < 0) out.push({ id: new_id(), point, note });
+    else out[at] = { ...out[at], note: out[at].note ? `${out[at].note} · ${note}` : note };
+  }
+  return out;
+}
+
+function from_v2(data: z.infer<typeof SketchV2Schema>): { sketch: Sketch; moved_heights: number } {
+  const { paths, markers, version: _, ...rest } = data;
+  const heights = paths.map((path) => ({ point: path.points[0], height: path.height }));
+  return {
+    sketch: {
+      ...rest,
+      version: VERSION,
+      snap: SNAP_45,
+      paths: paths.map(({ height: _, ...path }) => ({ ...path, check: true })),
+      markers: heights_to_markers(markers, heights, data.unit),
+    },
+    moved_heights: heights.filter((each) => each.height !== null).length,
+  };
+}
+
 function read(json: unknown, version: unknown): Parsed {
   if (version === 1) {
     const result = SketchV1Schema.safeParse(json);
     if (!result.success) throw invalid(result.error);
     const { boxes, paths, ...rest } = result.data;
-    return {
-      sketch: { ...rest, version: VERSION, paths: paths.map((path) => ({ ...path, height: null })) },
-      dropped_boxes: boxes.length,
-    };
+    const { sketch } = from_v2({ ...rest, version: 2, paths: paths.map((path) => ({ ...path, height: null })) });
+    return { sketch, dropped_boxes: boxes.length, moved_heights: 0 };
+  }
+  if (version === 2) {
+    const result = SketchV2Schema.safeParse(json);
+    if (!result.success) throw invalid(result.error);
+    return { ...from_v2(result.data), dropped_boxes: 0 };
   }
   const result = SketchSchema.safeParse(json);
   if (!result.success) throw invalid(result.error);
-  return { sketch: result.data, dropped_boxes: 0 };
+  return { sketch: { ...result.data, snap: normalize_snap(result.data.snap) }, dropped_boxes: 0, moved_heights: 0 };
 }
 
 export function parse_sketch(text: string): Parsed {
@@ -101,8 +147,9 @@ export function serialize_sketch(sketch: Sketch): string {
   const clean: Sketch = {
     version: VERSION,
     unit: sketch.unit,
+    snap: sketch.snap,
     points: sketch.points.map(({ id, x, y }) => ({ id, x: round(x, 1), y: round(y, 1) })),
-    paths: sketch.paths.map(({ id, points, closed, lengths, height }) => ({ id, points, closed, lengths, height })),
+    paths: sketch.paths.map(({ id, points, closed, lengths, check }) => ({ id, points, closed, lengths, check })),
     dims: sketch.dims.map(({ id, a, b, length, offset }) => ({ id, a, b, length, offset: round(offset, 1) })),
     markers: sketch.markers.map(({ id, point, note }) => ({ id, point, note })),
     notes: sketch.notes.map(({ id, x, y, text }) => ({ id, x: round(x, 1), y: round(y, 1), text })),

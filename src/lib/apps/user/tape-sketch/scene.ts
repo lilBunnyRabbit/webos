@@ -1,7 +1,8 @@
-import { to_screen, type View } from "$kit/utils/view";
+import type { View } from "$kit/utils/view";
 import { add, distance, inside_polygon, midpoint, scale, segments, sub, unit } from "./geometry";
 import { place_labels, text_width, type LabelRequest, type Line, type Rect } from "./labels";
 import { point_map, same_target, type Point, type Sketch, type Target } from "./model";
+import { rotate, to_screen } from "./rotation";
 import { format_length } from "./units";
 
 export const LABEL_FONT = 13;
@@ -68,16 +69,12 @@ export interface Scene {
   bounds: Rect | null;
 }
 
-export function height_text(height: number | null, unit: Sketch["unit"]): string {
-  return `↑ ${format_length(height, unit)}`;
-}
-
 function left_normal(a: Point, b: Point): Point {
   const d = unit(sub(b, a));
   return { x: d.y, y: -d.x };
 }
 
-export function outward_normal(a: Point, b: Point, corners: readonly Point[], closed: boolean): Point {
+function outward_normal(a: Point, b: Point, corners: readonly Point[], closed: boolean): Point {
   const mid = midpoint(a, b);
   const normal = left_normal(a, b);
   const center = corners.reduce((sum, p) => add(sum, scale(p, 1 / corners.length)), { x: 0, y: 0 });
@@ -99,33 +96,24 @@ export const AROUND: Point[] = [
   { x: -R, y: -R },
 ];
 
-export function around_from(prefer: Point): Point[] {
-  const start = AROUND.reduce(
-    (best, side, i) =>
-      side.x * prefer.x + side.y * prefer.y > AROUND[best].x * prefer.x + AROUND[best].y * prefer.y ? i : best,
-    0
-  );
-  return [...AROUND.slice(start), ...AROUND.slice(0, start)];
-}
-
-export function note_rect(at: Point, text: string): Rect {
+function note_rect(at: Point, text: string): Rect {
   const lines = text.split("\n");
   const width = Math.max(...lines.map((line) => text_width(line, NOTE_FONT))) + 12;
   return { x: at.x, y: at.y, w: width, h: lines.length * NOTE_FONT * 1.35 + 10 };
 }
 
-export function union(a: Rect | null, b: Rect): Rect {
+function union(a: Rect | null, b: Rect): Rect {
   if (!a) return b;
   const x = Math.min(a.x, b.x);
   const y = Math.min(a.y, b.y);
   return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
 }
 
-export function point_rect(p: Point, by = 6): Rect {
+function point_rect(p: Point, by = 6): Rect {
   return { x: p.x - by, y: p.y - by, w: by * 2, h: by * 2 };
 }
 
-export function dim_shape(id: string, sa: Point, sb: Point, normal: Point, shift: number): SceneDim {
+function dim_shape(id: string, sa: Point, sb: Point, normal: Point, shift: number): SceneDim {
   const a = add(sa, scale(normal, shift));
   const b = add(sb, scale(normal, shift));
   const side = shift < 0 ? -1 : 1;
@@ -146,7 +134,7 @@ export function dim_shape(id: string, sa: Point, sb: Point, normal: Point, shift
   return { id, a, b, extensions, arrows, normal: scale(normal, side) };
 }
 
-export class Labeller {
+class Labeller {
   readonly lines: Line[] = [];
   private readonly requests: LabelRequest[] = [];
   private readonly meta = new Map<string, Omit<SceneLabel, "rect">>();
@@ -194,18 +182,7 @@ export function edge_label(
   };
 }
 
-export function height_label(path: string, height: number | null, unit: Sketch["unit"]): Omit<SceneLabel, "rect"> {
-  return {
-    id: `height:${path}`,
-    kind: LabelKind.LENGTH,
-    text: height_text(height, unit),
-    target: { kind: "height", path },
-    owner: null,
-    measured: height !== null,
-  };
-}
-
-export function bounds_of(lines: readonly Line[], rects: readonly Rect[]): Rect | null {
+function bounds_of(lines: readonly Line[], rects: readonly Rect[]): Rect | null {
   let bounds: Rect | null = null;
   for (const line of lines) bounds = union(union(bounds, point_rect(line.a, 0)), point_rect(line.b, 0));
   for (const rect of rects) bounds = union(bounds, rect);
@@ -213,9 +190,9 @@ export function bounds_of(lines: readonly Line[], rects: readonly Rect[]): Rect 
 }
 
 /** Everything the sketch draws, in screen pixels for `view`: lines keep their weight and labels their size at any zoom. */
-export function build_scene(sketch: Sketch, view: View): Scene {
+export function build_scene(sketch: Sketch, view: View, rotation = 0): Scene {
   const points = point_map(sketch);
-  const screen = (p: Point) => to_screen(view, p.x, p.y);
+  const screen = (p: Point) => to_screen({ view, rotation }, p);
   const labeller = new Labeller();
   const lines = labeller.lines;
 
@@ -232,11 +209,6 @@ export function build_scene(sketch: Sketch, view: View): Scene {
         normal,
         scale(normal, -1),
       ]);
-    }
-    if (parts.length) {
-      const center = corners.reduce((sum, p) => add(sum, scale(p, 1 / corners.length)), { x: 0, y: 0 });
-      const away = distance(corners[0], center) > 1e-6 ? unit(sub(corners[0], center)) : { x: 0, y: -1 };
-      labeller.request(height_label(path.id, path.height, sketch.unit), corners[0], around_from(away));
     }
   }
 
@@ -284,10 +256,10 @@ export function build_scene(sketch: Sketch, view: View): Scene {
   return { edges, dims, points: scene_points, markers, notes, labels, bounds };
 }
 
-export function sketch_bounds(sketch: Sketch): Rect | null {
+export function sketch_bounds(sketch: Sketch, rotation = 0): Rect | null {
   let bounds: Rect | null = null;
-  for (const point of sketch.points) bounds = union(bounds, point_rect(point, 0));
-  for (const note of sketch.notes) bounds = union(bounds, point_rect(note, 0));
+  for (const point of sketch.points) bounds = union(bounds, point_rect(rotate(point, rotation), 0));
+  for (const note of sketch.notes) bounds = union(bounds, point_rect(rotate(note, rotation), 0));
   return bounds;
 }
 

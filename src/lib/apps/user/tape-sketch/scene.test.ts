@@ -55,12 +55,14 @@ describe("build_scene", () => {
     expect(scene.labels.filter((label) => !label.measured && label.target?.kind === "edge")).toHaveLength(5);
   });
 
-  test("the height reads as a question by the first corner until measured", () => {
-    const height = scene.labels.find((label) => label.target?.kind === "height")!;
-    expect(height.text).toBe("↑ ?");
-    expect(height.measured).toBe(false);
-    expect(Math.hypot(height.rect.x + height.rect.w / 2 - 100, height.rect.y + height.rect.h / 2 - 100)).toBeLessThan(
-      60
-    );
+  test("turned, the lines turn and the labels are placed upright off them", () => {
+    const turned = build_scene(room(), VIEW, Math.PI / 6);
+    const edge = turned.edges[0];
+    expect(Math.atan2(edge.b.y - edge.a.y, edge.b.x - edge.a.x)).toBeCloseTo(Math.PI / 6);
+    const turned_lines = [...turned.edges, ...turned.dims.flatMap((dim) => [{ a: dim.a, b: dim.b }, ...dim.extensions])];
+    for (const label of turned.labels) {
+      expect(label.rect.h).toBe(20);
+      for (const line of turned_lines) expect(line_hits_rect(line, label.rect)).toBe(false);
+    }
   });
 });

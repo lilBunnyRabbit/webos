@@ -5,6 +5,34 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.75.0",
+    date: "2026-10-27",
+    title: "Tape Sketch, flat and turnable",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["tape-sketch"],
+        text: "Turn a Tape Sketch with two fingers while you zoom; it settles square near each quarter turn, the numbers stay upright, and the compass button turns it back.",
+      },
+      {
+        kind: NEW,
+        apps: ["tape-sketch"],
+        text: "Tape Sketch's magnet can snap to 45°, isometric 30° lines, every 15° or angles you type, and Walk gets a direction ring to match.",
+      },
+      {
+        kind: NEW,
+        apps: ["tape-sketch"],
+        text: "Turn off Check lengths on a shape you drew in 3D by hand, so Tape Sketch stops asking you to fix lengths that were never meant to close flat.",
+      },
+      { kind: IMPROVED, apps: ["tape-sketch"], text: "Tape Sketch's number keys give a short buzz under your thumb on phones that support it." },
+      {
+        kind: IMPROVED,
+        apps: ["tape-sketch"],
+        text: "Tape Sketch drops its 3D view and shape heights to stay simple; a height in an older sketch becomes a note on the shape's first corner.",
+      },
+    ],
+  },
+  {
     version: "3.74.3",
     date: "2026-10-27",
     title: "Paste, paste",

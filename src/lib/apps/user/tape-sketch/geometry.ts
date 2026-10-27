@@ -61,14 +61,72 @@ export function distance_to_segment(p: Point, a: Point, b: Point): number {
   return distance(p, add(a, scale(ab, t)));
 }
 
-/** The nearest of the 8 directions; the point lands at the foot of `to` on that ray, so a sloppy tap keeps its reach. */
-export function snap_45(from: Point, to: Point): Point {
+/** The nearest of `directions`; the point lands at the foot of `to` on that ray, so a sloppy tap keeps its reach. */
+export function snap_dir(from: Point, to: Point, directions: readonly Point[]): Point {
   const delta = sub(to, from);
-  if (length(delta) < 1e-9) return { ...to };
-  let best = DIRECTIONS[0];
-  for (const direction of DIRECTIONS) if (dot(delta, direction) > dot(delta, best)) best = direction;
+  if (length(delta) < 1e-9 || !directions.length) return { ...to };
+  let best = directions[0];
+  for (const direction of directions) if (dot(delta, direction) > dot(delta, best)) best = direction;
   const reach = Math.max(0, dot(delta, best));
   return add(from, scale(best, reach));
+}
+
+const clean = (value: number) => Math.round(value * 1e12) / 1e12 + 0;
+
+/** Degrees into [0, 180), deduplicated and sorted: an angle and its opposite are one line. */
+export function normalize_snap(angles: readonly number[]): number[] {
+  const out = new Set<number>();
+  for (const angle of angles) {
+    if (!Number.isFinite(angle)) continue;
+    out.add(clean(Math.round((((angle % 180) + 180) % 180) * 100) / 100) % 180);
+  }
+  return [...out].sort((a, b) => a - b);
+}
+
+/** Every angle both ways, counter-clockwise from right; sketch y grows downwards, so up is −y. */
+export function snap_directions(snap: readonly number[]): Direction[] {
+  const out: Direction[] = [];
+  for (const base of normalize_snap(snap)) {
+    for (const degrees of [base, base + 180]) {
+      const radians = (degrees * Math.PI) / 180;
+      out.push({ id: `${degrees}`, label: `${degrees}°`, x: clean(Math.cos(radians)), y: clean(-Math.sin(radians)) });
+    }
+  }
+  return out.sort((a, b) => Number(a.id) - Number(b.id));
+}
+
+export const SnapPreset = { DEG_45: "45", ISO: "iso", DEG_15: "15", CUSTOM: "custom" } as const;
+export type SnapPreset = (typeof SnapPreset)[keyof typeof SnapPreset];
+
+export interface SnapOption {
+  id: SnapPreset;
+  label: string;
+  angles: number[];
+}
+
+export const SNAP_PRESETS: SnapOption[] = [
+  { id: SnapPreset.DEG_45, label: "45°", angles: [0, 45, 90, 135] },
+  { id: SnapPreset.ISO, label: "Iso", angles: [0, 30, 90, 150] },
+  { id: SnapPreset.DEG_15, label: "15°", angles: Array.from({ length: 12 }, (_, i) => i * 15) },
+];
+
+export function snap_preset(snap: readonly number[]): SnapPreset {
+  const key = normalize_snap(snap).join(",");
+  return SNAP_PRESETS.find((preset) => preset.angles.join(",") === key)?.id ?? SnapPreset.CUSTOM;
+}
+
+export function parse_angles(text: string): number[] | null {
+  const parts = text.split(/[\s,;]+/).map((part) => part.replace(/°$/, "")).filter(Boolean);
+  if (!parts.length) return null;
+  const values = parts.map(Number);
+  if (values.some((value) => !Number.isFinite(value))) return null;
+  return normalize_snap(values);
+}
+
+export function nearest_direction(directions: readonly Direction[], toward: Point): Direction | null {
+  let best: Direction | null = null;
+  for (const direction of directions) if (!best || dot(toward, direction) > dot(toward, best)) best = direction;
+  return best;
 }
 
 export function align(p: Point, neighbours: readonly Point[], threshold: number): Point {
@@ -151,7 +209,7 @@ export interface Closure {
 }
 
 export function closure(path: SketchPath, points: ReadonlyMap<string, SketchPoint>): Closure | null {
-  if (!path.closed || path.points.length < 3) return null;
+  if (!path.closed || !path.check || path.points.length < 3) return null;
   const directions = segments(path, points).map((segment) => unit(sub(segment.b, segment.a)));
   const measured_total = path.lengths.reduce<number>((sum, value) => sum + (value ?? 0), 0);
   const tolerance = closure_tolerance(measured_total);
@@ -258,7 +316,7 @@ export function sketch_scale(sketch: Sketch): number | null {
 }
 
 export function rebuild(path: SketchPath, points: ReadonlyMap<string, SketchPoint>): Map<string, Point> | null {
-  if (edge_count(path) === 0) return null;
+  if (edge_count(path) === 0 || !path.check) return null;
   const k = path_scale(path, points);
   if (k === null) return null;
   const vectors = edge_vectors(path, points, k);
@@ -275,7 +333,7 @@ export function rebuild(path: SketchPath, points: ReadonlyMap<string, SketchPoin
 
 export interface Measures {
   perimeter: number;
-  area: number;
+  area: number | null;
   approximate: boolean;
 }
 
@@ -286,5 +344,5 @@ export function measures(path: SketchPath, points: ReadonlyMap<string, SketchPoi
   const corners: Point[] = [{ x: 0, y: 0 }];
   for (let i = 0; i < vectors.length - 1; i++) corners.push(add(corners[i], vectors[i]));
   const check = closure(path, points);
-  return { perimeter, area: Math.abs(signed_area(corners)), approximate: !!check && !check.closes };
+  return { perimeter, area: path.check ? Math.abs(signed_area(corners)) : null, approximate: !!check && !check.closes };
 }

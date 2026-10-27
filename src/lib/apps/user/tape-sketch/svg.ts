@@ -1,7 +1,6 @@
 import { fit_view, type View } from "$kit/utils/view";
 import type { Rect } from "./labels";
 import type { Point, Sketch } from "./model";
-import type { Orbit } from "./projection";
 import {
   build_scene,
   LABEL_FONT,
@@ -11,7 +10,6 @@ import {
   type SceneLabel,
   type SceneMarker,
 } from "./scene";
-import { build_solid_scene, EdgeKind, solid_bounds, type SolidScene } from "./solid";
 
 export interface Palette {
   paper: string;
@@ -107,25 +105,3 @@ export function export_scene(sketch: Sketch): { svg: (palette: Palette) => strin
   };
 }
 
-export function solid_svg(scene: SolidScene, box: Rect, palette: Palette): string {
-  const out = open_svg(box, palette);
-  for (const face of scene.faces)
-    out.push(`<polygon points="${points(face.points)}" fill="${palette.ink}" fill-opacity="0.06"/>`);
-  out.push(...dims_svg(scene.dims, palette));
-  for (const edge of scene.edges) {
-    const width = edge.kind === EdgeKind.RISE ? 1.5 : 2.5;
-    out.push(line(edge.a, edge.b, `stroke="${palette.ink}" stroke-width="${width}" stroke-linecap="round"`));
-  }
-  for (const handle of scene.handles)
-    out.push(line(handle.foot, handle.tip, `stroke="${palette.accent}" stroke-width="1.5" stroke-dasharray="3 3"`));
-  out.push(...markers_svg(scene.markers, palette), ...labels_svg(scene.labels, palette), "</svg>");
-  return `${out.join("\n")}\n`;
-}
-
-export function export_solid(sketch: Sketch, orbit: Orbit): { svg: (palette: Palette) => string } | null {
-  const bounds = solid_bounds(sketch, orbit);
-  if (!bounds) return null;
-  const scene = build_solid_scene(sketch, orbit, fitted(bounds));
-  const box = framed(scene.bounds!);
-  return { svg: (palette) => solid_svg(scene, box, palette) };
-}

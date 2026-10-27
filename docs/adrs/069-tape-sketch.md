@@ -71,3 +71,21 @@ Built the same day ([internals](../apps/tape-sketch.md#the-3d-view)). Details th
 - **Refit:** entering 3D, picking a chip and a double tap fit the model; so does closing the numpad when a new height has grown it past the view.
 - **Also in 3D:** dimensions are tappable like edges; Delete and the tool keys do nothing; the system Back leaves 3D after closing the numpad.
 - **Version 1 boxes:** left out with a notification, not the app's own transient notice, since it has to outlast the open.
+
+## Revision 2026-10-27: back to 2D, check toggle, magnet sets, rotation
+The owner, after using the 3D view: "i would drop 3d in the way it is now its too complex. i would rather have better support to draw the 3d axis shapes without the tool prompting me to adjust it - the adjusting prompt is good but i want to opt out as well since that would break my manual 3d of it." Also: "vibrate api on the keyboard, option to rotate canvas (with fingers i can only zoom now)" and "optional angle defs would be nice" ([brainstorm](../brainstorm/2026-10-27_tape-sketch-2d.md)).
+- **3D view and heights removed.** No 2D / 3D toggle, no `paths[].height`, no height targets. A 3D box is drawn by hand as a flat outline.
+- **Format `version: 3`:** `paths[].check: boolean` and `snap: number[]`, no `height`. A version 2 file opens: `check: true`, the 45° set, and each non-null height becomes a marker note `↑ {height}` on its path's first corner, appended to a marker already there. Version 1 still opens through the same path.
+- **Check lengths, per shape, default on.** Off: no closure gap, no implied lengths (summary card and numpad), no Redraw to scale, no area; the perimeter stays.
+- **Magnet angle set per sketch.** Degrees, each also meaning its opposite (closed under +180°). Presets 45° (0, 45, 90, 135, the default and today's behaviour), Iso (0, 30, 90, 150), 15° (every 15°), and Custom (typed angles). Magnet Off stays. `snap_45` became `snap_dir(from, to, directions)`. Corner-drag alignment unchanged.
+- **Two-finger rotate**, app-local (the kit `View` untouched): from the pinch angle while zooming, snapping to 0 / 90 / 180 / 270 within 8°; labels upright; taps un-rotated before mapping; a compass button turns back to 0°. View state only, not saved.
+- **Numpad keys vibrate** for 8 ms on a touch press.
+
+Built the same day ([internals](../apps/tape-sketch.md)). Details the revision left open, decided in the build:
+- **Rotation is folded into the screen mapping, not an SVG group `transform`.** Each sketch point is turned, then scaled and offset; the scene is built from the turned screen positions. With a group transform the labels, placed in unrotated screen space and counter-rotated, would no longer be checked against the lines they end up next to; folding it in keeps placement exact and the labels upright with no counter-rotation.
+- **Walk with a set other than 45°: a direction ring.** A disc with a tick per direction; press, slide to the nearest direction (it lights up with its angle), lift to walk. The 45° set keeps the 8 buttons. Buttons, ring and arrow keys mean screen directions: each is turned back by the rotation and matched to the nearest direction of the set.
+- **Magnet menu** in the toolbar for Corners and Walk: Off, the presets with a short description, Custom… as a prompt prefilled with the current set. Picking a set is an undoable sketch edit and turns the magnet on; on / off stays per device. A new sketch keeps the last set, as it keeps the unit.
+- **Check lengths** is a switch on the summary card of a closed path, hidden while the numpad is open; flipping it is undoable.
+- **Vibration** covers every numpad key including Clear and ✓, touch presses only.
+- **Version 2 heights** are announced with a notification that counts them, like version 1 boxes.
+- **No mouse gesture for rotation** and export is always upright.

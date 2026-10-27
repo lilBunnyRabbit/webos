@@ -1,4 +1,4 @@
-import { add, closure_tolerance, distance, rebuild, scale, sketch_scale, type Direction } from "./geometry";
+import { add, closure_tolerance, distance, normalize_snap, rebuild, scale, sketch_scale, type Direction } from "./geometry";
 import {
   edge_count,
   new_id,
@@ -26,6 +26,17 @@ export function set_unit(sketch: Sketch, unit: Unit): Sketch {
   return { ...sketch, unit };
 }
 
+export function set_snap(sketch: Sketch, snap: number[]): Sketch {
+  const next = normalize_snap(snap);
+  return next.length && next.join(",") !== sketch.snap.join(",") ? { ...sketch, snap: next } : sketch;
+}
+
+export function set_check(sketch: Sketch, path: string, check: boolean): Sketch {
+  const item = sketch.paths.find((each) => each.id === path);
+  if (!item || item.check === check) return sketch;
+  return map_path(sketch, path, (each) => ({ ...each, check }));
+}
+
 export function add_point(sketch: Sketch, at: Point): Added {
   const id = new_id();
   return { sketch: { ...sketch, points: [...sketch.points, { id, x: at.x, y: at.y }] }, id };
@@ -41,7 +52,7 @@ export function move_point(sketch: Sketch, id: string, at: Point): Sketch {
 export function start_path(sketch: Sketch, point: string): Added {
   const id = new_id();
   return {
-    sketch: { ...sketch, paths: [...sketch.paths, { id, points: [point], closed: false, lengths: [], height: null }] },
+    sketch: { ...sketch, paths: [...sketch.paths, { id, points: [point], closed: false, lengths: [], check: true }] },
     id,
   };
 }
@@ -182,7 +193,6 @@ export function measure_targets(sketch: Sketch): Target[] {
   const targets: Target[] = [];
   for (const path of sketch.paths) {
     for (let index = 0; index < edge_count(path); index++) targets.push({ kind: "edge", path: path.id, index });
-    targets.push({ kind: "height", path: path.id });
   }
   for (const dim of sketch.dims) targets.push({ kind: "dim", id: dim.id });
   return targets;
@@ -195,8 +205,7 @@ export function target_exists(sketch: Sketch, target: Target): boolean {
 export function length_of(sketch: Sketch, target: Target): number | null {
   if (target.kind === "edge")
     return sketch.paths.find((path) => path.id === target.path)?.lengths[target.index] ?? null;
-  if (target.kind === "dim") return sketch.dims.find((dim) => dim.id === target.id)?.length ?? null;
-  return sketch.paths.find((path) => path.id === target.path)?.height ?? null;
+  return sketch.dims.find((dim) => dim.id === target.id)?.length ?? null;
 }
 
 export function set_length(sketch: Sketch, target: Target, value: number | null): Sketch {
@@ -207,9 +216,7 @@ export function set_length(sketch: Sketch, target: Target, value: number | null)
       lengths: path.lengths.map((each, i) => (i === target.index ? rounded : each)),
     }));
   }
-  if (target.kind === "dim")
-    return { ...sketch, dims: sketch.dims.map((dim) => (dim.id === target.id ? { ...dim, length: rounded } : dim)) };
-  return map_path(sketch, target.path, (path) => ({ ...path, height: rounded }));
+  return { ...sketch, dims: sketch.dims.map((dim) => (dim.id === target.id ? { ...dim, length: rounded } : dim)) };
 }
 
 /**

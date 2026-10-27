@@ -17,25 +17,27 @@
 </script>
 
 <script lang="ts">
-  import { pinch_view, to_image, zoom_view, type View } from "$kit/utils/view";
+  import { zoom_view, type View } from "$kit/utils/view";
   import { untrack } from "svelte";
   import { Pick, Tool, type Editor } from "./editor.svelte";
   import { move_point, set_dim_offset, set_note } from "./edit";
   import { add, align, dot, sub } from "./geometry";
   import { same_target } from "./model";
+  import { pinch_camera, pinch_start, to_screen, to_sketch, type Pinch } from "./rotation";
   import { build_scene, into_view, label_center, LABEL_FONT, NOTE_FONT, type SceneLabel } from "./scene";
 
   interface Props {
     editor: Editor;
     view: View;
+    rotation: number;
     width: number;
     height: number;
     ontap: (event: TapEvent) => void;
   }
 
-  let { editor, view = $bindable(), width = $bindable(), height = $bindable(), ontap }: Props = $props();
+  let { editor, view = $bindable(), rotation = $bindable(0), width = $bindable(), height = $bindable(), ontap }: Props = $props();
 
-  const scene = $derived(build_scene(editor.sketch, view));
+  const scene = $derived(build_scene(editor.sketch, view, rotation));
   const labels = $derived(new Map(scene.labels.map((label) => [label.id, label])));
   const selection = $derived(editor.selection);
   const drawing_first = $derived.by(() => {
@@ -61,7 +63,7 @@
 
   const pointers = new Map<number, Point>();
   let gesture: Gesture | null = null;
-  let pinch: { view: View; mid: Point; distance: number } | null = null;
+  let pinch: Pinch | null = null;
 
   function local(event: PointerEvent | WheelEvent): Point {
     const box = svg!.getBoundingClientRect();
@@ -69,7 +71,7 @@
   }
 
   function sketch_at(p: Point): Point {
-    return to_image(view, p.x, p.y);
+    return to_sketch({ view, rotation }, p);
   }
 
   function read_hit(target: EventTarget | null): Hit | null {
@@ -161,7 +163,7 @@
       const a = sketch.points.find((each) => each.id === dim?.a);
       const shown = scene.dims.find((each) => each.id === id);
       if (!dim || !a || !shown) return;
-      const base = sub(p, { x: a.x * view.scale + view.offset_x, y: a.y * view.scale + view.offset_y });
+      const base = sub(p, to_screen({ view, rotation }, a));
       editor.preview = set_dim_offset(sketch, id, Math.round(dot(base, shown.normal) / view.scale));
     } else if (current.kind === DragKind.NOTE) {
       const to = add(at, current.grab);
@@ -180,7 +182,7 @@
         editor.preview = null;
       }
       const [a, b] = [...pointers.values()];
-      pinch = { view, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, distance: Math.hypot(a.x - b.x, a.y - b.y) };
+      pinch = pinch_start({ view, rotation }, a, b);
       return;
     }
     if (pointers.size > 2) return;
@@ -194,7 +196,9 @@
     pointers.set(event.pointerId, p);
     if (pinch && pointers.size >= 2) {
       const [a, b] = [...pointers.values()];
-      view = pinch_view(pinch.view, pinch.mid, pinch.distance, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, Math.hypot(a.x - b.x, a.y - b.y));
+      const next = pinch_camera(pinch, a, b);
+      view = next.view;
+      rotation = next.rotation;
       return;
     }
     const current = gesture;
@@ -259,7 +263,7 @@
     const from = editor.walk_from;
     if (!from) return;
     const point = editor.sketch.points.find((each) => each.id === from);
-    if (point) untrack(() => keep_visible({ x: point.x * view.scale + view.offset_x, y: point.y * view.scale + view.offset_y }));
+    if (point) untrack(() => keep_visible(to_screen({ view, rotation }, point)));
   });
 
   function keep_visible(at: Point | null): void {

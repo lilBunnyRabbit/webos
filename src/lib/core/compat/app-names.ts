@@ -42,6 +42,7 @@ export const APP_NAMES: Record<string, string> = {
   settings: "Settings",
   "shopping-list": "Shopping List",
   soundboard: "Soundboard",
+  "tape-sketch": "Tape Sketch",
   terminal: "Terminal",
   "text-editor": "Text Editor",
   unsaid: "Unsaid",
