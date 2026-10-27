@@ -9,6 +9,7 @@ import { parse_settings, SETTINGS_PATH } from "../settings/persistence";
 import { SettingsService } from "../settings/service.svelte";
 import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
 import { WindowsService } from "../windows/service.svelte";
+import { CloseChoice } from "../windows/close-guard";
 import { BUILD_INFO } from "../version/build-info";
 import { serialize_slice } from "./catalogue";
 import { CATALOGUE_PATH, INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
@@ -135,8 +136,8 @@ describe("AppsService installed apps", () => {
     const kernel = await boot();
     const windows = kernel.service<WindowsService>("windows");
     const opened = (id: string) => windows.get(id)?.app;
-    expect(opened(apps(kernel).launch("old-games", { mode: "count", count: 2 }))).toMatchObject({ id: "example", props: { count: 2 } });
-    expect(opened(apps(kernel).launch("old-games"))).toMatchObject({ id: "game", props: undefined });
+    expect(opened(apps(kernel).launch("old-games", { mode: "count", count: 2 })!)).toMatchObject({ id: "example", props: { count: 2 } });
+    expect(opened(apps(kernel).launch("old-games")!)).toMatchObject({ id: "game", props: undefined });
     expect(() => apps(kernel).launch("gone")).toThrow("App gone not found");
   });
 
@@ -236,25 +237,26 @@ describe("AppsService recent apps", () => {
     return parse_recent(file ? await file.text() : null);
   }
 
-  test("launch records user apps newest first, once each; system apps never", async () => {
+  test("launch records apps newest first, once each; core apps never", async () => {
     await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
     const kernel = await boot();
     apps(kernel).launch("board");
     apps(kernel).launch("settings");
+    apps(kernel).launch("calculator");
     apps(kernel).launch("notes");
     apps(kernel).launch("board");
-    expect(apps(kernel).recent).toEqual(["board", "notes"]);
-    await vi.waitFor(async () => expect(await recent_on_disk(kernel)).toEqual(["board", "notes"]));
+    expect(apps(kernel).recent).toEqual(["board", "notes", "calculator"]);
+    await vi.waitFor(async () => expect(await recent_on_disk(kernel)).toEqual(["board", "notes", "calculator"]));
   });
 
   test("the saved list loads, dropping core and unknown apps but keeping ones opened without installing", async () => {
     await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
-    await write(RECENT_PATH, serialize_recent(["gone", "notes", "settings", "game", "board"]));
+    await write(RECENT_PATH, serialize_recent(["gone", "notes", "settings", "calculator", "game", "board"]));
     const kernel = await boot();
-    expect(apps(kernel).recent).toEqual(["notes", "game", "board"]);
+    expect(apps(kernel).recent).toEqual(["notes", "calculator", "game", "board"]);
 
     await apps(kernel).uninstall("notes");
-    expect(apps(kernel).recent).toEqual(["notes", "game", "board"]);
+    expect(apps(kernel).recent).toEqual(["notes", "calculator", "game", "board"]);
   });
 
   test("a replaced id in the saved list shows as the app a bare launch opens (ADR-071)", async () => {
@@ -345,6 +347,8 @@ describe("AppsService catalogue (ADR-077)", () => {
     open: () => void;
     /** What the next fetch answers instead of the glob's catalogue: a later deploy. */
     next?: (catalogue: Catalogue) => Catalogue;
+    /** The manifest chunks of entries with this hash fail to load. */
+    broken?: string;
   }
 
   async function sourced(): Promise<{ service: typeof AppsServiceClass; gate: Gate }> {
@@ -363,7 +367,9 @@ describe("AppsService catalogue (ADR-077)", () => {
       },
       async manifest(entry) {
         await ready;
-        return base.manifest(entry);
+        if (gate.broken !== undefined && entry.hash === gate.broken) throw new Error("Failed to fetch dynamically imported module");
+        // The stand-ins' components never resolve; Restart app waits for the new one's before closing anything.
+        return { ...(await base.manifest(entry)), component: async () => (() => {}) as never };
       },
     };
     class SourcedApps extends AppsServiceClass {
@@ -441,9 +447,29 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(apps(kernel).is_installed("example")).toBe(true);
     await expect(apps(kernel).load("example")).rejects.toThrow(/updated since this page loaded/);
     expect(apps(kernel).installed_catalogue()).toBeNull();
-    const window_id = apps(kernel).launch("example");
-    kernel.service<WindowsService>("windows").get(window_id)?.app.component.catch(() => {});
+    expect(apps(kernel).launch("example")).toBeNull();
+    expect(kernel.service<WindowsService>("windows").list()).toEqual([]);
+    expect(apps(kernel).recent).toEqual([]);
     expect(toasts(kernel)).toContain("Update WebOS to open Example");
+  });
+
+  test("while a core update waits, another core's apps are left out of the slice, not holding it back", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example"]));
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    gate.next = (catalogue) => ({ ...catalogue, core: "next-core", apps: [...catalogue.apps, { ...catalogue.apps.find(({ id }) => id === "notes")!, id: "fresh", name: "Fresh" }] });
+    expect(await apps(kernel).catalogue()).toBe(false);
+    expect(apps(kernel).get("fresh")).toBeDefined();
+    kernel.service<SettingsService>("settings").taskbar.pinned = ["fresh"];
+    expect(apps(kernel).launch("fresh")).toBeNull();
+    apps(kernel).install("fresh");
+    expect(apps(kernel).is_installed("fresh")).toBe(false);
+    const ids = apps(kernel).installed_catalogue()?.apps.map(({ id }) => id);
+    expect(ids).toContain("example");
+    expect(ids).not.toContain("fresh");
   });
 
   test("before its code lands an app is a stub: a launch opens at once and checks the props once it lands", async () => {
@@ -453,8 +479,8 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(stub.props).toBeUndefined();
     expect(stub.version).toBe(BUILD_INFO.version);
     const windows = kernel.service<WindowsService>("windows");
-    const good = apps(kernel).launch("example", { count: 3 });
-    const bad = apps(kernel).launch("example", { count: "three" });
+    const good = apps(kernel).launch("example", { count: 3 })!;
+    const bad = apps(kernel).launch("example", { count: "three" })!;
     expect(windows.get(good)?.app.manifest.name).toBe("Example");
     gate.open();
     await vi.waitFor(() => expect(apps(kernel).get("example")?.props).toBeDefined());
@@ -472,7 +498,7 @@ describe("AppsService catalogue (ADR-077)", () => {
     await apps(kernel).load("example");
     await apps(kernel).load("board");
     const windows = kernel.service<WindowsService>("windows");
-    const first = apps(kernel).launch("example", { count: 1 });
+    const first = apps(kernel).launch("example", { count: 1 })!;
     const old = apps(kernel).get("example");
 
     gate.next = deploy("example", "board");
@@ -482,7 +508,7 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(apps(kernel).update_ready("board")).toBe(false);
     expect(apps(kernel).installed_catalogue()?.apps.find(({ id }) => id === "example")?.hash).toBe("new");
 
-    const second = apps(kernel).launch("example", { count: 2 });
+    const second = apps(kernel).launch("example", { count: 2 })!;
     expect(apps(kernel).get("example")).toBe(old);
     await windows.close(first);
     expect(apps(kernel).update_ready("example")).toBe(true);
@@ -498,7 +524,7 @@ describe("AppsService catalogue (ADR-077)", () => {
     await apps(kernel).catalogue();
     await apps(kernel).load("example");
     const windows = kernel.service<WindowsService>("windows");
-    const id = apps(kernel).launch("example", { count: 4 });
+    const id = apps(kernel).launch("example", { count: 4 })!;
     const bounds = { ...windows.get(id)!.bounds };
     gate.next = deploy("example");
     await apps(kernel).refresh();
@@ -510,6 +536,52 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(reopened[0].app).toMatchObject({ id: "example", props: { count: 4 } });
     expect(reopened[0].bounds).toEqual(bounds);
     expect(apps(kernel).update_ready("example")).toBe(false);
+  });
+
+  test("Restart app whose new version doesn't load keeps every window on the version it has", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    await apps(kernel).load("example");
+    const windows = kernel.service<WindowsService>("windows");
+    const ids = [apps(kernel).launch("example", { count: 1 })!, apps(kernel).launch("example", { count: 2 })!];
+    const old = apps(kernel).get("example");
+    gate.next = deploy("example");
+    gate.broken = "new";
+    await apps(kernel).refresh();
+
+    expect(await apps(kernel).restart("example")).toBe(false);
+    expect(windows.list()).toEqual(ids);
+    expect(apps(kernel).get("example")).toBe(old);
+    expect(apps(kernel).update_ready("example")).toBe(true);
+    expect(toasts(kernel)).toContain("Couldn't update Example");
+  });
+
+  test("Restart app asks dirty windows first; one kept reopens the ones closed, and nothing else closes", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    await apps(kernel).load("example");
+    const windows = kernel.service<WindowsService>("windows");
+    const clean = apps(kernel).launch("example", { count: 1 })!;
+    const discarded = apps(kernel).launch("example", { count: 2 })!;
+    const kept = apps(kernel).launch("example", { count: 3 })!;
+    windows.set_dirty(discarded, true);
+    windows.set_dirty(kept, true);
+    const asked: string[] = [];
+    windows.set_close_prompt(async ({ id }) => (asked.push(id), id === kept ? CloseChoice.CANCEL : CloseChoice.DISCARD));
+    gate.next = deploy("example");
+    await apps(kernel).refresh();
+
+    expect(await apps(kernel).restart("example")).toBe(false);
+    expect(asked).toHaveLength(2);
+    expect(windows.exists(clean)).toBe(true);
+    expect(windows.exists(kept)).toBe(true);
+    const counts = windows.list().map((id) => (windows.get(id)!.app.props as { count: number }).count);
+    expect(counts.sort()).toEqual([1, 2, 3]);
+    expect(apps(kernel).update_ready("example")).toBe(true);
   });
 
   test("refresh skips the fetch when the build it's told about isn't newer, and ignores another core", async () => {
@@ -551,6 +623,47 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(ids()).not.toContain("example");
     expect(ids()).toEqual(expect.arrayContaining(await system_ids()));
   });
+
+  test("once the full catalogue is here, installed ids it doesn't name are dropped and saved, so boot stops fetching it", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example", "gone", "old-games"]));
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual(["example", "game"]));
+    expect(gate.fetches).toBe(1);
+  });
+
+  test("a newer catalogue that drops an app forgets it, unless it still runs here", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    await apps(kernel).load("example");
+    apps(kernel).launch("example", { count: 1 });
+    gate.next = (catalogue) => ({ ...deploy()(catalogue), apps: catalogue.apps.filter(({ id }) => id !== "board" && id !== "example") });
+    await apps(kernel).refresh();
+    expect(apps(kernel).get("board")).toBeUndefined();
+    expect(apps(kernel).get("example")).toBeDefined();
+  });
+
+  test("offline, a list from before core apps keeps the optional system apps for this boot only", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    gate.online = false;
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, JSON.stringify({ version: 1, installed: ["example"] }));
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    expect(apps(kernel).is_installed("calculator")).toBe(true);
+    expect(apps(kernel).is_installed("kernel")).toBe(true);
+    apps(kernel).install("kernel");
+    await vi.waitFor(async () => {
+      const file = await kernel.service<FilesService>("files").get_file(INSTALLED_PATH);
+      expect(parse_installed(await file!.text())).toEqual({ ids: ["example", "kernel"], system: false });
+    });
+  });
 });
 
 describe("AppsService active time", () => {
@@ -570,7 +683,7 @@ describe("AppsService active time", () => {
     await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
     const kernel = await boot();
     const windows = kernel.service<WindowsService>("windows");
-    const board = apps(kernel).launch("board");
+    const board = apps(kernel).launch("board")!;
     await vi.waitFor(() => expect(windows.get_focused()).toBe(board));
     await new Promise((resolve) => setTimeout(resolve, 1200));
     apps(kernel).launch("notes");
@@ -579,5 +692,27 @@ describe("AppsService active time", () => {
     expect(apps(kernel).usage("board")?.seconds).toBeGreaterThanOrEqual(1);
     expect(apps(kernel).usage("board")?.days).toBe(1);
     await vi.waitFor(async () => expect((await usage_on_disk(kernel)).board?.seconds).toBeGreaterThanOrEqual(1), { timeout: 4000 });
+  });
+
+  test("a save adds this tab's time onto what another tab wrote since", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
+    const kernel = await boot();
+    const windows = kernel.service<WindowsService>("windows");
+    const board = apps(kernel).launch("board")!;
+    await vi.waitFor(() => expect(windows.get_focused()).toBe(board));
+    await write(USAGE_PATH, serialize_usage(add_time({}, "notes", 500, new Date())));
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    apps(kernel).launch("notes");
+    flushSync();
+
+    await vi.waitFor(
+      async () => {
+        const usage = await usage_on_disk(kernel);
+        expect(usage.notes?.seconds).toBeGreaterThanOrEqual(500);
+        expect(usage.board?.seconds).toBeGreaterThanOrEqual(1);
+      },
+      { timeout: 4000 }
+    );
+    expect(apps(kernel).usage("notes")?.seconds).toBeGreaterThanOrEqual(500);
   });
 });

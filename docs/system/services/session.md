@@ -94,7 +94,7 @@ interface WindowSnapshot {
 - It tracks everything it reads, so any bounds, flag, snap or z-order change rewrites the file. Bounds only change on pointer release, so dragging doesn't write per frame. Focusing a window does write (its `order` changes).
 - Writes `windows.frames` alongside, so a close (which records a frame) rewrites the file.
 - Also updates `saved_count` and `last_saved`.
-- Then, untracked, compares the snapshot's window ids with the previous run's: every window that disappeared is pushed onto `closed` (topmost first). Windows with `restore: false` aren't in the snapshot, so they can't be reopened. Closes before the restore decision aren't tracked.
+- Then, untracked, compares the snapshot's window ids with the previous run's: every window that disappeared is pushed onto `closed` (topmost first), except the ones `apps.restarting(id)` names: Restart app reopens those itself (ADR-077). Windows with `restore: false` aren't in the snapshot, so they can't be reopened. Closes before the restore decision aren't tracked.
 
 The first run writes immediately, so after Start fresh with no windows open the file holds `{"version":2,"windows":[],"frames":{…}}` and the next boot offers nothing.
 

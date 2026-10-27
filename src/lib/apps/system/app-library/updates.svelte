@@ -2,6 +2,7 @@
   import kernel, { type AppListing, type AppsService, type StoreService } from "$lib/core/api";
   import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
   import { format_date } from "$lib/core/utils";
+  import { can_update } from "$lib/core/components/apps/app-actions";
   import { ArrowCircleUp as ArrowCircleUpIcon, ArrowsClockwise as ArrowsClockwiseIcon, CheckCircle as CheckCircleIcon } from "phosphor-svelte";
   import type { AppUpdate } from "./discover";
   import StoreRow from "./store-row.svelte";
@@ -18,7 +19,7 @@
   const store = $derived(kernel.service<StoreService>("store"));
   const apps = $derived(kernel.service<AppsService>("apps"));
   /** Open windows still run the version before an app-only update; Update restarts them on the new one (ADR-077). */
-  const ready = $derived(apps.listings().filter((manifest) => apps.update_ready(manifest.id)));
+  const ready = $derived(apps.listings().filter((manifest) => can_update(manifest.id)));
   const day = (date: string) => format_date(new Date(`${date}T00:00`));
 </script>
 

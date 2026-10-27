@@ -156,7 +156,8 @@ export class SessionService implements ISessionService {
   /** Pushes windows that were in the previous save and aren't now. Oldest-first input, so the topmost ends newest. */
   private track_closed(entries: [WindowId, WindowSnapshot][]): void {
     const current = new Map(entries);
-    const gone = [...this.previous].filter(([id]) => !current.has(id)).map(([, snapshot]) => snapshot);
+    // Restart app reopens its windows itself; offering them back would duplicate them.
+    const gone = [...this.previous].filter(([id]) => !current.has(id) && !this.apps_service.restarting(id)).map(([, snapshot]) => snapshot);
     this.previous = current;
     if (gone.length > 0) this.closed = [...gone.reverse(), ...this.closed].slice(0, MAX_CLOSED);
   }

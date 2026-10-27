@@ -32,6 +32,7 @@ export function parse_installed(text: string | null): InstalledList | null {
   }
 }
 
-export function serialize_installed(ids: Iterable<AppId>): string {
-  return JSON.stringify({ version: INSTALLED_VERSION, installed: [...new Set(ids)].sort(), system: true }, null, 2) + "\n";
+/** `system: false` keeps a list from before core apps marked as such, so the move still runs on a later boot. */
+export function serialize_installed(ids: Iterable<AppId>, system = true): string {
+  return JSON.stringify({ version: INSTALLED_VERSION, installed: [...new Set(ids)].sort(), ...(system && { system: true }) }, null, 2) + "\n";
 }

@@ -49,7 +49,7 @@
   const recent = $derived.by(() => {
     const pinned = new Set(items.flatMap((item) => (item.kind === "shortcut" ? [item.app_id] : [])));
     return apps.recent
-      .filter((id) => !pinned.has(id) && apps.is_installed(id))
+      .filter((id) => !pinned.has(id))
       .flatMap((id) => apps.get(id) ?? [])
       .slice(0, RECENT_COUNT);
   });

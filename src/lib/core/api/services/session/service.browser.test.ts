@@ -152,4 +152,16 @@ describe("SessionService", () => {
     expect(windows(kernel).get(settings)?.app.state).toEqual({ section: "whats-new" });
     expect(session(kernel).reopen_closed()).toBeNull();
   });
+
+  test("windows Restart app closes and reopens aren't offered back as closed", async () => {
+    const kernel = await boot(null);
+    const apps = kernel.service<AppsService>("apps");
+    apps.launch("example", { count: 1 });
+    flushSync();
+    expect(await apps.restart("example")).toBe(true);
+    flushSync();
+    expect(windows(kernel).list()).toHaveLength(1);
+    expect(session(kernel).closed).toEqual([]);
+    expect(session(kernel).reopen_closed()).toBeNull();
+  });
 });

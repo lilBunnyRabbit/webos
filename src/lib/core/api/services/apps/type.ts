@@ -18,9 +18,10 @@ export interface AppsService extends IService {
   /**
    * Props are validated against the manifest's `props` schema; anything else is discarded (ADR-008). An app that isn't
    * installed opens without installing, with a toast offering Install (ADR-077), unless `options.offer_install` is
-   * false (the App Store, which shows Install beside Open).
+   * false (the App Store, which shows Install beside Open). `null` for an app of another core while a core update
+   * waits: it toasts "Update WebOS to open {App}" and opens nothing.
    */
-  launch(id: AppId, props?: unknown, options?: LaunchOptions): WindowId;
+  launch(id: AppId, props?: unknown, options?: LaunchOptions): WindowId | null;
   /**
    * The instance `launch()` would open, without opening a window or reporting problems: `null` when the app is unknown
    * or the props fail its schema. Used by session restore (ADR-023).
@@ -81,15 +82,18 @@ export interface AppsService extends IService {
   /** Open windows run an older version of the app than its entry. Reactive. */
   update_ready(id: AppId): boolean;
   /**
-   * Restart app: closes the app's windows (guarded: a kept one cancels, resolving `false`), loads its current version
-   * and reopens them with the same props, frames and window state.
+   * Restart app: loads the app's current version first (a failure toasts and keeps every window), then closes its
+   * windows, dirty ones first (a kept one reopens the ones already closed, resolving `false`), and reopens them on it
+   * with the same props, frames and window state. Never rejects.
    */
   restart(id: AppId): Promise<boolean>;
+  /** The window was closed by `restart()` to reopen, not by the user: Session leaves it out of Reopen closed window. */
+  restarting(window_id: WindowId): boolean;
   /** Files of installed apps and of apps whose code runs in this tab: what pruning the app cache must keep. */
   files_in_use(): Set<string>;
   /**
-   * User apps `launch()` opened lately, newest first, each once, at most 16; never system apps, and apps uninstalled
-   * since drop out. Reactive. Saved in `/var/lib/apps/recent.json`; always empty in solo mode (ADR-047).
+   * Apps `launch()` opened lately, newest first, each once, at most 16, installed or not; never the core apps, and
+   * apps no catalogue knows drop out. Reactive. Saved in `/var/lib/apps/recent.json`; always empty in solo mode (ADR-047).
    */
   readonly recent: AppId[];
   clear_recent(): void;

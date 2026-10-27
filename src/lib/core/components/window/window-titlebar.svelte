@@ -14,6 +14,7 @@
   import { cn } from "$lib/core/utils";
   import { Button, IconButton } from "../ui";
   import { view_transition } from "$lib/core/utils/view-transition";
+  import { can_update } from "../apps/app-actions";
 
   let { zoom = $bindable(), window_id, focused }: { zoom: number; window_id: WindowId; focused: boolean } = $props();
 
@@ -76,7 +77,7 @@
     </IconButton>
   </div>
 
-  {#if apps.update_ready(instance.app.id)}
+  {#if can_update(instance.app.id)}
     <Button
       data-window-button
       size="sm"

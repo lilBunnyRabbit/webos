@@ -7,6 +7,7 @@ import kernel, {
   type DesktopService,
   type DialogsService,
   type NotificationsService,
+  type StoreService,
   type WindowsService,
 } from "$lib/core/api";
 import type { Position } from "$lib/core/utils/type";
@@ -24,6 +25,12 @@ const dialogs = () => kernel.service<DialogsService>("dialogs");
 export const CLEAR_RECENT_ITEM = { id: "clear-recent", label: "Clear recent", icon: BroomIcon };
 export const OPEN_ITEM = { id: "open", label: "Open", icon: ArrowSquareOutIcon };
 export const INSTALL_ITEM = { id: "install", label: "Install", icon: DownloadSimpleIcon };
+
+/** Restart app needs the new version's files: on the device already, or a connection to fetch them. Reactive. */
+export function can_update(id: AppId): boolean {
+  const store = kernel.service<StoreService>("store");
+  return apps().update_ready(id) && (store.online || store.is_saved(id));
+}
 
 export function install_items(id: AppId): (typeof INSTALL_ITEM)[] {
   return apps().get(id) && !apps().is_installed(id) ? [INSTALL_ITEM] : [];

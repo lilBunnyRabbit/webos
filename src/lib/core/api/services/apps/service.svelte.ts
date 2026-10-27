@@ -23,6 +23,7 @@ import type {
   WindowsService,
   WindowId,
   WindowOptions,
+  WindowSnapshot,
 } from "$lib/core/api";
 import { untrack, type Component } from "svelte";
 import { best_apps_for, file_extension, has_compound_match } from "./associations";
@@ -41,6 +42,7 @@ import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./rece
 import { without_pin } from "../settings/taskbar";
 import { is_core_app } from "./helpers";
 import { track_launch } from "$lib/core/utils/analytics";
+import { error_message } from "$lib/core/utils";
 import { on_idle } from "$lib/core/utils/idle";
 import { ActiveTime } from "./active-time.svelte";
 import type { AppUsage } from "./active-time";
@@ -67,6 +69,9 @@ export class AppsService implements IAppsService {
   readonly registry: Map<string, AppManifest> = new SvelteMap();
   /** Everything installed but the core apps, which always are (ADR-077). Ids no entry names yet stay, so they're saved back. */
   private readonly installed = new SvelteSet<AppId>();
+  /** Optional system apps an offline boot keeps until the move to core apps can run (ADR-077): installed, never saved. */
+  private readonly provisional = new SvelteSet<AppId>();
+  private migrated = true;
   private readonly entries = new SvelteMap<AppId, CatalogueApp>();
   private readonly code = new SvelteMap<AppId, AppManifest>();
   private readonly loading = new Map<AppId, Promise<AppManifest>>();
@@ -79,6 +84,8 @@ export class AppsService implements IAppsService {
    */
   private readonly stale = new SvelteMap<AppId, CatalogueApp>();
   private readonly icons = new Map<AppId, Component>();
+  /** Windows Restart app closed to reopen: the user didn't close them, so Session doesn't offer them back. */
+  private readonly restarted = new Set<WindowId>();
   public header: CatalogueHeader | null = $state.raw(null);
   public complete = $state(false);
   public last_update: AppsUpdate | null = $state.raw(null);
@@ -183,7 +190,10 @@ export class AppsService implements IAppsService {
     if (own && this.header && catalogue.build > this.header.build) this.adopt(catalogue);
     else if (own && this.header && catalogue.build < this.header.build) this.add({ ...catalogue, apps: catalogue.apps.filter((entry) => !this.entries.has(entry.id)) }, true, false);
     else this.add(catalogue, own);
-    if (own) this.complete = true;
+    if (own) {
+      this.complete = true;
+      this.drop_unknown();
+    }
     return own;
   }
 
@@ -194,6 +204,7 @@ export class AppsService implements IAppsService {
     if (this.header && catalogue.build <= this.header.build) return [];
     const changed = this.adopt(catalogue);
     this.complete = true;
+    this.drop_unknown();
     return changed;
   }
 
@@ -221,6 +232,16 @@ export class AppsService implements IAppsService {
         this.swap(entry.id);
       }
     }
+    const named = new Set(apps.map(({ id }) => id));
+    for (const id of [...this.entries.keys()]) {
+      if (named.has(id) || this.foreign.has(id) || this.has_windows(id)) continue;
+      this.entries.delete(id);
+      this.registry.delete(id);
+      this.code.delete(id);
+      this.stale.delete(id);
+      this.loading.delete(id);
+      this.failed.delete(id);
+    }
     this.header = header;
     this.last_update = { build: header.build, changed, swapped };
     return changed;
@@ -246,22 +267,80 @@ export class AppsService implements IAppsService {
     return this.stale.has(id);
   }
 
+  public restarting(window_id: WindowId): boolean {
+    return this.restarted.has(window_id);
+  }
+
   public async restart(id: AppId): Promise<boolean> {
     const windows = this.windows_service;
-    // Dirty windows first: keeping one cancels before any other window closed.
-    const ids = windows
-      .list()
-      .filter((window_id) => windows.get(window_id)?.app.id === id)
-      .sort((a, b) => Number(windows.get(b)?.dirty) - Number(windows.get(a)?.dirty));
+    const of_app = () => windows.list().filter((window_id) => windows.get(window_id)?.app.id === id);
+    if (of_app().length === 0) return false;
+    const name = this.registry.get(id)?.name ?? id;
+    // The new version loads before any window closes: if it can't, every window stays on the version it has.
+    let next: AppManifest | null;
+    try {
+      next = await this.next_version(id);
+    } catch (error) {
+      this.notifications_service.notify("apps", {
+        type: "error",
+        title: `Couldn't update ${name}`,
+        message: `${navigator.onLine ? error_message(error) : "You're offline."} It stays on the version it has.`,
+      });
+      return false;
+    }
+    const ids = of_app();
     if (ids.length === 0) return false;
-    const snapshots = ids.map((window_id) => snapshot_window(windows.get(window_id)!)).reverse();
-    for (const window_id of ids) if (!(await windows.close(window_id))) return false;
-    if (this.stale.has(id)) this.swap(id);
-    await this.load(id);
-    const { restored } = windows.restore(snapshots, ({ app_id, props, state }) => this.create_instance(app_id, props, state));
-    const last = restored.at(-1);
-    if (last) windows.focus(last);
+    const snapshots = new Map(ids.map((window_id) => [window_id, snapshot_window(windows.get(window_id)!)]));
+    const order = new Map(ids.map((window_id) => [window_id, windows.get(window_id)!.order]));
+    const by_order = (list: WindowId[]) => [...list].sort((a, b) => order.get(a)! - order.get(b)!).map((window_id) => snapshots.get(window_id)!);
+    const stale = this.stale.get(id);
+    // Out of `stale` while closing, or the last window to close would swap the code before the new version is in.
+    this.stale.delete(id);
+    // Dirty windows ask first; the clean ones close only once every dirty one agreed.
+    const dirty = (window_id: WindowId) => (windows.get(window_id)?.dirty ? 1 : 0);
+    const closing = [...ids].sort((a, b) => dirty(b) - dirty(a));
+    const closed: WindowId[] = [];
+    for (const window_id of closing) {
+      this.restarted.add(window_id);
+      if (await windows.close(window_id)) {
+        closed.push(window_id);
+        continue;
+      }
+      this.restarted.delete(window_id);
+      if (stale) this.stale.set(id, stale);
+      this.reopen(by_order(closed));
+      return false;
+    }
+    if (next) this.commit(id, next);
+    this.reopen(by_order(ids));
     return true;
+  }
+
+  private async next_version(id: AppId): Promise<AppManifest | null> {
+    const entry = this.entries.get(id);
+    if (!entry || !this.stale.has(id)) {
+      await this.require(id);
+      return null;
+    }
+    const definition = await this.source.manifest(entry);
+    const manifest: AppManifest = { ...definition, system: entry.system, version: entry.version };
+    await manifest.component();
+    return manifest;
+  }
+
+  private commit(id: AppId, manifest: AppManifest): void {
+    this.stale.delete(id);
+    this.loading.delete(id);
+    this.failed.delete(id);
+    this.code.set(id, manifest);
+    this.registry.set(id, manifest);
+  }
+
+  private reopen(snapshots: WindowSnapshot[]): void {
+    if (snapshots.length === 0) return;
+    const { restored } = this.windows_service.restore(snapshots, ({ app_id, props, state }) => this.create_instance(app_id, props, state));
+    const last = restored.at(-1);
+    if (last) this.windows_service.focus(last);
   }
 
   public files_in_use(): Set<string> {
@@ -292,11 +371,13 @@ export class AppsService implements IAppsService {
     if (!header) return null;
     if (!this.complete && [...this.installed].some((id) => !this.entries.has(id))) return null;
     const ids = new Set(Array.from(this.list({ installed: true }), ([id]) => id));
-    // System apps that aren't installed still open on demand from what boot knows: a file's default, Docs from Kernel.
-    for (const [id, entry] of this.entries) if (entry.system) ids.add(id);
-    // Recent and taskbar-pinned apps stay known after a reload even when they aren't installed.
-    for (const id of [...this.recent_ids, ...this.settings_service.taskbar.pinned]) if (this.entries.has(id)) ids.add(id);
     if ([...ids].some((id) => this.foreign.has(id))) return null;
+    // Another core's entries (a core update waits) are left out rather than holding the slice back.
+    const known = (id: AppId) => this.entries.has(id) && !this.foreign.has(id);
+    // System apps that aren't installed still open on demand from what boot knows: a file's default, Docs from Kernel.
+    for (const [id, entry] of this.entries) if (entry.system && known(id)) ids.add(id);
+    // Recent and taskbar-pinned apps stay known after a reload even when they aren't installed.
+    for (const id of [...this.recent_ids, ...this.settings_service.taskbar.pinned]) if (known(id)) ids.add(id);
     return { ...header, apps: [...ids].map((id) => this.entries.get(id)!) };
   }
 
@@ -397,7 +478,10 @@ export class AppsService implements IAppsService {
       // Only the full catalogue tells a replaced id from one the slice doesn't name; until then every id stays.
       const known = (id: AppId) => !this.complete || this.registry.has(id);
       for (const id of current_ids(this.registry.values(), saved.ids, known)) this.installed.add(id);
-      if (!saved.system) await this.keep_used_system_apps();
+      if (!saved.system) {
+        this.migrated = false;
+        await this.keep_used_system_apps();
+      }
       return;
     }
     // No list yet. A first boot starts with the core apps (the intro adds the picked interests); a device from before
@@ -410,18 +494,18 @@ export class AppsService implements IAppsService {
       const commands = await command_apps(this.registry.values());
       this.tidy([...this.registry.keys()], used_apps(this.registry.values(), signals, commands));
     }
-    this.writer.write(serialize_installed(this.installed));
+    this.save_installed();
   }
 
   /**
    * A list from before ADR-077's core apps names user apps only, since every system app was installed. The optional
    * system apps stay installed where past use points to them (ADR-040's signals), once. Without the full catalogue
-   * (offline) they all count as installed for this boot, unsaved, and the next boot decides.
+   * (offline) they all count as installed for this boot, never saved, and a boot with the catalogue decides.
    */
   private async keep_used_system_apps(): Promise<void> {
     const optional = [...this.registry.values()].filter((manifest) => manifest.system && !is_core_app(manifest.id));
     if (!this.complete) {
-      for (const manifest of optional) this.installed.add(manifest.id);
+      for (const manifest of optional) this.provisional.add(manifest.id);
       return;
     }
     const { command_apps, read_usage, used_apps } = await import("./usage");
@@ -431,7 +515,21 @@ export class AppsService implements IAppsService {
       return [];
     });
     for (const id of used_apps(optional, signals, commands)) this.installed.add(id);
-    this.writer.write(serialize_installed(this.installed));
+    this.migrated = true;
+    this.save_installed();
+  }
+
+  private save_installed(): void {
+    this.writer.write(serialize_installed(this.installed, this.migrated));
+  }
+
+  /** Once the full catalogue is here, an installed id it doesn't name is gone, or became the apps replacing it (ADR-071). */
+  private drop_unknown(): void {
+    const ids = current_ids(this.registry.values(), this.installed, (id) => this.registry.has(id));
+    if (ids.length === this.installed.size && ids.every((id) => this.installed.has(id))) return;
+    this.installed.clear();
+    for (const id of ids) this.installed.add(id);
+    this.save_installed();
   }
 
   public get recent(): AppId[] {
@@ -449,7 +547,7 @@ export class AppsService implements IAppsService {
     this.recent_writer.seed(text);
     const known = (id: AppId) => !this.complete || this.registry.has(id);
     const ids = current_list(this.registry.values(), parse_recent(text), known);
-    this.recent_ids = ids.filter((id) => this.registry.get(id)?.system !== true);
+    this.recent_ids = ids.filter((id) => !is_core_app(id));
   }
 
   protected remember(id: AppId): void {
@@ -490,17 +588,22 @@ export class AppsService implements IAppsService {
 
   public is_installed(id: AppId): boolean {
     const manifest = this.registry.get(id);
-    return manifest !== undefined && (is_core_app(id) || this.installed.has(id));
+    return manifest !== undefined && (is_core_app(id) || this.installed.has(id) || this.provisional.has(id));
   }
 
   public install(ids: AppId | AppId[]): AppId[] {
     const wanted = [ids].flat();
     // Its files are another core's, which this page can't run or keep: it installs after the update.
     for (const id of wanted) if (this.foreign.has(id)) this.offer_update(this.registry.get(id)!);
+    const kept = wanted.filter((id) => this.provisional.delete(id));
+    for (const id of kept) this.installed.add(id);
     const added = wanted.filter((id) => this.registry.has(id) && !this.is_installed(id) && !this.foreign.has(id));
-    if (added.length === 0) return [];
+    if (added.length === 0) {
+      if (kept.length > 0) this.save_installed();
+      return [];
+    }
     for (const id of added) this.installed.add(id);
-    this.writer.write(serialize_installed(this.installed));
+    this.save_installed();
     for (const id of added) void this.load(id).catch(() => {});
     return added;
   }
@@ -510,7 +613,8 @@ export class AppsService implements IAppsService {
     if (!manifest) throw new Error(`App ${id} not found`);
     if (is_core_app(id)) throw new Error(`${manifest.name} is part of WebOS and can't be uninstalled`);
     this.installed.delete(id);
-    this.writer.write(serialize_installed(this.installed));
+    this.provisional.delete(id);
+    this.save_installed();
     if (this.settings_service.taskbar.pinned.includes(id)) this.settings_service.taskbar.pinned = without_pin(this.settings_service.taskbar.pinned, id);
     if (!options.data) return;
 
@@ -552,15 +656,19 @@ export class AppsService implements IAppsService {
     return this.registry.get(id);
   }
 
-  public launch(requested: AppId, requested_props?: unknown, options: LaunchOptions = {}): WindowId {
+  public launch(requested: AppId, requested_props?: unknown, options: LaunchOptions = {}): WindowId | null {
     const { id, props } = this.target(requested, requested_props) ?? { id: requested, props: requested_props };
     const manifest = this.registry.get(id);
     if (!manifest) {
       throw new Error(`App ${id} not found`);
     }
+    // Its files are another core's: nothing can open until WebOS updates.
+    if (this.foreign.has(id)) {
+      this.offer_update(manifest);
+      return null;
+    }
     // Opening isn't installing (ADR-077): the app runs on demand, out of the menus and not offline, until Install.
-    if (this.foreign.has(id)) this.offer_update(manifest);
-    else if (!this.is_installed(id) && options.offer_install !== false) this.offer_install(manifest);
+    if (!this.is_installed(id) && options.offer_install !== false) this.offer_install(manifest);
 
     const code = this.code.get(id);
     const window_id = code

@@ -19,7 +19,7 @@
   import { view_transition } from "$lib/core/utils/view-transition";
   import AppBadge from "../apps/app-badge.svelte";
   import AppProgress from "../apps/app-progress.svelte";
-  import { install_items, INSTALL_ITEM } from "../apps/app-actions";
+  import { can_update, install_items, INSTALL_ITEM } from "../apps/app-actions";
 
   let { group, vertical, position }: { group: WindowInstance[]; vertical: boolean; position: TaskbarPosition } = $props();
 
@@ -37,7 +37,7 @@
   const active = $derived(group.some((instance) => windows.is_focused(instance.id) && !minimized(instance)));
   const all_minimized = $derived(group.every(minimized));
   const is_out = $derived(group.some((instance) => extract?.current === instance.id));
-  const update_ready = $derived(apps.update_ready(app.id));
+  const update_ready = $derived(can_update(app.id));
   const label = $derived(
     (single ? (single.title ? `${single.title} — ${app.manifest.name}` : app.manifest.name) : `${app.manifest.name}, ${group.length} windows`) +
       (update_ready ? ", update ready" : "")
