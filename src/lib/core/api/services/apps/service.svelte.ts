@@ -9,7 +9,6 @@ import type {
   AppsFilter,
   AppCategory,
   AppsUpdate,
-  LaunchOptions,
   OpenOptions,
   UninstallOptions,
 } from "./type";
@@ -670,7 +669,7 @@ export class AppsService implements IAppsService {
     return this.registry.get(id);
   }
 
-  public launch(requested: AppId, requested_props?: unknown, options: LaunchOptions = {}): WindowId | null {
+  public launch(requested: AppId, requested_props?: unknown): WindowId | null {
     const { id, props } = this.target(requested, requested_props) ?? { id: requested, props: requested_props };
     const manifest = this.registry.get(id);
     if (!manifest) {
@@ -681,9 +680,6 @@ export class AppsService implements IAppsService {
       this.offer_update(manifest);
       return null;
     }
-    // Opening isn't installing (ADR-077): the app runs on demand, out of the menus and not offline, until Install.
-    if (!this.is_installed(id) && options.offer_install !== false) this.offer_install(manifest);
-
     const code = this.code.get(id);
     const window_id = code
       ? this.windows_service.open(this.instantiate(code, this.validate_props(code, props)))
@@ -707,14 +703,6 @@ export class AppsService implements IAppsService {
     });
     window_id = this.windows_service.open(this.instantiate(manifest, as_props(props), undefined, component));
     return window_id;
-  }
-
-  protected offer_install(manifest: AppManifest): void {
-    this.notifications_service.notify("apps", {
-      title: `${manifest.name} isn't installed`,
-      message: "Install it to keep it in your apps and use it offline.",
-      actions: [{ label: "Install", on_click: () => void this.install(manifest.id) }],
-    });
   }
 
   protected offer_update(manifest: AppManifest): void {

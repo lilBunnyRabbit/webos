@@ -154,18 +154,12 @@ describe("AppsService installed apps", () => {
     });
   });
 
-  test("launching an app that isn't installed opens it without installing, and the toast's Install installs it", async () => {
+  test("launching an app that isn't installed opens it without installing, quietly", async () => {
     await write(INSTALLED_PATH, serialize_installed([]));
     const kernel = await boot();
-    apps(kernel).launch("example");
+    expect(apps(kernel).launch("example")).not.toBeNull();
     expect(apps(kernel).is_installed("example")).toBe(false);
-    expect(toasts(kernel)).toEqual(["Example isn't installed"]);
-    const notifications = kernel.service<NotificationsService>("notifications");
-    notifications.all[0].actions?.find((action) => action.label === "Install")?.on_click();
-    expect(apps(kernel).is_installed("example")).toBe(true);
-    await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual(["example"]));
-    apps(kernel).launch("example");
-    expect(toasts(kernel)).toEqual(["Example isn't installed"]);
+    expect(toasts(kernel)).toEqual([]);
   });
 
   test("uninstall keeps data unless asked; system apps refuse", async () => {

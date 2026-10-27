@@ -22,7 +22,7 @@ Entry points: start menu (`launch(id)`), desktop shortcut (through `apps.open(pa
 `AppsService.launch(id, props?)`:
 
 1. Unknown id → `throw new Error("App {id} not found")`.
-   A user app that isn't installed opens without installing, with an "{App} isn't installed" toast offering Install (ADR-077).
+   A user app that isn't installed opens without installing (ADR-077).
 2. Validates `props` against `manifest.props` ([rules](../services/apps.md#props-validation-adr-008)). When the app's code hasn't landed yet, the window opens first and the props are checked when the manifest loads, before the component renders.
 3. Builds the instance (private `instantiate`) and starts the component import: `component()` returns a promise, stored as-is.
 4. `windows.open(app_instance)` with `AppInstance = { id, manifest (without component), component: Promise, props?, state }`. `state` is the window's `storage.window()` values: empty on launch, the saved values on restore.

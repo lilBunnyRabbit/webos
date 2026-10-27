@@ -1,7 +1,7 @@
 import type { Kernel, NotificationsService, WindowId, WindowsService } from "$lib/core/api";
 import { RouteKind, route_url, shareable_props } from "../router/route";
 import { AppsService } from "./service.svelte";
-import type { AppId, LaunchOptions } from "./type";
+import type { AppId } from "./type";
 
 /** A solo link (ADR-047) opens exactly one window; anything else points to the full OS instead. */
 export class SoloAppsService extends AppsService {
@@ -27,11 +27,9 @@ export class SoloAppsService extends AppsService {
 
   protected override remember(): void {}
 
-  protected override offer_install(): void {}
-
-  override launch(id: AppId, props?: unknown, options?: LaunchOptions): WindowId | null {
+  override launch(id: AppId, props?: unknown): WindowId | null {
     const current = this.solo_windows.list()[0];
-    if (!current) return super.launch(id, props, options);
+    if (!current) return super.launch(id, props);
 
     const instance = this.solo_windows.get(current)!;
     const url = route_url({ kind: RouteKind.APP, id: instance.app.id, props: shareable_props(instance.app.props).props });

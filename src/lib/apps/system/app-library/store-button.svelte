@@ -54,7 +54,7 @@
     </span>
   {:else}
     <!-- Open works without installing (ADR-077); Install only keeps the app in your apps and offline, so it never stands alone. -->
-    <Button {variant} {size} class={open_class} onclick={() => apps.launch(manifest.id, undefined, { offer_install: false })} aria-label="Open {manifest.name}">
+    <Button {variant} {size} class={open_class} onclick={() => apps.launch(manifest.id)} aria-label="Open {manifest.name}">
       <PlayIcon weight="fill" /> Open
     </Button>
     {#if !installed}

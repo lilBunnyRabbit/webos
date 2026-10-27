@@ -6,7 +6,7 @@ Key `store` · Depends on: `files`, `apps`, `tasks` · ADR: [ADR-077](../../adrs
 
 Keeps installed apps on the device. One state per app (ADR-077): installed means listed, downloaded, kept offline and updated. The service worker precaches only the core, so an update installs in seconds whatever the number of apps ([version › Service worker](version.md#service-worker)). Every app, system apps included, loads on demand into one runtime cache, `webos-assets`, shared by every release, and this service downloads an installed app's whole file list into it:
 
-- when the app is installed (App Store, search, a menu's Install, the "{App} isn't installed" toast, the intro's interests);
+- when the app is installed (App Store, search, a menu's Install, the intro's interests);
 - after every update, for every installed app (a file already in the cache is skipped, so only renamed ones download);
 - after an app-only update, without a reload ([Hot updates](#hot-updates-adr-077-stage-3)), for the installed apps whose files changed;
 - on a fresh install, the core apps (App Store, Settings, File Explorer, Terminal; the only ones installed by default), on the first idle moment after boot.
