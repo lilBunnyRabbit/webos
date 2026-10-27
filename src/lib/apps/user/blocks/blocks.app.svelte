@@ -59,7 +59,7 @@
   const daily_day = untrack(() => daily_prop);
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   const play = track_play(app_id, () => win.is_visible);
   const stats = storage.persisted<Stats>("stats", empty_stats(), stats_schema);
 
@@ -169,6 +169,7 @@
     const previous = game;
     game = next;
     if (next.pieces > previous.pieces && next.last_clear > 0) {
+      if (next.last_clear === 4) achievements.achieve("four-lines");
       announcement = next.level > previous.level ? `${clear_name(next.last_clear)}, level ${next.level}` : clear_name(next.last_clear);
     }
     if (next.status === Status.OVER || next.status === Status.WON) finish(next);
@@ -180,12 +181,18 @@
     if (end.mode === Mode.MARATHON) {
       new_best = end.score > 0 && end.score > marathon.best_score;
       stats.value = record_marathon(stats.value, end, day_key());
+      achievements.progress("level-10", end.level);
+      achievements.progress("lines-500", stats.value.marathon.total_lines);
       return;
     }
     const won = end.status === Status.WON;
     new_best = won && (sprint.best_ms === null || final_ms < sprint.best_ms);
     stats.value = record_sprint(stats.value, won ? final_ms : null);
     if (won && daily) play.daily(daily, final_ms);
+    if (!won) return;
+    achievements.achieve("sprint");
+    if (daily) achievements.achieve("daily");
+    if (final_ms < 90_000) achievements.achieve("sprint-90");
   }
 
   function release() {

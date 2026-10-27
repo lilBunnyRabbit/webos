@@ -75,8 +75,12 @@ Accuracy = (clean + sorry ÷ 2) ÷ sales. ≥ 95 % three stars, ≥ 80 % two, �
 ## Data
 
 - `app.checkout-challenge.best` (localStorage, app storage): the best run `{ money, days, accuracy }`, money in cents, validated by `best_run_schema`. Best = most money, more days breaks a tie. Updated whenever a day ends, so a run abandoned mid-way still counts what it earned.
+- `app.checkout-challenge.sales`: sales rung up in all, every run added up, for the `sales-500` achievement.
+- `/var/lib/apps/checkout-challenge/achievements.json`: achievements, written by the OS ([achievements](../system/services/achievements.md)).
 - `/var/lib/games/plays.json`: play time and sessions through `track_play` (Game Hub).
 - No props, no shell commands (`app launch checkout-challenge`), no files.
+
+**Achievements** (ADR-078), reported from `record_day()` whenever a day ends, before the best run is compared: `first-day` (a day that didn't close early), `three-stars` (three stars for the day), `days-7` (progress: days survived this run), `money-1000` (progress: this run's money in whole units), `sales-500` (progress: the running total above), secret `spotless` (`spotless_day`, `game.ts`: day 5 or later, open to the end, sales and no sorry or mistake).
 
 ## Dependencies & licences
 
@@ -90,4 +94,5 @@ None beyond the repo's. Item pictures are Phosphor icons; the customers are draw
 
 ## Decisions
 
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - [2026-10-25 brainstorm](../brainstorm/2026-10-25_checkout-challenge.md): any digit keys, copy the shown total rather than sum it, real keypad buttons on both platforms, best run in app storage, no shell commands.

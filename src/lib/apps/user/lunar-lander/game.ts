@@ -296,3 +296,16 @@ export type BestScores = z.infer<typeof best_scores_schema>;
 export function mode_key(ship: ShipId, env: Environment): string {
   return [ship, env.gravity, env.air ? "air" : "", env.air && env.wind ? "wind" : "", env.infinite_fuel ? "inf" : ""].filter(Boolean).join("-");
 }
+
+/** Ships with a landing on record: every best score is keyed by `mode_key`, which starts with the ship. */
+export function ships_landed(best: BestScores): number {
+  const keys = Object.keys(best);
+  return Object.keys(SHIPS).filter((ship) => keys.some((key) => key === ship || key.startsWith(`${ship}-`))).length;
+}
+
+/** Judged on the touchdown alone, so fuel left over neither helps nor hurts. */
+export const SOFT_TOUCH = 850;
+
+export function soft_touch(result: Score | null): boolean {
+  return result !== null && result.total - result.fuel >= SOFT_TOUCH;
+}

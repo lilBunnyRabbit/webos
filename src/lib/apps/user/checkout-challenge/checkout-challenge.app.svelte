@@ -17,6 +17,7 @@
     Timer as TimerIcon,
     X as XIcon,
   } from "phosphor-svelte";
+  import { z } from "zod";
   import CustomerFace from "./customer.svelte";
   import {
     accuracy,
@@ -38,6 +39,7 @@
     run_summary,
     sales,
     scanned_total,
+    spotless_day,
     Stage,
     stars,
     type BestRun,
@@ -49,9 +51,10 @@
   const KEYPAD = ["7", "8", "9", "4", "5", "6", "1", "2", "3", ".", "0", KeypadKey.BACK];
   const GREETINGS = ["Hi there!", "Just these, please.", "Hello!", "Lovely day!", "Ready when you are.", "Morning!"];
 
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   track_play(app_id, () => win.is_visible);
   const best = storage.persisted<BestRun>("best", NO_BEST, best_run_schema);
+  const sales_total = storage.persisted("sales", 0, z.number().int().nonnegative());
 
   let new_best = $state(false);
   let board: HTMLDivElement | undefined = $state();
@@ -118,10 +121,21 @@
   });
 
   function on_end(ended: Run) {
+    record_day(ended);
     const summary = run_summary(ended);
     if (!better_run(summary, best.value)) return;
     best.value = summary;
     new_best = true;
+  }
+
+  function record_day(ended: Run) {
+    sales_total.value += sales(ended.today);
+    if (!ended.closed_early) achievements.achieve("first-day");
+    if (stars(ended.today, ended.closed_early) === 3) achievements.achieve("three-stars");
+    if (spotless_day(ended)) achievements.achieve("spotless");
+    achievements.progress("days-7", ended.days_survived);
+    achievements.progress("money-1000", Math.floor(ended.money / 100));
+    achievements.progress("sales-500", sales_total.value);
   }
 
   function start() {

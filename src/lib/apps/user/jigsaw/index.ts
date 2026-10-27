@@ -17,5 +17,12 @@ export default define_app({
       height: { min: 380 },
     },
   },
+  achievements: [
+    { id: "first-solve", title: "Picture perfect", text: "Finish a puzzle." },
+    { id: "pieces-100", title: "Hundred pieces", text: "Finish a puzzle of 100 pieces or more." },
+    { id: "pieces-200", title: "Big picture", text: "Finish a 200-piece puzzle." },
+    { id: "solves-10", title: "Puzzler", text: "Finish 10 puzzles.", goal: 10 },
+    { id: "no-peeking", title: "No peeking", text: "Finish a puzzle of 100 pieces or more without the preview in the frame.", secret: true },
+  ],
   component: () => import("./jigsaw.app.svelte"),
 });

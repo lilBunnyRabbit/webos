@@ -32,7 +32,7 @@
   const MODE_OPTIONS = MODES.map((value) => ({ value, label: MODE_LABELS[value] }));
   const COMPUTER_DELAY_MS = 350;
 
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   $effect(() => shortcuts.register({ id: "tic-tac-toe.undo", keys: "mod+z", label: "Undo", category: ShortcutCategory.APP, window: window_id, run: undo }));
@@ -82,6 +82,12 @@
     const tally = stats.value[mode];
     if (winner === null) tally.draws++;
     else tally[winner]++;
+    if (mode === Mode.LOCAL) return achievements.achieve("local");
+    if (winner === null && mode === Mode.IMPOSSIBLE) achievements.achieve("stalemate");
+    if (winner !== Mark.X) return;
+    achievements.achieve("first-win");
+    if (mode === Mode.MEDIUM) achievements.achieve("medium");
+    achievements.progress("wins-25", stats.value.easy.x + stats.value.medium.x + stats.value.impossible.x);
   }
 
   function play_human(cell: number) {

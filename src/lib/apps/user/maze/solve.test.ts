@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { carve, cell_count, CARVERS, create_maze, exits, generate, neighbours, type Maze } from "./maze";
 import { create_rng } from "$lib/core/utils/random";
-import { solve, SOLVERS } from "./solve";
+import { solve, SOLVERS, straight_shot } from "./solve";
 
 function distances(maze: Maze, from: number): Int32Array {
   const distance = new Int32Array(cell_count(maze)).fill(-1);
@@ -80,4 +80,19 @@ describe.each(SOLVERS)("%s", (solver) => {
 test("A* expands fewer cells than BFS on an open grid", () => {
   const maze = open_grid(20, 20);
   expect(solve("a-star", maze, 0, 399).expanded).toBeLessThan(solve("bfs", maze, 0, 399).expanded);
+});
+
+describe("straight_shot", () => {
+  test("holds for the shortest walk and fails after a detour", () => {
+    const maze = generate(CARVERS[0], 8, 8, 7);
+    const goal = cell_count(maze) - 1;
+    const trail = new Uint8Array(cell_count(maze));
+    const path = solve(SOLVERS[0], maze, 0, goal).path;
+    for (const cell of path) trail[cell] = 1;
+    expect(straight_shot(maze, trail, 0, goal)).toBe(true);
+
+    const off = Array.from(trail.keys()).find((cell) => !trail[cell] && exits(maze, cell).some((next) => trail[next]));
+    trail[off!] = 1;
+    expect(straight_shot(maze, trail, 0, goal)).toBe(false);
+  });
 });

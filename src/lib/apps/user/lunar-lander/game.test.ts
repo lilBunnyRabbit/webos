@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { create_game, GRAVITY, ground_at, mode_key, score, set_status, Status, step, to_world, wind_speed, type Environment, type GameState } from "./game";
+import { create_game, GRAVITY, ground_at, mode_key, score, set_status, ships_landed, soft_touch, Status, step, to_world, wind_speed, type Environment, type GameState } from "./game";
 import { NO_CONTROLS, SHIPS, ShipId, type Controls } from "./ships";
 
 const DT = 1 / 120;
@@ -128,5 +128,19 @@ describe("touchdown", () => {
   it("keys bests by ship and setup, ignoring wind without air", () => {
     expect(mode_key(ShipId.SHUTTLE, MOON)).toBe("shuttle-moon");
     expect(mode_key(ShipId.PODS, { gravity: "mars", air: false, wind: true, infinite_fuel: true })).toBe("pods-mars-inf");
+  });
+});
+
+describe("achievements", () => {
+  it("counts each ship once, whatever environments it landed in", () => {
+    expect(ships_landed({})).toBe(0);
+    expect(ships_landed({ "pods-moon": 500, "pods-earth-air": 300, lander: 200 })).toBe(2);
+    expect(ships_landed({ "lander-moon": 1, "pods-mars": 1, "shuttle-zero-inf": 1 })).toBe(3);
+  });
+
+  it("judges a soft touch without the fuel bonus", () => {
+    expect(soft_touch(null)).toBe(false);
+    expect(soft_touch({ total: 1200, soft: 400, level: 150, centre: 150, fuel: 500 })).toBe(false);
+    expect(soft_touch({ total: 870, soft: 490, level: 190, centre: 190, fuel: 0 })).toBe(true);
   });
 });

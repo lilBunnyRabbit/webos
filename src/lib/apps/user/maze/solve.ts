@@ -131,3 +131,10 @@ export function solve(solver: Solver, maze: Maze, start: number, goal: number): 
     expanded++;
   }
 }
+
+/** The walk never left the shortest way: it marked no more cells than the path has. */
+export function straight_shot(maze: Maze, trail: Uint8Array, start: number, goal: number): boolean {
+  let walked = 0;
+  for (const cell of trail) walked += cell;
+  return walked === solve(Solver.BFS, maze, start, goal).path.length;
+}

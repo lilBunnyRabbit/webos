@@ -6,17 +6,21 @@
   import type { RunProps } from "../color-recall/run";
   import ShareCard from "../color-recall/share-card.svelte";
   import { sort_share } from "./share";
-  import { is_solved, scramble, sort_puzzle, SORT_CONFIGS, swap, valid_order, type SortState } from "./sort";
+  import { fewest_swaps, is_solved, scramble, sort_puzzle, SORT_CONFIGS, swap, valid_order, type SortState } from "./sort";
+  import { Level } from "../color-recall/modes";
+  import { z } from "zod";
 
   let { seed, level, daily, head, link, saved, onsave, onfinish, next }: RunProps<SortState> = $props();
 
   const DRAG_PX = 6;
 
-  const { window: win } = get_app_context();
+  const { window: win, storage, achievements } = get_app_context();
+  const sorts = storage.persisted("sorts", 0, z.number().int().nonnegative());
   const initial = untrack(() => ({ seed, saved, level }));
   const puzzle = sort_puzzle(initial.seed, SORT_CONFIGS[initial.level]);
   const restored = initial.saved && valid_order(initial.saved.order, puzzle) ? initial.saved : null;
   const clock = new Stopwatch(() => win.is_visible, restored?.ms ?? 0);
+  const fewest = fewest_swaps(scramble(puzzle, initial.seed));
 
   let order = $state<number[]>(restored?.order ?? scramble(puzzle, initial.seed));
   let moves = $state(restored?.moves ?? 0);
@@ -33,6 +37,15 @@
     onsave({ order: [...order], moves, ms: clock.read() });
   }
 
+  function record_sort() {
+    sorts.value++;
+    achievements.achieve("first-sort");
+    if (daily) achievements.achieve("daily");
+    if (initial.level === Level.HARD) achievements.achieve("hard");
+    if (moves <= fewest) achievements.achieve("no-wasted-swaps");
+    achievements.progress("sorts-25", sorts.value);
+  }
+
   function apply(a: number, b: number) {
     const swapped = swap(order, puzzle.anchors, a, b);
     selected = null;
@@ -40,7 +53,10 @@
     if (!clock.running) clock.start();
     order = swapped;
     moves++;
-    if (is_solved(order, puzzle.colors)) onfinish(clock.pause());
+    if (is_solved(order, puzzle.colors)) {
+      onfinish(clock.pause());
+      record_sort();
+    }
     save();
   }
 

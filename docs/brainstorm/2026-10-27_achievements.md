@@ -70,6 +70,7 @@ The App Store redesign ([brainstorm](2026-10-27_app-store-design.md)) gave every
 
 - [ ] Sweep: games and puzzles (two groups), apps with a finish line (two groups), Shopping List with its scan option
   - [x] AI games and creative apps: Alibi, Unsaid, Paint, Hopsprite, Font Maker, Warren, Tape Sketch, Brackets
+  - [x] Arcade and colour games: Blocks, Lunar Lander, Maze, Jigsaw, Tic-Tac-Toe, Color Recall, Crack the Code, Hex Guess, Odd One Out, Gradient Sort, Checkout Challenge (Color Games is no app any more: its four modes are their own apps since ADR-071)
 
 ## Next session topics
 - Cross-tab live refresh beyond re-reading when a tab becomes visible.

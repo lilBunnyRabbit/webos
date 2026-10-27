@@ -6,6 +6,8 @@ import {
   arrival_gap,
   backspace,
   better_run,
+  spotless_day,
+  SPOTLESS_FROM_DAY,
   create_customer,
   create_run,
   DAY_MS,
@@ -262,5 +264,24 @@ describe("days", () => {
     expect(better_run({ money: 10, days: 1, accuracy: 1 }, { money: 5, days: 4, accuracy: 1 })).toBe(true);
     expect(better_run({ money: 10, days: 2, accuracy: 0 }, { money: 10, days: 1, accuracy: 1 })).toBe(true);
     expect(better_run({ money: 10, days: 1, accuracy: 1 }, { money: 10, days: 1, accuracy: 0 })).toBe(false);
+  });
+});
+
+describe("spotless_day", () => {
+  const day = (day: number, today: Partial<ReturnType<typeof create_run>["today"]>, closed_early = false) => {
+    const run = create_run();
+    return { ...run, day, closed_early, today: { ...run.today, ...today } };
+  };
+
+  test("takes a clean day from day 5 on", () => {
+    expect(spotless_day(day(SPOTLESS_FROM_DAY, { clean: 12 }))).toBe(true);
+    expect(spotless_day(day(SPOTLESS_FROM_DAY - 1, { clean: 12 }))).toBe(false);
+  });
+
+  test("not with a sorry, a mistake, no sales or an early close", () => {
+    expect(spotless_day(day(6, { clean: 12, sorry: 1 }))).toBe(false);
+    expect(spotless_day(day(6, { clean: 12, mistakes: 1 }))).toBe(false);
+    expect(spotless_day(day(6, {}))).toBe(false);
+    expect(spotless_day(day(6, { clean: 12 }, true))).toBe(false);
   });
 });

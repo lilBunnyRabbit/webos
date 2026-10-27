@@ -32,14 +32,15 @@
     MODE_LABELS,
     prefs_schema,
     size_label,
+    Size,
     SIZES,
     Speed,
     SPEED_LABELS,
     SPEED_RATES,
     SOLVER_LABELS,
-    type Size,
   } from "./options";
-  import { SOLVERS, solve_steps } from "./solve";
+  import { SOLVERS, solve_steps, straight_shot } from "./solve";
+  import { z } from "zod";
 
   const MODE_OPTIONS = Object.values(Mode).map((value) => ({ value, label: MODE_LABELS[value] }));
   const CARVER_OPTIONS = CARVERS.map((value) => ({ value, label: CARVER_LABELS[value] }));
@@ -68,9 +69,10 @@
   type Phase = (typeof Phase)[keyof typeof Phase];
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   track_play(app_id, () => win.is_visible);
   const best = storage.persisted("best_ms", {}, best_ms_schema);
+  const escapes = storage.persisted("escapes", 0, z.number().int().nonnegative());
 
   // Per window, so two open mazes don't change each other; storage only remembers the last picks.
   const saved = storage.get("prefs", prefs_schema) ?? DEFAULT_PREFS;
@@ -230,6 +232,7 @@
     scene.path = path;
     path_length = path.length;
     phase = Phase.SOLVED;
+    if (path.length) achievements.achieve("watched");
   }
 
   function skip() {
@@ -317,6 +320,12 @@
       best.value[built.size] = time;
       record = true;
     }
+    escapes.value++;
+    achievements.achieve("first-exit");
+    if (built.size === Size.GIANT) achievements.achieve("giant");
+    if (Number(built.size) >= 24 && straight_shot(scene.maze, scene.trail!, scene.start, scene.goal)) achievements.achieve("straight-shot");
+    achievements.progress("every-size", SIZES.filter((entry) => best.value[entry] !== undefined).length);
+    achievements.progress("escapes-25", escapes.value);
   }
 
   function on_keydown(event: KeyboardEvent) {

@@ -35,7 +35,7 @@
   const { daily: daily_prop }: { daily?: string } = $props();
   const daily_day = untrack(() => daily_prop);
 
-  const { window_id, app_id, window: win, storage } = get_app_context();
+  const { window_id, app_id, window: win, storage, achievements } = get_app_context();
   const tracker = track_play(app_id, () => win.is_visible);
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
@@ -147,6 +147,11 @@
     const ms = clock.pause();
     stats.value = record(stats.value, game.length, used, ms);
     if (daily) tracker.daily(daily, ms, used);
+    achievements.achieve("first-crack");
+    if (daily) achievements.achieve("daily");
+    if (game.length === Length.L7) achievements.achieve("seven");
+    if (Number(game.length) >= 4 && used <= 5) achievements.achieve("hunch");
+    achievements.progress("cracks-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.solved, 0));
   }
 
   async function give_up() {

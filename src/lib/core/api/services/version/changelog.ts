@@ -15,6 +15,23 @@ export const CHANGELOG: Release[] = [
         text: "Alibi, Unsaid, Paint, Hopsprite, Font Maker, Warren, Tape Sketch and Brackets have achievements to earn: close a case, export your first font, measure a room that adds up, crown a champion and more.",
       },
       {
+        kind: NEW,
+        apps: [
+          "blocks",
+          "lunar-lander",
+          "maze",
+          "jigsaw",
+          "tic-tac-toe",
+          "color-recall",
+          "crack-the-code",
+          "hex-guess",
+          "odd-one-out",
+          "gradient-sort",
+          "checkout-challenge",
+        ],
+        text: "Blocks, Lunar Lander, Maze, Jigsaw, Tic-Tac-Toe, Crack the Code, Checkout Challenge and the four colour games now have achievements to earn, a few of them secret.",
+      },
+      {
         kind: IMPROVED,
         apps: ["shopping-list"],
         text: "Shopping List can scan a list with Doc Scan, next to the camera, in the list, its menus and its widget, and has four achievements to earn, like ticking off a whole list.",

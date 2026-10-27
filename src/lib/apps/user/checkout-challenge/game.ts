@@ -456,3 +456,11 @@ export function run_summary(run: Run): BestRun {
 export function better_run(candidate: BestRun, best: BestRun): boolean {
   return candidate.money > best.money || (candidate.money === best.money && candidate.days > best.days);
 }
+
+export const SPOTLESS_FROM_DAY = 5;
+
+/** A day from `SPOTLESS_FROM_DAY` on that ended open, with sales and every one of them clean. */
+export function spotless_day(run: Run): boolean {
+  const { today } = run;
+  return run.day >= SPOTLESS_FROM_DAY && !run.closed_early && sales(today) > 0 && today.mistakes === 0 && today.sorry === 0;
+}

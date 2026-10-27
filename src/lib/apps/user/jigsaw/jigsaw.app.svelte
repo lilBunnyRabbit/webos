@@ -18,6 +18,7 @@
     Shuffle as ShuffleIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
+  import { z } from "zod";
   import { fit_view, pinch_view, to_image, zoom_view, type Point, type View } from "$kit/utils/view";
   import {
     bounds,
@@ -49,12 +50,13 @@
 
   const { path: path_prop }: { path?: string } = $props();
 
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   const play = track_play(app_id, () => win.is_visible);
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const clock = new Stopwatch(() => win.is_visible);
+  const solves = storage.persisted("solves", 0, z.number().int().nonnegative());
 
   let pieces = $state<PieceCount>(storage.get("pieces", pieces_schema) ?? 48);
   let picture = $state.raw<ImageBitmap | null>(null);
@@ -69,6 +71,8 @@
   let edge_only = $state(false);
   let ghost = $state(false);
   let solved = $state(false);
+  // Not saved with the game: a puzzle resumed after a reload counts as unseen.
+  let peeked = false;
   let loading = $state(false);
   let dragging_file = $state(false);
   let lifted = $state.raw<Set<number> | null>(null);
@@ -139,6 +143,7 @@
     board = create_board(layout, saved && fits(saved, layout) ? saved.positions : scatter(layout, seed, aspect));
     lifted = null;
     solved = is_complete(board);
+    peeked = ghost;
     clock.reset(saved ? saved.elapsed : 0);
     revision++;
     view = null;
@@ -242,6 +247,10 @@
   $effect(() => () => picture?.close());
 
   $effect(() => {
+    if (ghost) peeked = true;
+  });
+
+  $effect(() => {
     revision;
     if (!canvas || !board || !picture || !palette || !view || !size.width || sprites.length !== total) return;
     const target = canvas;
@@ -302,9 +311,19 @@
       settle(board);
       solved = true;
       clock.pause();
+      record_solve();
     }
     revision++;
     save();
+  }
+
+  function record_solve() {
+    solves.value++;
+    achievements.achieve("first-solve");
+    if (pieces >= 100) achievements.achieve("pieces-100");
+    if (pieces >= 200) achievements.achieve("pieces-200");
+    if (pieces >= 100 && !peeked) achievements.achieve("no-peeking");
+    achievements.progress("solves-10", solves.value);
   }
 
   function on_pointerdown(event: PointerEvent) {

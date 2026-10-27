@@ -23,7 +23,8 @@
     { value: Space.OKLCH, label: "OKLCH" },
   ];
 
-  const { window: win, storage } = get_app_context();
+  const { window: win, storage, achievements } = get_app_context();
+  const games = storage.persisted("games", 0, z.number().int().nonnegative());
   const space = storage.persisted<Space>("space", Space.HSB, z.enum(Space));
 
   const initial = untrack(() => ({ seed, saved, level }));
@@ -99,11 +100,22 @@
     if (phase !== Phase.GUESS) return;
     guesses = [...guesses, guess_hex];
     phase = Phase.REVEAL;
+    if (scores[last] === ROUND_MAX) achievements.achieve("dead-on");
     if (guesses.length === ROUNDS) {
       const ms = clock.pause();
       onfinish(ms, total);
+      record_game();
     }
     save(false);
+  }
+
+  function record_game() {
+    games.value++;
+    achievements.achieve("first-game");
+    if (daily) achievements.achieve("daily");
+    if (total >= 40) achievements.achieve("score-40");
+    if (initial.level === Level.HARD && total >= 35) achievements.achieve("hard-35");
+    achievements.progress("games-25", games.value);
   }
 
   function after_reveal() {

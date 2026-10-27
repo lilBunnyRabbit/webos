@@ -104,3 +104,18 @@ export function valid_order(order: readonly number[], puzzle: SortPuzzle): boole
   const seen = new Set(order);
   return seen.size === order.length && order.every((tile, position) => tile < order.length && (!puzzle.anchors[position] || tile === position));
 }
+
+/** The fewest swaps that put every tile home: one fewer than each cycle of the scramble is long. */
+export function fewest_swaps(order: readonly number[]): number {
+  const seen = new Uint8Array(order.length);
+  let swaps = 0;
+  for (let start = 0; start < order.length; start++) {
+    let length = 0;
+    for (let at = start; !seen[at]; at = order[at]) {
+      seen[at] = 1;
+      length++;
+    }
+    if (length) swaps += length - 1;
+  }
+  return swaps;
+}

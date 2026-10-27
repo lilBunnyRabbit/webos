@@ -23,12 +23,15 @@
     DEFAULT_ENVIRONMENT,
     fixed_steps,
     GRAVITY,
+    Gravity,
     GRAVITY_OPTIONS,
     gravity_schema,
     mode_key,
     SAFE,
     score,
     set_status,
+    ships_landed,
+    soft_touch,
     Status,
     step,
     to_world,
@@ -36,7 +39,6 @@
     type BestScores,
     type Environment,
     type GameState,
-    type Gravity,
   } from "./game";
   import { emit_crash, emit_dust, emit_exhaust, update_particles, type Particle } from "./particles";
   import { Control, NO_CONTROLS, SHIP_OPTIONS, ship_id_schema, ShipId, type Controls } from "./ships";
@@ -55,9 +57,10 @@
   };
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   track_play(app_id, () => win.is_visible);
   const best_scores = storage.persisted<BestScores>("best", {}, best_scores_schema);
+  const landings = storage.persisted("landings", 0, z.number().int().nonnegative());
   const uid = $props.id();
 
   // Per window, so two open games don't change each other's setup; storage only remembers the last pick.
@@ -196,9 +199,17 @@
       const at = to_world(next.ship, foot);
       emit_dust(particles, at.x, at.y, 10, 30, Math.random);
     }
-    const total = score(next)?.total ?? 0;
+    const result = score(next);
+    const total = result?.total ?? 0;
     new_best = total > best;
     if (new_best) best_scores.value[key] = total;
+    landings.value++;
+    achievements.achieve("first-landing");
+    if (next.env.gravity === Gravity.EARTH) achievements.achieve("earth");
+    if (next.env.air && next.env.wind) achievements.achieve("crosswind");
+    if (soft_touch(result)) achievements.achieve("soft-touch");
+    achievements.progress("every-ship", ships_landed(best_scores.value));
+    achievements.progress("landings-25", landings.value);
   }
 
   function controls(): Controls {
