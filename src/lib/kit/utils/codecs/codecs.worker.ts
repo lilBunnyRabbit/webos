@@ -1,10 +1,6 @@
 import { CODECS, CodecFormat, ENCODER_INFO, is_avif, is_codec_format, is_jxl, type EncodeOptions, type EncoderFormat } from "./formats";
 import { ssim, type SsimResult } from "./ssim";
-
-export type CodecRequest =
-  | { id: number; op: "encode"; format: EncoderFormat; image: ImageData; options: EncodeOptions }
-  | { id: number; op: "decode"; blob: Blob }
-  | { id: number; op: "compare"; a: ImageData; b: ImageData };
+import { serve, transfer } from "../worker/serve";
 
 export interface EncodeResult {
   blob: Blob;
@@ -12,9 +8,11 @@ export interface EncodeResult {
   ms: number;
 }
 
-export type CodecResponse =
-  | { id: number; ok: true; result: EncodeResult | ImageData | SsimResult }
-  | { id: number; ok: false; error: string };
+export interface CodecApi {
+  encode(input: { format: EncoderFormat; image: ImageData; options: EncodeOptions }): EncodeResult;
+  decode(input: { blob: Blob }): ImageData;
+  compare(input: { a: ImageData; b: ImageData }): SsimResult;
+}
 
 const clamp_quality = (quality: number | undefined, fallback: number) => Math.min(100, Math.max(1, Math.round(quality ?? fallback)));
 
@@ -88,26 +86,18 @@ async function decode(blob: Blob): Promise<ImageData> {
   }
 }
 
-async function handle(request: CodecRequest): Promise<{ result: EncodeResult | ImageData | SsimResult; transfer: Transferable[] }> {
-  if (request.op === "encode") {
+serve<CodecApi>({
+  encode: async (request) => {
     const start = performance.now();
     const blob = await encode(request.format, request.image, request.options);
-    return { result: { blob, ms: performance.now() - start }, transfer: [] };
-  }
-  if (request.op === "decode") {
+    return { blob, ms: performance.now() - start };
+  },
+  decode: async (request) => {
     const image = await decode(request.blob);
-    return { result: image, transfer: [image.data.buffer] };
-  }
-  const result = ssim(request.a, request.b);
-  return { result, transfer: [result.map.buffer] };
-}
-
-self.onmessage = async ({ data: request }: MessageEvent<CodecRequest>) => {
-  try {
-    const { result, transfer } = await handle(request);
-    self.postMessage({ id: request.id, ok: true, result } satisfies CodecResponse, { transfer });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    self.postMessage({ id: request.id, ok: false, error: message } satisfies CodecResponse);
-  }
-};
+    return transfer(image, [image.data.buffer]);
+  },
+  compare: (request) => {
+    const result = ssim(request.a, request.b);
+    return transfer(result, [result.map.buffer]);
+  },
+});

@@ -1,4 +1,5 @@
-import type { CodecRequest, CodecResponse, EncodeResult } from "./codecs.worker";
+import { spawn, type Input, type WorkerHandle } from "../worker";
+import type { CodecApi, EncodeResult } from "./codecs.worker";
 import CodecWorker from "./codecs.worker?worker";
 import { CODECS, type CodecFormat, type EncodeOptions, type EncoderFormat } from "./formats";
 import type { SsimResult } from "./ssim";
@@ -8,10 +9,11 @@ export type { EncodeResult } from "./codecs.worker";
 export type { Pixels, SsimResult } from "./ssim";
 export { SSIM_STEP, SSIM_WINDOW } from "./ssim";
 
-type Request = CodecRequest extends infer R ? (R extends CodecRequest ? Omit<R, "id"> : never) : never;
+type Method = keyof CodecApi;
 
 interface Job {
-  request: CodecRequest;
+  method: Method;
+  input: Input<CodecApi[Method]>;
   resolve: (value: never) => void;
   reject: (reason: unknown) => void;
   signal?: AbortSignal;
@@ -19,7 +21,7 @@ interface Job {
 }
 
 interface Slot {
-  worker: Worker;
+  worker: WorkerHandle<CodecApi>;
   job: Job | null;
   idle: ReturnType<typeof setTimeout> | null;
 }
@@ -30,45 +32,40 @@ const max_workers = () => Math.max(1, Math.min(4, (navigator.hardwareConcurrency
 
 const slots: Slot[] = [];
 const queue: Job[] = [];
-let next_id = 0;
 
 function retire(slot: Slot) {
   if (slot.idle) clearTimeout(slot.idle);
   slot.worker.terminate();
-  slots.splice(slots.indexOf(slot), 1);
+  const at = slots.indexOf(slot);
+  if (at >= 0) slots.splice(at, 1);
 }
 
-function finish(job: Job) {
-  if (job.on_abort) job.signal?.removeEventListener("abort", job.on_abort);
-}
-
-function spawn(): Slot {
-  const slot: Slot = { worker: new CodecWorker(), job: null, idle: null };
-  slot.worker.onmessage = ({ data }: MessageEvent<CodecResponse>) => {
-    const job = slot.job;
-    slot.job = null;
-    if (job && job.request.id === data.id) {
-      finish(job);
-      if (data.ok) job.resolve(data.result as never);
-      else job.reject(new Error(data.error));
-    }
-    // A wasm abort can leave the module unusable, so a failed worker isn't reused.
-    if (!data.ok) retire(slot);
-    else slot.idle = setTimeout(() => retire(slot), IDLE_MS);
-    pump();
-  };
-  slot.worker.onerror = (event) => {
-    event.preventDefault();
-    const job = slot.job;
-    retire(slot);
-    if (job) {
-      finish(job);
-      job.reject(new Error(event.message || "The image codec stopped"));
-    }
-    pump();
-  };
+function add_slot(): Slot {
+  const slot: Slot = { worker: spawn<CodecApi>(CodecWorker, { stopped: "The image codec stopped" }), job: null, idle: null };
   slots.push(slot);
   return slot;
+}
+
+// The signal goes to `call()`, which ends the worker on abort: a wasm encode can't be interrupted any other way.
+function dispatch(slot: Slot, job: Job) {
+  if (job.on_abort) job.signal?.removeEventListener("abort", job.on_abort);
+  slot.job = job;
+  slot.worker
+    .call(job.method, job.input as never, { signal: job.signal })
+    .then(
+      (result) => {
+        slot.job = null;
+        slot.idle = setTimeout(() => retire(slot), IDLE_MS);
+        job.resolve(result as never);
+      },
+      (reason: unknown) => {
+        slot.job = null;
+        // A wasm abort can leave the module unusable, so a failed worker isn't reused.
+        retire(slot);
+        job.reject(reason);
+      }
+    )
+    .finally(pump);
 }
 
 function pump() {
@@ -76,33 +73,23 @@ function pump() {
     let slot = slots.find((candidate) => candidate.job === null);
     if (!slot) {
       if (slots.length >= max_workers()) return;
-      slot = spawn();
+      slot = add_slot();
     }
     if (slot.idle) clearTimeout(slot.idle);
     slot.idle = null;
-    const job = queue.shift()!;
-    slot.job = job;
-    slot.worker.postMessage(job.request);
+    dispatch(slot, queue.shift()!);
   }
 }
 
-function cancel(job: Job) {
-  finish(job);
-  const queued = queue.indexOf(job);
-  if (queued >= 0) queue.splice(queued, 1);
-  // A wasm encode can't be interrupted; ending its worker is the only way to stop it.
-  const slot = slots.find((candidate) => candidate.job === job);
-  if (slot) retire(slot);
-  job.reject(job.signal?.reason ?? new DOMException("Aborted", "AbortError"));
-  pump();
-}
-
-function run<T>(request: Request, signal?: AbortSignal): Promise<T> {
+function run<T>(method: Method, input: Job["input"], signal?: AbortSignal): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     if (signal?.aborted) return reject(signal.reason);
-    const job: Job = { request: { ...request, id: next_id++ } as CodecRequest, resolve: resolve as (value: never) => void, reject, signal };
+    const job: Job = { method, input, resolve: resolve as (value: never) => void, reject, signal };
     if (signal) {
-      job.on_abort = () => cancel(job);
+      job.on_abort = () => {
+        queue.splice(queue.indexOf(job), 1);
+        reject(signal.reason ?? new DOMException("Aborted", "AbortError"));
+      };
       signal.addEventListener("abort", job.on_abort, { once: true });
     }
     queue.push(job);
@@ -120,16 +107,16 @@ export function encode(
   options: EncodeOptions = {},
   { signal }: CodecCallOptions = {}
 ): Promise<EncodeResult> {
-  return run({ op: "encode", format, image, options }, signal);
+  return run("encode", { format, image, options }, signal);
 }
 
 /** The browser's own decoder when it has one (with jSquash for AVIF where it doesn't), jSquash for JPEG XL. */
 export function decode(blob: Blob, { signal }: CodecCallOptions = {}): Promise<ImageData> {
-  return run({ op: "decode", blob }, signal);
+  return run("decode", { blob }, signal);
 }
 
 export function compare(a: ImageData, b: ImageData, { signal }: CodecCallOptions = {}): Promise<SsimResult> {
-  return run({ op: "compare", a, b }, signal);
+  return run("compare", { a, b }, signal);
 }
 
 const probes = new Map<CodecFormat, Promise<boolean>>();

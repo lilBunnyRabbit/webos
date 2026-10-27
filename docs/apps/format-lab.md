@@ -27,23 +27,23 @@ So JPEG, WebP and PNG use the canvas encoder, and AVIF and JPEG XL need wasm: jS
 | JPEG XL | jSquash, `jxl_enc.wasm` 1.4 MB | quality 75 | Effort 1–9, default 7 | yes |
 | PNG | canvas | lossless | none | always |
 
-`kit/utils/codecs/formats.ts:32`, `codecs.worker.ts:21`, `codecs.worker.ts:40`. jSquash loads its multi-threaded build only when `wasm-feature-detect` finds wasm threads, which need cross-origin isolation; the site isn't isolated, so the single-threaded builds run.
+`kit/utils/codecs/formats.ts:32`, `codecs.worker.ts:19`, `codecs.worker.ts:38`. jSquash loads its multi-threaded build only when `wasm-feature-detect` finds wasm threads, which need cross-origin isolation; the site isn't isolated, so the single-threaded builds run.
 
-**Decode** (`codecs.worker.ts:64`): JPEG XL is recognised by signature (bare codestream `FF 0A` or the ISO container, `formats.ts:64`), so a `.jxl` with no MIME type still counts, and goes to `jxl_dec.wasm` (0.85 MB). Everything else tries `createImageBitmap` first; only an AVIF the browser can't read falls back to `avif_dec.wasm` (1.2 MB). SVG can't be decoded in a worker; `read_image` falls back to the page's `<img>` (`kit/utils/codecs/source.ts:6`, shared with Image Tools).
+**Decode** (`codecs.worker.ts:66`): JPEG XL is recognised by signature (bare codestream `FF 0A` or the ISO container, `formats.ts:64`), so a `.jxl` with no MIME type still counts, and goes to `jxl_dec.wasm` (0.85 MB). Everything else tries `createImageBitmap` first; only an AVIF the browser can't read falls back to `avif_dec.wasm` (1.2 MB). SVG can't be decoded in a worker; `read_image` falls back to the page's `<img>` (`kit/utils/codecs/source.ts:6`, shared with Image Tools).
 
 Wasm is fetched on first use only, never at boot, and cached by the service worker in `webos-wasm` (`vite.config.ts`, `CacheFirst` on `.wasm`), so the formats work offline afterwards.
 
 ### Worker pool
 
-`kit/utils/codecs/index.ts`. Every encode, decode and compare is a job in a small pool.
+`kit/utils/codecs/index.ts`, on `$kit/utils/worker` (`spawn`; the worker side is `serve<CodecApi>`). Every encode, decode and compare is a job in a small pool.
 
 | Rule | Value | Why |
 |------|-------|-----|
-| Size | `min(4, hardwareConcurrency − 1)`, at least 1 (`kit/utils/codecs/index.ts:29`) | One per lab format at most, and a core left for the page |
-| Idle | A worker ends 30 s after its last job (`kit/utils/codecs/index.ts:28`) | A worker keeps its codec's wasm memory, hundreds of MB after a big AVIF, until it's gone |
-| Cancel | Terminates the worker running the job (`kit/utils/codecs/index.ts:89`) | A wasm encode never yields; ending the worker is the only stop |
-| Failure | A worker whose job failed is retired, never reused (`kit/utils/codecs/index.ts:56`) | A wasm abort can leave the module unusable |
-| Probe | `supported(format)`: canvas formats are probed once by encoding a 1×1 canvas and checking the blob's type; wasm formats need `WebAssembly` (`kit/utils/codecs/index.ts:138`) | `convertToBlob` silently falls back to PNG |
+| Size | `min(4, hardwareConcurrency − 1)`, at least 1 (`kit/utils/codecs/index.ts:31`) | One per lab format at most, and a core left for the page |
+| Idle | A worker ends 30 s after its last job (`kit/utils/codecs/index.ts:30`) | A worker keeps its codec's wasm memory, hundreds of MB after a big AVIF, until it's gone |
+| Cancel | Terminates the worker running the job: the signal goes to the kit worker helper's `call()`, which ends its worker (`kit/utils/codecs/index.ts:50`, `kit/utils/worker`) | A wasm encode never yields; ending the worker is the only stop |
+| Failure | A worker whose job failed is retired, never reused (`kit/utils/codecs/index.ts:63`) | A wasm abort can leave the module unusable |
+| Probe | `supported(format)`: canvas formats are probed once by encoding a 1×1 canvas and checking the blob's type; wasm formats need `WebAssembly` (`kit/utils/codecs/index.ts:125`) | `convertToBlob` silently falls back to PNG |
 
 Format Lab runs the four formats as a parallel task group (`encode-job.ts:35`): per format encode, decode the result, compare with the source, make a bitmap for the stage. Each shows in the task's tree with its size and SSIM. Settings re-encode on Encode, not live: each run is a task with a toast, so live re-encoding on every slider move would flood toasts. Only formats whose settings changed run again (`format-lab.app.svelte:86`).
 
