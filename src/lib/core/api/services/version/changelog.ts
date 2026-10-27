@@ -5,6 +5,22 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.76.0",
+    date: "2026-10-27",
+    title: "Achievements all round",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "The update screen shows what's new in full beside the download progress, instead of a cramped list cut short.",
+      },
+      {
+        kind: FIXED,
+        apps: ["app-library"],
+        text: "Doc Scan and Motion Watch show under New apps in the App Store.",
+      },
+    ],
+  },
+  {
     version: "3.75.0",
     date: "2026-10-27",
     title: "Tape Sketch, flat and turnable",

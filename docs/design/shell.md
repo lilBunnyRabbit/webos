@@ -43,7 +43,7 @@ The parts of the OS around apps. Source: `src/lib/core/components/`.
 
 ## Updating
 
-- "Update and reload" covers both shells with a full-viewport takeover like the introduction: `background-darkest` with the `background-dark` glow, the logo mark in `primary`, "Updating WebOS" (`text-base font-semibold`) over `v{old} → v{new}` in mono `text-2xs`.
+- "Update and reload" covers both shells with a full-viewport takeover like the introduction: `background-darkest` with the `background-dark` glow, one card in two panes: status (logo mark in `primary`, "Updating WebOS" in `text-base font-semibold` over `v{old} → v{new}` in mono `text-2xs`, the steps, Restart now at the foot) and What's new (every release in full, kind badges, scrolling). Side by side from a `@2xl` container, stacked below it. Release notes are never clamped: the person waiting reads them.
 - Three steps in `text-ui`: done ones get a `primary` check, the current one a spinner, upcoming ones a dot at 65%. It stays until the page navigates away.
 
 ## Introduction
