@@ -104,6 +104,12 @@
       wrapped ? EditorView.lineWrapping : [],
       slot.of((side.language && languages.get(side.language)) ?? []),
       placeholder(hint),
+      // A whole text pasted into an empty side keeps the view at the top, where the other side's paste goes next.
+      EditorState.transactionFilter.of((transaction) =>
+        transaction.isUserEvent("input.paste") && transaction.startState.doc.length === 0
+          ? [transaction, { selection: { anchor: 0 }, sequential: true }]
+          : transaction
+      ),
       side.read_only ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : [],
       EditorView.updateListener.of((update) => {
         if (update.docChanged) side.text = update.state.doc.toString();
