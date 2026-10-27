@@ -53,6 +53,11 @@ export function match(puzzle: Puzzle, cells: readonly number[]): Placement | nul
   return puzzle.placements.find((placement) => placement.word === text || placement.word === reverse(text)) ?? null;
 }
 
+/** Right to left, or straight up: the rising diagonal still reads left to right. */
+export function reads_backwards(placement: Placement): boolean {
+  return placement.dc < 0 || (placement.dc === 0 && placement.dr < 0);
+}
+
 export function with_found(game: Game, word: string): Game {
   if (game.found.includes(word)) return game;
   const found = [...game.found, word];

@@ -72,8 +72,11 @@ Hints are counted; best times count only solves without hints.
 | `app.plots.daily` | Daily in progress: `{ day, game }` |
 | `app.plots.stats` | Per size `{ solved, best }` |
 | `app.plots.size` | Last size |
+| `/var/lib/apps/plots/achievements.json` | Achievements, written by the OS ([achievements](../system/services/achievements.md)) |
 
 A solved daily calls `PlayTracker.daily(day, ms)`; the manifest leaves `daily_rank` at its default, time ascending. Props: `daily` (`YYYY-MM-DD`), the Game Hub contract. The daily seed is `daily_seed(day, "plots")`, size 7×7. No shell commands beyond `games daily`.
+
+**Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (9×9 without a hint), `solves-25` (progress: the solves of every size added up), secret `quick` (6×6 in under 30 s without a hint).
 
 ## Dependencies & licences
 
@@ -90,4 +93,5 @@ None beyond the repo's own: `zod`, `phosphor-svelte` (toolbar icons).
 
 - [Daily puzzles brainstorm, 2026-10-21](../brainstorm/2026-10-21_daily-puzzles.md): one app per puzzle, rabbit names (Patches → Plots), generated with one answer, region borders as a small kit helper.
 - [ADR-035](../adrs/035-app-platform-wave-2.md): `daily` prop, `track_play`, Game Hub.
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - Built here, within the brainstorm's scope: a new plot replaces the plots it overlaps (LinkedIn's behaviour) instead of stacking; overlap shows as a preview while dragging, not as a lasting conflict. Clues are thinned until the deduction rules, not just the solver, still solve the puzzle.

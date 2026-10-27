@@ -40,7 +40,7 @@
     { value: Mode.COLOR, label: "Colour" },
   ];
 
-  const { app_id, window_id, window: win } = get_app_context();
+  const { app_id, window_id, window: win, achievements } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
@@ -235,6 +235,7 @@
       await files.create_file(directory, base_name(target), { content, overwrite: true });
       saved_text = content;
       path = target;
+      achievements.achieve("made");
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the puzzle", reason);

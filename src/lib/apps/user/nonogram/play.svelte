@@ -87,7 +87,7 @@
     { value: "-1", label: "Cross", icon: XIcon },
   ] as const;
 
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats_bw = storage.persisted("stats", empty_stats(), stats_schema);
   const stats_color = storage.persisted("stats-color", empty_stats(), stats_schema);
@@ -239,10 +239,22 @@
 
   function finish() {
     const time = clock.pause();
+    if (kind !== "test") report_solve();
     if (!tracks_stats) return;
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, size, time, game.hints);
+    const both = [...Object.values(stats_bw.value), ...Object.values(stats_color.value)];
+    achievements.progress("solves-25", both.reduce((sum, entry) => sum + entry.solved, 0));
     on_solved?.(time);
+  }
+
+  /** File puzzles count too, at their own size; a play-test from the editor doesn't. */
+  function report_solve() {
+    const big = width >= 20 && height >= 20;
+    achievements.achieve("first-solve");
+    if (kind === "daily") achievements.achieve("daily");
+    if (big) achievements.achieve("big");
+    if (big && colored && game.hints === 0) achievements.achieve("masterpiece");
   }
 
   function undo() {

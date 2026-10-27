@@ -32,6 +32,11 @@ export const CHANGELOG: Release[] = [
         text: "Blocks, Lunar Lander, Maze, Jigsaw, Tic-Tac-Toe, Crack the Code, Checkout Challenge and the four colour games now have achievements to earn, a few of them secret.",
       },
       {
+        kind: NEW,
+        apps: ["sokoban", "nonogram", "kakuro", "futoshiki", "nurikabe", "hutches", "plots", "sun-and-moon", "tunnels", "word-search"],
+        text: "Sokoban, Nonogram, Kakuro, Futoshiki, Nurikabe, Hutches, Plots, Sun & Moon, Tunnels and Word Search have achievements to earn, from a first solve and a daily to the biggest boards, plus a secret one each.",
+      },
+      {
         kind: IMPROVED,
         apps: ["shopping-list"],
         text: "Shopping List can scan a list with Doc Scan, next to the camera, in the list, its menus and its widget, and has four achievements to earn, like ticking off a whole list.",

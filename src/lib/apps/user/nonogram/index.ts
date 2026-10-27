@@ -30,5 +30,13 @@ export default define_app({
     },
   },
   shell: () => import("./commands"),
+  achievements: [
+    { id: "first-solve", title: "Picture this", text: "Solve a puzzle." },
+    { id: "daily", title: "Daily picture", text: "Solve a daily puzzle." },
+    { id: "big", title: "Big picture", text: "Solve a 20×20 puzzle." },
+    { id: "made", title: "Pixel pusher", text: "Save a puzzle you made in the editor." },
+    { id: "solves-25", title: "Gallery", text: "Solve 25 puzzles.", goal: 25 },
+    { id: "masterpiece", title: "Masterpiece", text: "Solve a 20×20 colour puzzle without a hint.", secret: true },
+  ],
   component: () => import("./nonogram.app.svelte"),
 });

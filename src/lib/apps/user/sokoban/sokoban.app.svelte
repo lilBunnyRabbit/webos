@@ -59,7 +59,7 @@
   const { daily: daily_prop }: { daily?: string } = $props();
   const daily_day = untrack(() => daily_prop);
 
-  const { window_id, app_id, window: win, storage } = get_app_context();
+  const { window_id, app_id, window: win, storage, achievements } = get_app_context();
   const play = track_play(app_id, () => win.is_visible);
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
@@ -146,6 +146,17 @@
     new_best = previous !== undefined && better(result, previous);
     bests.value = record_best(bests.value, key, result);
     stats.value = record(stats.value, game.difficulty, time);
+    report_solve(time);
+  }
+
+  function report_solve(time: number) {
+    const hard = game.difficulty === Difficulty.HARD;
+    achievements.achieve("first-solve");
+    if (daily) achievements.achieve("daily");
+    if (hard) achievements.achieve("hard");
+    if (new_best) achievements.achieve("improved");
+    if (hard && time < 120_000) achievements.achieve("quick");
+    achievements.progress("solves-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.solved, 0));
   }
 
   function step(direction: Direction) {

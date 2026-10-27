@@ -22,5 +22,12 @@ export default define_app({
       .optional(),
   }),
   shell: () => import("./commands"),
+  achievements: [
+    { id: "first-solve", title: "Landfall", text: "Solve a puzzle." },
+    { id: "daily", title: "Daily tide", text: "Solve a daily puzzle." },
+    { id: "big", title: "Archipelago", text: "Solve a 12×12 puzzle without a hint." },
+    { id: "solves-25", title: "Cartographer", text: "Solve 25 puzzles.", goal: 25 },
+    { id: "quick", title: "Low tide", text: "Solve a 7×7 puzzle in under a minute without a hint.", secret: true },
+  ],
   component: () => import("./nurikabe.app.svelte"),
 });

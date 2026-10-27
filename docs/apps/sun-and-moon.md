@@ -68,10 +68,13 @@ The reason shows in the status line for six seconds (`Flash` from `$kit/utils/fl
 | Last size | `app.sun-and-moon.size` | `"6"` or `"8"` |
 | Stats | `app.sun-and-moon.stats` | Per size `{ solved, best }`; best only counts solves without hints |
 | Daily results, play time | `/var/lib/games/plays.json` | Games kit (`track_play`), ranked by time |
+| Achievements | `/var/lib/apps/sun-and-moon/achievements.json` | Written by the OS ([achievements](../system/services/achievements.md)) |
 
 Props: `daily` (`YYYY-MM-DD`) opens that day's puzzle; Game Hub's Today tab passes it.
 
 Undo and redo are `$kit/utils/history` over the marks, up to 200 steps, per window and not saved.
+
+**Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (8×8 without a hint), `solves-25` (progress: the solves of both sizes added up), secret `quick` (6×6 in under 45 s without a hint).
 
 ## Dependencies & licences
 
@@ -86,3 +89,4 @@ None beyond the repo. Icons are Phosphor `Sun` and `Moon` (duotone), sun in `pri
 ## Decisions
 
 - [Daily puzzles, LinkedIn style](../brainstorm/2026-10-21_daily-puzzles.md): one app per puzzle, the name, 6×6 daily, edge-sign helpers shared with Futoshiki through `$kit/games/grid`.
+- [ADR-078](../adrs/078-achievements.md): achievements.

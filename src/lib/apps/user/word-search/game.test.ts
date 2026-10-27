@@ -8,6 +8,7 @@ import {
   line_between,
   match,
   new_game,
+  reads_backwards,
   record,
   restore,
   saved_schema,
@@ -111,5 +112,29 @@ describe("daily", () => {
     const today = daily_game("2026-10-14");
     expect(daily_game("2026-10-14").puzzle).toEqual(today.puzzle);
     expect(daily_game("2026-10-15").puzzle).not.toEqual(today.puzzle);
+  });
+});
+
+describe("reads_backwards", () => {
+  const at = (dr: number, dc: number) => ({ word: "HOP", row: 5, col: 5, dr, dc });
+
+  it("is right to left or bottom to top", () => {
+    expect(reads_backwards(at(0, -1))).toBe(true);
+    expect(reads_backwards(at(-1, 0))).toBe(true);
+    expect(reads_backwards(at(-1, -1))).toBe(true);
+    expect(reads_backwards(at(1, -1))).toBe(true);
+  });
+
+  it("isn't across, down or either left-to-right diagonal", () => {
+    expect(reads_backwards(at(0, 1))).toBe(false);
+    expect(reads_backwards(at(1, 0))).toBe(false);
+    expect(reads_backwards(at(1, 1))).toBe(false);
+    expect(reads_backwards(at(-1, 1))).toBe(false);
+  });
+
+  it("never happens below Hard", () => {
+    for (const difficulty of [Difficulty.EASY, Difficulty.MEDIUM]) {
+      for (let seed = 0; seed < 20; seed++) expect(new_game(difficulty, seed).puzzle.placements.some(reads_backwards)).toBe(false);
+    }
   });
 });

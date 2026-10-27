@@ -71,3 +71,7 @@ Decided within scope while building:
 - A failed definitions fetch retries on the next read after 30 s, as well as on `online`.
 - Apps that report on save (Paint, Hopsprite, Tape Sketch, Warren) report only when the document had unsaved changes or had never been saved (for Warren, never saved and not an import or template), so Save on someone else's finished file earns nothing. Paint counts a save as a new image only when no file was at that path before the write. Warren's print achievement is gone: `afterprint` fires on a cancelled dialog too. Hopsprite reports an animation export from the job's done report, which a Retry runs again.
 - The shell's `achievements` reads an app's record together with its definitions, so it never prints an unlocked one as locked; a locked secret shows no id or progress.
+
+## Revision 2026-10-27 (sweep: grid puzzles)
+- Sokoban, Nonogram, Kakuro, Futoshiki, Nurikabe, Hutches, Plots, Sun & Moon, Tunnels and Word Search derive their `solves-25` totals from the per-size stats they already keep; none needed a new storage key.
+- Nonogram's one-offs count a solved `.nonogram` file at its own size (20×20 or larger is "big"), never an editor play-test; its total adds the black-and-white and colour stats, which only free play and dailies record.

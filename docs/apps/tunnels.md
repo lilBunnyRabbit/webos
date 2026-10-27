@@ -80,8 +80,11 @@ Both come from ENABLE (public domain); the answers are its common words, filtere
 | Size | `app.tunnels.size` |
 | Statistics | `app.tunnels.stats`: solved and best (no hints) per size |
 | Daily result | `/var/lib/games/plays.json` through `track_play` |
+| Achievements | `/var/lib/apps/tunnels/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)) |
 
 Props: `daily` (`YYYY-MM-DD`), seeded with `daily_seed(day, "tunnels")`. Game Hub lists the daily because the props schema has a `daily` key. No shell commands beyond Game Hub's `games daily`.
+
+**Achievements** (ADR-078): `first-solve` (any solve), `daily` (a daily), `large` (Large without a hint) and `solves-25` (progress: the solves of every size added up) are reported from `finish()` after the stats are recorded; secret `red-herring` unlocks in `submit()` when `judge` says `elsewhere` (a real word on cells that aren't a hidden one).
 
 ## Dependencies & licences
 
@@ -97,3 +100,4 @@ None of its own. Word lists from ENABLE, public domain.
 ## Decisions
 
 - [Daily puzzles brainstorm](../brainstorm/2026-10-21_daily-puzzles.md): one app per puzzle, rabbit-themed names, generated with a proven single answer against the full accept list.
+- [ADR-078](../adrs/078-achievements.md): achievements.
