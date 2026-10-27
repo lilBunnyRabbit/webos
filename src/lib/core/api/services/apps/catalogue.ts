@@ -44,6 +44,8 @@ export interface CatalogueApp {
   /** How many achievements the manifest declares; their text is in `store/achievements.json` (ADR-078). */
   achievements?: number;
   background?: boolean;
+  /** The kinds of sheet the app provides (ADR-079). */
+  provides?: string[];
 }
 
 export type CatalogueData = Omit<CatalogueApp, "version" | "hash" | "manifest" | "entry" | "files" | "content">;
@@ -87,6 +89,7 @@ function zod_shape(schema: unknown): Record<string, unknown> | null {
 export function manifest_data(manifest: Record<string, unknown>, meta: Record<string, unknown>, system: boolean): CatalogueData {
   const has = (key: string) => typeof manifest[key] === "function" || undefined;
   const shape = zod_shape(manifest.props);
+  const provides = manifest.provides && typeof manifest.provides === "object" ? Object.keys(manifest.provides) : [];
   const data = {
     id: manifest.id,
     name: manifest.name,
@@ -114,6 +117,7 @@ export function manifest_data(manifest: Record<string, unknown>, meta: Record<st
     on_uninstall_data: has("on_uninstall_data"),
     achievements: Array.isArray(manifest.achievements) && manifest.achievements.length > 0 ? manifest.achievements.length : undefined,
     background: has("background"),
+    provides: provides.length ? provides : undefined,
   };
   return json_safe(data) as CatalogueData;
 }

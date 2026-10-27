@@ -57,6 +57,12 @@ Window sheets (ADR-025), rendered over this window only ([services/dialogs.md](.
 | `pick_directory(options?)` | `Promise<string \| null>` | The same for folders: "Select folder" takes the selected subfolder or the open folder |
 | `pick_save(options?)` | `Promise<string \| null>` | The picker in save mode: a folder plus a typed name. Options: `name` (suggested), `accept` (dims files that don't match), `start_path`, `title` (default "Save as"). Asks before replacing ("Replace" button). Refuses system folders (`/etc`, `/var`, `/tmp`). Resolves the full path; the app writes the file ([files.md](../services/files.md#picker-mode-adr-025)) |
 
+Another app's sheet ([ADR-079](../../adrs/079-app-sheets.md)):
+
+| Member | Type | Behaviour |
+|--------|------|-----------|
+| `request(key, input?)` | `Promise<Output \| null>` | Loaded on first call (`contexts/app/app-sheet.ts`). Opens the sheet `key` (`"{app-id}::{kind}"`, from that app's [`provides`](manifest.md#provides-adr-079)) over this window, like `pick_file`, and resolves what it hands back. The app is loaded on demand, installed or not; one this device doesn't know fetches the catalogue first. Resolves `null` on Cancel, when the window closes, and on **any** failure: offline, no such app or kind, its code failing to load, the sheet throwing while it renders. Never rejects. `key`, `input` and the result are typed from `AppSheets`, so an unknown key fails `bun run check`. **Always handle `null`** with the app's own way on, such as a plain file picker |
+
 Files from the real device aren't a handle member: `pick_device_files({ accept, multiple, capture })` from `$lib/core/utils/device-file` resolves `File[]` in memory, with no OPFS copy (ADR-031). `capture: "environment" | "user"` opens the camera on phones.
 
 Not there (ADR-003, deferred): `on()` events (owner decided against them; use getters plus `onDestroy`), `set_icon`, taskbar attention/badge, status bar.

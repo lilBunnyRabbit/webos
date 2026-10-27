@@ -1,7 +1,7 @@
 import type { ConfirmOptions } from "$lib/core/components/dialogs/confirm-dialog.svelte";
 import type { PromptOptions } from "$lib/core/components/dialogs/prompt-dialog.svelte";
 import type { PickOptions, SaveOptions } from "$lib/core/components/files/file-picker-dialog.svelte";
-import type { AppId, DirtyOptions, WindowId } from "$lib/core/api";
+import type { AppId, AppSheetInput, AppSheetKey, AppSheetOutput, DirtyOptions, WindowId } from "$lib/core/api";
 import type { Bounds } from "$lib/core/utils/type";
 import type { ZodType } from "zod";
 import type { JsonFile } from "./json-file.svelte";
@@ -58,6 +58,13 @@ export interface WindowHandle {
   pick_directory(options?: Omit<PickOptions, "accept"> & { title?: string }): Promise<string | null>;
   /** The picker in save mode: a folder plus a file name. Resolves the full path, or `null`. Writing is the caller's job. */
   pick_save(options?: SaveOptions & { title?: string }): Promise<string | null>;
+  /**
+   * Another app's sheet over this window (ADR-079): `key` is `"{app-id}::{kind}"`, from the provider's `provides`. Loads
+   * the provider on demand, installed or not. Resolves what the sheet hands back, or `null`: on Cancel, when the window
+   * closes, and on ANY failure (offline, the provider missing or not providing `kind`, its code failing to load or
+   * throwing). Never rejects. Always handle `null` with your own way to carry on.
+   */
+  request<K extends AppSheetKey>(key: K, input?: AppSheetInput<K>): Promise<AppSheetOutput<K> | null>;
 }
 
 export interface AchievementsHandle {

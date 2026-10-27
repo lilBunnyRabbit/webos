@@ -435,6 +435,7 @@ export class AppsService implements IAppsService {
       };
       Object.assign(parts, { [part]: run });
     }
+    const provides = entry.provides && Object.fromEntries(entry.provides.map((kind) => [kind, () => this.require(entry.id).then((manifest) => manifest.provides![kind]())]));
     return {
       id: entry.id,
       name: entry.name,
@@ -451,6 +452,7 @@ export class AppsService implements IAppsService {
       widget_size: entry.widget_size,
       default_widget: entry.default_widget,
       ...parts,
+      provides,
       component: () => this.require(entry.id).then((manifest) => manifest.component()),
     };
   }

@@ -70,12 +70,13 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `on_uninstall_data` | yes (3.57) | `() => import("./uninstall")`, the module default-exporting `() => Promise<void>`, run after an uninstall with data cleared `app.{id}.*` and `/var/lib/apps/{id}`, for stores the OS can't see (IndexedDB, caches). A throw is toasted; the uninstall stands ([manifest](apps/manifest.md)) |
 | `on_fire` | yes (3.57) | `() => import("./on-fire")`, the module default-exporting an `OnFire` `(job, { outcome, due })`, called by the scheduler when one of the app's jobs fires or is missed ([manifest](apps/manifest.md#on_fire-adr-062)) |
 | `background` | no (internal, 3.75) | `() => import("./watch.svelte")`, the module default-exporting a `BackgroundRun` `(ctx) => Promise<void>`: code that runs with no window, one job per app per browser, started and stopped by the app through BackgroundService ([manifest](apps/manifest.md#background-adr-081), ADR-081). Internal until a second app uses it |
+| `provides` | yes (3.75) | `{ [kind]: () => import("./x-sheet.svelte") }`: sheets other apps open with `win.request("{id}::{kind}")` (ADR-079). The component takes `AppSheetProps<Input, Output>` (`input`, `resolve`); declare its key in `AppSheets` by declaration merging ([manifest](apps/manifest.md#provides-adr-079)) |
 | `widget`, `widget_size`, `default_widget` | yes | [Widgets and badges](#widgets-and-badges) |
 | `system` | no | Set by discovery for `src/lib/apps/system/`, never written by an app |
 
 `define_app` throws on an invalid `widget_size` wherever the manifest is evaluated: in the build's Node step (the catalogue plugin), so the build fails, and when the manifest loads lazily in a tab. `AppCategory` values (`productivity`, `media`, `utilities`, `developer`, `games`) are stable; a new category is a minor.
 
-Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `AppReplacement`, `WindowOptions`, `WindowFlag`.
+Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `AppReplacement`, `AppSheetProps`, `AppSheets`, `AppSheetKey`, `WindowOptions`, `WindowFlag`.
 
 ## Props and file associations
 
@@ -95,7 +96,7 @@ Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `App
 |------|---------|
 | `AppContext` | `window_id`, `app_id`, `window`, `storage`, `achievements` (3.75) |
 | `AchievementsHandle` | `achieve(id)`, `progress(id, n)` (3.75, ADR-078) |
-| `WindowHandle` | Getters `id`, `is_focused`, `is_maximized`, `is_minimized`, `is_visible`, `bounds`. Controls `focus`, `close`, `minimize`, `maximize`, `restore`, `set_title`, `set_dirty`, `on_back`. Sheets `confirm`, `prompt`, `pick_file`, `pick_directory`, `pick_save` |
+| `WindowHandle` | Getters `id`, `is_focused`, `is_maximized`, `is_minimized`, `is_visible`, `bounds`. Controls `focus`, `close`, `minimize`, `maximize`, `restore`, `set_title`, `set_dirty`, `on_back`. Sheets `confirm`, `prompt`, `pick_file`, `pick_directory`, `pick_save`, `request` (another app's sheet, 3.75; resolves `null` on any failure, ADR-079) |
 | `StorageHandle` | `get`, `set`, `remove`, `persisted`, `window`, `file` |
 
 Option types: `ConfirmOptions`, `PromptOptions`, `PickOptions`, `SaveOptions`, `DirtyOptions`.

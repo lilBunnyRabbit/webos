@@ -136,6 +136,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - **Status:** Overlays done (ADR-025)
 - [-] Expanded WindowHandle (`set_title` done; set_icon, request_attention, set_badge open; the manifest `badge` may cover set_badge)
 - [x] Window overlays: file picker, confirm, prompt (promise-based; window sheets, ADR-025)
+- [x] App sheets: an app lends a sheet through `provides`, another opens it over its own window with `win.request("app-id::kind")`, null on any failure; `app provides` lists them (2026-10-27, [ADR-079](adrs/079-app-sheets.md), [brainstorm](brainstorm/2026-10-27_doc-scan-and-app-sheets.md))
 - Window status bar: parked, the kit `StatusBar` covers it (see Parked)
 
 ### Session Persistence

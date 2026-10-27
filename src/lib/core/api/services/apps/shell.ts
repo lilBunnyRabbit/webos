@@ -51,17 +51,18 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
       console.error(`[AppsService] ${loaders[index].id}'s shell commands failed to load`, result.reason);
       return [];
     });
+    const sheets = (await import("./shell-sheets")).sheets_shell(apps);
     return {
       completers: Object.assign({}, ...contributions.map(({ shell }) => shell.completers)),
-      values: Object.assign({}, ...contributions.map(({ shell }) => shell.values)),
-      commands: contributions.flatMap(({ id, shell }) =>
+      values: Object.assign({}, sheets.values, ...contributions.map(({ shell }) => shell.values)),
+      commands: [...(sheets.commands ?? []), ...contributions.flatMap(({ id, shell }) =>
         (shell.commands ?? []).map((command) => ({
           ...command,
           app: id,
           // A system app's commands (`docs`, `tour`) open it on demand like a file does, installed or not (ADR-077).
           available: () => (apps.is_installed(id) || apps.get(id)?.system ? (command.available?.() ?? true) : not_installed(apps.get(id)!)),
         }))
-      ),
+      )],
     };
   }
 

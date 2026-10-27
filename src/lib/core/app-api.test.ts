@@ -11,6 +11,9 @@ import type {
   AppPitch,
   AppProps,
   AppReplacement,
+  AppSheetKey,
+  AppSheetProps,
+  AppSheets,
   AppsService,
   Command,
   CommandContext,
@@ -336,6 +339,7 @@ const manifest_fields: Members<
   | "on_uninstall_data"
   | "preview"
   | "props"
+  | "provides"
   | "replaces"
   | "repository"
   | "restore"
@@ -364,6 +368,7 @@ const window_handle_members: Members<
   | "pick_file"
   | "pick_save"
   | "prompt"
+  | "request"
   | "restore"
   | "set_dirty"
   | "set_title"
@@ -378,6 +383,7 @@ const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = 
 const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
 const app_meta_members: Members<AppMeta, "authors" | "description" | "keywords" | "pitch"> = true;
 const app_replacement_members: Members<AppReplacement, "app" | "props"> = true;
+const app_sheet_props_members: Members<AppSheetProps, "input" | "resolve"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size" | "style"> = true;
 const window_options_members: Members<WindowOptions, "constraints" | "flags" | "snap_zone"> = true;
 const json_file_members: Members<JsonFile<unknown>, "error" | "ready" | "release" | "value"> = true;
@@ -424,6 +430,9 @@ type StableTypes = [
   AppPitch,
   AppProps,
   AppReplacement,
+  AppSheetKey,
+  AppSheetProps,
+  AppSheets,
   AppsService,
   Command,
   CommandContext,

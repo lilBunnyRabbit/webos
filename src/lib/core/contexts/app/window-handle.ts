@@ -79,5 +79,13 @@ export function create_window_handle(id: WindowId): WindowHandle {
       const paths = await dialogs().show(await file_picker(), { kind: "save" as const, ...options }, { window: id });
       return paths?.[0] ?? null;
     },
+    request: (async (key: string, input?: unknown) => {
+      try {
+        return await (await import("./app-sheet")).open_app_sheet(id, key, input);
+      } catch (error) {
+        console.warn(`[WindowHandle] ${key} failed, resolving null`, error);
+        return null;
+      }
+    }) as WindowHandle["request"],
   };
 }

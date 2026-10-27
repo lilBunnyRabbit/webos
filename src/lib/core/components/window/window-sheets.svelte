@@ -45,7 +45,10 @@
       {@attach focus_first}
       {@attach docked && swipe_dismiss({ on_dismiss: () => entry.resolve(null), dismissible: entry.dismissible || entry.swipe_cancels })}
     >
-      <entry.component {...entry.props} resolve={entry.resolve} />
+      <!-- Another app's sheet (ADR-079) may throw: that answers null instead of breaking the window. -->
+      <svelte:boundary onerror={(error) => (console.warn("[WindowSheets] A sheet failed, resolving null", error), entry.resolve(null))}>
+        <entry.component {...entry.props} resolve={entry.resolve} />
+      </svelte:boundary>
       {#if docked && (entry.dismissible || entry.swipe_cancels)}<Grabber class="absolute inset-x-0 top-1.5" />{/if}
     </div>
   </div>

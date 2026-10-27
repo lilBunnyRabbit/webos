@@ -1,6 +1,6 @@
 # App manifest
 
-ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md), [062](../../adrs/062-background-scheduler.md), [077](../../adrs/077-app-store.md), [081](../../adrs/081-background-apps.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `catalogue.ts`, `search.ts`; the build reads manifests in `tooling/vite-plugin-catalogue.ts`, the dev server and tests in `src/lib/apps/index.ts`
+ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md), [062](../../adrs/062-background-scheduler.md), [077](../../adrs/077-app-store.md), [079](../../adrs/079-app-sheets.md), [081](../../adrs/081-background-apps.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `catalogue.ts`, `search.ts`; the build reads manifests in `tooling/vite-plugin-catalogue.ts`, the dev server and tests in `src/lib/apps/index.ts`
 
 Every app is a folder with an `index.ts` that default-exports `define_app({...})`, and usually a `meta.ts` with its display text. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
 
@@ -46,6 +46,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `on_uninstall_data` | `() => Promise<{ default: () => Promise<void> }>` | no | Deletes the app's own stores the OS can't see (IndexedDB, caches) when it's uninstalled with "Also delete its saved data" ([apps](../services/apps.md), owner call 2026-10-22). Moonrabbit deletes `webos.moonrabbit` |
 | `on_fire` | `() => Promise<{ default: OnFire }>` | no | Runs when one of the app's scheduler jobs fires or is missed, with nothing of the app loaded ([below](#on_fire-adr-062), ADR-062) |
 | `background` | `() => Promise<{ default: BackgroundRun }>` | no | Code that runs with no window, one job per app per browser, started by `background.start(id)` ([below](#background-adr-081), ADR-081) |
+| `provides` | `Record<string, () => Promise<{ default: Component<AppSheetProps> }>>` | no | Sheets other apps open over their own window with `win.request("{id}::{kind}", input)` (ADR-079): kind → a lazy component. See [below](#provides-adr-079) |
 | `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |
 | `widget_size` | `{ min: WidgetSize; max: WidgetSize; default: WidgetSize }` | no | The widget's size range in cells and the size new widgets get. Without it the widget keeps its file's size and can't be resized |
 | `default_widget` | `boolean` | no | Puts the app's widget on every desktop once, at `widget_size.default` ([desktop](../services/desktop.md)). Removing it sticks. Needs `widget` |
@@ -182,6 +183,33 @@ export default run;
 ```
 
 The app starts it from its own UI with `background.start(id, props)` and stops it with `background.stop(id)`; the job runs until its signal aborts or it returns, with or without windows. One per app per browser (a Web Lock, never stolen); the app's windows read it through `background.get(id)` (`view` is what the job shared, in the tab that runs it). Inside a job, spawn workers with `ctx.spawn`, so they're listed under it and end with it. Like `on_fire` it has no app context: services through `kernel.service`, app data through `json_file`. Motion Watch is the one user. Details: [background](../services/background.md).
+
+### `provides` (ADR-079)
+
+Sheets this app lends to other apps. Each kind is a lazy Svelte component; another app opens it over its own window with `win.request("{app-id}::{kind}", input)` ([app context](app-context.md#windowhandle)) and gets back what the sheet resolves.
+
+```ts
+// index.ts
+provides: { scan: () => import("./scan-sheet.svelte") },
+
+// sheet-types.ts: typed keys, so a caller's typo fails to compile
+declare module "$lib/core/api/services/apps/type" {
+  interface AppSheets {
+    "doc-scan::scan": { input: ScanInput; output: Blob };
+  }
+}
+
+// scan-sheet.svelte
+let { input, resolve }: AppSheetProps<ScanInput, Blob> = $props();
+```
+
+- The sheet renders in the caller's window, with the caller's app context: `get_app_context()` there gives the caller's handle (use it for pickers and confirms) and the caller's storage (keep your own data out of it).
+- Size it like the file picker (`w-[min(46rem,calc(100cqw-2rem))]`, a height under `100cqh`): on a phone it docks to the bottom of the window.
+- `resolve(value)` once with the result, `resolve(null)` on Cancel. Esc and a swipe down resolve `null` too.
+- It may fail, and that's normal: the caller sees `null` for anything that goes wrong (offline, not loadable, a throw while rendering, which a `<svelte:boundary>` in `window-sheets.svelte` catches). Errors in your own handlers aren't caught; resolve `null` from them.
+- The kinds go into the app's catalogue entry (`provides: ["scan"]`), so `app provides` and a stub know them before the code loads.
+
+Doc Scan provides `scan` ([doc-scan](../../apps/doc-scan.md)).
 
 ### `widget` (ADR-034)
 

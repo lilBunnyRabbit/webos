@@ -59,10 +59,11 @@ describe("manifest_data", () => {
     associations: [".sudoku"],
     widget: () => Promise.resolve(),
     shell: () => Promise.resolve(),
+    provides: { scan: () => Promise.resolve(), print: () => Promise.resolve() },
     component: () => Promise.resolve(),
   };
 
-  test("keeps data, turns lazy parts into flags and a daily props key into `daily`", () => {
+  test("keeps data, turns lazy parts into flags, provided sheets into their kinds and a daily props key into `daily`", () => {
     const data = manifest_data(manifest, { description: "Numbers.", keywords: ["puzzle"] }, false);
     expect(data).toEqual({
       id: "sudoku",
@@ -76,6 +77,7 @@ describe("manifest_data", () => {
       daily: true,
       widget: true,
       shell: true,
+      provides: ["scan", "print"],
     });
   });
 

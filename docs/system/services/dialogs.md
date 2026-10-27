@@ -61,12 +61,14 @@ Because `resolve` is idempotent, a dialog that resolves a value and is then clos
 - While the window has sheets, its app content is wrapped in `inert`: no clicks, focus or screen-reader access. The titlebar stays live, so the window can still be moved, minimized or closed. Closing resolves the sheets with `null`.
 - On mount, focus goes to the sheet's first `[autofocus]`, else its first input or button. Only the top sheet is interactive (lower ones are `inert`).
 - Esc resolves `null` if the entry is dismissible.
+- Each sheet sits in a `<svelte:boundary>`: a sheet that throws while rendering resolves `null` (with a `console.warn`) instead of breaking the window. Another app's sheet (`win.request`, ADR-079) is the case it's for.
 
 Built-in sheets, used through `WindowHandle` ([apps/app-context.md](../apps/app-context.md#windowhandle)):
 
 | Component | Props | Resolves |
 |-----------|-------|----------|
 | `ConfirmDialog` | `message`, `detail?`, `confirm_label?` (default "OK"), `danger?` (red button, Cancel gets focus) | `true` / `false` |
+| An app's `provides` sheet (`win.request`, ADR-079) | `input` | whatever the sheet resolves, `null` on Cancel or any failure |
 | `PromptDialog` | `message`, `detail?`, `initial?`, `placeholder?`, `confirm_label?`, `validate?(value) → error \| null`, `select_stem?` (select up to the last dot), `danger?` (red confirm button; the field keeps the initial focus) | trimmed string, or `null` on Cancel/Esc |
 
 ### Context menus (ADR-025)

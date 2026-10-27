@@ -203,6 +203,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * can't see (IndexedDB, caches). A throw is logged and toasted; the uninstall still completes.
    */
   on_uninstall_data?: () => Promise<{ default: () => Promise<void> }>;
+  /**
+   * Sheets other apps open over their own window with `win.request("{id}::{kind}", input)` (ADR-079): kind → a lazy
+   * component taking `AppSheetProps`. Declare each one's input and output in `AppSheets` too.
+   */
+  provides?: Record<string, AppSheetLoader>;
   /** What the app renders on the desktop for its `.widget` files (ADR-034). Props are validated against `props`. */
   widget?: () => Promise<{ default: Component<WidgetProps> }>;
   /**
@@ -235,6 +240,30 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
 }
+
+/** What an app sheet gets (ADR-079): the caller's `input`, and `resolve` to hand back a value, or `null` for nothing. */
+export interface AppSheetProps<TInput = unknown, TOutput = unknown> {
+  input?: TInput;
+  resolve(value: TOutput | null): void;
+}
+
+/**
+ * Every sheet an app provides, `"{app-id}::{kind}"` → `{ input; output }`. The providing app adds its own by declaration
+ * merging, so a typo in `win.request()` fails to compile:
+ * `declare module "$lib/core/api/services/apps/type" { interface AppSheets { "doc-scan::scan": { input: ScanInput; output: Blob } } }`
+ */
+export interface AppSheets {}
+
+export interface AppSheetShape {
+  input: unknown;
+  output: unknown;
+}
+
+export type AppSheetKey = keyof AppSheets & `${string}::${string}`;
+export type AppSheetInput<K extends AppSheetKey> = AppSheets[K] extends AppSheetShape ? AppSheets[K]["input"] : never;
+export type AppSheetOutput<K extends AppSheetKey> = AppSheets[K] extends AppSheetShape ? AppSheets[K]["output"] : never;
+
+export type AppSheetLoader = () => Promise<{ default: Component<AppSheetProps<never, unknown>> }>;
 
 /** An app's display text, default-exported by its `meta.ts` (ADR-049). */
 export interface AppMeta {
