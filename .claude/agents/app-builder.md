@@ -47,7 +47,7 @@ Anything not decided in the ADR or brainstorm that would change shape is not you
 
 ## Changelog
 
-One user-facing sentence in `src/lib/core/api/services/version/changelog.ts`, no ADR numbers or service names, `kind` new, improved or fixed. Follow CLAUDE.md "Releases": check `git diff origin/master -- package.json`; if unchanged since the last push, bump `package.json` (minor for new, patch for fixes) and open a new top entry dated today; if already bumped, add to the top entry (raise a patch to the next minor for a `new` change). The merger renumbers if another build lands first; don't fight it.
+One user-facing sentence in `src/lib/core/api/services/version/changelog.ts`, no ADR numbers or service names, `kind` new, improved or fixed. Follow CLAUDE.md "Releases": check `git diff origin/master -- package.json`; if unchanged since the last push, bump `package.json` (minor for new, patch for fixes) and open a new top entry dated today; if already bumped, add to the top entry (raise a patch to the next minor for a `new` change). The merger renumbers if another build lands first; don't fight it. A new app also adds its id to that entry's `introduces`.
 
 ## Quality
 

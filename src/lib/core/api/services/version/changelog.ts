@@ -8,6 +8,7 @@ export const CHANGELOG: Release[] = [
     version: "3.75.0",
     date: "2026-10-27",
     title: "Tape Sketch, flat and turnable",
+    introduces: ["doc-scan", "motion-watch"],
     changes: [
       {
         kind: NEW,

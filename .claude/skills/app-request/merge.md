@@ -21,7 +21,7 @@ Run once per finished `app-builder` agent, in the order they report. Pushes go i
   - Read master's top entry and `git diff origin/master -- package.json`.
   - Master's version already pushed: the incoming entry gets the next free minor (`new` in it) or patch (fixes only) above master, today's date.
   - Master's top entry unpushed: an unpushed patch fix joins that entry; a `new` change raises it to the next minor.
-  - Keep every entry and every line. Top entry's `version` equals `package.json`.
+  - Keep every entry and every line, and every `introduces` id (a new app without one never shows in App Store › New apps). Top entry's `version` equals `package.json`.
 - [ ] Table rows (CLAUDE.md per-app table, `docs/apps/README.md`, `docs/adrs/README.md`, `docs/ROADMAP.md`): keep both sides, in order.
 - [ ] Anything else: read both sides, resolve by intent, never take one side blindly. `git cherry-pick --continue`.
 

@@ -276,6 +276,7 @@ Users are told about releases through `src/lib/core/api/services/version/changel
   - **Unchanged since the last push:** bump `package.json` and open a new entry at the top of `CHANGELOG`. Use minor for anything new, patch for fixes only.
   - **Already bumped:** add your line to the top entry. If a `new` change joins a patch release, raise it to the next minor.
 - The top entry's `version` always equals `package.json`. `date` is the day of the push.
+- A new app's id goes in the entry's `introduces` (App Store › New apps and the new-app announcement read it; without it the app never shows as new).
 - Write for users, not developers: one sentence per change, no ADR numbers, no service names. `kind` is `new`, `improved` or `fixed`.
 
 ## Reference only
