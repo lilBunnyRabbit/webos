@@ -11,7 +11,7 @@
     type VersionService,
     type WindowsService,
   } from "$lib/core/api";
-  import { FEATURED } from "$lib/core/api/services/apps/featured";
+  import { FEATURED } from "./featured";
   import { INTERESTS } from "$lib/core/api/services/apps/suggestions";
   import { get_app_context } from "$lib/core/contexts/app";
   import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";

@@ -25,7 +25,6 @@ The app registry. Holds every app the catalogue names (ADR-077): boot knows only
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
 | `active-time.ts` | `USAGE_PATH`, `AppUsage`, `parse_usage()` (tolerant: a broken file is `{}`), `serialize_usage()`, `add_time(usage, id, seconds, now)` (adds a stretch, stamps `last`, counts a new local day once), `format_usage()` ("under a minute", "25 min", "1.5 h", "12 h") and `milestones(usage, game)` (the App Store's goals). Unit tests in `active-time.test.ts` |
 | `active-time.svelte.ts` | `ActiveTime`, the tracker ([below](#active-time)) |
-| `featured.ts` | `FEATURED`: the App Store's hand-picked hero cards, an id and an optional tagline each. Data only |
 | `suggestions.ts` | `INTERESTS` and `interest_apps()`: the intro's "What are you into?" groups, installed when picked. The intro hides a group with none of its apps registered |
 | `test-apps.ts` | Tests only: `EXAMPLE_APP`, `TEST_APPS` and `TestAppsService`, whose glob source holds the system apps and these, so core tests don't depend on user apps |
 | `service.svelte.ts` | The class |

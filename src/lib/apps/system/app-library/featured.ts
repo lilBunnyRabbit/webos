@@ -1,4 +1,4 @@
-import type { AppId } from "./type";
+import type { AppId } from "$lib/core/api";
 
 export interface FeaturedApp {
   app: AppId;

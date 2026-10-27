@@ -526,7 +526,7 @@ Id `app-library` (the name was App Library until 3.74.0, ADR-077; the id stays f
 | `discover.svelte`, `browse.svelte`, `library-page.svelte`, `updates.svelte`, `app-page.svelte` | The places and the app page |
 | `category-icons.ts` | The Phosphor icon per `LibraryCategory`, shared by the nav and Discover's category tiles |
 
-Featured picks are core data: `FEATURED` in `services/apps/featured.ts`, next to `suggestions.ts` ([apps](services/apps.md#files)).
+Featured picks are the App Store's own data: `FEATURED` in `app-library/featured.ts`, an id and an optional tagline each.
 
 **Props.** `APP_LIBRARY_PROPS`: `view` picks the place (`discover`, `apps`, `library`, `updates`; the old `showcase` opens Discover and `store` All apps), `app` opens that app's page. Both only seed the window state, so a restored window keeps what the user last chose. `#/solo/app-library?view=showcase` is the shareable store link; `#/app/app-library?view=showcase&app=forms` opens one app's page inside the OS.
 

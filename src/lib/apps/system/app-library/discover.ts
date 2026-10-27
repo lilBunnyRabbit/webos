@@ -1,5 +1,5 @@
 import { app_authors, OWNER } from "$lib/core/api/services/apps/authors";
-import type { FeaturedApp } from "$lib/core/api/services/apps/featured";
+import type { FeaturedApp } from "./featured";
 import type { Interest } from "$lib/core/api/services/apps/suggestions";
 import type { AppUsage } from "$lib/core/api";
 import { AppCategory, type AppId, type AppListing } from "$lib/core/api/services/apps/type";
