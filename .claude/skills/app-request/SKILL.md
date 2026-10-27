@@ -113,6 +113,8 @@ Docs are uncommitted at this point. The builder copies them into its worktree an
 
 One at a time, as each agent reports, merged locally. Push in groups (owner, 2026-10-21: "group the pushes if you can - not all in one but what makes sense"): a feature with its polish, a health or refactor batch, a risky infra change alone, a set of related new apps. Every push deploys and posts a release, so a group is a release. Follow [merge.md](merge.md) exactly. After each merge, tell the agents still running the new master version.
 
+Before a group is pushed, every `feat:` in it gets a read-only review (CLAUDE.md "Review every feature"): one reviewer per feature, prompt from [review-prompt.md](review-prompt.md), given only the spec and the commits. Verify each finding, fix the real ones, rerun the checks, then push. Fixes themselves don't get a review.
+
 ## 8. Report
 
 Per item, caveman-terse:

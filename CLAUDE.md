@@ -254,6 +254,15 @@ When implementation forces a change, add a dated revision note to the ADR (see A
 
 At the end of every session that completes work, update `docs/ROADMAP.md`: `[x]` done, `[-]` partial. It is the single source of truth for progress. Also set the ADR's status in the index.
 
+## Review every feature
+
+Every `feat:` (new app, app feature, OS feature, kit addition) gets a review before it's pushed. Bug fixes don't (owner, 2026-10-27: "for bug fixes we dont have to just for new code").
+
+- One reviewer per feature: `general-purpose` agent, `model: opus`, **read-only** (the prompt says "review only, no edits"). It gets only the spec (the ADR, the brainstorm decisions, the scope) and the commits, never the builder's report, so it judges the code against what was asked, not against what the builder says it did.
+- It checks the commits against the spec, the hard rules and CONVENTIONS, the code standards, fork promise and docs-accuracy criteria of `/health-pass` (`.claude/skills/health-pass/auditors.md` sections 5–7), and the documentation duties below.
+- It reports defects only: file:line, the defect, a concrete failure scenario, severity, confidence. Each finding is verified in code before it's fixed. Real findings get fixed (an `app-builder` fix agent, or directly when small); "nothing found" is a valid result.
+- Push only after the findings are fixed and the checks pass again. Template: `.claude/skills/app-request/review-prompt.md`.
+
 ## Commits
 
 Use conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`). Body is short bullets. Renames toward the naming rules go in their own `refactor:` commit.
