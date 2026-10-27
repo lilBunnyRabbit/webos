@@ -7,7 +7,6 @@ export default define_app({
   id: "app-library",
   name: "App Store",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   props: APP_LIBRARY_PROPS,

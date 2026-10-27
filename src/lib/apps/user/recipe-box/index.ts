@@ -8,7 +8,6 @@ export default define_app({
   id: APP_ID,
   name: "Recipe Box",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   associations: COOK_FILES,

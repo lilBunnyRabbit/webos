@@ -7,7 +7,6 @@ export default define_app({
   id: "hopsprite",
   name: "Hopsprite",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   associations: [".hopsprite"],

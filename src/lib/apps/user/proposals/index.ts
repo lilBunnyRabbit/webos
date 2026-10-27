@@ -7,7 +7,6 @@ export default define_app({
   id: "proposals",
   name: "Proposals",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.PRODUCTIVITY,
   associations: [".proposals.md"],

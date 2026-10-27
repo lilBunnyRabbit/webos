@@ -8,7 +8,6 @@ export default define_app({
   id: "music-visualizer",
   name: "Music Visualizer",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   tools: ["audio/*"],

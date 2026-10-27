@@ -7,7 +7,6 @@ export default define_app({
   id: "soundboard",
   name: "Soundboard",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   tools: ["audio/*", "video/*"],

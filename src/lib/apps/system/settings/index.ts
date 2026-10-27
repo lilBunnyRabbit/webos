@@ -8,7 +8,6 @@ export default define_app({
   id: "settings",
   name: "Settings",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   defaults: {

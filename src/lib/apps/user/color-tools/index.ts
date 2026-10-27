@@ -7,7 +7,6 @@ export default define_app({
   id: "color-tools",
   name: "Color Tools",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.UTILITIES,
   associations: [".palette"],

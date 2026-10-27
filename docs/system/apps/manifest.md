@@ -23,7 +23,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 |-------|------|----------|--------------|
 | `id` | `AppId` (`string`) | yes | Registry key. Matched by start menu search. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
 | `name` | `string` | yes | Start menu (tile label, search, sort order), the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
-| `version` | `string` | yes | Ignored since ADR-077 stage 2: the OS shows the catalogue's version, the release the app's files last changed in ("Version 3.67.0" in the App Store details, `app info`, the apps inspector), and replaces this value with it. Still required, so existing apps keep compiling |
+| `version` | `string` | no, deprecated | Ignored since ADR-077 stage 2: the OS shows the catalogue's version, the release the app's files last changed in ("Version 3.67.0" in the App Store details, `app info`, the apps inspector). Optional and `@deprecated` since 2026-10-27, removed in 4.0; no app sets it |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. The app's own `icon.svelte`, drawn to the [app icon rules](../../design/foundations.md#app-icons); it takes `class` and ignores `weight` like a Phosphor icon. An app that needs on-device AI wraps it: `icon: ai_icon(AppIcon)` from `$kit/components/ai-icon` adds the sparkle ([app icons](../../design/foundations.md#app-icons)) |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
 | `category` | `AppCategory` | yes | The launcher section a user app sits in, and searchable by its label. See below |
@@ -204,22 +204,9 @@ The build imports every manifest in Node to write the app catalogue and the icon
 
 Only `src/lib/apps/system/*` and `src/lib/apps/user/*` are read; nothing else under `src/lib/apps/` reaches the catalogue.
 
-## The import rule
+## The import rule (lifted)
 
-A manifest may import only **types and functions** from `$lib/core/api`. Import constants from their own module:
-
-```ts
-import { define_app } from "$lib/core/api";
-import { FILE_PROPS } from "$lib/core/api/services/apps/helpers";
-import { AppCategory } from "$lib/core/api/services/apps/type";
-```
-
-Why: until ADR-077 stage 2, manifests were evaluated eagerly while the barrel was still initializing. The chain was `$lib/core/api` → `kernel` → `init.ts` → `apps/service.svelte.ts` → `$lib/apps` (eager glob) → your `index.ts` → `$lib/core/api` again, which is mid-evaluation. Function declarations are hoisted, so `define_app` works. A `const` from a module that hasn't run yet is in the temporal dead zone and throws.
-
-`FILE_PROPS` (`helpers.ts`) and `AppCategory` (`type.ts`) lived in modules nothing on that chain had evaluated yet, so importing them via the barrel threw. Importing the module directly evaluates it on the spot.
-
-Since stage 2 nothing imports a manifest while the barrel initializes: the build's Node step, the dev glob and the runtime all load manifests after it has finished, so the cycle is gone. The rule stays as written until it's lifted on purpose; it costs nothing to follow.
-
+Until ADR-077 stage 2 a manifest could import only types and functions from `$lib/core/api`: manifests were evaluated while the barrel was still initializing (`$lib/core/api` → `kernel` → `init.ts` → `apps/service.svelte.ts` → the eager glob → your `index.ts` → the barrel again), so a `const` from it was in the temporal dead zone. Now the build's Node step, the dev glob (a dynamic import in `source.ts`) and the runtime all load manifests after the barrel has finished, so constants such as `FILE_PROPS` and `AppCategory` can come from `$lib/core/api` too. Lifted by the owner on 2026-10-27; the existing direct imports stay as they are.
 
 ## Example
 
@@ -233,7 +220,6 @@ export default define_app({
   id: "pdf-viewer",
   name: "PDF Viewer",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   associations: ["application/pdf", ".pdf"],
   props: FILE_PROPS,

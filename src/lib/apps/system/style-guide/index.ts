@@ -7,7 +7,6 @@ export default define_app({
   name: "Style Guide",
   meta: () => import("./meta"),
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.DEVELOPER,
   defaults: {
     constraints: {

@@ -6,7 +6,6 @@ export default define_app({
   id: "dev-tools",
   name: "Dev Tools",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.DEVELOPER,
   defaults: { constraints: { width: { min: 320 }, height: { min: 320 } } },

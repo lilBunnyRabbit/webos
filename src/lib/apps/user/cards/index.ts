@@ -7,7 +7,6 @@ export default define_app({
   id: "cards",
   name: "Cards",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   props: z.object({ card: z.string().optional(), import: z.string().optional() }),

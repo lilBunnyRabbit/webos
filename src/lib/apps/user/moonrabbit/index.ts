@@ -6,7 +6,6 @@ export default define_app({
   id: "moonrabbit",
   name: "Moonrabbit",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 420 } } },

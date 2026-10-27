@@ -7,7 +7,6 @@ export default define_app({
   id: "font-maker",
   name: "Font Maker",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   associations: [".fontmaker"],

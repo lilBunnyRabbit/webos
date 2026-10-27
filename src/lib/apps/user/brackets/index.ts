@@ -7,7 +7,6 @@ export default define_app({
   id: "brackets",
   name: "Brackets",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   associations: [".bracket"],

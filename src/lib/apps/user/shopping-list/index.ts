@@ -7,7 +7,6 @@ export default define_app({
   id: "shopping-list",
   name: "Shopping List",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   props: z.object({ list: z.string().optional(), photo: z.boolean().optional() }),

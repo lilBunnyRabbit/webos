@@ -16,7 +16,6 @@ export default define_app({
   id: "solitaire",
   name: "Solitaire",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   props: SOLITAIRE_PROPS,

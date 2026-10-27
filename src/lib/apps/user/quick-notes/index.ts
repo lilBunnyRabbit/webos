@@ -13,7 +13,6 @@ export default define_app({
   id: "quick-notes",
   name: "Quick Notes",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   props: QUICK_NOTES_PROPS,

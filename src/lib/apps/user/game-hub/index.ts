@@ -8,7 +8,6 @@ export default define_app({
   id: HUB_ID,
   name: "Game Hub",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   props: z.object({ tab: z.enum(Tab).optional() }),

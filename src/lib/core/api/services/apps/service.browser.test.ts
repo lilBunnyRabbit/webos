@@ -431,6 +431,21 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(gate.fetches).toBe(1);
   });
 
+  test("listings({ all: true }) fetches the full catalogue; a plain listings() doesn't", async () => {
+    const { service, gate } = await sourced();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example"]));
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    apps(kernel).listings({ installed: false });
+    await Promise.resolve();
+    expect(gate.fetches).toBe(0);
+    expect(user_apps(kernel)).toEqual(["example"]);
+    apps(kernel).listings({ installed: false, all: true });
+    await expect.poll(() => user_apps(kernel).sort()).toEqual(["board", "example", "game", "notes"]);
+    expect(gate.fetches).toBe(1);
+  });
+
   test("another core's slice fetches the full catalogue at boot, and keeps every installed id", async () => {
     const { service, gate } = await sourced();
     await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));

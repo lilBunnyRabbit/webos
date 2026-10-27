@@ -7,7 +7,6 @@ export default define_app({
   id: "web-app",
   name: "Web App",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   associations: [".webapp"],

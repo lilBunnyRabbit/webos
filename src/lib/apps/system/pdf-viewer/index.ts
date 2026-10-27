@@ -8,7 +8,6 @@ export default define_app({
   id: "pdf-viewer",
   name: "PDF Viewer",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   associations: ["application/pdf", ".pdf"],

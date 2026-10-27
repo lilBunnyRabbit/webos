@@ -132,7 +132,6 @@
   let wave_selection = $state<Span | null>({ start: 0.8, end: 1.1 });
 
   const apps = $derived(kernel.service<AppsService>("apps"));
-  void kernel.service<AppsService>("apps").catalogue();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   // Paint with made-up highlights, so the cards and the "Start menu" strip both show.
@@ -142,7 +141,7 @@
     { icon: ShapesIcon, title: "Shapes and text", text: "Lines, rectangles, ellipses and text on their own layer until placed." },
     { icon: FloppyDiskIcon, title: "Your files", text: "Opens and saves PNG, JPEG and WebP in your folders." },
   ];
-  const pick = (id: string) => apps.listings().find((listing) => listing.id === id);
+  const pick = (id: string) => apps.listings({ all: true }).find((listing) => listing.id === id);
   const sample_apps = $derived.by((): AnnouncedApp[] => {
     const paint = pick("paint");
     const list = [

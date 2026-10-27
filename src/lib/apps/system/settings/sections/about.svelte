@@ -35,8 +35,7 @@
   const settings = $derived(kernel.service<SettingsService>("settings"));
 
   const CREDIT_PREVIEW = 12;
-  void kernel.service<AppsService>("apps").catalogue();
-  const credit_list = $derived(credits(apps.listings()));
+  const credit_list = $derived(credits(apps.listings({ all: true })));
   let expanded = $state<string[]>([]);
 
   const DEV = import.meta.env.DEV;

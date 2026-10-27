@@ -6,7 +6,6 @@ export default define_app({
   id: "snake",
   name: "Snake",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: {

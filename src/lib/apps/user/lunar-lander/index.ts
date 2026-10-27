@@ -6,7 +6,6 @@ export default define_app({
   id: "lunar-lander",
   name: "Lunar Lander",
   icon: AppIcon,
-  version: "0.1.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: {

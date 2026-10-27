@@ -8,7 +8,6 @@ export default define_app({
   id: "sudoku",
   name: "Sudoku",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: {

@@ -7,7 +7,6 @@ export default define_app({
   id: "video-tools",
   name: "Video Tools",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   tools: ["video/*"],

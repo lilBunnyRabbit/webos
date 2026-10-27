@@ -7,7 +7,6 @@ export default define_app({
   id: "font-viewer",
   name: "Font Viewer",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
   associations: [".ttf", ".otf", ".woff", ".woff2", ".ttc", "font/ttf", "font/otf", "font/woff", "font/woff2", "font/collection"],

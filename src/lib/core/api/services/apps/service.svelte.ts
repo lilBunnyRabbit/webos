@@ -588,6 +588,7 @@ export class AppsService implements IAppsService {
   }
 
   public *list(filter: AppsFilter = {}): IterableIterator<[AppId, AppManifest]> {
+    this.want_all(filter);
     for (const entry of this.registry.entries()) {
       if (filter.installed === undefined || this.is_installed(entry[0]) === filter.installed) yield entry;
     }
@@ -647,8 +648,14 @@ export class AppsService implements IAppsService {
   }
 
   public listings(filter: AppsFilter = {}): AppListing[] {
+    this.want_all(filter);
     if (filter.installed === undefined) return this.all_listings;
     return this.all_listings.filter((listing) => this.is_installed(listing.id) === filter.installed);
+  }
+
+  // Read inside `$derived`, which may not write state: the fetch starts after it.
+  private want_all(filter: AppsFilter): void {
+    if (filter.all && !this.complete) queueMicrotask(() => void this.catalogue());
   }
 
   public register(manifest: AppManifest): void {

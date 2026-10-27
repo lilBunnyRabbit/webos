@@ -8,7 +8,6 @@ export default define_app({
   id: "csv-viewer",
   name: "CSV Viewer",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   associations: ["text/csv", "text/tab-separated-values", ".csv", ".tsv"],

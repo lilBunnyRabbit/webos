@@ -8,7 +8,6 @@ export default define_app({
   id: "text-editor",
   name: "Text Editor",
   icon: AppIcon,
-  version: "2.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   associations: ["text/*", ".md", ".json", ".ts", ".js", ".svelte", ".yaml", ".yml", ".toml", ".ini", ".log", ".env"],

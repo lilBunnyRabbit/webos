@@ -8,7 +8,6 @@ export default define_app({
   id: "html-preview",
   name: "HTML Preview",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),
   associations: ["text/html", ".html", ".htm"],

@@ -7,7 +7,6 @@ export default define_app({
   id: "algorithms",
   name: "Algorithms",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),
   associations: [".algo"],

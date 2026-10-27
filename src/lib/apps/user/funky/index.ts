@@ -7,7 +7,6 @@ export default define_app({
   id: "funky",
   name: "Funky DSL",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.DEVELOPER,
   associations: [".fdsl"],

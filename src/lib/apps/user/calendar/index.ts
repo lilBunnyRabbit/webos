@@ -8,7 +8,6 @@ export default define_app({
   id: "calendar",
   name: "Calendar",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   props: CALENDAR_PROPS,

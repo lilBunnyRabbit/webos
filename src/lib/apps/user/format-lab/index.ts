@@ -7,7 +7,6 @@ export default define_app({
   id: "format-lab",
   name: "Format Lab",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
   // A tool, not an association: double-clicking an AVIF or a JPEG XL still views it in Media Preview.

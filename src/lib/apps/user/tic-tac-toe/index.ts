@@ -6,7 +6,6 @@ export default define_app({
   id: "tic-tac-toe",
   name: "Tic-Tac-Toe",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: {

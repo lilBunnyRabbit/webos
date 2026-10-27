@@ -8,7 +8,6 @@ export default define_app({
   id: "file-explorer",
   name: "File Explorer",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   // A folder path to open at; defaults to /home.

@@ -9,7 +9,6 @@ export default define_app({
   id: "nonogram",
   name: "Nonogram",
   icon: AppIcon,
-  version: "1.1.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   associations: [".nonogram"],

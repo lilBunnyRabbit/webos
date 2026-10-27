@@ -8,7 +8,6 @@ export default define_app({
   id: "gw2",
   name: "GW2 Tracker",
   icon: AppIcon,
-  version: "1.1.0",
   meta: () => import("./meta"),
   category: AppCategory.UTILITIES,
   props: z.object({ section: z.enum(SECTION_IDS).optional(), query: z.string().optional() }),

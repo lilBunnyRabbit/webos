@@ -35,7 +35,7 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | Module | Stable | Notes |
 |--------|--------|-------|
 | `$lib/core/api` | Default export `kernel`, the names in the tables below, every type listed here | The barrel also re-exports a lot of OS-only helpers; only what's listed here is promised |
-| `$lib/core/api/services/apps/type` | `AppCategory`, `DailyRank` | Manifests import constants from their own module ([the import rule](apps/manifest.md#the-import-rule)), so this path is part of the promise |
+| `$lib/core/api/services/apps/type` | `AppCategory`, `DailyRank` | Older manifests import constants from here directly (before [the import rule](apps/manifest.md#the-import-rule-lifted) was lifted), so this path is part of the promise |
 | `$lib/core/api/services/apps/helpers` | `FILE_PROPS`, `define_app` | Same reason |
 | `$lib/core/api/services/shell/type`, `shell/arg`, `shell/define` | `ShellError`; `arg`, `ArgKind`; `define_command` | Same reason: each app's `commands.ts` builds its commands |
 | `$lib/core/contexts/app` | See [App context and data](#app-context-and-data) | Import from the barrel. The files behind it are internal paths |
@@ -54,7 +54,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 
 | Field | Stable | Notes |
 |-------|--------|-------|
-| `id`, `name`, `version`, `icon`, `category`, `component` | yes, required | `component: () => import("./x.app.svelte")`. Ids double as the storage prefix, so renaming an app's id loses its data |
+| `id`, `name`, `icon`, `category`, `component` | yes, required | `component: () => import("./x.app.svelte")`. Ids double as the storage prefix, so renaming an app's id loses its data |
 | `highlights`, `preview` | yes (1.5) | The new-app announcement and the App Store details. `highlights: () => import("./highlights")` (a module whose default is `AppHighlight[]`, `{ icon, title, text }`; lazy since 1.9), `preview: () => import("./preview.webp?url")` (ADR-038) |
 | `meta` | yes (3.0) | `meta: () => import("./meta")`, the module default-exporting an `AppMeta` (ADR-049): `description` (one sentence; launcher search and the App Store), `keywords` (launcher search), `pitch` (`AppPitch`, `{ problem, solution }`, one short sentence each: the Showcase tells the app's story with it and falls back to `description`), `authors` (`AppAuthor[]`, `{ name, github?, url? }`; omitted means the owner, `OWNER`; credited in the App Store details, the new-app announcement, Settings › About › Credits and `app info` / `app list`). Every member of `AppMeta` is stable. Loaded during boot, alongside the main chunk, so listings have their text from the first frame (ADR-049 revision 2026-10-24) |
 | `author`, `license`, `repository` | **deprecated**, removed in 4.0 | Stored and never read. `author` predates `authors` (now in `meta`). Typed `@deprecated`; drop them from your manifest |

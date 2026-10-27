@@ -9,7 +9,6 @@ export default define_app({
   id: "time-since",
   name: "Time Since",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   props: TIME_SINCE_PROPS,

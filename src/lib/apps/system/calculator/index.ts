@@ -6,7 +6,6 @@ export default define_app({
   id: "calculator",
   name: "Calculator",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   defaults: { constraints: { width: { min: 280 }, height: { min: 360 } } },

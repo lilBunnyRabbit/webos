@@ -27,8 +27,7 @@
   type Show = (typeof Show)[keyof typeof Show];
   let show = $state<Show>(Show.DOCUMENTED);
 
-  void kernel.service<AppsService>("apps").catalogue();
-  const all = $derived([...apps.list()].map(([, manifest]) => manifest).slice().sort((a, b) => a.name.localeCompare(b.name)));
+  const all = $derived([...apps.list({ all: true })].map(([, manifest]) => manifest).slice().sort((a, b) => a.name.localeCompare(b.name)));
   const internals = (app: AppManifest) => !app.system && has_page(`apps/${app.id}`);
   const documented = $derived(all.filter((app) => app.system || internals(app)));
   const listed = $derived(show === Show.ALL ? all : documented);

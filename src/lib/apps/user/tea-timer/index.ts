@@ -6,7 +6,6 @@ export default define_app({
   id: "tea-timer",
   name: "Tea Timer",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },

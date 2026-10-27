@@ -6,7 +6,6 @@ export default define_app({
   id: "p2p-transfer",
   name: "P2P Transfer",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.UTILITIES,
   defaults: {

@@ -7,7 +7,6 @@ export default define_app({
   id: "forms",
   name: "Forms",
   icon: AppIcon,
-  version: "1.1.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   associations: [".form.md", ".answers"],

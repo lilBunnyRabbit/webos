@@ -10,7 +10,6 @@ export default define_app({
   id: "getting-started",
   name: "Getting started",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   props: GETTING_STARTED_PROPS,

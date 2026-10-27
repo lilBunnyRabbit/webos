@@ -54,7 +54,7 @@ export interface AppsService extends IService {
   /**
    * Makes every app of this build known (ADR-077): fetches `store/catalogue.json` network-first, once, and lists the
    * apps it names. Resolves `false` when it couldn't (offline with no copy, or a copy from another build, whose apps are
-   * listed but can't open); a later call tries again. Call it before showing apps that may not be installed.
+   * listed but can't open); a later call tries again. Lists of apps that may not be installed pass `{ all: true }` to `list()` or `listings()` instead.
    */
   catalogue(): Promise<boolean>;
   /**
@@ -114,6 +114,8 @@ export interface AppsUpdate {
 
 export interface AppsFilter {
   installed?: boolean;
+  /** Also fetch the full catalogue (`catalogue()`) when this device doesn't know every app yet; the list grows when it arrives. */
+  all?: boolean;
 }
 
 export interface UninstallOptions {
@@ -299,8 +301,11 @@ export interface WidgetProps {
   style: WidgetStyle;
 }
 
-/** What `define_app` returns: a manifest before discovery knows its folder. */
-export type AppDefinition<TProps extends AppProps = AppProps> = Omit<AppManifest<TProps>, "system">;
+/** What `define_app` returns: a manifest before discovery knows its folder or the catalogue its version. */
+export interface AppDefinition<TProps extends AppProps = AppProps> extends Omit<AppManifest<TProps>, "system" | "version"> {
+  /** @deprecated Ignored: the catalogue gives every app its version (ADR-077). Removed in 4.0. */
+  version?: string;
+}
 
 /** Input type for define_app - component returns module */
 export interface AppConfig<TProps extends AppProps = AppProps> extends Omit<AppDefinition<TProps>, "component"> {

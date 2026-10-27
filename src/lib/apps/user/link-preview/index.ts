@@ -7,7 +7,6 @@ export default define_app({
   id: "link-preview",
   name: "Link Preview",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),
   tools: ["text/html", ".html", ".htm"],

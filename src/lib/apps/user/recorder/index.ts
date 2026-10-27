@@ -7,7 +7,6 @@ export default define_app({
   id: "recorder",
   name: "Recorder",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
   props: RECORDER_PROPS,

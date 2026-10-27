@@ -19,8 +19,7 @@
   const columns = $derived(Math.max(4, size.w));
   const slots = $derived(columns * Math.max(1, size.h - 1) - 1);
 
-  void kernel.service<AppsService>("apps").catalogue();
-  const dailies = $derived(daily_games(list_games(apps.listings())));
+  const dailies = $derived(daily_games(list_games(apps.listings({ all: true }))));
   const solved_today = $derived(plays.value.daily[today.value] ?? {});
   const solved_count = $derived(dailies.filter((entry) => solved_today[entry.key]).length);
   const highlighted = $derived(highlight_dailies(dailies, plays.value, today.value, slots));

@@ -7,7 +7,6 @@ export default define_app({
   id: "gradient-sort",
   name: "Gradient Sort",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: GAME_DEFAULTS,

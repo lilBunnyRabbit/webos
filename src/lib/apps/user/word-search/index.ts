@@ -7,7 +7,6 @@ export default define_app({
   id: "word-search",
   name: "Word Search",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: {

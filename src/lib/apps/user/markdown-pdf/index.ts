@@ -7,7 +7,6 @@ export default define_app({
   id: "markdown-pdf",
   name: "Markdown to PDF",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   tools: [".md", ".markdown", "text/markdown"],

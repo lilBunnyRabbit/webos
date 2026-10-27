@@ -6,7 +6,6 @@ export default define_app({
   id: "pomodoro",
   name: "Pomodoro",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   defaults: {

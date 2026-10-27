@@ -7,7 +7,6 @@ export default define_app({
   id: "hid-lab",
   name: "Keyboard & HID Lab",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),
   props: z.object({ section: z.enum(["keys", "hid"]).optional() }),

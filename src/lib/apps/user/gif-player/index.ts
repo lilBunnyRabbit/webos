@@ -8,7 +8,6 @@ export default define_app({
   id: "gif-player",
   name: "GIF Player",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
   tools: ["image/gif", ".gif", "video/*"],

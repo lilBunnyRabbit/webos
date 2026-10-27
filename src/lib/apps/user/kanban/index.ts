@@ -13,7 +13,6 @@ export default define_app({
   id: "kanban",
   name: "Kanban",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   props: KANBAN_PROPS,

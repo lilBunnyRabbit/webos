@@ -7,7 +7,6 @@ export default define_app({
   id: "docs",
   name: "Docs",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),
   /** `page`: a page id (`system/services/windows`) or a short name (`windows`, `adr 47`, `persistence`). */

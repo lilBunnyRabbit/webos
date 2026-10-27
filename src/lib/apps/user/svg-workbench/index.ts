@@ -7,7 +7,6 @@ export default define_app({
   id: "svg-workbench",
   name: "SVG Workbench",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.DEVELOPER,
   tools: [".svg", "image/svg+xml"],

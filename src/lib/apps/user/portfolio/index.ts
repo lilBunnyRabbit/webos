@@ -10,7 +10,6 @@ export default define_app({
   id: "portfolio",
   name: "Portfolio",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   highlights: () => import("./highlights"),

@@ -7,7 +7,6 @@ export default define_app({
   id: "futoshiki",
   name: "Futoshiki",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: {

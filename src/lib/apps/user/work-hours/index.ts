@@ -7,7 +7,6 @@ export default define_app({
   id: "work-hours",
   name: "Work Hours",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   props: WORK_HOURS_PROPS,

@@ -6,7 +6,6 @@ export default define_app({
   id: "rng-tools",
   name: "RNG Tools",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },

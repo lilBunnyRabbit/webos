@@ -8,7 +8,6 @@ export default define_app({
   id: APP_ID,
   name: "API Client",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),
   associations: HTTP_FILES,

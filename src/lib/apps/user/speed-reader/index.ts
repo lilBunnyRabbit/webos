@@ -8,7 +8,6 @@ export default define_app({
   id: "speed-reader",
   name: "Speed Reader",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.PRODUCTIVITY,
   tools: ["text/plain", ".txt", ".md"],

@@ -20,7 +20,6 @@
   let { library, onopen }: Props = $props();
 
   const apps = $derived(kernel.service<AppsService>("apps"));
-  void kernel.service<AppsService>("apps").catalogue();
   let stores = $state<{ label: string; detail: string; hash: string }[]>([]);
 
   load_page("system/persistence")
@@ -48,12 +47,12 @@
       services: live_services(),
       shell: PAGE_IDS.filter((id) => id.startsWith("system/shell/")).map((id) => [id, title_of(id)] as [string, string]),
       design: PAGE_IDS.filter((id) => id.startsWith("design/") && !id.endsWith("README")).map((id) => [id, title_of(id)] as [string, string]),
-      system_apps: [...apps.list()]
+      system_apps: [...apps.list({ all: true })]
         .map(([, manifest]) => manifest)
         .filter((manifest) => manifest.system)
         .slice().sort((a, b) => a.name.localeCompare(b.name))
         .map((manifest) => ({ id: manifest.id, name: manifest.name, slug: slugify(manifest.name) })),
-      user_apps: [...apps.list()].filter(([, manifest]) => !manifest.system).length,
+      user_apps: [...apps.list({ all: true })].filter(([, manifest]) => !manifest.system).length,
       stores,
       adrs: {
         total: library?.adrs.length ?? 0,

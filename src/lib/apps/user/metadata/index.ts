@@ -7,7 +7,6 @@ export default define_app({
   id: "metadata",
   name: "Metadata",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
   tools: ["image/jpeg", "image/png", "image/webp", ".jpg", ".jpeg", ".png", ".webp", "application/pdf", ".pdf"],

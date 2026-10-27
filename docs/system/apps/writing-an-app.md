@@ -26,7 +26,6 @@ export default define_app({
   id: "notes",
   name: "Notes",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   associations: [".note"],
   props: FILE_PROPS,
@@ -52,7 +51,6 @@ export default {
 
 - `id` must be unique; a clash silently replaces the other app.
 - Text the user reads but boot doesn't need (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): the catalogue carries it, so lists show it without loading the app (ADR-077). `bun run check` rejects those fields in `define_app` ([meta](manifest.md#meta-metats)).
-- From `$lib/core/api`, import only types and functions. Constants come from their own module ([why](manifest.md#the-import-rule)).
 - Skip `associations` and `props` if the app doesn't open files. Without a `props` schema the app never receives props.
 
 ## 3. Write the component

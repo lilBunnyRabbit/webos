@@ -7,7 +7,6 @@ export default define_app({
   id: "qr-studio",
   name: "QR Studio",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.UTILITIES,
   props: z.object({ text: z.string().optional() }),

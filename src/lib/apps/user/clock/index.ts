@@ -7,7 +7,6 @@ export default define_app({
   id: "clock",
   name: "Clock",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   props: CLOCK_PROPS,

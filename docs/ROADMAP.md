@@ -706,7 +706,7 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
   - [x] Stage 3 (2026-10-27, 3.74.0): an app-only deploy updates apps without a reload; open windows show Update (titlebar, taskbar, switcher card, App Store Updates) and Restart app reopens them on the new version; one asset cache pruned against installed apps; other tabs follow through a BroadcastChannel
   - [x] Release out of the bundle (2026-10-27): the running version comes from the catalogue and the changelog from `store/changelog.json`, so an app-only deploy leaves `sw.js`, the precache and the core hash unchanged and Settings shows the new release without a reload
   - [x] Store redesign (2026-10-27, 3.74.0, [brainstorm](brainstorm/2026-10-27_app-store-design.md)): Discover (featured carousel, shelves, categories), All apps and categories, Library (size, time used, Uninstall) and Updates (Update all) as places, an Install / Open / Update / progress button on every app, a store-like app page with goals; the OS counts each app's active time (`/var/lib/apps/usage.json`)
-  - [ ] Follow-ups (owner, 2026-10-27): a `listings({ all })` call instead of "call `catalogue()` first"; `define_app`'s `version` deprecated; the manifest import rule lifted
+  - [x] Follow-ups (owner, 2026-10-27): `list` and `listings` take `{ all: true }` instead of "call `catalogue()` first"; `define_app`'s `version` deprecated and dropped from every app; the manifest import rule lifted
   - [ ] Rough edges: a page or app fetched with a `?retry=` query misses the cache offline in a later session; a fork build shows empty categories with a 0 count; a dirty window answered "Don't save" comes back without those changes when Restart app is cancelled
 
 ---

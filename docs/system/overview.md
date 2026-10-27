@@ -117,7 +117,7 @@ api/index.ts → kernel/kernel.svelte.ts → kernel/init.ts → services/apps/se
   → $lib/apps (import.meta.glob, eager) → every {id}/index.ts manifest → $lib/core/api   ← still initializing
 ```
 
-AppsService no longer imports `$lib/apps`: a build loads manifests by URL after boot, and the dev server and tests import the glob from `init()`, after the barrel has finished. The cycle is gone; the rule that **a manifest imports only types and hoisted functions from `$lib/core/api`** stays until it's lifted on purpose. See [CONVENTIONS → Apps](../CONVENTIONS.md#apps) and [manifest](apps/manifest.md#the-import-rule).
+AppsService no longer imports `$lib/apps`: a build loads manifests by URL after boot, and the dev server and tests import the glob from `init()`, after the barrel has finished. The cycle is gone, and the rule that a manifest imports only types and hoisted functions from `$lib/core/api` was lifted on 2026-10-27 ([manifest](apps/manifest.md#the-import-rule-lifted)).
 
 ## Debug handle
 

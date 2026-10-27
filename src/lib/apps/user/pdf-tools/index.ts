@@ -8,7 +8,6 @@ export default define_app({
   id: "pdf-tools",
   name: "PDF Tools",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.PRODUCTIVITY,
   tools: [".pdf", "application/pdf"],

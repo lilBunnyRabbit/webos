@@ -7,7 +7,6 @@ export default define_app({
   id: "hop",
   name: "Hop",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
   defaults: {

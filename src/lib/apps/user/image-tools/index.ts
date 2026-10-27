@@ -8,7 +8,6 @@ export default define_app({
   id: "image-tools",
   name: "Image Tools",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.MEDIA,
   tools: ["image/*"],

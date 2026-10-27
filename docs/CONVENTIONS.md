@@ -104,7 +104,6 @@ export default define_app({
   id: "calculator",
   name: "Calculator",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   defaults: { constraints: { width: { min: 300 } } },
   component: () => import("./calculator.app.svelte"),
@@ -117,7 +116,6 @@ export default define_app({
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
 - Display text (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): the build copies it into the app's catalogue entry, so the OS shows it without loading the app (ADR-077).
 - Shell commands: `shell: () => import("./commands")`, never an inline object. `commands.ts` default-exports the `ShellContribution` ([writing an app](system/apps/writing-an-app.md)).
-- A manifest may take only types and functions from `$lib/core/api`; import constants such as `FILE_PROPS` from their own module (`$lib/core/api/services/apps/helpers`). The rule dates from when manifests were evaluated while that barrel was still initializing (a `const` from it was in the temporal dead zone). Since ADR-077 manifests load on their own after boot and that cycle is gone; the rule stays until the owner lifts it.
 - Everything a manifest imports ships with its manifest chunk (`{id}.manifest-<hash>.js`), which loads after first paint for every installed app, and a module the app's lazy code also imports is loaded with it whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 167.2 KB gz (`bun run build && bun run budget`, `scripts/boot-budget.ts`).
 - Props are always optional at the component level. An app launched from search gets none (ADR-008).
 - Apps use `@container` queries (`@sm:`, `@md:`) for responsiveness, never viewport breakpoints. That's what makes mobile free (ADR-016).

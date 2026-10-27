@@ -30,7 +30,6 @@ export default define_app({
   id: "ask",
   name: "Ask",
   icon: ai_icon(AppIcon),
-  version: "1.0.0",
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   tools: ASK_ACCEPT,

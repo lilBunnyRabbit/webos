@@ -7,7 +7,6 @@ export default define_app({
   id: "archive",
   name: "Archive",
   icon: AppIcon,
-  version: "1.0.0",
   meta: () => import("./meta"),
   category: AppCategory.UTILITIES,
   associations: [".zip", "application/zip", "application/x-zip-compressed"],

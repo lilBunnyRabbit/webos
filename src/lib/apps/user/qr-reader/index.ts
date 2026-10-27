@@ -8,7 +8,6 @@ export default define_app({
   id: "qr-reader",
   name: "QR Reader",
   icon: AppIcon,
-  version: "1.0.0",
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
   tools: ["image/*"],
