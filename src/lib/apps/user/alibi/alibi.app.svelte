@@ -9,6 +9,7 @@
   import { track_play } from "$kit/games";
   import { Detective as DetectiveIcon, PaperPlaneRight as PaperPlaneRightIcon, Scales as ScalesIcon, Stop as StopIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { onDestroy, tick, untrack } from "svelte";
+  import { z } from "zod";
   import {
     judge,
     lie_of,
@@ -31,11 +32,12 @@
   const { seed: seed_prop }: { seed?: number } = $props();
   const linked = untrack(() => seed_prop);
 
-  const { window_id, app_id, window: win, storage } = get_app_context();
+  const { window_id, app_id, window: win, storage, achievements } = get_app_context();
   const ai = $derived(kernel.service<AiService>("ai"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   track_play(app_id, () => win.is_visible);
 
+  const closed = storage.persisted("closed", 0, z.number().int().nonnegative());
   const saved = storage.get("case", saved_schema);
   const resumed = saved && (linked === undefined || saved.seed === linked) ? saved : null;
 
@@ -177,8 +179,20 @@
     chosen_card = null;
     if (!judge(game, accusation) && !over)
       flash.show(`The ${card_title.get(accusation.card)?.toLowerCase()} doesn't break statement ${statement_number.get(accusation.statement)}. ${tries_left} ${tries_left === 1 ? "try" : "tries"} left.`);
-    if (over) controller?.abort();
+    if (over) {
+      controller?.abort();
+      if (result === Status.SOLVED) report_solved();
+    }
     save();
+  }
+
+  function report_solved() {
+    closed.value += 1;
+    achievements.achieve("first-case");
+    if (wrong === 0) achievements.achieve("clean");
+    if (questions <= 3) achievements.achieve("few-questions");
+    if (questions === 0) achievements.achieve("silent");
+    achievements.progress("cases-10", closed.value);
   }
 
   async function start_over() {

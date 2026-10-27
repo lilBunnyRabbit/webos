@@ -14,6 +14,12 @@ export default define_app({
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 400 } } },
+  achievements: [
+    { id: "first-save", title: "First draft", text: "Save a document." },
+    { id: "goal", title: "On target", text: "Save a document that meets its word goal." },
+    { id: "pdf", title: "Hot off the press", text: "Print a document or save it as a PDF." },
+    { id: "words-10000", title: "Tome", text: "Save a document of 10,000 words.", goal: 10000 },
+  ],
   shell: () => import("./commands"),
   component: () => import("./warren.app.svelte"),
 });

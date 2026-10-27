@@ -14,6 +14,7 @@ import {
   pass,
   round_score,
   ROUND_CARDS,
+  tally,
   wrong_guesses,
 } from "./round";
 import { stem, tokens, violations } from "./words";
@@ -69,6 +70,25 @@ describe("a round", () => {
     expect(is_over(round)).toBe(true);
     expect(current(round)).toBeNull();
     expect(round_score(round)).toBe(ROUND_CARDS * 3);
+  });
+});
+
+describe("tally", () => {
+  test("counts guessed, passed and first-clue cards", () => {
+    let round = deal(7, DECK);
+    round = next_card(give_clue(round, "one", [current(round)!.card.word]));
+    round = give_clue(round, "miss", ["nope"]);
+    round = next_card(give_clue(round, "hit", [current(round)!.card.word]));
+    round = next_card(pass(round));
+    round = next_card(pass(give_clue(round, "miss", ["nope"])));
+    round = next_card(give_clue(round, "one", [current(round)!.card.word]));
+    expect(tally(round)).toEqual({ guessed: 3, passed: 2, first_clue: 2 });
+  });
+
+  test("a clean round has every card from its first clue", () => {
+    let round = deal(3, DECK);
+    for (let index = 0; index < ROUND_CARDS; index++) round = next_card(give_clue(round, "clue", [current(round)!.card.word]));
+    expect(tally(round)).toEqual({ guessed: ROUND_CARDS, passed: 0, first_clue: ROUND_CARDS });
   });
 });
 

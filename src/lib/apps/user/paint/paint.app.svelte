@@ -61,7 +61,7 @@
   import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
@@ -76,6 +76,7 @@
   const secondary = storage.persisted("secondary", "#ffffff", HEX);
   const recent = storage.persisted<string[]>("recent", [], z.array(HEX).max(8));
   const panel_open = storage.window("panel_open", true, z.boolean());
+  const saved_new = storage.persisted("saved_new", 0, z.number().int().nonnegative());
 
   const DEFAULT_WIDTH = 800;
   const DEFAULT_HEIGHT = 600;
@@ -320,11 +321,19 @@
   async function write(path: string): Promise<boolean> {
     if (!history) return false;
     const state = current(history);
+    const over_itself = path === file_path && dirty;
     try {
       await write_image(path, doc_canvas!);
+      const fresh = path !== file_path;
       file_path = path;
       saved = state;
       notifications.notify(app_id, { title: "Image saved", message: path });
+      achievements.achieve("first-save");
+      if (over_itself) achievements.achieve("touch-up");
+      if (fresh) {
+        saved_new.value += 1;
+        achievements.progress("saves-10", saved_new.value);
+      }
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the image", reason);

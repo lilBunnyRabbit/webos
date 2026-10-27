@@ -123,7 +123,10 @@ Guides show at 40 % behind the canvas and the grid cells through an SVG mask wit
 - **`.fontmaker`**, UTF-8 JSON, format version 3: `{ version: 3, name, sets, metrics: { em: 1000, cap, x, descender, bearing }, stroke?: { width }, weights: { weight, scale }[], italic: { slant } | null, kerning?: { auto, pairs?: { "AV": -20 } }, glyphs: { [char]: { strokes, lsb?, rsb?, guide?, weights?: { "700": strokes }, italic?: strokes, italics?: { "700": strokes } } } }`. `stroke` is optional (older files have none and draw at 70) and is an integer 20–160; weights are 100–900 in hundreds, unique, scale 0.3–3; slant 0–25°. `kerning` is written by new projects as `{ auto: true }`; a file without it (every file from before kerning, Burrow's sample included) builds no `kern` table until Auto is switched on or a pair is set. Pair keys are two characters, values integers ±400. Version 1 files (no `weights`, no `italic`) open with Regular 400 × 1, Bold 700 × 1.7 and a 10° italic; version 1 and 2 files save as version 3. Version 3 added `italics` and `kerning`; the bump exists so an older Font Maker refuses the file instead of dropping the new fields on save. Stroke points are rounded to 0.1 unit and pressure to 0.01 on save. Parsed with zod (`format.ts:44`): a newer `version` is refused ("made by a newer Font Maker"), keys must be one character, `x` may not exceed `cap`. Opened through the `.fontmaker` association (`FILE_PROPS`, `path`); Save / Save as / the dirty close guard follow Hopsprite.
 - **Export**: Font family (`.ttc`, `font/collection`), One face (`.ttf`, named `{Name}-BoldItalic.ttf` and so on), Variable font (`{Name}-VF.ttf`, `{Name}-Italic-VF.ttf`), each asking where, starting next to the project. Use as app font writes nothing in `/home`: Settings keeps its copy in `/etc/fonts/`.
 - **App storage:** `app.font-maker.sample` (the preview text), `app.font-maker.show-guide`, `app.font-maker.pressure` (`even` | `speed`), `app.font-maker.edit-spacing`.
+- **Achievements:** `/var/lib/apps/font-maker/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)).
 - One B guide measured 1.7 KB as a data URL (2026-10-20, Chromium, the template PNG warped and re-photographed in a test page); a full sheet of guides is unmeasured.
+
+**Achievements** (ADR-078), reported after an export's file is written (a cancelled save dialog earns nothing): `first-font` (any export), `alphabet` (the exported project has every letter A to Z drawn in either case, `has_alphabet` in `build.ts`), `variable` (a variable font), and `own-hand` once Use as app font has set the font.
 
 ## Dependencies & licences
 
@@ -143,6 +146,7 @@ None. zod is already approved (ADR-008).
 
 ## Decisions
 
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - [Brainstorm 2026-10-20](../brainstorm/2026-10-20_font-maker.md): hand-written writer, draw plus scan, guides not auto-trace, presets, open-only shell.
 - [ADR-055](../adrs/055-font-maker.md): file format, writer, stroke expansion, scan guides, and its implementation revision.
 - [Brainstorm 2026-10-21](../brainstorm/2026-10-21_font-maker-pen.md): line width in the file, speed pressure, Edit spacing, Undo, filmstrip, ghost, bead fix.

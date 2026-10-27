@@ -82,7 +82,7 @@
   import WarrenSlash from "./warren-slash.svelte";
 
   const { path: initial_path }: { path?: string } = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -472,11 +472,19 @@
       editor.mark_saved();
       notifications.notify(app_id, { title: "Document saved", message: path });
       void record(content, snapshot);
+      report_saved(snapshot);
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the document", reason);
       return false;
     }
+  }
+
+  function report_saved(snapshot: WarrenDocument) {
+    const words = count(document_text(snapshot.editor)).words;
+    achievements.achieve("first-save");
+    if (snapshot.goal && words >= snapshot.goal) achievements.achieve("goal");
+    achievements.progress("words-10000", words);
   }
 
   async function save_as(): Promise<boolean> {
@@ -667,6 +675,7 @@
   async function export_pdf() {
     try {
       await print_html(await printable(editor.snapshot(), stem, inter_url, await print_faces()), { title: stem });
+      achievements.achieve("pdf");
     } catch (reason) {
       report_error(app_id, "Couldn't print the document", reason);
     }

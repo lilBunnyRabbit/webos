@@ -13,5 +13,11 @@ export default define_app({
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 420 } } },
+  achievements: [
+    { id: "first-font", title: "Typesetter", text: "Export a font." },
+    { id: "alphabet", title: "A to Z", text: "Export a font with every letter from A to Z drawn." },
+    { id: "variable", title: "Shape shifter", text: "Export a variable font." },
+    { id: "own-hand", title: "In your own hand", text: "Use your font as the UI or code font." },
+  ],
   component: () => import("./font-maker.app.svelte"),
 });

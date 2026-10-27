@@ -13,5 +13,10 @@ export default define_app({
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 480 } } },
+  achievements: [
+    { id: "first-save", title: "On paper", text: "Save a sketch." },
+    { id: "every-edge", title: "Every edge", text: "Save a sketch with every edge measured." },
+    { id: "square", title: "Square and true", text: "Save a room measured all the way round whose lengths add up." },
+  ],
   component: () => import("./tape-sketch.app.svelte"),
 });

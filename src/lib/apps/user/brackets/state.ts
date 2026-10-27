@@ -156,6 +156,11 @@ export function record_race(bracket: Bracket, race: NextRace, order: string[]): 
   return after.played > before.played ? next : bracket;
 }
 
+/** The change that played the last result, so its champion is decided. */
+export function crowned(before: Bracket, after: Bracket): boolean {
+  return !view_of(before).finished && view_of(after).finished;
+}
+
 export function undo(bracket: Bracket): Bracket {
   return bracket.results.length ? { ...bracket, results: bracket.results.slice(0, -1) } : bracket;
 }

@@ -69,6 +69,7 @@ The App Store redesign ([brainstorm](2026-10-27_app-store-design.md)) gave every
 - [x] Docs: system reference, per-app pages, ROADMAP, changelog
 
 - [ ] Sweep: games and puzzles (two groups), apps with a finish line (two groups), Shopping List with its scan option
+  - [x] AI games and creative apps: Alibi, Unsaid, Paint, Hopsprite, Font Maker, Warren, Tape Sketch, Brackets
 
 ## Next session topics
 - Cross-tab live refresh beyond re-reading when a tab becomes visible.

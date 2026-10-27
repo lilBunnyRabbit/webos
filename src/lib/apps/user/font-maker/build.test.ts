@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { read_font, FontFormat } from "../font-viewer/font";
 import { split_collection } from "$lib/core/utils/font-collection";
-import { auto_kern_of, build_face, build_family, build_font, build_variable, place_glyph, variable_blockers } from "./build";
+import { auto_kern_of, build_face, build_family, build_font, build_variable, has_alphabet, place_glyph, variable_blockers } from "./build";
 import { CharSet } from "./charsets";
 import { add_stroke, create_project, set_weights, update_glyph, type FontProject, type Stroke } from "./model";
 import { checksum } from "./ttf";
@@ -197,5 +197,19 @@ describe("kerning", () => {
     expect(auto_kern_of(auto, face, "o", "A")).toBe(written.get("3,2") ?? 0);
     expect(auto_kern_of({ ...auto, kerning: { auto: false } }, face, "A", "o")).toBe(0);
     expect(auto_kern_of(auto, face, "A", "B")).toBe(0);
+  });
+});
+
+describe("has_alphabet", () => {
+  const stroke = line(0, 0, 100, 100);
+  const letters = (chars: string) => [...chars].reduce((project, char) => add_stroke(project, char, stroke), create_project());
+
+  test("takes either case of each letter", () => {
+    expect(has_alphabet(letters("abcdefghijklm" + "NOPQRSTUVWXYZ"))).toBe(true);
+  });
+
+  test("a missing letter or a letter outside the sets fails", () => {
+    expect(has_alphabet(letters("abcdefghijklmnopqrstuvwxy"))).toBe(false);
+    expect(has_alphabet({ ...letters("abcdefghijklmnopqrstuvwxyz"), sets: [CharSet.SYMBOLS] })).toBe(false);
   });
 });

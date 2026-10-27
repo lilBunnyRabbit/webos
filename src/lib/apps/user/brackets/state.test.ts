@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { BracketSchema, create_bracket, CupStage, default_format, file_name_for, FormatKind, parse_names, parse_points } from "./bracket";
-import { pick, record_race, undo, view_of } from "./state";
+import { crowned, pick, record_race, undo, view_of } from "./state";
 
 const names = ["Ana", "Bor", "Cene", "Dora"];
 
@@ -69,5 +69,17 @@ describe("results", () => {
       { place: 2, players: ["p1"] },
       { place: 3, players: ["p2"] },
     ]);
+  });
+});
+
+describe("crowned", () => {
+  test("only the result that decides the champion crowns", () => {
+    const start = create_bracket("Friday", names, default_format(FormatKind.SINGLE, 4), 1);
+    const semis = pick(pick(start, "w1-0", "p1"), "w1-1", "p2");
+    const final = pick(semis, "w2-0", "p2");
+    expect(crowned(start, pick(start, "w1-0", "p1"))).toBe(false);
+    expect(crowned(semis, final)).toBe(true);
+    expect(crowned(final, { ...final, name: "Renamed" })).toBe(false);
+    expect(crowned(final, undo(final))).toBe(false);
   });
 });

@@ -10,6 +10,11 @@ export const CHANGELOG: Release[] = [
     title: "Achievements all round",
     changes: [
       {
+        kind: NEW,
+        apps: ["alibi", "unsaid", "paint", "hopsprite", "font-maker", "warren", "tape-sketch", "brackets"],
+        text: "Alibi, Unsaid, Paint, Hopsprite, Font Maker, Warren, Tape Sketch and Brackets have achievements to earn: close a case, export your first font, measure a room that adds up, crown a champion and more.",
+      },
+      {
         kind: IMPROVED,
         apps: ["shopping-list"],
         text: "Shopping List can scan a list with Doc Scan, next to the camera, in the list, its menus and its widget, and has four achievements to earn, like ticking off a whole list.",

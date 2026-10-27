@@ -59,7 +59,7 @@
   import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -176,6 +176,7 @@
       file_path = path;
       editor.mark_saved(snapshot);
       notifications.notify(app_id, { title: "Sprite saved", message: path });
+      achievements.achieve("first-save");
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the sprite", reason);
@@ -212,13 +213,16 @@
     if (!path) return;
     const target = path.toLowerCase().endsWith(extension) ? path : `${path}${extension}`;
     const snapshot = editor.sprite;
-    if (gif) {
-      const order = request.kind === "animation" ? frame_sequence(request.range, request.direction) : [editor.frame];
-      await write_gif(app_id, target, snapshot, { scale: request.scale, order, loop: request.kind === "animation" && request.loop });
+    if (request.kind === "animation") {
+      const order = frame_sequence(request.range, request.direction);
+      const done = gif
+        ? await write_gif(app_id, target, snapshot, { scale: request.scale, order, loop: request.loop })
+        : await write_animated_svg(app_id, target, snapshot, request);
+      if (done) report_animation(order);
       return;
     }
-    if (request.kind === "animation") {
-      await write_animated_svg(app_id, target, snapshot, request);
+    if (gif) {
+      await write_gif(app_id, target, snapshot, { scale: request.scale, order: [editor.frame], loop: false });
       return;
     }
     try {
@@ -231,6 +235,12 @@
     } catch (reason) {
       report_error(app_id, "Couldn't export the SVG", reason);
     }
+  }
+
+  function report_animation(order: readonly number[]) {
+    const frames = new Set(order).size;
+    if (frames >= 2) achievements.achieve("animation");
+    if (frames >= 12) achievements.achieve("flipbook");
   }
 
   const TILE_SIZES = [0, 8, 16, 32];

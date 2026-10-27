@@ -27,6 +27,7 @@
     PASS_COST,
     round_score,
     ROUND_CARDS,
+    tally,
     wrong_guesses,
     type Round,
   } from "./round";
@@ -34,10 +35,11 @@
 
   const { seed: seed_prop }: { seed?: number } = $props();
 
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   const ai = $derived(kernel.service<AiService>("ai"));
   track_play(app_id, () => win.is_visible);
   const best = storage.persisted("best", null as number | null, z.number().int().nonnegative().nullable());
+  const guessed_total = storage.persisted("guessed", 0, z.number().int().nonnegative());
 
   let deck = $state.raw<Card[] | null>(null);
   let round = $state.raw<Round | null>(null);
@@ -136,9 +138,20 @@
     if (is_over(round) && !recorded) {
       recorded = true;
       best.value = better_best(best.value, round_score(round));
+      report_round(round);
     } else {
       queueMicrotask(() => input?.focus());
     }
+  }
+
+  function report_round(finished: Round) {
+    const { guessed, passed, first_clue } = tally(finished);
+    guessed_total.value += guessed;
+    achievements.achieve("first-round");
+    if (passed === 0) achievements.achieve("no-pass");
+    if (first_clue > 0) achievements.achieve("first-clue");
+    if (first_clue === ROUND_CARDS) achievements.achieve("telepathy");
+    achievements.progress("guessed-25", guessed_total.value);
   }
 
   async function new_round() {

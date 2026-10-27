@@ -51,9 +51,13 @@ Per card: clues used, plus 3 when passed. The round is the sum. The best (lowest
 ## Data
 
 - `app.unsaid.best`: the lowest round score, or `null`.
+- `app.unsaid.guessed`: cards guessed in all, for the `guessed-25` achievement.
+- `/var/lib/apps/unsaid/achievements.json`: achievements, written by the OS ([achievements](../system/services/achievements.md)).
 - Play time through `track_play` in `/var/lib/games/plays.json` (ADR-035). No daily.
 - Props: `{ seed?: number }` deals that round. The end screen copies a solo link with the round's seed.
 - A round in progress isn't saved: closing the window drops it.
+
+**Achievements** (ADR-078), reported once when the fifth card is left, from `tally(round)` (`round.ts`: guessed, passed, guessed from the first clue): `first-round`, `no-pass` (nothing passed), `first-clue` (a card guessed from its first clue), `guessed-25` (progress: `app.unsaid.guessed`), secret `telepathy` (all five from their first clue). A round abandoned with New round earns nothing.
 
 ## Dependencies & licences
 
@@ -67,5 +71,6 @@ None beyond the AI service and zod.
 
 ## Decisions
 
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - [AI games brainstorm](../brainstorm/2026-10-21_ai-games.md): rounds of 5, untimed, code-owned banned words, the name.
 - [ADR-061](../adrs/061-ai-games.md): code owns the rules, the kit `AiGate`, `extract()` for repeated guesses, no dailies, no shell commands.

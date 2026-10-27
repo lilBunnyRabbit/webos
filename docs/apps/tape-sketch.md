@@ -94,7 +94,10 @@ PNG and SVG from the File menu, written where the save picker says, of the whole
 - **Version 1** (3.65.0) had no heights and a `boxes` list (`{ id, x, y, w, d, h, note }`, an oblique W × D × H symbol). It opens through the version 2 path; the boxes are left out, counted, with a notification saying how many.
 - Opened through the `.tapesketch` association (`FILE_PROPS`, `path`). Open…, Save (Mod+S), Save as… (Mod+Shift+S), New sketch, and the dirty close guard follow Hopsprite.
 - `app.tape-sketch.snap` in app storage: the magnet on or off.
+- `/var/lib/apps/tape-sketch/achievements.json`: achievements, written by the OS ([achievements](../system/services/achievements.md)).
 - No shell commands; `open` covers it through the association.
+
+**Achievements** (ADR-078), reported after a save lands, from the saved sketch (`geometry.ts`): `first-save`, `every-edge` (`all_measured`: at least one edge, every edge of every path with a length; dimension lines don't count), `square` (`checks_out`: a closed path with Check lengths on, every edge measured and its closure within tolerance).
 
 ## Dependencies & licences
 
@@ -113,5 +116,6 @@ None beyond the repo: zod for the file, `$kit/utils/history` and `$kit/utils/vie
 
 ## Decisions
 
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - [ADR-069](../adrs/069-tape-sketch.md) and its revisions: 2026-10-25 (the numbers above; the 3D view replacing the box) and 2026-10-27 (3D and heights removed, Check lengths, magnet sets, rotation, key buzz).
 - [Brainstorm 2026-10-25](../brainstorm/2026-10-25_tape-sketch.md), sessions 1 and 2; [brainstorm 2026-10-27](../brainstorm/2026-10-27_tape-sketch-2d.md).

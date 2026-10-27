@@ -1,4 +1,4 @@
-import { edge_count, type Point, type Sketch, type SketchPath, type SketchPoint } from "./model";
+import { edge_count, point_map, type Point, type Sketch, type SketchPath, type SketchPoint } from "./model";
 
 const R = Math.SQRT1_2;
 
@@ -349,4 +349,19 @@ export function measures(path: SketchPath, points: ReadonlyMap<string, SketchPoi
   for (let i = 0; i < vectors.length - 1; i++) corners.push(add(corners[i], vectors[i]));
   const check = closure(path, points);
   return { perimeter, area: path.check ? Math.abs(signed_area(corners)) : null, approximate: !!check && !check.closes };
+}
+
+/** At least one edge drawn and every edge given a length. */
+export function all_measured(sketch: Sketch): boolean {
+  const drawn = sketch.paths.filter((path) => edge_count(path) > 0);
+  return drawn.length > 0 && drawn.every((path) => path.lengths.length === edge_count(path) && path.lengths.every((value) => value !== null));
+}
+
+/** A checked room measured all the way round whose lengths close. */
+export function checks_out(sketch: Sketch): boolean {
+  const points = point_map(sketch);
+  return sketch.paths.some((path) => {
+    const check = closure(path, points);
+    return !!check && check.complete && check.closes;
+  });
 }

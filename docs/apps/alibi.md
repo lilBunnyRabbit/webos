@@ -53,8 +53,12 @@ Game app frame: toolbar with the case title, `Case NNNN` and New case (F2); the 
 |------|-------|
 | Case in progress or last finished | `app.alibi.case`: `{ seed, transcript: [{ role, content, stopped? }], picks: [{ statement, card }] }`, zod-checked on load (`saved_schema`, `case.ts:174`). The case itself is rebuilt from the seed |
 | Play time | `track_play` into `/var/lib/games/plays.json` |
+| Cases closed in all | `app.alibi.closed`, for the `cases-10` achievement |
+| Achievements | `/var/lib/apps/alibi/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)) |
 
 Written only once the case has a question or an accusation, so opening a `seed` link doesn't replace a saved case until it's played. New case clears it. Props: `{ seed?: number }` opens that case; with a saved case of the same seed it resumes. No daily, no shell commands (ADR-061).
+
+**Achievements** (ADR-078), reported from `accuse()` when the accusation solves the case (a lost case earns nothing): `first-case`, `clean` (no wrong accusation), `few-questions` (3 questions or fewer, `questions_in`), `cases-10` (progress: `app.alibi.closed`), secret `silent` (no question asked).
 
 ## Dependencies & licences
 
@@ -69,5 +73,6 @@ None beyond the AI service. Templates, names and texts are written for WebOS.
 
 ## Decisions
 
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - [AI games brainstorm](../brainstorm/2026-10-21_ai-games.md), section Alibi
 - [ADR-061](../adrs/061-ai-games.md), with the 2026-10-21 Alibi revision note

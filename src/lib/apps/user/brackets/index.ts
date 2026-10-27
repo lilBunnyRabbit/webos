@@ -13,5 +13,11 @@ export default define_app({
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
+  achievements: [
+    { id: "champion", title: "Champion crowned", text: "Play a tournament through to its winner." },
+    { id: "double", title: "Second chances", text: "Play a double elimination bracket through to its winner." },
+    { id: "cup", title: "Chequered flag", text: "Finish every race of a race cup." },
+    { id: "big-field", title: "Big field", text: "Play a tournament of 16 players or more through to its winner." },
+  ],
   component: () => import("./brackets.app.svelte"),
 });

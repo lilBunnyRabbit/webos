@@ -44,7 +44,7 @@
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
   import { z } from "zod";
-  import { build_face, build_family, build_variable, drawn_characters, family_name, variable_blockers } from "./build";
+  import { build_face, build_family, build_variable, drawn_characters, family_name, has_alphabet, variable_blockers } from "./build";
   import { CHAR_SET_LABELS, set_characters, type CharSet } from "./charsets";
   import { FontEditor } from "./editor.svelte";
   import FontMakerCanvas from "./font-maker-canvas.svelte";
@@ -92,7 +92,7 @@
   import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -247,7 +247,7 @@
 
   const safe_name = (name: string) => name.replace(/[\\/:*?"<>|]/g, "-").trim() || "Untitled";
 
-  async function save_font(name: string, extension: ".ttf" | ".ttc", build: () => Uint8Array<ArrayBuffer>) {
+  async function save_font(name: string, extension: ".ttf" | ".ttc", snapshot: FontProject, build: () => Uint8Array<ArrayBuffer>): Promise<boolean> {
     const type = extension === ".ttc" ? "font/collection" : "font/ttf";
     const path = await win.pick_save({
       name: `${name}${extension}`,
@@ -255,7 +255,7 @@
       start_path: file_path && !read_only ? parent_path(file_path) : "/home",
       title: "Export font",
     });
-    if (!path) return;
+    if (!path) return false;
     const target = with_extension(path, extension);
     try {
       await write_file(target, new Blob([build()], { type }));
@@ -264,8 +264,12 @@
         message: `${drawn} ${drawn === 1 ? "character" : "characters"} · ${target}`,
         actions: [{ label: "Open", on_click: () => void apps.open(target) }],
       });
+      achievements.achieve("first-font");
+      if (has_alphabet(snapshot)) achievements.achieve("alphabet");
+      return true;
     } catch (reason) {
       report_error(app_id, "Couldn't export the font", reason);
+      return false;
     }
   }
 
@@ -281,7 +285,9 @@
       return;
     }
     const stem = safe_name(file_stem(file_name) || project.name);
-    void save_font(italic ? `${stem}-Italic-VF` : `${stem}-VF`, ".ttf", () => build_variable(snapshot, italic));
+    void save_font(italic ? `${stem}-Italic-VF` : `${stem}-VF`, ".ttf", snapshot, () => build_variable(snapshot, italic)).then((done) => {
+      if (done) achievements.achieve("variable");
+    });
   }
 
   async function use_as_app_font(role: FontRole) {
@@ -291,6 +297,7 @@
       const file = new File([build_family(snapshot)], `${safe_name(family)}.ttc`, { type: "font/collection" });
       await kernel.service<SettingsService>("settings").use_font(role, file);
       notifications.notify(app_id, { title: role === FontRole.SANS ? `${family} is the UI font` : `${family} is the code font`, message: "Change it back in Settings › Text & interface." });
+      achievements.achieve("own-hand");
     } catch (reason) {
       report_error(app_id, "Couldn't use the font", reason);
     }
@@ -326,10 +333,10 @@
     if (!choice || !has_ink()) return;
     const snapshot = editor.project;
     const stem = safe_name(file_stem(file_name) || project.name);
-    if (choice === "family") void save_font(stem, ".ttc", () => build_family(snapshot));
+    if (choice === "family") void save_font(stem, ".ttc", snapshot, () => build_family(snapshot));
     else if (choice.startsWith("face:")) {
       const face = faces.find((item) => face_id(item) === choice)!;
-      void save_font(`${stem}-${style_name(face.weight, face.italic).replaceAll(" ", "")}`, ".ttf", () => build_face(snapshot, face));
+      void save_font(`${stem}-${style_name(face.weight, face.italic).replaceAll(" ", "")}`, ".ttf", snapshot, () => build_face(snapshot, face));
     } else if (choice.startsWith("variable:")) export_variable(choice === "variable:italic");
     else if (choice === "app:sans") void use_as_app_font(FontRole.SANS);
     else if (choice === "app:mono") void use_as_app_font(FontRole.MONO);

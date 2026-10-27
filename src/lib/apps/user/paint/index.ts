@@ -12,5 +12,10 @@ export default define_app({
   tools: ["image/*"],
   props: FILE_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 320 } } },
+  achievements: [
+    { id: "first-save", title: "Framed", text: "Save a drawing." },
+    { id: "touch-up", title: "Touch-up", text: "Change an image that's already a file and save it over itself." },
+    { id: "saves-10", title: "Gallery wall", text: "Save 10 new images.", goal: 10 },
+  ],
   component: () => import("./paint.app.svelte"),
 });

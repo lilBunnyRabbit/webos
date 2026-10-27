@@ -32,12 +32,12 @@
   import Podium from "./podium.svelte";
   import RoundRobinView from "./round-robin-view.svelte";
   import StartScreen from "./start-screen.svelte";
-  import { can_pick, pick, record_race, undo, view_of } from "./state";
+  import { can_pick, crowned, pick, record_race, undo, view_of } from "./state";
   import { list_brackets, parse_bracket, save_new, type BracketEntry } from "./store";
   import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path }: { path?: string } = $props();
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
 
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -97,7 +97,16 @@
     if (!cell?.value) return;
     const current = $state.snapshot(cell.value) as Bracket;
     const next = change(current);
-    if (next !== current) cell.value = next;
+    if (next === current) return;
+    cell.value = next;
+    if (crowned(current, next)) report_champion(next);
+  }
+
+  function report_champion(finished: Bracket) {
+    achievements.achieve("champion");
+    if (finished.format.kind === FormatKind.DOUBLE) achievements.achieve("double");
+    if (finished.format.kind === FormatKind.CUP) achievements.achieve("cup");
+    if (finished.players.length >= 16) achievements.achieve("big-field");
   }
 
   async function create(name: string, players: string[], format: Format) {

@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import {
   align,
+  all_measured,
+  checks_out,
   closure,
   DIRECTIONS,
   measures,
@@ -214,5 +216,41 @@ describe("parse_angles cap", () => {
     const many = Array.from({ length: 181 }, (_, i) => i * 0.5).join(",");
     expect(parse_angles(many)).toBeNull();
     expect(parse_angles("0, 22.5, 63, 90")).toEqual([0, 22.5, 63, 90]);
+  });
+});
+
+describe("all_measured and checks_out", () => {
+  test("a room measured all round that agrees passes both", () => {
+    const { sketch } = room(SQUARE, [4000, 3000, 4000, 3000]);
+    expect(all_measured(sketch)).toBe(true);
+    expect(checks_out(sketch)).toBe(true);
+  });
+
+  test("an unmeasured edge fails both", () => {
+    const { sketch } = room(SQUARE, [4000, 3000, null, 3000]);
+    expect(all_measured(sketch)).toBe(false);
+    expect(checks_out(sketch)).toBe(false);
+  });
+
+  test("measured sides that disagree are measured but don't check out", () => {
+    const { sketch } = room(SQUARE, [4000, 3000, 3950, 3000]);
+    expect(all_measured(sketch)).toBe(true);
+    expect(checks_out(sketch)).toBe(false);
+  });
+
+  test("an open line measured all along is measured; no room checks out", () => {
+    const { sketch } = room(SQUARE, [4000, 3000, 4000], false);
+    expect(all_measured(sketch)).toBe(true);
+    expect(checks_out(sketch)).toBe(false);
+  });
+
+  test("an empty sketch has nothing measured", () => {
+    expect(all_measured(create_sketch())).toBe(false);
+  });
+
+  test("one unmeasured path among measured ones fails", () => {
+    const { sketch } = room(SQUARE, [4000, 3000, 4000, 3000]);
+    const loose = { id: "wall", points: ["p0", "p1"], closed: false, lengths: [null], check: true };
+    expect(all_measured({ ...sketch, paths: [...sketch.paths, loose] })).toBe(false);
   });
 });

@@ -109,6 +109,22 @@ export function round_score(round: Round): number {
   return round.cards.reduce((sum, play) => sum + card_score(play), 0);
 }
 
+export interface RoundTally {
+  guessed: number;
+  passed: number;
+  /** Cards guessed from their first clue. */
+  first_clue: number;
+}
+
+export function tally(round: Round): RoundTally {
+  const guessed = round.cards.filter((play) => play.status === CardStatus.GUESSED);
+  return {
+    guessed: guessed.length,
+    passed: round.cards.filter((play) => play.status === CardStatus.PASSED).length,
+    first_clue: guessed.filter((play) => play.clues.length === 1).length,
+  };
+}
+
 export function better_best(best: number | null, score: number): number {
   return best === null ? score : Math.min(best, score);
 }

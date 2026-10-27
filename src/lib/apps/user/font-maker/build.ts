@@ -105,6 +105,14 @@ export function drawn_characters(project: FontProject): string[] {
   return project_characters(project.sets).filter((char) => is_drawn(project.glyphs[char]));
 }
 
+const ALPHABET = "abcdefghijklmnopqrstuvwxyz";
+
+/** Every letter A to Z drawn, in either case. */
+export function has_alphabet(project: FontProject): boolean {
+  const drawn = new Set(drawn_characters(project));
+  return [...ALPHABET].every((letter) => drawn.has(letter) || drawn.has(letter.toUpperCase()));
+}
+
 export function family_name(project: FontProject): string {
   return project.name.trim() || "Untitled";
 }

@@ -60,6 +60,8 @@
   import { sketch_svg, svg_to_png } from "./export";
   import { EXTENSION, serialize_sketch, sketch_name_for } from "./format";
   import {
+    all_measured,
+    checks_out,
     closure,
     DIRECTIONS,
     measures,
@@ -83,7 +85,7 @@
   import { format_area, format_length, input_for, parse_input, UNIT_LABELS } from "./units";
 
   const { path: initial_path }: { path?: string } = $props();
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -229,6 +231,9 @@
       file_path = path;
       editor.mark_saved(snapshot);
       notifications.notify(app_id, { title: "Sketch saved", message: path });
+      achievements.achieve("first-save");
+      if (all_measured(snapshot)) achievements.achieve("every-edge");
+      if (checks_out(snapshot)) achievements.achieve("square");
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the sketch", reason);

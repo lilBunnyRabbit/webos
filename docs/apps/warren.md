@@ -277,6 +277,8 @@ Shell (`commands.ts`, `shell.ts`), both reading the JSON without Lexical:
 
 Path completion is filtered to `.warren`.
 
+Achievements (ADR-078) live in `/var/lib/apps/warren/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)), reported after a save lands: `first-save`, `goal` (the saved document's word count reaches its `goal`), `words-10000` (progress: the saved document's word count, so the most words any one saved document has held; 10,000 unlocks). `pdf` unlocks when the print dialog closes: the browser reports no difference between printing, saving a PDF and cancelling, so cancelling counts too.
+
 ## Dependencies & licences
 
 `lexical`, `@lexical/extension`, `@lexical/rich-text`, `@lexical/list`, `@lexical/history`, `@lexical/selection`, `@lexical/utils`, `@lexical/html`, `@lexical/link` (which pulls in `@lexical/a11y`), `@lexical/table` (wave C, approved in the ultra functional follow-up), `@lexical/markdown` (wave D, approved; brings `@lexical/code-core` for its code transformers, which Warren doesn't use), `@lexical/mark` (wave E, approved), all exactly 0.52.0, MIT, `nspell` 2.1.5 (MIT; brings `is-buffer`, MIT) and `dictionary-en` 4.0.0 (the en_US Hunspell dictionary from Kevin Atkinson's SCOWL, licence "MIT AND BSD": SCOWL's MIT-like terms plus the BSD-licensed parts it draws on; its `license` file holds the full text), both approved for wave E, and `mammoth` 1.13.0 (BSD-2-Clause; brings `jszip`, `@xmldom/xmldom`, `lop`, `underscore`, `xmlbuilder`, `base64-js`, `dingbat-to-unicode`, and `argparse` for its CLI only), in the app's own `package.json` (ADR-045). mammoth loads only when a `.docx` is opened. The Lexical packages pull in `@lexical/clipboard`, `@lexical/dragon` and friends at the same version and `@preact/signals-core`. `@lexical/extension` brings `NestedEditorExtension` and the NodeState used by `ImageNode`; no new package. The templates and `docx-media.ts` are their own chunks, loaded on use. `nspell` and the dictionary load only when the spelling list is switched on: the worker is its own chunk (11 KB, 4.5 KB gz), the `.dic` an asset fetched on first use (186 KB gz). All but those and mammoth load with the app's lazy component: `warren.app` is 639 KB, 199 KB gz after wave E (the history, comments, spelling list and writing help add 13 KB gz); `warren.app` is 598 KB, 186 KB gz after wave D (538 KB, 167 KB gz after wave C; `@lexical/markdown` and the wave's code are most of the 19 KB gz) (325 KB, 104 KB gz after the finalize; waves A and B weren't measured in between); mammoth is its own chunk, about 99 KB gz, fetched on the first `.docx` opened (production build, 2026-10-22). The boot chunk is unchanged (184.4 / 190 KB gz).
@@ -312,5 +314,6 @@ Path completion is filtered to `.warren`.
 
 ## Decisions
 
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - [Brainstorm, 2026-10-21](../brainstorm/2026-10-21_warren.md)
 - [ADR-059](../adrs/059-warren.md)
