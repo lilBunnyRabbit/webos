@@ -2,6 +2,8 @@
 **Date:** 2026-10-27
 **Status:** Implemented
 
+> **Revision 2026-10-27: stopping and encoder failure.** Stop is honoured at every wait while starting (settings, the camera prompt, `resumable()`); a camera stream granted after Stop is stopped at once. `finish` flushes the encoder before cutting the clip. An encoder that fails saves the clip in progress, starts a fresh encoder and keeps watching; the fourth failure in a run ends the job.
+
 ## Context
 The owner asked for camera tools. Motion Watch watches a camera, saves a clip from just before to just after motion, notifies, and shows the day as a timeline ([brainstorm](../brainstorm/2026-10-27_motion-watch.md)). It needs to run with no window, which ADR-081 provides.
 

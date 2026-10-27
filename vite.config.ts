@@ -258,7 +258,11 @@ export default defineConfig({
         test: {
           name: "browser",
           include: ["src/**/*.browser.test.ts"],
-          browser: { enabled: true, headless: true, provider: playwright(), instances: [{ browser: "chromium" }] },
+          browser: { enabled: true, headless: true, provider: playwright({
+              // A test camera that needs no permission prompt (Motion Watch).
+              launchOptions: { args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] },
+            }),
+            instances: [{ browser: "chromium" }] },
         },
       },
     ],

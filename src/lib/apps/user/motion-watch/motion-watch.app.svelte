@@ -190,7 +190,7 @@
             <div class="absolute inset-0 grid place-items-center p-4 text-center">
               <div class="flex flex-col items-center gap-2 text-foreground/65">
                 <VideoCameraIcon class="size-10" weight="duotone" />
-                <p class="text-ui">{elsewhere ? "Watching in another tab" : job ? "Starting the camera…" : "Disarmed"}</p>
+                <p class="text-ui">{elsewhere ? "Watching in another tab" : job ? `${job.status || "Starting the camera"}…` : "Disarmed"}</p>
                 {#if elsewhere}<p class="text-2xs">{job?.status}</p>{/if}
               </div>
             </div>

@@ -211,10 +211,15 @@ export class WebmEncoder {
     return new Promise((resolve) => this.waiting.push(resolve));
   }
 
-  async finish(duration_ms: number): Promise<Blob> {
+  /** Waits for every queued frame's chunk: `on_chunk` has them all once this resolves. */
+  async flush(): Promise<void> {
     this.check();
     await Promise.all([this.video_encoder?.flush(), this.audio_encoder?.flush()]);
     this.check();
+  }
+
+  async finish(duration_ms: number): Promise<Blob> {
+    await this.flush();
     this.close();
     return mux_webm({ video: this.video_track, audio: this.audio_track, duration_ms, chunks: this.chunks });
   }

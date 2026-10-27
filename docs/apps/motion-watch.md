@@ -45,10 +45,12 @@ The worker encodes nonstop through `WebmEncoder` (VP9, else VP8; 1 Mbit/s, 15 fp
 | Pre-roll | From the newest keyframe at or before 5 s before the start (`PRE_US`), else the oldest keyframe in the ring: 5–7 s |
 | End | 5 s after the last frame with motion (`POST_US`) |
 | Cap | 120 s (`MAX_US`); motion that goes on starts the next clip with its own pre-roll |
-| Stop | `finish` cuts the clip in progress; the job waits up to 4 s for it before letting go |
+| Stop | `finish` flushes the encoder (at most 2 s) and cuts the clip in progress; the job waits up to 4 s for it before letting go. A camera that stops does the same before the job ends |
 | Output | Chunks rebased to start at 0, then kit `mux_webm` |
 
-A clip only ever opens on a keyframe: when the ring has none yet, the clip waits for the next one. Encoder output trails its input a little, so the last frame or two of the post-roll can be missing.
+A clip only ever opens on a keyframe: when the ring has none yet, the clip waits for the next one. Encoder output trails its input a little, so a clip that ends by itself can miss the last frame or two of its post-roll; Stop flushes first, so a stopped clip keeps them.
+
+**Encoder failure.** An encoder that errors (or fails to start) doesn't end the watch: the clip in progress is saved with the chunks it has, the encoder and the ring are dropped (a new encoder's chunks don't follow the old one's), and the next frame starts a fresh one. The fourth failure in a run ends the job with "The video encoder keeps failing" (`MAX_ENCODER_RESTARTS`).
 
 ### Files (`events.ts`, `storage.ts`)
 
@@ -79,7 +81,11 @@ On each clip start: `notify({ title: "Motion", message: "Seen at 14:03. Recordin
 
 ### Resume
 
-The job calls `ctx.resumable()` once the camera is running. After a reload with the watch armed, WebOS offers "Resume Motion Watch?"; Resume arms it again (the camera permission must still be granted).
+The job calls `ctx.resumable()` once the camera is running.
+
+### Stopping
+
+Every wait while starting gives way to Stop: the settings read, the camera prompt (`getUserMedia` raced against the signal; a stream that arrives after Stop has its tracks stopped at once) and `resumable()`. Whatever point Stop lands on, the job ends, the camera's tracks stop and saves in flight finish first. While it ends the job's status is "Stopping", which the window shows in place of the preview; Arm right after Disarm waits for it and starts a new watch. After a reload with the watch armed, WebOS offers "Resume Motion Watch?"; Resume arms it again (the camera permission must still be granted).
 
 ## Shell
 

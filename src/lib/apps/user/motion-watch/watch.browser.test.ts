@@ -2,11 +2,15 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest"
 import kernel from "$lib/core/api";
 import { clear_opfs } from "$lib/core/api/services/files/opfs";
 import { FilesService } from "$lib/core/api/services/files/service.svelte";
+import { NotificationsService } from "$lib/core/api/services/notifications/service.svelte";
+import type { BackgroundContext } from "$lib/core/api/services/background/type";
 import { spawn } from "$kit/utils/worker";
 import { probe_video } from "$kit/utils/video/capture";
 import { day_of, parse_events } from "./events";
 import { ALL_ZONES, detect_config } from "./settings";
+import { as_live } from "./live.svelte";
 import { clip_path, list_days, prune_days, read_day, save_clip } from "./storage";
+import run from "./watch.svelte";
 import type { Clip, WatchApi, WatchEvent } from "./watch.worker";
 import WatchWorker from "./watch.worker?worker";
 
@@ -15,6 +19,7 @@ let files: FilesService;
 beforeAll(() => {
   files = new FilesService();
   kernel.services.set("files", files);
+  kernel.services.set("notifications", new NotificationsService());
 });
 
 beforeEach(async () => {
@@ -24,6 +29,7 @@ beforeEach(async () => {
 
 afterAll(() => {
   kernel.services.delete("files");
+  kernel.services.delete("notifications");
 });
 
 const FPS = 15;
@@ -93,6 +99,49 @@ describe("the watch worker", () => {
     worker.terminate();
     expect(events.some((event) => event.kind === "clip")).toBe(true);
   }, 60_000);
+});
+
+describe("the background job", () => {
+  test("Stop while it marks itself resumable lets go of the camera", async () => {
+    const controller = new AbortController();
+    let view: unknown = null;
+    let stream: MediaStream | null = null;
+    const context: BackgroundContext = {
+      app_id: "motion-watch",
+      props: {},
+      signal: controller.signal,
+      status: () => {},
+      share: (shared) => (view = shared),
+      resumable: () =>
+        new Promise((resolve) => {
+          stream = as_live(view)?.stream ?? null;
+          controller.abort(new DOMException("Stopped", "AbortError"));
+          setTimeout(resolve, 100);
+        }),
+      spawn: (WorkerCtor, options) => spawn(WorkerCtor, options),
+    };
+    await expect(run(context)).rejects.toMatchObject({ name: "AbortError" });
+    expect(stream).not.toBeNull();
+    expect(stream!.getTracks().every((track) => track.readyState === "ended")).toBe(true);
+  }, 30_000);
+
+  test("Stop while it starts ends the job with no camera on", async () => {
+    const controller = new AbortController();
+    let view: unknown = null;
+    const context: BackgroundContext = {
+      app_id: "motion-watch",
+      props: {},
+      signal: controller.signal,
+      status: (text) => {
+        if (text === "Starting the camera") queueMicrotask(() => controller.abort(new DOMException("Stopped", "AbortError")));
+      },
+      share: (shared) => (view = shared),
+      resumable: async () => {},
+      spawn: (WorkerCtor, options) => spawn(WorkerCtor, options),
+    };
+    await expect(run(context)).rejects.toMatchObject({ name: "AbortError" });
+    expect(as_live(view)?.stream).toBeNull();
+  }, 30_000);
 });
 
 describe("storage", () => {

@@ -10,6 +10,9 @@ import { DETECT, type DetectConfig } from "./settings";
 const ENCODE_LONG_SIDE = 640;
 const BITRATE = 1_000_000;
 const LEVEL_EVERY_MS = 150;
+const FLUSH_MS = 2_000;
+/** Encoder failures (a GPU reset, a codec that dies) survived by starting a fresh one; one more ends the watch. */
+const MAX_ENCODER_RESTARTS = 3;
 
 export interface Clip {
   blob: Blob;
@@ -36,13 +39,13 @@ let detector: MotionDetector | null = null;
 let reader: ReadableStreamDefaultReader<VideoFrame> | null = null;
 let stopping = false;
 
-const recorder = new ClipRecorder();
+let recorder = new ClipRecorder();
 const small = new OffscreenCanvas(DETECT.WIDTH, DETECT.HEIGHT);
 const small_context = small.getContext("2d", { willReadFrequently: true })!;
 let big: OffscreenCanvas | null = null;
 let big_context: OffscreenCanvasRenderingContext2D | null = null;
 let encoder: WebmEncoder | null = null;
-let encoder_failed = false;
+let encoder_failures = 0;
 let first_timestamp: number | null = null;
 let last_level = 0;
 
@@ -58,6 +61,9 @@ async function start_encoder(frame: VideoFrame) {
   if (size.width !== frame.displayWidth || size.height !== frame.displayHeight) {
     big = new OffscreenCanvas(size.width, size.height);
     big_context = big.getContext("2d")!;
+  } else {
+    big = null;
+    big_context = null;
   }
   encoder = await WebmEncoder.create({
     video: { ...size, bitrate: BITRATE, framerate: 15 },
@@ -71,16 +77,39 @@ function send(clip: FinishedClip | null) {
   served.emit({ kind: "clip", clip: { blob, at: clip.at, end: clip.end, peak: clip.peak, cells: clip.cells } });
 }
 
+/** Lets the encoder hand over the frames it still holds, so a clip keeps its last ones. */
+async function flush() {
+  if (!encoder) return;
+  const timeout = new Promise((resolve) => setTimeout(resolve, FLUSH_MS));
+  await Promise.race([encoder.flush(), timeout]).catch(() => {});
+}
+
+/**
+ * Saves the clip in progress with the chunks it has, then drops the encoder and the ring (a fresh encoder's chunks
+ * don't follow the old one's): the next frame starts a new encoder.
+ */
+function encoder_failed(error: unknown) {
+  if (encoder) send(recorder.finish());
+  encoder?.close();
+  encoder = null;
+  recorder = new ClipRecorder();
+  if (++encoder_failures > MAX_ENCODER_RESTARTS) throw new Error(`The video encoder keeps failing: ${error instanceof Error ? error.message : String(error)}`);
+}
+
 async function handle(frame: VideoFrame) {
   first_timestamp ??= frame.timestamp;
   const time = frame.timestamp - first_timestamp;
-  if (!encoder && !encoder_failed) await start_encoder(frame).catch(() => (encoder_failed = true));
+  if (!encoder) await start_encoder(frame).catch(encoder_failed);
   // A live camera can't wait for the encoder: a busy one skips the frame, detection still sees it.
   if (encoder && !encoder.busy) {
-    if (big && big_context) {
-      big_context.drawImage(frame, 0, 0, big.width, big.height);
-      encoder.encode_frame(big, time);
-    } else encoder.encode_frame(frame, time);
+    try {
+      if (big && big_context) {
+        big_context.drawImage(frame, 0, 0, big.width, big.height);
+        encoder.encode_frame(big, time);
+      } else encoder.encode_frame(frame, time);
+    } catch (error) {
+      encoder_failed(error);
+    }
   }
 
   small_context.drawImage(frame, 0, 0, DETECT.WIDTH, DETECT.HEIGHT);
@@ -118,6 +147,7 @@ const served = serve<WatchApi, WatchEvent>({
       reader.releaseLock();
     }
     if (!stopping) {
+      await flush();
       send(recorder.finish());
       throw new Error("The camera stopped");
     }
@@ -127,6 +157,7 @@ const served = serve<WatchApi, WatchEvent>({
     stopping = true;
     await reader?.cancel().catch(() => {});
     await new Promise((resolve) => setTimeout(resolve, 0));
+    await flush();
     send(recorder.finish());
     encoder?.close();
     return null;
