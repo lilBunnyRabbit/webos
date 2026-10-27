@@ -6,7 +6,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 export const CHANGELOG: Release[] = [
   {
     version: "3.74.0",
-    date: "2026-10-26",
+    date: "2026-10-27",
     title: "App Store",
     changes: [
       { kind: NEW, apps: ["app-library"], text: "The App Library is now the App Store: Install an app to keep it, or just Open it without installing." },

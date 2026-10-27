@@ -98,7 +98,7 @@ What are the implications of this decision?
 | [062](./062-background-scheduler.md) | Background Scheduler | 2026-10-21 | Implemented |
 | [063](./063-moonrabbit-journal.md) | Moonrabbit Journal Encryption | 2026-10-22 | Implemented |
 | [064](./064-kit-encoder-table.md) | Kit Encoder Table | 2026-10-22 | Implemented |
-| [065](./065-apps-on-demand.md) | Apps on Demand, Offline by Choice | 2026-10-22 | Implemented |
+| [065](./065-apps-on-demand.md) | Apps on Demand, Offline by Choice | 2026-10-22 | Superseded by ADR-077 |
 | [066](./066-app-icons-as-files.md) | App Icons as Files | 2026-10-22 | Reverted |
 | [067](./067-browser-support-check.md) | Browser Support Check | 2026-10-23 | Implemented |
 | [068](./068-soft-surfaces.md) | Soft Surfaces | 2026-10-23 | Rejected |

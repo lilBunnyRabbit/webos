@@ -50,6 +50,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Multi-window sync: each `DirectoryHandler` watches its folder's and ancestors' `files.revision()` (ADR-021); a gone folder sends the explorer to the nearest parent ([brainstorm](brainstorm/2026-10-12_explorer-sync.md))
 - [ ] Cross-tab file sync: FileSystemObserver vs BroadcastChannel relay (brainstorm first)
   - [ ] App data files (`json_file`) announce changes to other tabs, so an app open in one tab sees what another tab's scheduler leader or `on_fire` handler wrote (owner, 2026-10-21; [scheduler brainstorm](brainstorm/2026-10-21_background-scheduler.md))
+  - [ ] App Store in a long-lived tab: it keeps the full catalogue for the session, so apps a later deploy adds show only after a reload (owner, 2026-10-27: fix all tab issues together; [ADR-077](adrs/077-app-store.md))
 - [x] File explorer: open files in apps (see File Associations, ADR-018)
 - [x] Context menus, window sheets and clipboard ([ADR-025](adrs/025-menus-sheets-clipboard.md)):
   - [x] Window-scoped dialogs + confirm/prompt sheets
@@ -705,6 +706,8 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
   - [x] Stage 3 (2026-10-27, 3.74.0): an app-only deploy updates apps without a reload; open windows show Update (titlebar, taskbar, switcher card, App Store Updates) and Restart app reopens them on the new version; one asset cache pruned against installed apps; other tabs follow through a BroadcastChannel
   - [x] Release out of the bundle (2026-10-27): the running version comes from the catalogue and the changelog from `store/changelog.json`, so an app-only deploy leaves `sw.js`, the precache and the core hash unchanged and Settings shows the new release without a reload
   - [x] Store redesign (2026-10-27, 3.74.0, [brainstorm](brainstorm/2026-10-27_app-store-design.md)): Discover (featured carousel, shelves, categories), All apps and categories, Library (size, time used, Uninstall) and Updates (Update all) as places, an Install / Open / Update / progress button on every app, a store-like app page with goals; the OS counts each app's active time (`/var/lib/apps/usage.json`)
+  - [ ] Follow-ups (owner, 2026-10-27): a `listings({ all })` call instead of "call `catalogue()` first"; `define_app`'s `version` deprecated; the manifest import rule lifted
+  - [ ] Rough edges: a page or app fetched with a `?retry=` query misses the cache offline in a later session; a fork build shows empty categories with a 0 count; a dirty window answered "Don't save" comes back without those changes when Restart app is cancelled
 
 ---
 

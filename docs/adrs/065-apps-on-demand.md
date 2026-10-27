@@ -1,6 +1,6 @@
 # ADR-065: Apps on Demand, Offline by Choice
 **Date:** 2026-10-22
-**Status:** Implemented
+**Status:** Superseded by [ADR-077](./077-app-store.md)
 
 > **Revision 2026-10-26: the Portfolio path ([solo stale-build brainstorm](../brainstorm/2026-10-26_solo-stale-build.md)).**
 > `/webos/portfolio/` is a copy of `index.html` the worker never precaches or serves (`globIgnores`, `navigateFallbackDenylist`), so the public Portfolio link always boots the deployed build instead of the one cached before the last deploy. It's the one path that isn't offline-first. Details in [store.md](../system/services/store.md#service-worker).

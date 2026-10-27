@@ -186,3 +186,12 @@ Found driving production builds (N, an app-only N+1, a core N+2) in Chromium, fi
 - **The window's Try again asks AppsService first.** It used to import the URL the error named and render its default export, which for a window opened before its code landed is the manifest, so the window crashed ("u is not a function") when the connection came back. It now runs `apps.get(id).component()` and falls back to the URL retry for a component chunk.
 - **Docs pages read after reconnecting** load from the failed chunk's URL with `?retry=n` (`retry_page_url`); before, an unread page opened offline showed "This page didn't load" once online. The helper reads the URL itself: importing `load-error` from an app moved it out of `core` and over the boot budget.
 - **The App Store's offline strip** shows only offline. Online with another core's catalogue (a core update waits) it said "Offline" while listing the new apps.
+
+### 2026-10-27: owner calls before the push
+- **Boot budget** stays at 167.2 KB gz with 9 bytes left.
+- **Docs search** keeps loading every page when Docs opens.
+- **The App Store keeps its catalogue for the session**; a long-lived tab's staleness goes on the roadmap with the other cross-tab issues, to be fixed together.
+- **Listing every app:** a `listings({ all })` call replaces "call `catalogue()` first" (follow-up).
+- **Shelf arrows** stay hand-built; no `::scroll-button()`.
+- **ADR-065** is superseded by this ADR.
+- **`define_app`'s `version`** is deprecated and **the manifest import rule** is lifted (follow-ups).
