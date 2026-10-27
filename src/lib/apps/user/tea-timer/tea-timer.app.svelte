@@ -1,3 +1,8 @@
+<script lang="ts" module>
+  // Keyed by job and end, so a later steep of the same cup counts again; one set for the tab, so two windows count a cup once.
+  const counted = new Set<string>();
+</script>
+
 <script lang="ts">
   import kernel, { type DialogsService, type MenuItem, type NotificationsService, type SchedulerService } from "$lib/core/api";
   import { Button, EmptyState, Segmented, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -12,6 +17,7 @@
     Plus as PlusIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
+  import { untrack } from "svelte";
   import { z } from "zod";
   import BrewCard from "./brew-card.svelte";
   import { attempt, start_brew, steep_again, stop_brew } from "./jobs";
@@ -72,31 +78,36 @@
 
   function brew(tea: TeaEntry) {
     void notifications.request_system();
-    attempt(
-      "Couldn't start the brew",
-      start_brew(tea, strength_of(file.value, tea.id)).then(() => {
-        count_brew();
-        if (!tea.built_in) achievements.achieve("own-tea");
-      })
-    );
+    attempt("Couldn't start the brew", start_brew(tea, strength_of(file.value, tea.id)));
   }
 
   function steep(brew: Brew, steep: number) {
     if (!brew.tea) return;
     void notifications.request_system();
-    attempt(
-      "Couldn't start the next steep",
-      steep_again(brew, brew.tea, steep).then(() => {
-        count_brew();
-        achievements.achieve("resteep");
-      })
-    );
+    attempt("Couldn't start the next steep", steep_again(brew, brew.tea, steep));
   }
 
-  function count_brew() {
+  // A cup counts when this window sees it go from brewing to ready: Stop cancels the job, so a stopped cup never gets there.
+  let seen_brewing = new Set<string>();
+  $effect(() => {
+    const brewing_now = new Set<string>();
+    for (const entry of brews) {
+      const key = `${entry.job}:${entry.end_at}`;
+      if (!entry.ready) brewing_now.add(key);
+      else if (seen_brewing.has(key) && !counted.has(key)) {
+        counted.add(key);
+        untrack(() => count_brew(entry));
+      }
+    }
+    seen_brewing = brewing_now;
+  });
+
+  function count_brew(entry: Brew) {
     brewed.value += 1;
     achievements.achieve("first-brew");
     achievements.progress("brews-50", brewed.value);
+    if (entry.steep > 1) achievements.achieve("resteep");
+    if (entry.tea && !entry.tea.built_in) achievements.achieve("own-tea");
   }
 
   function choose_strength(tea: TeaEntry, strength: Strength) {

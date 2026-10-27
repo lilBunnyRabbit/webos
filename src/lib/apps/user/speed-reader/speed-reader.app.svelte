@@ -42,7 +42,7 @@
     position_at,
   } from "./timeline";
   import { tokenize, type ReaderToken } from "./tokens";
-  import { EMPTY_TALLY, FAST_WORDS, tally, type Tally } from "./reading";
+  import { EMPTY_TALLY, FAST_WORDS, read_through, reported, tally, type Tally } from "./reading";
   import { z } from "zod";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
@@ -65,7 +65,8 @@
   const files = $derived(kernel.service<FilesService>("files"));
 
   const settings = storage.persisted("settings", DEFAULT_SETTINGS, settings_schema);
-  const words_read = storage.persisted("words", 0, z.number().int().nonnegative());
+  const WORDS_KEY = "words";
+  const words_schema = z.number().int().nonnegative();
 
   let root = $state<HTMLDivElement>();
   let source = $state.raw<Source | null>(null);
@@ -101,7 +102,7 @@
         index = timeline.segments.length - 1;
         progress = 0;
         reading = tally(reading, from, index + 1, settings.value.wpm);
-        achievements.achieve("the-end");
+        if (read_through(reading, timeline.segments.length)) achievements.achieve("the-end");
         pause();
         return;
       }
@@ -122,13 +123,15 @@
     save_position();
   });
 
+  // Read and written straight through, not a persisted cell: on close the cell is torn down before onDestroy runs.
   function count_reading() {
     if (reading.words > 0) {
-      words_read.value += reading.words;
-      achievements.progress("words-10000", words_read.value);
+      const total = (storage.get(WORDS_KEY, words_schema) ?? 0) + reading.words;
+      storage.set(WORDS_KEY, total);
+      achievements.progress("words-10000", total);
     }
     if (reading.fast_best >= FAST_WORDS) achievements.achieve("fast");
-    reading = EMPTY_TALLY;
+    reading = reported(reading);
   }
 
   function save_position() {
@@ -190,6 +193,8 @@
 
   async function show(next: Source) {
     playing = false;
+    count_reading();
+    reading = EMPTY_TALLY;
     source = next;
     const stored = next.path ? find_position(storage.get("positions", positions_schema) ?? [], next.path) : null;
     index = clamp_int(stored ?? 0, 0, Math.max(0, next.tokens.length - 1));

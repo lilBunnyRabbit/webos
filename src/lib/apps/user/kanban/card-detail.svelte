@@ -14,7 +14,6 @@
     due_state,
     find_card,
     LABEL_COLORS,
-    move_card,
     remove_check,
     remove_label,
     toggle_label,
@@ -34,12 +33,13 @@
     card_id: string;
     today: string;
     edit: (update: (board: Board) => Board) => void;
+    onmove: (column_id: string) => void;
     onclose: () => void;
     onarchive: () => void;
     ondelete: () => void;
   }
 
-  let { board, card_id, today, edit, onclose, onarchive, ondelete }: Props = $props();
+  let { board, card_id, today, edit, onmove, onclose, onarchive, ondelete }: Props = $props();
 
   const { window: win } = get_app_context();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -120,7 +120,7 @@
         class="w-auto max-w-44"
         aria-label="Column"
         options={column_options}
-        bind:value={() => column.id, (to) => edit((board) => move_card(board, card_id, to, Infinity))}
+        bind:value={() => column.id, onmove}
       />
       <span class="flex-1"></span>
       <IconButton label="Archive card" size="sm" onclick={onarchive}><Archive /></IconButton>

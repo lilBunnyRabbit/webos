@@ -73,6 +73,7 @@ The App Store redesign ([brainstorm](2026-10-27_app-store-design.md)) gave every
   - [x] Arcade and colour games: Blocks, Lunar Lander, Maze, Jigsaw, Tic-Tac-Toe, Color Recall, Crack the Code, Hex Guess, Odd One Out, Gradient Sort, Checkout Challenge (Color Games is no app any more: its four modes are their own apps since ADR-071)
   - [x] Grid puzzles: Sokoban, Nonogram, Kakuro, Futoshiki, Nurikabe, Hutches, Plots, Sun and Moon, Tunnels, Word Search
   - [x] Routine and capture apps: Pomodoro, Tea Timer, Speed Reader, Kanban, Doc Scan, Motion Watch, Recorder
+    - Review fixes: Tea Timer counts a cup when it brews to its end in an open window, not at Brew (a stopped cup earns nothing; one that ends with no window open doesn't count). Speed Reader's "The end" needs every word from the first played without a seek, and the words read count is written straight to app storage so closing mid-play keeps it. Kanban: the card panel's Column picker reports like the other moves; `done-50` dropped, since no card field tells a first finish from a card moved back and forth; `kanban done` and `kanban mv` from the shell with no window report nothing.
 
 ## Next session topics
 - Cross-tab live refresh beyond re-reading when a tab becomes visible.

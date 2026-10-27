@@ -85,7 +85,6 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const data = storage.file(BOARDS_FILE, default_file(), KanbanFileSchema);
-  const cards_done = storage.persisted("finished", 0, z.number().int().nonnegative());
   const board_id = storage.window<string>("board", untrack(() => initial_board ?? "life"), z.string());
   const open_card = storage.window<string | null>("card", untrack(() => initial_card ?? null), z.string().nullable());
   const archive_open = storage.window<boolean>("archive", false, z.boolean());
@@ -183,20 +182,20 @@
 
   function report_move(outcome: MoveOutcome) {
     if (!outcome.finished) return;
-    cards_done.value += 1;
     achievements.achieve("first-done");
-    achievements.progress("done-50", cards_done.value);
     if (outcome.cleared) achievements.achieve("cleared");
+  }
+
+  function move_to(card_id: string, column_id: string, index: number) {
+    report_move(move_outcome(board, card_id, column_id));
+    edit((board) => move_card(board, card_id, column_id, index));
   }
 
   const drag = new BoardDrag((kind, id, target) => {
     if (kind === DragKind.CARD && target.column) {
       const column = board.columns.find((candidate) => candidate.id === target.column);
       if (column && folder) void move_note(id, column.id);
-      else if (column) {
-        report_move(move_outcome(board, id, column.id));
-        edit((board) => move_card(board, id, column.id, index_before(column, target.before, id)));
-      }
+      else if (column) move_to(id, column.id, index_before(column, target.before, id));
     } else if (kind === DragKind.COLUMN && id !== NO_VALUE) {
       edit_columns((board) => move_column(board, id, column_index_before(board, target.before, id)));
     }
@@ -270,8 +269,7 @@
     }
     const index = dx === 0 ? found.index + dy : Math.min(found.index, to.cards.length);
     if (dx === 0 && (index < 0 || index >= found.column.cards.length)) return;
-    report_move(move_outcome(board, card_id, to.id));
-    edit((board) => move_card(board, card_id, to.id, index));
+    move_to(card_id, to.id, index);
     void focus_card(card_id);
   }
 
@@ -333,8 +331,7 @@
     );
     if (choice === "open") open(card_id);
     else if (choice?.startsWith("move:")) {
-      report_move(move_outcome(board, card_id, choice.slice(5)));
-      edit((board) => move_card(board, card_id, choice.slice(5), Infinity));
+      move_to(card_id, choice.slice(5), Infinity);
       void focus_card(card_id);
     } else if (choice === "up") key_move(card_id, 0, -1);
     else if (choice === "down") key_move(card_id, 0, 1);
@@ -579,6 +576,7 @@
                 card_id={open_card.value}
                 {today}
                 {edit}
+                onmove={(to) => move_to(open_card.value!, to, Infinity)}
                 onclose={() => (open_card.value = null)}
                 onarchive={() => archive(open_card.value!)}
                 ondelete={() => delete_card(open_card.value!)}
