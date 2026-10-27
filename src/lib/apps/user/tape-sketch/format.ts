@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalize_snap } from "./geometry";
+import { MAX_SNAP_ANGLES, normalize_snap } from "./geometry";
 import { edge_count, new_id, SNAP_45, UNITS, type Marker, type Sketch, type Unit } from "./model";
 import { format_length } from "./units";
 
@@ -9,7 +9,8 @@ export const EXTENSION = ".tapesketch";
 const Id = z.string().min(1).max(64);
 const Coordinate = z.number().finite();
 const Length = z.number().positive().finite().nullable();
-const Text = z.string().max(2000);
+const MAX_TEXT = 2000;
+const Text = z.string().max(MAX_TEXT);
 
 const PathV1 = z.object({ id: Id, points: z.array(Id).min(1), closed: z.boolean(), lengths: z.array(Length) });
 
@@ -24,7 +25,7 @@ const Common = {
 const SketchSchema = z.object({
   version: z.literal(VERSION),
   ...Common,
-  snap: z.array(z.number().finite()).min(1).max(180),
+  snap: z.array(z.number().finite()).min(1).max(MAX_SNAP_ANGLES),
   paths: z.array(PathV1.extend({ check: z.boolean() })),
 });
 
@@ -88,7 +89,7 @@ function heights_to_markers(
     const note = `↑ ${format_length(height, unit)}`;
     const at = out.findIndex((marker) => marker.point === point);
     if (at < 0) out.push({ id: new_id(), point, note });
-    else out[at] = { ...out[at], note: out[at].note ? `${out[at].note} · ${note}` : note };
+    else out[at] = { ...out[at], note: out[at].note ? `${out[at].note.slice(0, MAX_TEXT - note.length - 3)} · ${note}` : note };
   }
   return out;
 }

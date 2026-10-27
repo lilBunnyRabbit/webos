@@ -115,12 +115,16 @@ export function snap_preset(snap: readonly number[]): SnapPreset {
   return SNAP_PRESETS.find((preset) => preset.angles.join(",") === key)?.id ?? SnapPreset.CUSTOM;
 }
 
+/** What a file may hold (`format.ts`): more would save a sketch that can't be opened again. */
+export const MAX_SNAP_ANGLES = 180;
+
 export function parse_angles(text: string): number[] | null {
   const parts = text.split(/[\s,;]+/).map((part) => part.replace(/°$/, "")).filter(Boolean);
   if (!parts.length) return null;
   const values = parts.map(Number);
   if (values.some((value) => !Number.isFinite(value))) return null;
-  return normalize_snap(values);
+  const angles = normalize_snap(values);
+  return angles.length <= MAX_SNAP_ANGLES ? angles : null;
 }
 
 export function nearest_direction(directions: readonly Direction[], toward: Point): Direction | null {

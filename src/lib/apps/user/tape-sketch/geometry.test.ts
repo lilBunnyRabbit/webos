@@ -208,3 +208,11 @@ test("sketch_scale is the median ratio of drawn to measured", () => {
   expect(sketch_scale(sketch)).toBeCloseTo(0.1);
   expect(sketch_scale(create_sketch())).toBeNull();
 });
+
+describe("parse_angles cap", () => {
+  test("refuses more angles than a file may hold", () => {
+    const many = Array.from({ length: 181 }, (_, i) => i * 0.5).join(",");
+    expect(parse_angles(many)).toBeNull();
+    expect(parse_angles("0, 22.5, 63, 90")).toEqual([0, 22.5, 63, 90]);
+  });
+});

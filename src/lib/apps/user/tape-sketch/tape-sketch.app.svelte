@@ -894,7 +894,7 @@
 
     {#if rotation}
       <IconButton label="Turn back to upright ({Math.round((rotation * 180) / Math.PI)}°)" size="md" class="absolute top-2 right-2 bg-background-light/95 shadow-popover" onclick={unrotate}>
-        <CompassIcon weight="bold" style="rotate: {-rotation}rad" />
+        <CompassIcon weight="bold" style="rotate: {rotation}rad" />
       </IconButton>
     {/if}
 
