@@ -218,6 +218,9 @@ export default defineConfig({
       },
     },
   },
+  // Agent worktrees under .claude/ hold their own tsconfig and dist; watching them makes the dev server clear its dep
+  // cache mid-session, and open pages then fail every lazy import until reloaded.
+  server: { watch: { ignored: ["**/.claude/**"] } },
   // The codec worker imports jSquash lazily, and a classic worker can't split chunks.
   worker: { format: "es" },
   // jSquash and ONNX Runtime find their wasm with `new URL("x.wasm", import.meta.url)`; pre-bundling moves the module
