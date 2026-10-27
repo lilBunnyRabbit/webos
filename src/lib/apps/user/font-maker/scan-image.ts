@@ -1,5 +1,6 @@
 import type { CharSet } from "./charsets";
-import { crop_box, has_ink, homography, to_gray, type Gray, type Quad } from "./scan";
+import { homography, to_gray, type Gray, type Quad } from "$kit/utils/perspective";
+import { crop_box, has_ink } from "./scan";
 import { template_layout } from "./template";
 
 const MAX_SIDE = 1600;

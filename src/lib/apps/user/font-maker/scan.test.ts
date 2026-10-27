@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { CharSet } from "./charsets";
 import type { Vec } from "./outline";
-import { crop_box, find_marks, has_ink, homography, project, type Gray, type Quad } from "./scan";
+import { homography, project, type Gray, type Quad } from "$kit/utils/perspective";
+import { crop_box, find_marks, has_ink } from "./scan";
 import { MARK_SIZE, PAGE, template_layout } from "./template";
 
 const layout = template_layout(CharSet.BASIC_LATIN);
@@ -40,19 +41,6 @@ function photograph(corners: Quad, inked: string[], width = 700, height = 900): 
 }
 
 const close = (a: Vec, b: Vec, tolerance: number) => Math.hypot(a.x - b.x, a.y - b.y) < tolerance;
-
-describe("homography", () => {
-  test("maps the four corners exactly", () => {
-    const to: Quad = [
-      { x: 30, y: 40 },
-      { x: 620, y: 20 },
-      { x: 680, y: 870 },
-      { x: 10, y: 830 },
-    ];
-    const matrix = homography(PAGE_QUAD, to);
-    PAGE_QUAD.forEach((corner, index) => expect(close(project(matrix, corner), to[index], 1e-6)).toBe(true));
-  });
-});
 
 describe("find_marks", () => {
   const corners: Quad = [

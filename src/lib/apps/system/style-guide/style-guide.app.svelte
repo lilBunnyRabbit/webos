@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppListing, type AppsService, type DialogsService } from "$lib/core/api";
+  import kernel, { type AppListing, type AppsService, type DialogsService, type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppAnnouncement, { type AnnouncedApp } from "$lib/core/components/announcement/app-announcement.svelte";
   import {
@@ -54,6 +54,8 @@
   import { ai_icon } from "$kit/components/ai-icon";
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
+  import { QuadFrame } from "$kit/components/quad-frame";
+  import type { Quad } from "$kit/utils/perspective";
   import { SwipeCompare } from "$kit/components/swipe-compare";
   import { QrFrames } from "$kit/components/qr-transfer";
   import { Waveform, type Span } from "$kit/components/waveform";
@@ -118,6 +120,12 @@
   let sheet_open = $state(false);
   let split = $state(50);
   let crop = $state({ x: 60, y: 40, width: 200, height: 120 });
+  let quad = $state<Quad>([
+    { x: 92, y: 30 },
+    { x: 250, y: 46 },
+    { x: 236, y: 178 },
+    { x: 70, y: 160 },
+  ]);
   const WAVE_RATE = 8000;
   const wave: Pcm = {
     sample_rate: WAVE_RATE,
@@ -133,6 +141,14 @@
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
+  /** A sheet of paper photographed at an angle, in the theme's own shades. */
+  const paper_photo = $derived.by(() => {
+    const { background_darkest: table, foreground: paper, background_dark: ink } = settings.theme;
+    const lines = [0, 1, 2, 3, 4].map((row) => `<path d="M${106 - row * 4} ${60 + row * 22}l${110 + row * 2} ${8 + row * 0.5}" stroke="${ink}" stroke-width="5" stroke-linecap="round"/>`);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="320" height="200"><rect width="320" height="200" fill="${table}"/><path d="M92 30 250 46 236 178 70 160Z" fill="${paper}"/>${lines.join("")}</svg>`;
+    return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+  });
 
   // Paint with made-up highlights, so the cards and the "Start menu" strip both show.
   const SAMPLE_HIGHLIGHTS = [
@@ -441,6 +457,16 @@
               <CropFrame bind:rect={crop} bounds={{ width: 320, height: 200 }} />
             </div>
             <span class="font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(crop.width)} × {Math.round(crop.height)} at {Math.round(crop.x)}, {Math.round(crop.y)}</span>
+          </div>
+        </Section>
+        <Section
+          title="Quad frame"
+          description="Four corners over a picture, from $kit: drag a corner or focus it and use the arrow keys (Shift for bigger steps) to line it up with a skewed page. Font Maker's scan step uses it."
+          flush
+        >
+          <div class="flex flex-col gap-2">
+            <QuadFrame bind:quad image={{ src: paper_photo, width: 320, height: 200 }} alt="A sheet of paper on a table" class="aspect-[320/200] w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-foreground/10" />
+            <span class="font-mono text-2xs text-foreground/80 tabular-nums">{quad.map((corner) => `${Math.round(corner.x)},${Math.round(corner.y)}`).join("  ")}</span>
           </div>
         </Section>
         <Section

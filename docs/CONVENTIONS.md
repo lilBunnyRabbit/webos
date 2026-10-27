@@ -38,9 +38,10 @@ src/lib/
 │   ├── components/code/          # shared CodeMirror setup, CodeView
 │   ├── components/swipe-compare/ # SwipeCompare: wipe divider, zoom, pan, pinch
 │   ├── components/crop-frame/    # CropFrame: draggable crop over a picture, crop geometry
+│   ├── components/quad-frame/    # QuadFrame: four draggable corners over a picture
 │   ├── components/waveform/      # Waveform: sound peaks, trim handles, selection, playhead
 │   ├── games/                    # shared game helpers: play tracking, stopwatch, daily seed, grid, direction, time (ADR-035)
-│   └── utils/                    # image, image-format, picture (downscaled WebP data URLs), codecs (the encoder table: AVIF/JXL wasm and hand-written GIF, BMP, ICO, TIFF, QOI, TGA, PPM in a worker; SSIM), view (2D camera math), history, qr, qr-scan, linear-barcode (1D decode where BarcodeDetector is missing), filter (canvas filters by hand where `ctx.filter` is ignored), caret, exif, p2p (WebRTC pairing by QR), audio (PCM16 WAV, region cuts with crossfade, peaks), video (capture, WebM encode and mux), roadmap (`docs/ROADMAP.md` parser), worker (re-exports core's `utils/worker`: typed calls into a dedicated worker, `spawn`, `serve`)
+│   └── utils/                    # image, image-format, picture (downscaled WebP data URLs), codecs (the encoder table: AVIF/JXL wasm and hand-written GIF, BMP, ICO, TIFF, QOI, TGA, PPM in a worker; SSIM), view (2D camera math), perspective (homography, adaptive threshold, regions), history, qr, qr-scan, linear-barcode (1D decode where BarcodeDetector is missing), filter (canvas filters by hand where `ctx.filter` is ignored), caret, exif, p2p (WebRTC pairing by QR), audio (PCM16 WAV, region cuts with crossfade, peaks), video (capture, WebM encode and mux), roadmap (`docs/ROADMAP.md` parser), worker (re-exports core's `utils/worker`: typed calls into a dedicated worker, `spawn`, `serve`)
 └── apps/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else

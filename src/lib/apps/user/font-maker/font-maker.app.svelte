@@ -85,7 +85,8 @@
     type Layer,
   } from "./model";
   import { PRESSURE_MODES, PressureMode } from "./pressure";
-  import { find_marks, type Quad } from "./scan";
+  import { find_marks } from "./scan";
+  import type { Quad } from "$kit/utils/perspective";
   import { load_scan, scan_guides, type ScanImage } from "./scan-image";
   import { draw_template, PAGE, PNG_DPI, template_html, template_layout } from "./template";
   import { report_error } from "$kit/utils/report-error";
