@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { Button, IconButton, Input } from "$lib/core/components/ui";
-  import { Camera as CameraIcon, ClockCounterClockwise as ClockCounterClockwiseIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import { Article as ArticleIcon, Camera as CameraIcon, ClockCounterClockwise as ClockCounterClockwiseIcon, Plus as PlusIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import type { History } from "./data";
   import { entry_text, format_amount, parse_entry } from "./parse";
@@ -13,15 +13,16 @@
     exclude: ReadonlySet<string>;
     onadd: (text: string) => void;
     onphoto: () => void;
+    onscan: () => void;
     /** Off in the store: a planning aid, and a stray tap there adds an item. Suggestions while typing stay. */
     again?: boolean;
     /** In the store: one "+ Add" button until tapped, so the list keeps the room. */
     compact?: boolean;
-    /** Before the camera button, like All's list picker. */
+    /** Before the camera and scan buttons, like All's list picker. */
     before?: Snippet;
   }
 
-  let { history, exclude, onadd, onphoto, again = true, compact = false, before }: Props = $props();
+  let { history, exclude, onadd, onphoto, onscan, again = true, compact = false, before }: Props = $props();
 
   let draft = $state("");
   let field = $state<HTMLInputElement | null>(null);
@@ -88,6 +89,7 @@
     >
       {@render before?.()}
       <IconButton label="Read a list from a photo" size="lg" class="pointer-coarse:size-11" onclick={onphoto}><CameraIcon weight="bold" /></IconButton>
+      <IconButton label="Scan a list with Doc Scan" size="lg" class="pointer-coarse:size-11" onclick={onscan}><ArticleIcon weight="bold" /></IconButton>
       <Input
         bind:value={draft}
         bind:element={field}

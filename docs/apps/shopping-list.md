@@ -1,16 +1,23 @@
 # Shopping List
 
-Id `shopping-list` · Source: `src/lib/apps/user/shopping-list/` · [ADR-051](../adrs/051-ai-image-input.md), [ADR-053](../adrs/053-qr-data-transfer.md) · [brainstorm](../brainstorm/2026-10-19_shopping-list.md)
+Id `shopping-list` · Source: `src/lib/apps/user/shopping-list/` · [ADR-051](../adrs/051-ai-image-input.md), [ADR-053](../adrs/053-qr-data-transfer.md), [ADR-079](../adrs/079-app-sheets.md), [ADR-078](../adrs/078-achievements.md) · [brainstorm](../brainstorm/2026-10-19_shopping-list.md)
 
 ## What it does
 
-A shopping list for use in the store, phone first. Several coloured lists, tick and untick in place, amounts typed as you go ("2x mleko", "500 g moka"), suggestions from what you bought before, and "buy again" for the last trip. It reads a handwritten or printed list from a photo, and two phones pass lists to each other by QR code, every change reviewed before it lands, with no server.
+A shopping list for use in the store, phone first. Several coloured lists, tick and untick in place, amounts typed as you go ("2x mleko", "500 g moka"), suggestions from what you bought before, and "buy again" for the last trip. It reads a handwritten or printed list from a photo or from a Doc Scan scan, and two phones pass lists to each other by QR code, every change reviewed before it lands, with no server.
 
 ## How it works
 
 ### Reading a photo
 
 Two readers. Gemini Nano goes first where Chrome has it; PP-OCRv5 runs everywhere else, and also when Nano throws.
+
+Two ways in, side by side wherever one shows (entry bar, both ⋯ menus, the empty list, the widget; owner: "both camera and scanner options (always)"):
+
+- **Camera** (`photo()`, `CameraIcon`): the device picker, then every step below.
+- **Scan** (`scan()`, phosphor `Article`, Doc Scan's own icon is an app file): `win.request("doc-scan::scan")` with no source, so Doc Scan's sheet opens over the list and asks for the photo itself ([ADR-079](../adrs/079-app-sheets.md), [doc-scan](doc-scan.md)). The Blob it hands back is already straight, so it goes to `read(image, null)` at once, skipping step 3. `null` (Cancel, offline, Doc Scan failing to load) does nothing: the list stays as it was, and the camera beside it is the way on. No fallback picker.
+
+"Try again" and "Another photo" on the review go back the same way the read started (`read_from`).
 
 | Step | What | Where |
 |------|------|-------|
@@ -156,7 +163,7 @@ A row (`item-row.svelte`) is swiped, not tapped, to tick (owner: taps were miscl
 
 List settings (`list-settings.svelte`, `View.SETTINGS`) edit name, colour (swatches named by how the theme paints them, `color_names()` in `colors.ts`: each token resolved through a hidden element, its hue named, look-alikes split into Light and Dark; the token names say nothing about the colour, owner) and icon (a grid of 16, the picked one tinted in the picked colour, `ListIcon` in `data.ts`, components in `colors.ts`), with a live preview tile; New list opens the same view empty. Renaming also renames the list's widget file.
 
-The bottom of a list: a strip with "N of M in the cart" and Clear done (shown once something is ticked; the button turns primary only when nothing is left open), then the entry bar. Both are centred at the list's `max-w-xl`, so a wide window keeps them under the list. Clear done shows a "Cleared N items" toast for 8 s whose Undo puts the items back and restores the history as it was before the trip was recorded. The entry bar's field, camera and Add are 44 px on touch; in store mode the Buy again chips are hidden (a stray tap there adds an item), suggestions while typing stay, and the bar is one "+ Add" button (`compact`) until tapped: it then opens and focuses the field, and collapses again when the field is left empty (owner).
+The bottom of a list: a strip with "N of M in the cart" and Clear done (shown once something is ticked; the button turns primary only when nothing is left open), then the entry bar. Both are centred at the list's `max-w-xl`, so a wide window keeps them under the list. Clear done shows a "Cleared N items" toast for 8 s whose Undo puts the items back and restores the history as it was before the trip was recorded. The entry bar's field, camera, scan and Add are 44 px on touch; in store mode the Buy again chips are hidden (a stray tap there adds an item), suggestions while typing stay, and the bar is one "+ Add" button (`compact`) until tapped: it then opens and focuses the field, and collapses again when the field is left empty (owner).
 
 ### Adding an item
 
@@ -164,10 +171,10 @@ The bottom of a list: a strip with "N of M in the cart" and Clear done (shown on
 
 ### Props and launching
 
-`props: { list?: string, photo?: boolean }` (`index.ts`). Every launch opens a new window, as for any app.
+`props: { list?: string, photo?: boolean | "scan" }` (`index.ts`, a zod union). Every launch opens a new window, as for any app.
 
 - `list`: the window opens on that list. An unknown id is ignored and the window keeps its own (first list by default).
-- `photo`: the window starts the photo read at once, the same `photo()` as the camera button: device picker, crop, review. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
+- `photo`: `true` starts the photo read at once, the same `photo()` as the camera button: device picker, crop, review. `"scan"` opens Doc Scan's sheet at once, the same `scan()` as the scan button. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
 - Both are acted on once per window, when the file is ready (`shopping-list.app.svelte:117`). The window's `launched` flag keeps a session restore from switching lists or opening the picker again.
 
 ### Shell and Ask
@@ -187,11 +194,25 @@ Both are `ai: "read"`, so Ask's assistant can answer "what's on my shopping list
 |------|------|
 | Header | Colour dot, list name, "N left" (`left_count`, `items.ts:23`: not ticked, not deleted). Tap launches the app with `{ list }` |
 | Camera | Launches the app with `{ list, photo: true }` |
+| Scan | Launches the app with `{ list, photo: "scan" }` |
 | Field + Add | `add_entry` on the shared file, the same path as the entry bar; Enter or the + button. No suggestion chips |
 
 At h=1 everything uses the kit's `sm` sizes; at h=2 `md`, with more padding. Measured on the desktop at 3×1: 263×60 px body, the field 183 px wide, nothing overflows.
 
 Pinned from the list actions menu with `toggle_widget`: "Add to desktop" ("Add to home screen" on mobile), with the list's name as label. Once a widget with `props.list` equal to the list's id is on the desktop (`widget_for`), the item reads "Remove from desktop" ("Remove from home screen") and removes it. Renaming a list renames its widget file (`rename_list`, same `/ \ :` cleanup as `pin_widget`), so the desktop frame's title follows; a taken name keeps the old one. Deleting a list removes its widget too. A widget added from the App Store has no `list` prop and isn't counted.
+
+### Achievements
+
+Declared in `index.ts`, reported through `get_app_context().achievements` ([achievements](../system/services/achievements.md)). Earned by using the lists, never by opening the app:
+
+| Id | Title | Reported |
+|----|-------|----------|
+| `first-read` | Off the page | `add_reviewed` with at least one line: a list read from a photo or a scan was added |
+| `all-in` | Every last one | `toggle` ticks the last open item of a list with five or more live items (checked against the state the tick is about to set, since `view_transition` runs the change later) |
+| `bought-100` | Regular (goal 100) | `clear_done` after recording the trip: the sum of every history `count`, so no new counter key. Undo puts the history back, but progress keeps its highest |
+| `shared` | Two phones, one list | `apply_incoming` applied at least one change from another phone |
+
+Existing history counts toward `bought-100` on the next Clear done.
 
 ### Suggestions and buy again
 
@@ -210,7 +231,8 @@ History is keyed by the item's text in lower case: `{ count, last }` (`data.ts:4
 | "In the cart" open | Window storage `cart_open` | Boolean, default open |
 | Sort | Window storage `sort` | `oldest` (default), `newest`, `name`, `name-desc` (`ItemSort`, `sort.ts`) |
 | In-store mode | Window storage `store` | Boolean; big rows, Screen Wake Lock (`shopping-list.app.svelte:149`) |
-| Launch props handled | Window storage `launched` | Boolean; set once the `list` and `photo` props were acted on, so a restored window doesn't switch lists or ask for a photo again |
+| Launch props handled | Window storage `launched` | Boolean; set once the `list` and `photo` props were acted on, so a restored window doesn't switch lists, ask for a photo or open the scan sheet again |
+| Achievements | `/var/lib/apps/shopping-list/achievements.json` | Owned by the OS ([achievements](../system/services/achievements.md)) |
 | Widgets | `/home/Desktop/{list name}.widget` | `{ app: "shopping-list", props: { list }, w, h }`, written by `pin_widget` (desktop service) |
 | Models and runtime | Bundled assets, `webos-wasm` cache | Not in OPFS, not in backups |
 
@@ -246,3 +268,5 @@ No shell commands (owner: nothing for now).
 - [ADR-051](../adrs/051-ai-image-input.md): image input in AiService, `PROMPT_IMAGE`; revision for PP-OCRv5.
 - [ADR-053](../adrs/053-qr-data-transfer.md): sharing by multi-part QR with a review, replacing live sync (ADR-052's pairing, used until 3.6.0).
 - [ADR-045](../adrs/045-scoped-app-dependencies.md): app-scoped dependencies.
+- [Doc Scan and app sheets](../brainstorm/2026-10-27_doc-scan-and-app-sheets.md): the scan option beside the camera, `photo: "scan"`, `null` does nothing. [ADR-079](../adrs/079-app-sheets.md): `win.request`.
+- [Achievements](../brainstorm/2026-10-27_achievements.md): the sweep, two to four for apps with a finish line.

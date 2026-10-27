@@ -3,7 +3,7 @@
   import { IconButton, Input } from "$lib/core/components/ui";
   import { app_data_path, json_file } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
-  import { Camera as CameraIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import { Article as ArticleIcon, Camera as CameraIcon, Plus as PlusIcon } from "phosphor-svelte";
   import { COLOR_DOT } from "./colors";
   import { APP_ID, empty_file, LISTS_FILE, ListsFileSchema } from "./data";
   import { add_entry, left_count } from "./items";
@@ -48,6 +48,9 @@
     <form class="flex items-center gap-1" onsubmit={add}>
       <IconButton label="Read a list from a photo" size={tall ? "md" : "sm"} onclick={() => apps.launch(APP_ID, { list: list.id, photo: true })}>
         <CameraIcon weight="bold" />
+      </IconButton>
+      <IconButton label="Scan a list with Doc Scan" size={tall ? "md" : "sm"} onclick={() => apps.launch(APP_ID, { list: list.id, photo: "scan" })}>
+        <ArticleIcon weight="bold" />
       </IconButton>
       <Input
         bind:value={draft}

@@ -58,7 +58,7 @@ The owner: "shopping list should have both camera and scanner options (always)".
 - [x] Doc Scan (ADR-080): the app, its sheet, `docs/apps/doc-scan.md`.
 - [x] Shopping List: measure straightening on a skewed synthetic list; wire it only on a gain. Measured: turned and skewed 5 → 10 of 10, skew alone 10 both ways; wired as a quad frame pre-filled by `find_paper`. `win.request("doc-scan::scan")` not used: `null` can't tell Cancel from a failure, so a fallback picker would open after every Cancel.
 
-- [ ] Shopping List: scan option beside the camera, through the sheet.
+- [x] Shopping List: scan option beside the camera, through the sheet.
 
 ## Next session topics
 - More providers once a second use shows up (a signature sheet from PDF Tools, a colour picker).

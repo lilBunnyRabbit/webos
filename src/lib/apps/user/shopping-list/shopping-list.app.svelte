@@ -11,6 +11,7 @@
   import { image_files, has_files } from "$kit/utils/image";
   import {
     ArrowsLeftRight as ArrowsLeftRightIcon,
+    Article as ArticleIcon,
     Broom as BroomIcon,
     Camera as CameraIcon,
     CaretDown as CaretDownIcon,
@@ -73,12 +74,12 @@
 
   interface Props {
     list?: string;
-    photo?: boolean;
+    photo?: boolean | "scan";
   }
 
   let { list: list_prop, photo: photo_prop }: Props = $props();
 
-  const { app_id, window: win, window_id, storage } = get_app_context();
+  const { app_id, window: win, window_id, storage, achievements } = get_app_context();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -127,7 +128,8 @@
     untrack(() => {
       launched.value = true;
       if (list_prop && file.value.lists.some((candidate) => candidate.id === list_prop)) current.value = list_prop;
-      if (photo_prop) void photo();
+      if (photo_prop === "scan") void scan();
+      else if (photo_prop) void photo();
     });
   });
 
@@ -183,10 +185,13 @@
   function toggle(id: string) {
     const item = find(id);
     if (!item) return;
+    const checked = !item.checked;
     view_transition(() => {
-      item.checked = !item.checked;
+      item.checked = checked;
       item.updated_at = stamp(item);
     });
+    const on_list = live(owner_of(id)?.items ?? []);
+    if (checked && on_list.length >= 5 && on_list.every((each) => each.id === id || each.checked)) achievements.achieve("all-in");
   }
 
   function remove(item: Item) {
@@ -248,6 +253,7 @@
     const cleared = done.map((item) => item.id);
     const history = $state.snapshot(file.value.history);
     file.value.history = record_trip(file.value.history, done.map((item) => item.text));
+    achievements.progress("bought-100", Object.values(file.value.history).reduce((sum, entry) => sum + entry.count, 0));
     view_transition(() => {
       for (const item of done) remove(item);
     });
@@ -332,6 +338,7 @@
       { id: "share", label: "Share…", icon: QrCodeIcon },
       { id: "receive", label: "Receive…", icon: ScanIcon },
       { id: "photo", label: "Read a photo…", icon: CameraIcon },
+      { id: "scan", label: "Scan a list…", icon: ArticleIcon },
       { separator: true },
       sort_menu(),
       { id: "settings", label: "List settings…", icon: GearSixIcon },
@@ -347,6 +354,7 @@
     if (choice === "share") view = View.SHARE;
     else if (choice === "receive") view = View.RECEIVE;
     else if (choice === "photo") await photo();
+    else if (choice === "scan") await scan();
     else if (choice === "settings") open_settings(list.id);
     else if (choice === "widget") await toggle_widget(list);
     else if (choice === "clear") clear_done();
@@ -359,6 +367,7 @@
       { id: "receive", label: "Receive…", icon: ScanIcon },
       { separator: true },
       { id: "photo", label: "Read a photo…", icon: CameraIcon },
+      { id: "scan", label: "Scan a list…", icon: ArticleIcon },
       { id: "new", label: "New list…", icon: ListPlusIcon },
       { separator: true },
       sort_menu(),
@@ -369,6 +378,7 @@
     if (choice === "share") view = View.SHARE;
     else if (choice === "receive") view = View.RECEIVE;
     else if (choice === "photo") await photo();
+    else if (choice === "scan") await scan();
     else if (choice === "new") new_list();
     else if (choice === "clear") clear_done();
   }
@@ -457,9 +467,20 @@
   let review_controller: AbortController | null = null;
   let photo_image = $state.raw<Blob | null>(null);
 
+  /** How the last read started, so "Try again" goes the same way. */
+  let read_from: "photo" | "scan" = "photo";
+
   async function photo() {
+    read_from = "photo";
     const [image] = await pick_device_files({ accept: ["image/*"] });
     if (image) choose_part(image);
+  }
+
+  /** Doc Scan hands back the page already straight, so it skips the frame. `null` (Cancel, or Doc Scan failing) leaves the list as it was. */
+  async function scan() {
+    read_from = "scan";
+    const image = await win.request("doc-scan::scan");
+    if (image) void read(image, null);
   }
 
   function choose_part(image: Blob) {
@@ -504,6 +525,7 @@
 
   function add_reviewed(lines: string[]) {
     for (const line of lines) add(line);
+    if (lines.length > 0) achievements.achieve("first-read");
     close_side_view();
   }
 
@@ -518,6 +540,7 @@
     if (!incoming) return;
     const { share, reviews } = incoming;
     const applied = apply_changes(file.value.lists, share, picked, reviews);
+    if (applied > 0) achievements.achieve("shared");
     close_side_view();
     notifications.notify(app_id, { title: applied === 1 ? "1 change applied" : `${applied} changes applied` });
   }
@@ -633,7 +656,7 @@
         open_keys={open_keys}
         onadd={add_reviewed}
         oncancel={close_side_view}
-        onretry={() => void photo()}
+        onretry={() => void (read_from === "scan" ? scan() : photo())}
       />
     {:else if home}
       <ListsOverview {lists} onopen={open_place} onsettings={open_settings} onnew={new_list} />
@@ -641,10 +664,11 @@
       <EmptyState
         icon={ShoppingCartIcon}
         title={all ? "Nothing on any list" : "Nothing on the list"}
-        description="Type below, tap one you bought before, or read a list from a photo."
+        description="Type below, tap one you bought before, or read a list from a photo or a scan."
       >
         {#snippet actions()}
           <Button onclick={() => void photo()}><CameraIcon weight="bold" /> Read a photo…</Button>
+          <Button onclick={() => void scan()}><ArticleIcon weight="bold" /> Scan a list…</Button>
         {/snippet}
       </EmptyState>
     {:else}
@@ -705,7 +729,7 @@
           </div>
         </div>
       {/if}
-      <EntryBar history={file.value.history} exclude={open_keys} again={!store.value} compact={store.value} onadd={add} onphoto={() => void photo()}>
+      <EntryBar history={file.value.history} exclude={open_keys} again={!store.value} compact={store.value} onadd={add} onphoto={() => void photo()} onscan={() => void scan()}>
         {#snippet before()}
           {#if all && target}
             <button

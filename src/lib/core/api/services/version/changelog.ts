@@ -11,6 +11,11 @@ export const CHANGELOG: Release[] = [
     changes: [
       {
         kind: IMPROVED,
+        apps: ["shopping-list"],
+        text: "Shopping List can scan a list with Doc Scan, next to the camera, in the list, its menus and its widget, and has four achievements to earn, like ticking off a whole list.",
+      },
+      {
+        kind: IMPROVED,
         text: "The update screen shows what's new in full beside the download progress, instead of a cramped list cut short.",
       },
       {

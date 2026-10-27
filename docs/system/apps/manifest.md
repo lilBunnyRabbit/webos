@@ -209,7 +209,7 @@ let { input, resolve }: AppSheetProps<ScanInput, Blob> = $props();
 - It may fail, and that's normal: the caller sees `null` for anything that goes wrong (offline, not loadable, a throw while rendering, which a `<svelte:boundary>` in `window-sheets.svelte` catches). Errors in your own handlers aren't caught; resolve `null` from them.
 - The kinds go into the app's catalogue entry (`provides: ["scan"]`), so `app provides` and a stub know them before the code loads.
 
-Doc Scan provides `scan` ([doc-scan](../../apps/doc-scan.md)).
+Doc Scan provides `scan` ([doc-scan](../../apps/doc-scan.md)); Shopping List calls it beside its camera ([shopping-list](../../apps/shopping-list.md)).
 
 ### `widget` (ADR-034)
 
