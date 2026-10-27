@@ -71,7 +71,7 @@
   let edge_only = $state(false);
   let ghost = $state(false);
   let solved = $state(false);
-  // Not saved with the game: a puzzle resumed after a reload counts as unseen.
+  // Not saved with the game, so a resumed puzzle counts as peeked: it can't be told apart.
   let peeked = false;
   let loading = $state(false);
   let dragging_file = $state(false);
@@ -143,7 +143,7 @@
     board = create_board(layout, saved && fits(saved, layout) ? saved.positions : scatter(layout, seed, aspect));
     lifted = null;
     solved = is_complete(board);
-    peeked = ghost;
+    peeked = ghost || saved !== null;
     clock.reset(saved ? saved.elapsed : 0);
     revision++;
     view = null;

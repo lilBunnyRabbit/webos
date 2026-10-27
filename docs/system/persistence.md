@@ -58,9 +58,10 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.alibi.case` | `user/alibi` | Case in progress or last finished: seed, transcript (questions and answers, stopped flags) and accusations; written once the case has a question or an accusation |
 | `app.archive.method` | `user/archive` | Compression method (`deflate` / `store`) |
 | `app.blocks.{mode,stats}` | `user/blocks` | Last mode; marathon and sprint stats, top five marathon scores |
+| `app.checkout-challenge.{best,sales}` | `user/checkout-challenge` | Best run; items sold over every day (achievements) |
 | `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
 | `app.clock.stopwatch` | `user/clock` | Legacy: the stopwatch before it moved into `/var/lib/apps/clock/clock.json` (2026-10-21). Copied in once when the file has none, then removed |
-| `app.color-recall.{level,space,daily}` | `user/color-recall` | Last practice level; the slider space (HSB or OKLCH); the daily attempt `{ day, state }`, so a daily is played once. Before the split (ADR-071) these were `app.color-games.*`, which stay unread |
+| `app.color-recall.{level,space,daily,games}` | `user/color-recall` | Last practice level; the slider space (HSB or OKLCH); the daily attempt `{ day, state }`, so a daily is played once; games finished (achievements). Before the split (ADR-071) these were `app.color-games.*`, which stay unread |
 | `app.colour-atlas.{dex,daily}` | `user/colour-atlas` | Collected models, model id → best ΔE2000; the daily attempt `{ day, state }` (each submitted round's slider values and the time), so a daily is played once |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
 | `app.dev-tools.state` | `user/dev-tools` | Last section and inputs (texts over 20,000 characters skipped; a JWT secret is never saved) |
@@ -69,8 +70,8 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.example.count` | `user/example` | Counter (`number`) |
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |
 | `app.game-hub.sort` | `user/game-hub` | Library sort |
-| `app.gradient-sort.{level,daily}` | `user/gradient-sort` | Last practice level; the daily attempt `{ day, state }` |
-| `app.hex-guess.daily` | `user/hex-guess` | The daily attempt `{ day, state }` |
+| `app.gradient-sort.{level,daily,sorts}` | `user/gradient-sort` | Last practice level; the daily attempt `{ day, state }`; gradients sorted (achievements) |
+| `app.hex-guess.{daily,wins}` | `user/hex-guess` | The daily attempt `{ day, state }`; colours guessed (achievements) |
 | `app.hop.{stats,daily,game,size}` | `user/hop` | Stats per size; daily puzzle; path in progress; last size |
 | `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
 | `app.image-tools.sprite-settings` | `user/image-tools` | Sprites section grid settings |
@@ -78,16 +79,17 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.image-tools.fit` | `user/image-tools` | Fit section: size limit (preset or custom), format, max side |
 | `app.image-tools.poster` | `user/image-tools` | Poster print section: paper, orientation, sheets across, overlap, margin, crop marks, map |
 | `app.hutches.{stats,daily,game,size,auto-cross}` | `user/hutches` | Stats per size; daily puzzle; game in progress; last size; auto-cross switch |
-| `app.jigsaw.{game,pieces}` | `user/jigsaw` | Puzzle in progress (picture path, seed, piece positions, time; only for a picture from WebOS files); last piece count |
+| `app.jigsaw.{game,pieces,solves}` | `user/jigsaw` | Puzzle in progress (picture path, seed, piece positions, time; only for a picture from WebOS files); last piece count; puzzles finished (achievements) |
 | `app.kakuro.{stats,daily,game,size}` | `user/kakuro` | Stats; daily puzzle; game in progress; last size |
+| `app.lunar-lander.{best,landings}` | `user/lunar-lander` | Best score per ship and planet; safe landings (achievements) |
 | `app.markdown-pdf.settings` | `user/markdown-pdf` | Page and print settings |
-| `app.maze.{prefs,best_ms}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size |
+| `app.maze.{prefs,best_ms,escapes}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size; mazes escaped (achievements) |
 | `app.moonrabbit.{journal,idle-minutes,hidden-seconds}` | `user/moonrabbit` | Last journal's folder name; auto-lock after idle (minutes, 0 = never) and when hidden (seconds) |
 | `app.minesweeper.{difficulty,custom,stats}` | `user/minesweeper` | Last difficulty, last custom board, played/won/best times |
 | `app.music-visualizer.{mode,volume,smoothing,sensitivity}` | `user/music-visualizer` | Visualizer settings |
 | `app.nonogram.{stats,stats-color,size,mode,game}` | `user/nonogram` | Stats per mode; last size and mode; game in progress |
 | `app.nurikabe.{stats,daily,game,size}` | `user/nurikabe` | Stats; daily puzzle; game in progress; last size |
-| `app.odd-one-out.daily` | `user/odd-one-out` | The daily attempt `{ day, state }` |
+| `app.odd-one-out.{daily,spotted}` | `user/odd-one-out` | The daily attempt `{ day, state }`; odd tiles found (achievements) |
 | `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent}` | `user/paint` | Tool settings, colours, 8 recent colours |
 | `app.plots.{stats,daily,game,size}` | `user/plots` | Stats per size; daily puzzle; plots in progress; last size |
 | `app.pdf-tools.{sign,export,images,test-pdf}` | `user/pdf-tools` | Sign ink and date option; Export, Images and Test PDF section settings |

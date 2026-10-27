@@ -226,16 +226,21 @@
     phase = Phase.READY;
   }
 
+  // Skip jumps the solver to its end; that isn't watching it.
+  let skipped = false;
+
   function finish_solving(path: number[]) {
     solving = null;
     scene.head = null;
     scene.path = path;
     path_length = path.length;
     phase = Phase.SOLVED;
-    if (path.length) achievements.achieve("watched");
+    if (path.length && !skipped) achievements.achieve("watched");
+    skipped = false;
   }
 
   function skip() {
+    if (phase === Phase.SOLVING) skipped = true;
     advance(Infinity);
     draw();
   }
