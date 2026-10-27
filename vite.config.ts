@@ -9,7 +9,7 @@ import { offline_plugin } from "./tooling/vite-plugin-offline";
 import { catalogue_plugin, is_manifest_chunk } from "./tooling/vite-plugin-catalogue";
 import { phosphor_imports_plugin, phosphor_plugin } from "./tooling/vite-plugin-phosphor";
 import { core_modules } from "./tooling/vite-core-chunk";
-import { ASSETS_CACHE } from "./src/lib/core/api/services/store/lists";
+import { ASSETS_CACHE } from "./src/lib/core/api/services/store/cache";
 import { import_map_plugin } from "./tooling/vite-plugin-import-map";
 import { PORTFOLIO_PATH, portfolio_path_plugin } from "./tooling/vite-plugin-portfolio-path";
 import path from "path";

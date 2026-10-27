@@ -1,5 +1,6 @@
-/** One cache for every app's files, across releases (ADR-077 stage 3); the service worker rule in `vite.config.ts` uses it too. */
-export const ASSETS_CACHE = "webos-assets";
+import { ASSETS_CACHE } from "./cache";
+
+export { ASSETS_CACHE };
 const LEGACY_PREFIX = `${ASSETS_CACHE}-`;
 
 /** The URL a list's file (`assets/…`, relative to the base) is cached under. */

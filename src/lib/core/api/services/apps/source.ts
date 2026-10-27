@@ -1,5 +1,7 @@
 import type { AppDefinition } from "./type";
-import { CORE_META, parse_catalogue, type Catalogue, type CatalogueApp } from "./catalogue";
+import { CORE_META, DEV_CORE, parse_catalogue, type Catalogue, type CatalogueApp } from "./catalogue";
+
+export { DEV_CORE };
 
 export interface CatalogueSource {
   /** Only a catalogue built against this core has entries whose code runs here (ADR-077). */
@@ -9,7 +11,6 @@ export interface CatalogueSource {
 }
 
 const CATALOGUE_URL = "store/catalogue.json";
-export const DEV_CORE = "dev";
 
 export function running_core(): string {
   if (import.meta.env.DEV) return DEV_CORE;

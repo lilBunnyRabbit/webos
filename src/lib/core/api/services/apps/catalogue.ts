@@ -5,6 +5,9 @@ interface Size {
   h: number;
 }
 
+/** The core hash under `bun dev` and in tests, where no build computed one. */
+export const DEV_CORE = "dev";
+
 export interface CatalogueApp {
   id: string;
   name: string;

@@ -19,7 +19,7 @@ import {
   type Catalogue,
   previous_or_warn,
 } from "./vite-plugin-catalogue";
-import type { Release } from "../src/lib/core/api/services/version/type";
+import type { Release } from "../src/lib/core/api/services/version/changelog-types";
 import type { VersionInfo } from "./vite-plugin-version";
 
 const ROOT = path.resolve(import.meta.dirname, "..");

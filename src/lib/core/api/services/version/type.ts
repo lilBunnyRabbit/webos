@@ -1,6 +1,9 @@
 import type { IService } from "../../type";
 import type { AppId } from "../apps/type";
 import type { Pipeline } from "./pipeline";
+import type { Release, ReleaseNote } from "./changelog-types";
+
+export * from "./changelog-types";
 
 export interface VersionInfo {
   version: string;
@@ -9,13 +12,6 @@ export interface VersionInfo {
   buildTime: string;
   buildTimestamp: number;
 }
-
-export const ChangeKind = {
-  NEW: "new",
-  IMPROVED: "improved",
-  FIXED: "fixed",
-} as const;
-export type ChangeKind = (typeof ChangeKind)[keyof typeof ChangeKind];
 
 /** Where "Update and reload" is. `IDLE` until the user asks; the update overlay shows every other stage. */
 export const UpdateStage = {
@@ -35,34 +31,6 @@ export interface UpdateProgress {
   total: number | null;
   /** The wait has run long: the overlay offers `restart_update()`. */
   slow: boolean;
-}
-
-export interface Change {
-  kind: ChangeKind;
-  /** User-facing wording, one sentence. */
-  text: string;
-  /** The apps this line is about; it shows in each one's history in the App Store (ADR-038). */
-  apps?: AppId[];
-}
-
-/** One entry of the hand-written changelog (ADR-026). */
-export interface Release {
-  /** Semver; the newest entry equals `package.json`. */
-  version: string;
-  /** `YYYY-MM-DD` */
-  date: string;
-  title: string;
-  changes: Change[];
-  /** Apps that first shipped in this release. A device updating past it gets the app announcement (ADR-038). */
-  introduces?: AppId[];
-}
-
-/** A release as `version.json` carries it for the update screen: no app lists. */
-export interface ReleaseNote {
-  version: string;
-  date: string;
-  title: string;
-  changes: Pick<Change, "kind" | "text" | "apps">[];
 }
 
 /** `version.json`: the build stamp, the core hash and the new release's notes (ADR-077); older builds have neither. */

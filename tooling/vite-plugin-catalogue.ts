@@ -5,9 +5,8 @@ import { createServer, type Plugin, type ResolvedConfig, type ViteDevServer } fr
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { VersionInfo } from "./vite-plugin-version";
 import { compare_versions } from "../src/lib/core/api/services/version/semver";
-import type { Release, ReleaseNote } from "../src/lib/core/api/services/version/type";
-import { DEV_CORE } from "../src/lib/core/api/services/apps/source";
-import { CORE_META, manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
+import type { Release, ReleaseNote } from "../src/lib/core/api/services/version/changelog-types";
+import { CORE_META, DEV_CORE, manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
 
 export { json_safe, manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "../src/lib/core/api/services/apps/catalogue";
 
