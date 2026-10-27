@@ -80,6 +80,8 @@ export function* audio_slices(buffer: AudioBuffer, from: number, to: number): Ge
 export interface WebmEncoderSetup {
   video?: VideoSetup;
   audio?: { channels: number };
+  /** Each chunk goes here instead of being kept: for a caller that keeps its own (a pre-roll ring) and muxes with `tracks`. */
+  on_chunk?: (chunk: WebmChunk) => void;
 }
 
 export class WebmEncoder {
@@ -91,11 +93,13 @@ export class WebmEncoder {
   private video_track: WebmVideoTrack | undefined;
   private audio_track: WebmAudioTrack | undefined;
   private waiting: (() => void)[] = [];
+  private on_chunk: ((chunk: WebmChunk) => void) | undefined;
 
   private constructor() {}
 
   static async create(setup: WebmEncoderSetup): Promise<WebmEncoder> {
     const out = new WebmEncoder();
+    out.on_chunk = setup.on_chunk;
     if (setup.video) await out.start_video(setup.video);
     if (setup.audio) await out.start_audio(setup.audio.channels);
     return out;
@@ -164,7 +168,9 @@ export class WebmEncoder {
   private keep(track: TrackKind, chunk: EncodedVideoChunk | EncodedAudioChunk) {
     const data = new Uint8Array(chunk.byteLength);
     chunk.copyTo(data);
-    this.chunks.push({ track, timestamp: chunk.timestamp, key: chunk.type === "key", data });
+    const kept: WebmChunk = { track, timestamp: chunk.timestamp, key: chunk.type === "key", data };
+    if (this.on_chunk) this.on_chunk(kept);
+    else this.chunks.push(kept);
   }
 
   private check() {
@@ -190,6 +196,10 @@ export class WebmEncoder {
     } finally {
       data.close();
     }
+  }
+
+  get tracks(): { video?: WebmVideoTrack; audio?: WebmAudioTrack } {
+    return { video: this.video_track, audio: this.audio_track };
   }
 
   get busy(): boolean {

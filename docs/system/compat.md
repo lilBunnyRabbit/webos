@@ -124,8 +124,8 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 |----|---------|-----------------|------|--------|---------|--------|
 | `opfs` | Private file storage | WebOS keeps every file and setting here. |  | 86 | 111 | 15.2 |
 | `opfs-write` | Writing files | Nothing can be saved, and the first start writes a file. | `api-client` `p2p-transfer` | 86 | 111 | 26 |
-| `web-locks` | Web Locks | Alarms and offline apps coordinate open tabs with it at start-up. | `moonrabbit` | 69 | 96 | 15.4 |
-| `broadcast-channel` | Broadcast Channel | Alarms talk between tabs with it at start-up. |  | 54 | 38 | 15.4 |
+| `web-locks` | Web Locks | Alarms, background apps and offline apps coordinate open tabs with it at start-up. | `moonrabbit` | 69 | 96 | 15.4 |
+| `broadcast-channel` | Broadcast Channel | Alarms and background apps talk between tabs with it at start-up. |  | 54 | 38 | 15.4 |
 | `import-maps` | Import maps | WebOS's code can't load. |  | 105 | 108 | 16.4 |
 
 ### Shell (`shell`)
@@ -160,7 +160,8 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 |----|---------|-----------------|------|--------|---------|--------|
 | `ai-prompt` | On-device AI: prompts | AI games and tools don't run; other apps hide their AI parts. | `alibi` `ask` `unsaid` `doodlehop` `warren` `shopping-list` | 148 | no | no |
 | `video-frame-callback` | Video frame callbacks | Video tracking, frame stepping and camera scanning. | `birdseye` `video-tools` `soundboard` `gif-player` `cards` `p2p-transfer` `qr-reader` | 83 | 132 | 15.4 |
-| `video-encoder` | Video encoding | Saving video. | `birdseye` `video-tools` | 94 | 130 | 16.4 |
+| `video-encoder` | Video encoding | Saving video. | `birdseye` `video-tools` `motion-watch` | 94 | 130 | 16.4 |
+| `camera-frames` | Camera frames off the page | Watching a camera for motion. | `motion-watch` | 94 | no | no |
 | `audio-encoder` | Audio encoding | Sound in saved video and audio-only export. | `birdseye` `video-tools` | 94 | 130 | 26 |
 | `image-decoder` | Image decoding | Playing GIFs; Hopsprite imports only a GIF's first frame. | `gif-player` `hopsprite` `image-tools` | 94 | 133 | no |
 | `capture-stream` | Media capture streams | Taking a sound from a video file. | `soundboard` | 62 | 149 | no |
@@ -182,7 +183,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `idle-callback` | Idle callbacks | Background work at start-up runs on a timer instead of when the browser is idle. | `text-editor` | 47 | 55 | no |
 | `canvas-filter` | Canvas filters | Image Editor, Image Tools and Birdseye apply filters by hand: slower, and Birdseye's blur is softer. | `image-editor` `image-tools` `birdseye` | 52 | 49 | no |
 | `coalesced-events` | Coalesced pointer events | Fast strokes in drawing apps are less smooth. | `paint` `doodlehop` `font-maker` `hopsprite` `proposals` `pdf-tools` | 58 | 59 | 18.2 |
-| `wake-lock` | Screen Wake Lock | The screen may sleep while you cook, check out or transfer. | `recipe-box` `cards` `shopping-list` `p2p-transfer` | 84 | 126 | 18.4 |
+| `wake-lock` | Screen Wake Lock | The screen may sleep while you cook, check out or transfer. | `recipe-box` `cards` `shopping-list` `p2p-transfer` `motion-watch` | 84 | 126 | 18.4 |
 | `webp-encode` | WebP encoding | Pictures are saved as larger PNG files. | `cards` `font-maker` `moonrabbit` `proposals` `warren` | 17 | 96 | no |
 | `image-smoothing-quality` | Image smoothing quality | Shrunk images look rougher. | `image-editor` `image-tools` `birdseye` `video-tools` `icon-pack` `nonogram` | 54 | no | 9.1 |
 | `field-sizing` | Auto-growing text boxes | Text boxes don't grow as you type. | `alibi` `ask` `kanban` `moonrabbit` | 123 | 152 | 26.2 |

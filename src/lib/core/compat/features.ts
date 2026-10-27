@@ -70,7 +70,7 @@ export const FEATURES: Feature[] = [
   {
     id: "web-locks",
     name: "Web Locks",
-    lost: "Alarms and offline apps coordinate open tabs with it at start-up.",
+    lost: "Alarms, background apps and offline apps coordinate open tabs with it at start-up.",
     level: Level.START,
     apps: ["moonrabbit"],
     min: min("69", "96", "15.4"),
@@ -79,7 +79,7 @@ export const FEATURES: Feature[] = [
   {
     id: "broadcast-channel",
     name: "Broadcast Channel",
-    lost: "Alarms talk between tabs with it at start-up.",
+    lost: "Alarms and background apps talk between tabs with it at start-up.",
     level: Level.START,
     min: min("54", "38", "15.4"),
     probe: () => global("BroadcastChannel"),
@@ -310,9 +310,19 @@ export const FEATURES: Feature[] = [
     name: "Video encoding",
     lost: "Saving video.",
     level: Level.APPS,
-    apps: ["birdseye", "video-tools"],
+    apps: ["birdseye", "video-tools", "motion-watch"],
     min: min("94", "130", "16.4"),
     probe: () => global("VideoEncoder"),
+  },
+  {
+    // Chrome has it on the page; Safari only in workers, where the camera can't be opened. The stream is then moved to a worker.
+    id: "camera-frames",
+    name: "Camera frames off the page",
+    lost: "Watching a camera for motion.",
+    level: Level.APPS,
+    apps: ["motion-watch"],
+    min: min("94", null, null),
+    probe: () => global("MediaStreamTrackProcessor"),
   },
   {
     id: "audio-encoder",
@@ -475,7 +485,7 @@ export const FEATURES: Feature[] = [
     name: "Screen Wake Lock",
     lost: "The screen may sleep while you cook, check out or transfer.",
     level: Level.COSMETIC,
-    apps: ["recipe-box", "cards", "shopping-list", "p2p-transfer"],
+    apps: ["recipe-box", "cards", "shopping-list", "p2p-transfer", "motion-watch"],
     min: min("84", "126", "18.4"),
     probe: () => "wakeLock" in navigator,
   },

@@ -43,6 +43,7 @@ export interface CatalogueApp {
   on_uninstall_data?: boolean;
   /** How many achievements the manifest declares; their text is in `store/achievements.json` (ADR-078). */
   achievements?: number;
+  background?: boolean;
 }
 
 export type CatalogueData = Omit<CatalogueApp, "version" | "hash" | "manifest" | "entry" | "files" | "content">;
@@ -63,7 +64,7 @@ export type CatalogueHeader = Omit<Catalogue, "apps">;
 /** `<meta name="webos-core">` in `index.html`: the build writes the core hash there, the page reads its own from it. */
 export const CORE_META = "webos-core";
 
-export const LAZY_PARTS = ["shell", "widget", "highlights", "preview", "on_fire", "on_uninstall_data"] as const;
+export const LAZY_PARTS = ["shell", "widget", "highlights", "preview", "on_fire", "on_uninstall_data", "background"] as const;
 export type LazyPart = (typeof LAZY_PARTS)[number];
 
 export function json_safe(value: unknown): unknown {
@@ -112,6 +113,7 @@ export function manifest_data(manifest: Record<string, unknown>, meta: Record<st
     on_fire: has("on_fire"),
     on_uninstall_data: has("on_uninstall_data"),
     achievements: Array.isArray(manifest.achievements) && manifest.achievements.length > 0 ? manifest.achievements.length : undefined,
+    background: has("background"),
   };
   return json_safe(data) as CatalogueData;
 }

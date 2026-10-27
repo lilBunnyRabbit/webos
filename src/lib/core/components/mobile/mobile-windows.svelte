@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppsService, type MobileWindowsService, type NotificationsService, type WindowId } from "$lib/core/api";
+  import kernel, { type AppsService, type BackgroundService, type MobileWindowsService, type NotificationsService, type WindowId } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { Cards as CardsIcon, X as XIcon } from "phosphor-svelte";
   import { Button, IconButton } from "../ui";
@@ -16,8 +16,11 @@
   const recent = $derived(windows.recent());
   const rank = $derived(new Map(recent.map((id, index) => [id, index])));
   const focused = $derived(windows.get_focused());
-  /** The notification center sits above the cards (ADR-006 revision), only when there's something in it. */
-  const center = $derived(switcher && kernel.service<NotificationsService>("notifications").all.length > 0);
+  /** The notification center sits above the cards (ADR-006 revision), only when there's something in it, or an app runs in the background. */
+  const center = $derived(
+    switcher &&
+      (kernel.service<NotificationsService>("notifications").all.length > 0 || kernel.service<BackgroundService>("background").list().length > 0)
+  );
 
   /** Cards are the live windows at this scale: no screenshots, the app keeps running inside. Smaller under notifications. */
   const scale = $derived(center ? 0.55 : 0.66);

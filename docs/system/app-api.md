@@ -69,6 +69,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `achievements` | yes (3.75) | `Achievement[]`, `{ id, title, text, goal?, secret? }`, plain data in `index.ts` (ADR-078): what the app reports through `get_app_context().achievements`. Every member of `Achievement` is stable ([manifest](apps/manifest.md), [achievements](services/achievements.md)) |
 | `on_uninstall_data` | yes (3.57) | `() => import("./uninstall")`, the module default-exporting `() => Promise<void>`, run after an uninstall with data cleared `app.{id}.*` and `/var/lib/apps/{id}`, for stores the OS can't see (IndexedDB, caches). A throw is toasted; the uninstall stands ([manifest](apps/manifest.md)) |
 | `on_fire` | yes (3.57) | `() => import("./on-fire")`, the module default-exporting an `OnFire` `(job, { outcome, due })`, called by the scheduler when one of the app's jobs fires or is missed ([manifest](apps/manifest.md#on_fire-adr-062)) |
+| `background` | no (internal, 3.75) | `() => import("./watch.svelte")`, the module default-exporting a `BackgroundRun` `(ctx) => Promise<void>`: code that runs with no window, one job per app per browser, started and stopped by the app through BackgroundService ([manifest](apps/manifest.md#background-adr-081), ADR-081). Internal until a second app uses it |
 | `widget`, `widget_size`, `default_widget` | yes | [Widgets and badges](#widgets-and-badges) |
 | `system` | no | Set by discovery for `src/lib/apps/system/`, never written by an app |
 

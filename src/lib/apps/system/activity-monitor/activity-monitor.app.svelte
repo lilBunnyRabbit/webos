@@ -11,6 +11,7 @@
   import Performance from "./sections/performance.svelte";
   import Storage from "./sections/storage.svelte";
   import Tasks from "./sections/tasks.svelte";
+  import Background from "./sections/background.svelte";
   import Widgets from "./sections/widgets.svelte";
   import Windows from "./sections/windows.svelte";
   import { SECTIONS, SECTION_IDS, type Section } from "./sections";
@@ -73,6 +74,8 @@
         <Network monitor={network_monitor} />
       {:else if section.value === "storage"}
         <Storage />
+      {:else if section.value === "background"}
+        <Background />
       {:else}
         <Tasks />
       {/if}

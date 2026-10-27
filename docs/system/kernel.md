@@ -78,6 +78,7 @@ No manifest loads during boot (ADR-077): AppsService reads the installed apps' c
 | `ai` | `AiService` | `files`, `tasks`, `notifications`. `MobileAiService` on mobile, picked by `platform_services` (ADR-046) |
 | `speech` | `SpeechService` | `settings`, `windows`, `files`. One class everywhere, `import()`ed beside the boot chunk like `ai` (ADR-074) |
 | `scheduler` | `SchedulerService` | `files`, `notifications`, `apps`, `shell`. The same class in solo (ADR-062) |
+| `background` | `BackgroundService` | `files`, `notifications`, `apps`, `session`. One class everywhere and in solo, `import()`ed beside the boot chunk like `speech` (ADR-081) |
 | `router` | `RouterService` | `windows`, `apps`, `session`, `clipboard`, `notifications` |
 | `extract` | `ExtractService` | `windows`, `dialogs`, `notifications`. Desktop only: registered by `platform_services` (ADR-043) |
 
@@ -97,6 +98,7 @@ files, notifications, apps, shell ───────────────�
 files, dialogs, notifications, windows, tasks ──────► backup
 files, tasks, notifications ────────────────────────► ai
 settings, windows, files ───────────────────────────► speech
+files, notifications, apps, session ────────────────► background
 windows, apps, session, clipboard, notifications ───► router
 windows, dialogs, notifications ────────────────────► extract (desktop)
 files, notifications, dialogs, apps, session, settings ► version
@@ -107,10 +109,10 @@ files, notifications, dialogs, apps, session, settings ► version
 `resolve_order()` is a depth-first topological sort. It visits keys in **registration order** and pushes each one after its dependencies. `settings` is registered first but depends on `files` and `notifications`, so both are pushed before it. With the registrations above, the order is:
 
 ```
-files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → scheduler → tasks → store → backup → ai → speech → router → version
+files → notifications → settings → windows → dialogs → apps → desktop → session → extract (desktop) → clipboard → ui → shell → shortcuts → scheduler → tasks → store → backup → ai → speech → achievements → background → router → version
 ```
 
-Shutdown runs the reverse: `version → router → speech → ai → backup → store → tasks → scheduler → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
+Shutdown runs the reverse: `version → router → background → achievements → speech → ai → backup → store → tasks → scheduler → shortcuts → shell → ui → clipboard → extract → session → desktop → apps → dialogs → windows → settings → notifications → files`.
 
 `apps` reads `/var/lib/apps/catalogue.json` in its `init()` and, on the first boot of a release (or with no file), awaits the full `store/catalogue.json` there, so `desktop`, `session` and the rest see every installed app; StoreService (`store`) writes the file later in the order ([apps](services/apps.md#catalogue-adr-077)).
 
@@ -151,6 +153,7 @@ Which services implement which hooks today:
 | apps, clipboard, tasks, backup | none | none |
 | ai | asks the browser which features it has, **without awaiting** (every feature reads `no` until it answers) ([ai](services/ai.md#lifecycle)); the mobile variant has no `init` | destroy kept model sessions |
 | speech | lists the browser's voices and listens for `voiceschanged`; starts the effect that stops a closed window's speech ([speech](services/speech.md#lifecycle)) | cancel speech, remove the listener |
+| background | open the `webos.background` BroadcastChannel and post `hello`, a `pagehide` listener, an effect that offers Resume once the session status leaves `pending` ([background](services/background.md#lifecycle)) | post `gone`, abort this tab's jobs (their Resume entries stay), close the channel, stop the sweep |
 | extract | `pointerdown` / `keydown` (capture) listeners on `window` for `input_inside`, an `$effect.root` that closes a closed window's mini window; while one is out, a `pagehide` listener and two `MutationObserver`s ([extract](services/extract.md)) | dispose it, close the mini window |
 
 ### Test kernel

@@ -60,11 +60,12 @@ async function mode_services(mode: Mode) {
 }
 
 export async function register_default_services(kernel: Kernel) {
-  const [platform, mode, speech, achievements] = await Promise.all([
+  const [platform, mode, speech, achievements, background] = await Promise.all([
     platform_services(kernel.platform),
     mode_services(kernel.mode),
     import("../services/speech/service.svelte"),
     import("../services/achievements/service.svelte"),
+    import("../services/background/service.svelte"),
   ]);
 
   kernel.register("settings", {
@@ -171,6 +172,12 @@ export async function register_default_services(kernel: Kernel) {
   kernel.register<IAchievementsService>("achievements", {
     instance: achievements.AchievementsService,
     dependencies: ["files", "notifications", "apps"],
+  });
+
+  // Same class on every platform and in solo (ADR-081): a solo tab runs its own app's job but never takes a lock.
+  kernel.register("background", {
+    instance: background.BackgroundService,
+    dependencies: ["files", "notifications", "apps", "session"],
   });
 
   kernel.register("router", {

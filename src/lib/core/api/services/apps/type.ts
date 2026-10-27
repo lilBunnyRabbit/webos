@@ -5,6 +5,7 @@ import type { WindowId, WindowOptions } from "../windows/type";
 import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
 import type { OnFire } from "../scheduler/type";
+import type { BackgroundRun } from "../background/type";
 import type { Catalogue, CatalogueHeader } from "./catalogue";
 import type { AppUsage } from "./active-time";
 import type { Achievement } from "../achievements/type";
@@ -192,6 +193,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   badge?: () => number | null;
   /** Lazy so it costs no boot weight: the leader tab loads it the first time one of the app's jobs fires or is missed. */
   on_fire?: () => Promise<{ default: OnFire }>;
+  /**
+   * Code that runs with no window (ADR-081), started by `background.start(id)`: the module's default export is a
+   * `BackgroundRun`. One job per app per browser; the app's windows are views onto it.
+   */
+  background?: () => Promise<{ default: BackgroundRun }>;
   /**
    * Lazy: runs after `uninstall(id, { data: true })` cleared `app.{id}.*` and `/var/lib/apps/{id}`, for stores the OS
    * can't see (IndexedDB, caches). A throw is logged and toasted; the uninstall still completes.

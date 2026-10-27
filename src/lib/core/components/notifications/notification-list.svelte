@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type AppsService, type NotificationsService, type TasksService, type UiService } from "$lib/core/api";
+  import kernel, { type AppsService, type BackgroundService, type NotificationsService, type TasksService, type UiService } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
   import { BellSimple as BellIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
@@ -15,6 +15,12 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const ui = $derived(kernel.service<UiService>("ui"));
   const running = $derived(show_tasks ? tasks.active_count : 0);
+  const background_jobs = $derived(show_tasks ? kernel.service<BackgroundService>("background").list() : []);
+  const background_label = $derived(
+    background_jobs.length === 1
+      ? `${apps.get(background_jobs[0].app_id)?.name ?? background_jobs[0].app_id} running in the background`
+      : `${background_jobs.length} apps running in the background`
+  );
 
   // Mounted means looked at: everything here counts as read, and toasts would only repeat the list (ADR-006 revision).
   $effect(() => {
@@ -42,6 +48,13 @@
     <button class="mb-1.5 flex h-8 shrink-0 items-center justify-between gap-2 rounded-lg px-2 text-ui text-foreground/80 hover:bg-foreground/8" onclick={() => (apps.launch("activity-monitor", { section: "tasks" }), ui.close())}>
       <span>{running} {running === 1 ? "task" : "tasks"} running</span>
       <span class="text-primary">Show</span>
+    </button>
+  {/if}
+
+  {#if background_jobs.length > 0}
+    <button class="mb-1.5 flex h-8 shrink-0 items-center justify-between gap-2 rounded-lg px-2 text-ui text-foreground/80 hover:bg-foreground/8" onclick={() => (apps.launch("activity-monitor", { section: "background" }), ui.close())}>
+      <span class="truncate">{background_label}</span>
+      <span class="shrink-0 text-primary">Show</span>
     </button>
   {/if}
 

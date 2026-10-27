@@ -16,6 +16,15 @@ export const CHANGELOG: Release[] = [
       },
       {
         kind: NEW,
+        apps: ["motion-watch"],
+        text: "Motion Watch keeps an eye on your camera and saves a clip of every movement, starting a few seconds before it, with a notification and a timeline of the day.",
+      },
+      {
+        kind: NEW,
+        text: "Apps can keep working after you close their window: a dot on the taskbar shows what's running, Activity Monitor can stop it, and after a reload you're offered to resume it.",
+      },
+      {
+        kind: NEW,
         apps: ["tape-sketch"],
         text: "Turn a Tape Sketch with two fingers while you zoom; it settles square near each quarter turn, the numbers stay upright, and the compass button turns it back.",
       },

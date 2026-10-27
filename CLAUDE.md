@@ -52,6 +52,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `speech` | SpeechService | Reads text aloud through the browser's `speechSynthesis`: one speaker at a time (newest preempts), sentence by sentence while text streams, markdown read without symbols; voice and rate from Settings, a window's speech stops when it closes (ADR-074) | settings, windows, files |
 | `achievements` | AchievementsService | Achievements apps declare in the manifest (`define_app({ achievements })`) and report through `get_app_context().achievements` (`achieve`, `progress`): `/var/lib/apps/{id}/achievements.json` merged on every change (union of unlocks, max of progress), one toast per unlock, kept by an uninstall with data; definitions from the loaded manifest or the build's `store/achievements.json`; five built-in active-time ones per app; `achievements [app]` (ADR-078) | files, notifications, apps |
 | `scheduler` | SchedulerService | Scheduled notifications for every app (alarms, timers, Pomodoro phases, reminders) while any WebOS tab lives: registry in `/var/lib/scheduler/jobs.json`, one leader tab per browser (Web Locks) with one timer, OS notifications through the service worker with shell-command buttons, missed summary at boot, one in-page chime per pass (`silent` jobs skip it), apps' lazy `on_fire` handlers run in the leader, Triggers when flagged (ADR-062) | files, notifications, apps, shell |
+| `background` | BackgroundService | App code that runs with no window (ADR-081): an app's lazy `background` module as one job per app per browser (Web Lock `webos.background.{id}`, never stolen), status shared with every tab over a BroadcastChannel, windows are views (`share`), `ctx.spawn` workers listed under their job; taskbar indicator, Activity Monitor › Background, Resume toast after a reload for jobs that asked (`/var/lib/background/state.json`); `bg ls`, `bg stop` | files, notifications, apps, session |
 | `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; `#/solo/{id}?{props}` stays in the URL (ADR-047); Copy link and Copy solo link for every window, without device paths (ADR-010) | windows, apps, session, clipboard, notifications |
 
 Each service ships a lazy `inspector.svelte`, which the Kernel app renders in basic and detailed modes (ADR-020). A new service needs one.
@@ -212,6 +213,7 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `portfolio` | `docs/apps/portfolio.md` |
 | `color-tools` | `docs/apps/color-tools.md` |
 | `colour-atlas` | `docs/apps/colour-atlas.md` |
+| `motion-watch` | `docs/apps/motion-watch.md` |
 
 **Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.
 

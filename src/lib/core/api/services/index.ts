@@ -20,3 +20,4 @@ export * from "./scheduler";
 export * from "./store";
 export * from "./speech";
 export * from "./achievements";
+export * from "./background";

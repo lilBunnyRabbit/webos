@@ -171,6 +171,7 @@ A contribution can hold back part of itself: `lazy?: () => Promise<ShellContribu
 | backup | `backup create [--files] [--settings] [--apps]`, `backup restore` | | |
 | tasks | `task list`, `task cancel`, `task retry`, `task clear` | `task` | `task` |
 | scheduler | `sched ls [app]` (yields `job` values, soonest first), `sched rm <job>` | `job`, `when` | `job` (click opens the job's `open` target, else its app) |
+| background | `bg ls` (yields `background` values: app, status, since, tab; in any tab), `bg stop <app>` (hidden with no jobs) | (uses `app`) | `background` |
 | ai | `summarize [--type tldr\|key-points\|teaser\|headline] [--length short\|medium\|long]`, `translate --to <lang> [--from <lang>]`, `lang`; each hidden where its feature answers `no` (ADR-046) | `language` | `language` |
 | achievements | `achievements [app]` (yields `achievement` values: app, title, unlocked, progress; built-in ones included, ADR-078) | | `achievement` (click opens the app's App Store page) |
 | speech | `say [text…]` (words, piped text, or piped files; all `.md` files read as markdown), `speech stop`; hidden where the browser can't speak (ADR-074) | | |

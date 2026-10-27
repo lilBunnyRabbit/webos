@@ -1,6 +1,6 @@
 # App manifest
 
-ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md), [062](../../adrs/062-background-scheduler.md), [077](../../adrs/077-app-store.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `catalogue.ts`, `search.ts`; the build reads manifests in `tooling/vite-plugin-catalogue.ts`, the dev server and tests in `src/lib/apps/index.ts`
+ADR: [001](../../adrs/001-app-manifest-structure.md), [008](../../adrs/008-app-props-validation.md), [018](../../adrs/018-file-associations.md), [034](../../adrs/034-app-extension-points.md), [049](../../adrs/049-lazy-app-metadata.md), [062](../../adrs/062-background-scheduler.md), [077](../../adrs/077-app-store.md), [081](../../adrs/081-background-apps.md) · Source: `src/lib/core/api/services/apps/type.ts`, `helpers.ts`, `catalogue.ts`, `search.ts`; the build reads manifests in `tooling/vite-plugin-catalogue.ts`, the dev server and tests in `src/lib/apps/index.ts`
 
 Every app is a folder with an `index.ts` that default-exports `define_app({...})`, and usually a `meta.ts` with its display text. The folder layout is in [CONVENTIONS](../../CONVENTIONS.md#apps).
 
@@ -45,6 +45,7 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `achievements` | `Achievement[]` (`{ id, title, text, goal?, secret? }`) | no | What can be earned, as plain data in `index.ts` (ADR-078). Reported through `get_app_context().achievements`; `goal` makes it progress-style, `secret` hides it until unlocked. The build puts the count in the catalogue entry and the list in `store/achievements.json`. The catalogue test fails on a duplicate, empty or `os.` id or a goal that isn't a whole number above 0 ([achievements](../services/achievements.md)) |
 | `on_uninstall_data` | `() => Promise<{ default: () => Promise<void> }>` | no | Deletes the app's own stores the OS can't see (IndexedDB, caches) when it's uninstalled with "Also delete its saved data" ([apps](../services/apps.md), owner call 2026-10-22). Moonrabbit deletes `webos.moonrabbit` |
 | `on_fire` | `() => Promise<{ default: OnFire }>` | no | Runs when one of the app's scheduler jobs fires or is missed, with nothing of the app loaded ([below](#on_fire-adr-062), ADR-062) |
+| `background` | `() => Promise<{ default: BackgroundRun }>` | no | Code that runs with no window, one job per app per browser, started by `background.start(id)` ([below](#background-adr-081), ADR-081) |
 | `widget` | `() => Promise<{ default: Component<WidgetProps> }>` | no | What the app renders on the desktop for its `.widget` files (ADR-034) |
 | `widget_size` | `{ min: WidgetSize; max: WidgetSize; default: WidgetSize }` | no | The widget's size range in cells and the size new widgets get. Without it the widget keeps its file's size and can't be resized |
 | `default_widget` | `boolean` | no | Puts the app's widget on every desktop once, at `widget_size.default` ([desktop](../services/desktop.md)). Removing it sticks. Needs `widget` |
@@ -166,6 +167,21 @@ export default on_fire;
 ```
 
 The leader tab loads it on first use and calls it once per occurrence, after the notification, one handler at a time. A throw becomes an error toast from the app; it isn't retried. It runs like a shell command: no app context, services through `kernel.service`, app data through `json_file`. Pomodoro counts a phase's end and schedules the next phase in it; Calendar points a repeating reminder's click at the next occurrence's day, or cancels a finished one. Details: [scheduler](../services/scheduler.md#on-fire-hook).
+
+### `background` (ADR-081)
+
+Code the app runs with no window open: `background: () => import("./watch.svelte")`, the module default-exporting a `BackgroundRun`:
+
+```ts
+import type { BackgroundRun } from "$lib/core/api";
+
+const run: BackgroundRun = async (ctx) => {
+  // ctx: app_id, props, signal, status(text), share(view), resumable(props?), spawn(WorkerCtor, options?)
+};
+export default run;
+```
+
+The app starts it from its own UI with `background.start(id, props)` and stops it with `background.stop(id)`; the job runs until its signal aborts or it returns, with or without windows. One per app per browser (a Web Lock, never stolen); the app's windows read it through `background.get(id)` (`view` is what the job shared, in the tab that runs it). Inside a job, spawn workers with `ctx.spawn`, so they're listed under it and end with it. Like `on_fire` it has no app context: services through `kernel.service`, app data through `json_file`. Motion Watch is the one user. Details: [background](../services/background.md).
 
 ### `widget` (ADR-034)
 

@@ -1,5 +1,6 @@
 import {
   AppWindow as AppWindowIcon,
+  Broadcast as BroadcastIcon,
   Gauge as GaugeIcon,
   HardDrives as HardDrivesIcon,
   ListChecks as ListChecksIcon,
@@ -14,6 +15,7 @@ export const SECTIONS = [
   { value: "network", label: "Network", icon: WifiHighIcon },
   { value: "storage", label: "Storage", icon: HardDrivesIcon },
   { value: "tasks", label: "Tasks", icon: ListChecksIcon },
+  { value: "background", label: "Background", icon: BroadcastIcon },
 ] as const;
 
 export type Section = (typeof SECTIONS)[number]["value"];

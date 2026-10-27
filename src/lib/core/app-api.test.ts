@@ -319,6 +319,7 @@ const manifest_fields: Members<
   | "achievements"
   | "associations"
   | "author"
+  | "background"
   | "badge"
   | "category"
   | "component"

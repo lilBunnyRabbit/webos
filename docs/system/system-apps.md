@@ -16,7 +16,7 @@ Only the core apps, App Store, Settings, File Explorer and Terminal (`CORE_APPS`
 | `pdf-viewer` | PDF Viewer | `application/pdf`, `.pdf` | `FILE_PROPS` | min 400×300 | files, apps (Edit in PDF Tools) | none |
 | `html-preview` | HTML Preview | `text/html`, `.html`, `.htm` | `FILE_PROPS` | min 400×300 | files | none |
 | `csv-viewer` | CSV Viewer | `text/csv`, `text/tab-separated-values`, `.csv`, `.tsv` | `FILE_PROPS` | min 400×300 | files | none |
-| `activity-monitor` | Activity Monitor | none | `{ section? }`: opens on that section (`tasks` from the taskbar) | min 480×360 | windows, files, apps, desktop, notifications, tasks | window: `section`, `open` |
+| `activity-monitor` | Activity Monitor | none | `{ section? }`: opens on that section (`tasks` or `background` from the taskbar) | min 480×360 | windows, files, apps, desktop, notifications, tasks, background | window: `section`, `open` |
 | `style-guide` | Style Guide | none | none | min 720×520 | none | window: `section`, `open` |
 | `terminal` | Terminal | none | `{ cwd?, run? }`: start folder, a line to run once | none | shell (`tilde_path` from `services/files/path` for display, no files service) | window: `cwd`, `scrollback`, `started` |
 | `calculator` | Calculator | none | none | min 280×360 | clipboard, notifications | `history`; window: `calc`, `solved`, `show_history` |
@@ -370,7 +370,7 @@ Touch and pen pointers are tracked in a plain `Map` (up to two) with pointer cap
 
 **Purpose.** A task manager for the web OS: activity per window and per desktop widget, page-wide performance, network requests, storage use and background tasks. It replaces the planned Profiler ([brainstorm](../brainstorm/2026-10-11_app-ports.md)).
 
-**Services.** `windows` (`list`, `get` for manifests, `force_close`), `files` (`size_tree`, `revision`), `apps` (names for app storage and widgets, `launch` for Reveal in Explorer), `desktop` (`items`, `open`, `remove_item` for widgets), `notifications` (a failed widget removal), `tasks` (the Tasks section).
+**Services.** `windows` (`list`, `get` for manifests, `force_close`), `files` (`size_tree`, `revision`), `apps` (names for app storage and widgets, `launch` for Reveal in Explorer), `desktop` (`items`, `open`, `remove_item` for widgets), `notifications` (a failed widget removal), `tasks` (the Tasks section), `background` (the Background section).
 
 **Zero cost when closed.** All monitoring lives in the app, in three classes next to the component: `DomMonitor` (two instances: windows and widgets), `PerformanceMonitor` and `NetworkMonitor`. No service or shell code knows the app exists. Each class has two methods, and each returns its cleanup to an `$effect`:
 
@@ -412,6 +412,7 @@ Samples are 60-entry ring buffers (`Series`, `$state.raw`) held in memory. `untr
     - **List:** under the card, the 12 biggest children as rows (swatch, name, share, size, `pointer-coarse:` taller), each doing what its tile does, so items too small to tap in the map stay reachable; then a count of smaller and empty items. Empty items get no tile.
   - localStorage bytes per `app.{id}.` prefix (UTF-16), plus "Other keys".
 - **Tasks:** [TasksService](services/tasks.md) jobs, newest first: title, status badge (running, done, failed, cancelled), app name, message or error, and a progress bar while running. Per row: Cancel while running, Retry when failed or cancelled, Remove when finished; Clear finished in the header. A caret toggles the run's tree (`task-details.svelte`, live through `TaskTree` in `task-tree.svelte.ts`): groups with their mode, tasks with their own status line, a bar while running or failed, and a logs button per task. Under the list, a card names `@lilbunnyrabbit/task-manager` with its version and links to its docs and npm. The taskbar's tasks indicator and the mobile "N tasks running" line launch the app with `{ section: "tasks" }`. Sections and their ids live in `sections.ts`, shared with the manifest's `props`.
+- **Background:** [BackgroundService](services/background.md) jobs in every tab: app icon and name, a badge (This tab, Another tab, Solo tab), the status line, run time (ticking each second), and the workers the job spawned with `ctx.spawn`, each with its name and uptime. Per row: Open (launches the app) and Stop. The taskbar's background indicator and the mobile "… running in the background" line launch the app with `{ section: "background" }`.
   - Service worker controller and registration states.
   - Refresh is manual; this tab has no timers.
 
@@ -421,7 +422,7 @@ An API the browser doesn't have shows "Not available in this browser". There are
 
 **Known gaps.**
 
-- No Workers tab: no browser API lists workers, and no app spawns one yet. A Workers Service comes with its first consumer. TasksService jobs (ADR-013) become a tab once that service lands.
+- No Workers tab: no browser API lists workers. Workers a background job spawns with `ctx.spawn` show under their job in Background (ADR-081); workers windows and services spawn aren't tracked.
 - Its own row counts the mutations from re-rendering its own table.
 - Widgets can't be highlighted on the desktop from their row: the desktop's selection is local to the desktop component.
 - Shared clocks (`utils/ticker.svelte.ts`) and shared app-data cells (`json_file`) aren't listed: their registries are module-private, and a count would need a new core export.

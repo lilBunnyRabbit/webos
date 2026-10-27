@@ -252,6 +252,10 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Notification integration: a progress toast with Cancel that becomes done, failed or cancelled
 - [x] Shell: `task list`, `task cancel`, `task retry`, `task clear`
 - [ ] Keyboard shortcut: owner said none for now
+
+### Background Apps
+- **ADR:** [ADR-081](adrs/081-background-apps.md) · [brainstorm](brainstorm/2026-10-27_motion-watch.md)
+- [x] BackgroundService (2026-10-27): an app's `background` module runs with no window, one job per app per browser (Web Lock, never stolen), status in every tab, windows as views, `ctx.spawn` workers listed under their job, Resume toast after a reload, taskbar indicator, Activity Monitor › Background, `bg ls` and `bg stop`. The worker helper `spawn`/`serve` (core, re-exported by the kit) carries the codecs pool and Warren's speller
 - [x] PDF Tools as task groups: a task per page, part, PDF or image, then a write step
 - [x] Image Tools batches as a task group (Convert, Fit, Squash run as task groups)
 - [x] Backup create and restore as tasks (owner, 2026-10-16; [ADR-037 revision](adrs/037-backups.md), [brainstorm](brainstorm/2026-10-16_backup-as-tasks.md)): create is a task per area, then Save to device; restore unpacks each area into `/tmp/restore` (cancellable, nothing changed), then replaces and reloads (ignores Cancel)
@@ -422,6 +426,8 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
   - [x] Kerning: a legacy `kern` table in every face, the variable fonts carrying their regular weight's pairs; auto kerning measured per face from the glyphs' side profiles, nothing stored; manual pair adjustments on top, stored in `.fontmaker` (format 3); tap between two letters in the preview for the − / + stepper, Reset and an Auto switch (2026-10-21, [brainstorm](brainstorm/2026-10-21_font-maker-kerning.md))
 - [x] Birdseye (2026-10-20, [ADR-056](adrs/056-birdseye.md), [brainstorm](brainstorm/2026-10-20_birdseye.md), [internals](apps/birdseye.md)): box a moving subject and it stays still in the middle while the world moves; hand-written NCC tracker (2-level pyramid, 3× search, sub-pixel peak, slow template blend) as a task, lost frames on a confidence timeline, re-box from any frame, forward-backward smoothing, zoom, blur/black/theme-colour edges, optional Follow size; WebM export with the sound as a task. Open with for videos, no shell commands. 2026-10-21: re-acquire (search widens 3×, 5×, 8× while lost; the boxed template matched alongside) and a blob fallback against plain sky, "found by shape" on the timeline, after LaxDOTexe's real swallow clip
   - [ ] A detector to find the subject again after a loss, frame-exact demuxing, MP4 output: next session topics in the brainstorm
+- [x] Motion Watch (2026-10-27, [ADR-082](adrs/082-motion-watch.md), [brainstorm](brainstorm/2026-10-27_motion-watch.md), [internals](apps/motion-watch.md)): watches a camera as a background job (keeps going with the window closed, one per browser, Resume after a reload); running-average detection on 160×120 grey with blobs, a lights filter, one sensitivity slider and a 16×12 zone grid; a WebCodecs pre-roll ring so each clip starts about 5 s before the motion and ends 5 s after; clips and a per-day `events.json` in `/home/Videos/Motion`, kept 7 days by default; a notification per event, a day timeline and clip list; phone layout with Dim and a wake lock. Chrome only
+  - [ ] Phone as a remote camera over WebRTC (own ADR)
 
 ### Utilities
 - **ADR:** [ADR-009](adrs/009-app-ecosystem.md)

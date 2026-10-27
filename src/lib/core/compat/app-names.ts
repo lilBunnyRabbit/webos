@@ -26,6 +26,7 @@ export const APP_NAMES: Record<string, string> = {
   "lunar-lander": "Lunar Lander",
   "markdown-pdf": "Markdown to PDF",
   moonrabbit: "Moonrabbit",
+  "motion-watch": "Motion Watch",
   "music-visualizer": "Music Visualizer",
   nonogram: "Nonogram",
   nurikabe: "Nurikabe",
