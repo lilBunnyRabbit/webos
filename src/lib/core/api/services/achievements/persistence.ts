@@ -41,15 +41,6 @@ export function serialize_record(record: AchievementRecord): string {
   return JSON.stringify({ version: VERSION, unlocked: sorted(record.unlocked), progress: sorted(record.progress) }) + "\n";
 }
 
-/** Union of unlocks (the earlier time wins) and max of progress: what either side saw stays. */
-export function merge_records(a: AchievementRecord, b: AchievementRecord): AchievementRecord {
-  const unlocked = { ...a.unlocked };
-  for (const [id, at] of Object.entries(b.unlocked)) unlocked[id] = id in unlocked ? Math.min(unlocked[id], at) : at;
-  const progress = { ...a.progress };
-  for (const [id, n] of Object.entries(b.progress)) progress[id] = Math.max(progress[id] ?? 0, n);
-  return { unlocked, progress };
-}
-
 export function same_record(a: AchievementRecord, b: AchievementRecord): boolean {
   return serialize_record(a) === serialize_record(b);
 }

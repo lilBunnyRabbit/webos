@@ -124,7 +124,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 |----|---------|-----------------|------|--------|---------|--------|
 | `opfs` | Private file storage | WebOS keeps every file and setting here. |  | 86 | 111 | 15.2 |
 | `opfs-write` | Writing files | Nothing can be saved, and the first start writes a file. | `api-client` `p2p-transfer` | 86 | 111 | 26 |
-| `web-locks` | Web Locks | Alarms, background apps and offline apps coordinate open tabs with it at start-up. | `moonrabbit` | 69 | 96 | 15.4 |
+| `web-locks` | Web Locks | Alarms, background apps, offline apps and achievements coordinate open tabs with it at start-up. | `moonrabbit` | 69 | 96 | 15.4 |
 | `broadcast-channel` | Broadcast Channel | Alarms and background apps talk between tabs with it at start-up. |  | 54 | 38 | 15.4 |
 | `import-maps` | Import maps | WebOS's code can't load. |  | 105 | 108 | 16.4 |
 

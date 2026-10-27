@@ -104,6 +104,52 @@ describe("AchievementsService", () => {
     expect(two.notifications.all).toHaveLength(0);
   });
 
+  test("two tabs unlocking different ones at once both keep theirs after a reload", async () => {
+    const one = await open_tab();
+    const two = await open_tab();
+    one.achievements.achieve("mines", "first-win");
+    two.achievements.achieve("mines", "hidden");
+    one.achievements.progress("mines", "wins-3", 2);
+    await Promise.all([one.achievements.idle(), two.achievements.idle()]);
+    const three = await open_tab();
+    three.achievements.list("mines");
+    await three.achievements.idle();
+    const unlocked = three.achievements.list("mines").filter((entry) => entry.unlocked && !entry.builtin);
+    expect(unlocked.map((entry) => entry.def.id).sort()).toEqual(["first-win", "hidden"]);
+    expect(three.achievements.list("mines").find((entry) => entry.def.id === "wins-3")?.progress).toBe(2);
+    expect(toasts(one.notifications)).toEqual(["Achievement: Cleared"]);
+    expect(toasts(two.notifications)).toEqual(["Achievement: Bare hands"]);
+  });
+
+  test("a failed write keeps it locked and toasts nothing; the next report saves it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const tab = await open_tab();
+    const create = vi.spyOn(tab.files, "create_file").mockRejectedValueOnce(new Error("disk full"));
+    tab.achievements.achieve("mines", "first-win");
+    await tab.achievements.idle();
+    expect(tab.achievements.list("mines")[0].unlocked).toBe(false);
+    expect(tab.notifications.all).toHaveLength(0);
+    create.mockRestore();
+    tab.achievements.achieve("mines", "first-win");
+    await tab.achievements.idle();
+    expect(Object.keys((await read(tab.files)).unlocked)).toEqual(["first-win"]);
+    expect(toasts(tab.notifications)).toEqual(["Achievement: Cleared"]);
+  });
+
+  test("progress below a cleared file's old maximum still saves", async () => {
+    const tab = await open_tab();
+    tab.achievements.progress("mines", "wins-3", 2);
+    await tab.achievements.idle();
+    await tab.files.create_file(await tab.files.get_directory("/var/lib/apps/mines"), "achievements.json", {
+      content: serialize_record({ unlocked: {}, progress: {} }),
+      overwrite: true,
+    });
+    tab.achievements.progress("mines", "wins-3", 1);
+    await tab.achievements.idle();
+    expect((await read(tab.files)).progress["wins-3"]).toBe(1);
+    expect(tab.achievements.list("mines")[1].progress).toBe(1);
+  });
+
   test("list shows declared then built-in entries from the file, secrets included", async () => {
     const tab = await open_tab();
     let dir = await tab.files.get_root();

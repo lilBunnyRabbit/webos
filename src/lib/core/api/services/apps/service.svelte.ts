@@ -46,7 +46,7 @@ import { on_idle } from "$lib/core/utils/idle";
 import { ActiveTime } from "./active-time.svelte";
 import type { AppUsage } from "./active-time";
 import { snapshot_window } from "../session/snapshot.svelte";
-import { ACHIEVEMENTS_FILE } from "../achievements/validate";
+import { ACHIEVEMENTS_FILE, achievements_lock, without_progress } from "../achievements/validate";
 import CatalogueIcon, { type CatalogueIconSource } from "$lib/core/components/apps/catalogue-icon.svelte";
 
 export class AppsService implements IAppsService {
@@ -636,7 +636,14 @@ export class AppsService implements IAppsService {
     if (parent && folder) {
       const items = await this.files_service.list(folder);
       if (!items.some((item) => item.name === ACHIEVEMENTS_FILE)) await this.files_service.delete_entry(parent, id, { recursive: true });
-      else for (const item of items) if (item.name !== ACHIEVEMENTS_FILE) await this.files_service.delete_entry(folder, item.name, { recursive: true });
+      else {
+        for (const item of items) if (item.name !== ACHIEVEMENTS_FILE) await this.files_service.delete_entry(folder, item.name, { recursive: true });
+        await navigator.locks.request(achievements_lock(id), async () => {
+          const file = await this.files_service.get_file(`${PATHS.var_lib}/apps/${id}/${ACHIEVEMENTS_FILE}`);
+          const kept = file ? without_progress(await file.text()) : null;
+          if (kept !== null) await this.files_service.create_file(folder, ACHIEVEMENTS_FILE, { content: kept, overwrite: true });
+        });
+      }
     }
     if (!manifest.on_uninstall_data) return;
     try {

@@ -70,7 +70,7 @@ export const FEATURES: Feature[] = [
   {
     id: "web-locks",
     name: "Web Locks",
-    lost: "Alarms, background apps and offline apps coordinate open tabs with it at start-up.",
+    lost: "Alarms, background apps, offline apps and achievements coordinate open tabs with it at start-up.",
     level: Level.START,
     apps: ["moonrabbit"],
     min: min("69", "96", "15.4"),

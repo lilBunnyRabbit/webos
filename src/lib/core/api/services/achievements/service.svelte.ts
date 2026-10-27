@@ -4,15 +4,18 @@ import type { AppsService, AppId, AppListing } from "../apps/type";
 import { AppCategory } from "../apps/type";
 import type { FilesService } from "../files/type";
 import type { NotificationsService } from "../notifications/type";
-import { LatestWriter } from "../files/latest-writer";
+import { split_path } from "../files/path";
 import type { AchievementsService as IAchievementsService, Achievement, AchievementEntry } from "./type";
-import { achievements_path, empty_record, merge_records, parse_record, same_record, serialize_record, type AchievementRecord } from "./persistence";
+import { ACHIEVEMENTS_FILE, achievements_path, empty_record, parse_record, same_record, serialize_record, type AchievementRecord } from "./persistence";
+import { achievements_lock } from "./validate";
 import { apply_achieve, apply_progress, builtin_entries, declared_entries } from "./entries";
 import { fetch_definitions, type Definitions } from "./definitions";
 import { achievements_shell } from "./shell";
 
 const DefinitionsState = { IDLE: "idle", LOADING: "loading", LOADED: "loaded", FAILED: "failed" } as const;
 type DefinitionsState = (typeof DefinitionsState)[keyof typeof DefinitionsState];
+
+const DEFINITIONS_RETRY_MS = 30_000;
 
 export class AchievementsService implements IAchievementsService {
   name = "AchievementsService";
@@ -29,14 +32,14 @@ export class AchievementsService implements IAchievementsService {
   private notifications_service!: NotificationsService;
   private apps_service!: AppsService;
 
-  /** What each app's file held when last read, merged with this tab's changes. */
+  /** What each app's file held when last read or written by this tab. */
   private readonly records = new SvelteMap<AppId, AchievementRecord>();
   private readonly reading = new Map<AppId, Promise<void>>();
   private readonly queues = new Map<AppId, Promise<void>>();
-  private readonly writers = new Map<AppId, LatestWriter>();
   private definitions: Definitions | null = $state.raw(null);
   private definitions_state: DefinitionsState = $state(DefinitionsState.IDLE);
   private definitions_loading: Promise<void> = Promise.resolve();
+  private definitions_retry_at = 0;
   private cleanups: (() => void)[] = [];
 
   constructor(private kernel: Kernel) {
@@ -54,7 +57,9 @@ export class AchievementsService implements IAchievementsService {
     document.addEventListener("visibilitychange", on_visibility);
     this.cleanups.push(() => document.removeEventListener("visibilitychange", on_visibility));
     const on_online = () => {
-      if (this.definitions_state === DefinitionsState.FAILED) this.definitions_state = DefinitionsState.IDLE;
+      if (this.definitions_state !== DefinitionsState.FAILED) return;
+      this.definitions_retry_at = 0;
+      this.definitions_state = DefinitionsState.IDLE;
     };
     window.addEventListener("online", on_online);
     this.cleanups.push(() => window.removeEventListener("online", on_online));
@@ -73,8 +78,8 @@ export class AchievementsService implements IAchievementsService {
   }
 
   public progress(app_id: AppId, id: string, n: number): void {
-    const record = this.records.get(app_id);
-    if (record && (record.unlocked[id] !== undefined || (record.progress[id] ?? 0) >= n)) return;
+    // Not `progress >= n`: uninstalling with data clears the file's progress behind this tab's back.
+    if (this.records.get(app_id)?.unlocked[id] !== undefined) return;
     this.enqueue(app_id, async () => {
       const def = await this.definition(app_id, id);
       if (!def) return;
@@ -99,7 +104,6 @@ export class AchievementsService implements IAchievementsService {
     // Lets reads and fetches that `list()` queued start first.
     await Promise.resolve();
     await Promise.all([...this.queues.values(), ...this.reading.values(), this.definitions_loading]);
-    await Promise.all([...this.writers.values()].map((writer) => writer.idle()));
   }
 
   /** The app's declared achievements: from its manifest once loaded, else from the build's side file. */
@@ -107,14 +111,15 @@ export class AchievementsService implements IAchievementsService {
     const own = this.apps_service.get(listing.id)?.achievements;
     if (own) return own;
     if (!listing.achievement_count) return [];
-    if (this.definitions_state === DefinitionsState.IDLE) queueMicrotask(() => void this.load_definitions());
+    if (this.wants_definitions()) queueMicrotask(() => void this.load_definitions());
     return this.definitions?.[listing.id] ?? [];
   }
 
   private entries_of(listing: AppListing): AchievementEntry[] {
     const game = !listing.system && listing.category === AppCategory.GAMES;
     const declared = this.declared(listing);
-    const record = declared.length > 0 ? this.record(listing.id) : empty_record();
+    // Read with the definitions, not after them: `idle()` then covers both.
+    const record = declared.length > 0 || (listing.achievement_count ?? 0) > 0 ? this.record(listing.id) : empty_record();
     return [...declared_entries(listing.id, declared, record), ...builtin_entries(listing.id, this.apps_service.usage(listing.id), game)];
   }
 
@@ -128,12 +133,9 @@ export class AchievementsService implements IAchievementsService {
   private read_into(app_id: AppId): Promise<void> {
     let pending = this.reading.get(app_id);
     if (!pending) {
-      pending = this.read(app_id)
-        .then((text) => {
-          const current = this.records.get(app_id);
-          const merged = current ? merge_records(current, parse_record(text)) : parse_record(text);
-          if (!current || !same_record(current, merged)) this.records.set(app_id, merged);
-        })
+      pending = navigator.locks
+        .request(achievements_lock(app_id), async (): Promise<void> => this.set_record(app_id, parse_record(await this.read(app_id))))
+        .then(() => {})
         .catch((error: unknown) => console.warn(`[AchievementsService] Couldn't read ${app_id}'s achievements`, error))
         .finally(() => this.reading.delete(app_id));
       this.reading.set(app_id, pending);
@@ -141,12 +143,17 @@ export class AchievementsService implements IAchievementsService {
     return pending;
   }
 
+  private wants_definitions(): boolean {
+    return this.definitions_state === DefinitionsState.IDLE || (this.definitions_state === DefinitionsState.FAILED && Date.now() >= this.definitions_retry_at);
+  }
+
   private load_definitions(): Promise<void> {
-    if (this.definitions_state === DefinitionsState.LOADING || this.definitions_state === DefinitionsState.LOADED) return this.definitions_loading;
+    if (!this.wants_definitions()) return this.definitions_loading;
     this.definitions_state = DefinitionsState.LOADING;
     this.definitions_loading = fetch_definitions().then((definitions) => {
       this.definitions = definitions;
       this.definitions_state = definitions ? DefinitionsState.LOADED : DefinitionsState.FAILED;
+      if (!definitions) this.definitions_retry_at = Date.now() + DEFINITIONS_RETRY_MS;
     });
     return this.definitions_loading;
   }
@@ -169,15 +176,23 @@ export class AchievementsService implements IAchievementsService {
   }
 
   /**
-   * Merges the file first: an unlock another tab saved is already in `current`, so only what this change adds toasts.
+   * Under the app's lock the file is the truth: every tab writes it before updating memory. An unlock another tab
+   * saved is already in it, so only what this change adds toasts, and only once it's on disk.
    */
   private async commit(app_id: AppId, change: (record: AchievementRecord) => AchievementRecord | null): Promise<void> {
-    const disk = parse_record(await this.read(app_id));
-    const current = merge_records(this.records.get(app_id) ?? empty_record(), disk);
-    const next = change(current) ?? current;
-    this.records.set(app_id, next);
-    if (!same_record(next, disk)) this.writer(app_id).write(serialize_record(next));
-    for (const id of Object.keys(next.unlocked)) if (current.unlocked[id] === undefined) await this.toast(app_id, id);
+    const added = await navigator.locks.request(achievements_lock(app_id), async () => {
+      const disk = parse_record(await this.read(app_id));
+      const next = change(disk);
+      if (next) await this.write(app_id, serialize_record(next));
+      this.set_record(app_id, next ?? disk);
+      return next ? Object.keys(next.unlocked).filter((id) => disk.unlocked[id] === undefined) : [];
+    });
+    for (const id of added) await this.toast(app_id, id);
+  }
+
+  private set_record(app_id: AppId, record: AchievementRecord): void {
+    const current = this.records.get(app_id);
+    if (!current || !same_record(current, record)) this.records.set(app_id, record);
   }
 
   private async toast(app_id: AppId, id: string): Promise<void> {
@@ -187,13 +202,13 @@ export class AchievementsService implements IAchievementsService {
     this.notifications_service.notify(app_id, { title: `Achievement: ${def.title}`, message: def.text, icon: manifest.icon });
   }
 
-  private writer(app_id: AppId): LatestWriter {
-    let writer = this.writers.get(app_id);
-    if (!writer) {
-      writer = new LatestWriter(() => this.files_service, achievements_path(app_id), `${app_id} achievements`);
-      this.writers.set(app_id, writer);
+  private async write(app_id: AppId, text: string): Promise<void> {
+    const files = this.files_service;
+    let directory = await files.get_root();
+    for (const segment of split_path(achievements_path(app_id)).slice(0, -1)) {
+      directory = (await files.exists(directory, segment, "directory")) ? await directory.getDirectoryHandle(segment) : await files.create_directory(directory, segment);
     }
-    return writer;
+    await files.create_file(directory, ACHIEVEMENTS_FILE, { content: text, overwrite: true });
   }
 
   private async read(app_id: AppId): Promise<string | null> {

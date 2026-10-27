@@ -64,3 +64,9 @@ Decided within scope while building:
 - The service worker's `store/` cache holds five entries instead of four.
 - Game Hub's tab is labelled "Trophies" to fit four tabs on a phone; its page title is "Achievements".
 - Snake and Doodlehop keep a running total in app storage (`eaten`, `recognised`) for their progress achievements; the other games derive totals from the stats they already keep.
+
+## Revision 2026-10-27 (review fixes)
+- Every change runs under a Web Lock per app (`webos.achievements.{id}`): read the file, apply, write and await the write, then update memory. Under the lock the file is the truth, so the merge with memory is gone; two tabs unlocking different achievements at once both keep theirs. A tab toasts only what it added to the file it read, and only after the write landed; a failed write leaves memory unchanged, so the app's next report tries again.
+- Uninstalling with data keeps `achievements.json` but empties its `progress` (under the same lock): the app's running totals reset with its data, and kept maxima would have frozen its bars after a reinstall. Unlocks stay.
+- A failed definitions fetch retries on the next read after 30 s, as well as on `online`.
+- The shell's `achievements` reads an app's record together with its definitions, so it never prints an unlocked one as locked; a locked secret shows no id or progress.

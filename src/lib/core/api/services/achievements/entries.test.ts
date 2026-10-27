@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { apply_achieve, apply_progress, builtin_entries, declared_entries } from "./entries";
-import { empty_record, merge_records, parse_record, serialize_record } from "./persistence";
-import { achievements_problem } from "./validate";
+import { empty_record, parse_record, serialize_record } from "./persistence";
+import { achievements_problem, without_progress } from "./validate";
 import type { Achievement } from "./type";
 
 const WINS: Achievement = { id: "wins", title: "Veteran", text: "Win 10 games.", goal: 10 };
@@ -17,9 +17,11 @@ describe("records", () => {
     expect(parse_record(null)).toEqual(empty_record());
   });
 
-  test("merge keeps every unlock, the earlier time, and the highest progress", () => {
-    const merged = merge_records({ unlocked: { a: 5 }, progress: { wins: 3, other: 9 } }, { unlocked: { a: 2, b: 7 }, progress: { wins: 6 } });
-    expect(merged).toEqual({ unlocked: { a: 2, b: 7 }, progress: { wins: 6, other: 9 } });
+  test("dropping progress keeps the unlocks and leaves a broken file alone", () => {
+    const text = serialize_record({ unlocked: { a: 5 }, progress: { b: 7 } });
+    expect(without_progress(text)).toBe(serialize_record({ unlocked: { a: 5 }, progress: {} }));
+    expect(without_progress("nope")).toBeNull();
+    expect(without_progress("[]")).toBeNull();
   });
 });
 

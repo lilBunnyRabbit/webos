@@ -3,6 +3,19 @@ import type { Achievement } from "./definition";
 /** Kept when an app is uninstalled with its data (ADR-078). Here, apart from `persistence.ts`, so AppsService pulls no schema into core. */
 export const ACHIEVEMENTS_FILE = "achievements.json";
 
+export const achievements_lock = (app_id: string) => `webos.achievements.${app_id}`;
+
+/** Unlocks only: the app's running totals reset with its data, so kept maxima would freeze its bars. */
+export function without_progress(text: string): string | null {
+  try {
+    const data: unknown = JSON.parse(text);
+    if (!data || typeof data !== "object" || Array.isArray(data)) return null;
+    return JSON.stringify({ ...data, progress: {} }) + "\n";
+  } catch {
+    return null;
+  }
+}
+
 /** Ids of the built-in active-time achievements every app has. */
 export const BUILTIN_PREFIX = "os.";
 

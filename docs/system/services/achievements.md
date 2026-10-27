@@ -31,16 +31,16 @@ achievements.progress("wins-25", total_wins); // a running total; reaching the g
 | Member | Signature | Notes |
 |--------|-----------|-------|
 | `achieve` | `(app_id, id) => void` | Queued per app. No-op when this tab already has it unlocked. An id the manifest (`apps.load(app_id)`) doesn't declare warns and saves nothing |
-| `progress` | `(app_id, id, n) => void` | `n` is cumulative; the highest seen counts. No-op when this tab already has it unlocked or at `n` or more. Reaching `goal` unlocks. A definition without `goal` warns |
+| `progress` | `(app_id, id, n) => void` | `n` is cumulative; the highest seen counts. No-op when this tab already has it unlocked; a lower `n` than the file holds changes nothing (checked against the file, not memory: uninstalling with data clears progress). Reaching `goal` unlocks. A definition without `goal` warns |
 | `list` | `(app_id?) => AchievementEntry[]` | Reactive. With an app: its declared achievements in manifest order, then the five built-ins; `[]` for an app no listing knows. Without: the same for every app that declares some (`achievement_count`) or has usage, by name. Reading it starts the reads it needs |
-| `idle` | `() => Promise<void>` | Lets queued reads start, then waits for them, every queued change, the definitions fetch and every writer. The shell command and tests use it |
+| `idle` | `() => Promise<void>` | Lets queued reads start, then waits for them, every queued change, the definitions fetch. The shell command and tests use it |
 
 `AchievementEntry`: `{ app_id, def, unlocked, unlocked_at, progress, progress_text, builtin }`. `unlocked_at` is epoch ms, `null` while locked and always for built-ins. `progress` is capped at `def.goal` (0 without one; the goal once unlocked). `progress_text` is `"7 / 25"`, `"24 min / 1 h"` for the time built-ins, `null` without a goal.
 
 ## Definitions
 
 - **The app's manifest** when its code is loaded (`apps.get(id).achievements`): always the case when the app itself reports.
-- **Otherwise the side file.** The catalogue entry carries only the count (`achievements: 3`, read as `AppListing.achievement_count`). An app with a count and no loaded manifest makes `list()` fetch `store/achievements.json` (`{ [app_id]: Achievement[] }`) once, network-first through the `webos-store` service worker cache (`definitions.ts`). A failed fetch retries on the next `online` event. Under `bun dev` and in tests there's no build: `fetch_definitions()` reads the manifests from `$lib/apps` instead.
+- **Otherwise the side file.** The catalogue entry carries only the count (`achievements: 3`, read as `AppListing.achievement_count`). An app with a count and no loaded manifest makes `list()` fetch `store/achievements.json` (`{ [app_id]: Achievement[] }`) once, network-first through the `webos-store` service worker cache (`definitions.ts`). A failed fetch retries on the next read 30 s later, or at once after an `online` event. Under `bun dev` and in tests there's no build: `fetch_definitions()` reads the manifests from `$lib/apps` instead.
 
 ## Built-in achievements (`entries.ts`)
 
@@ -56,14 +56,13 @@ Every app has them, derived from `apps.usage(id)` on every read, never stored an
 
 ## State
 
-- `records`: `SvelteMap<AppId, AchievementRecord>`, what each app's file held when last read, merged with this tab's changes. Filled on first `list()` of the app or the first change.
+- `records`: `SvelteMap<AppId, AchievementRecord>`, what each app's file held when this tab last read or wrote it under the lock. Filled on first `list()` of an app that declares some, or the first change.
 - `reading`, `queues`: per-app promises; changes to one app run one at a time.
-- `writers`: a `LatestWriter` per app's file.
 - `definitions` / `definitions_state` (`idle`, `loading`, `loaded`, `failed`): the side file.
 
 ## Lifecycle
 
-- `init()`: listens for `visibilitychange` (a tab coming back re-reads every record it holds, merging another tab's unlocks in without a toast) and `online` (a failed definitions fetch may try again). Nothing is read at boot.
+- `init()`: listens for `visibilitychange` (a tab coming back re-reads every record it holds, picking up another tab's unlocks without a toast) and `online` (a failed definitions fetch may try again). Nothing is read at boot.
 - `destroy()`: removes both listeners.
 
 ## Persistence
@@ -76,21 +75,21 @@ Every app has them, derived from `apps.usage(id)` on every read, never stored an
 
 Keys sorted, newline at the end. A broken or other-version file reads as empty and is replaced on the next change. Backed up and restored with `/var/lib` (ADR-037).
 
-**Uninstalling with data keeps it:** `apps.uninstall(id, { data: true })` deletes everything else in `/var/lib/apps/{id}/`, and the whole folder only when there's no `achievements.json` ([apps](apps.md#public-api)).
+**Uninstalling with data keeps the unlocks:** `apps.uninstall(id, { data: true })` deletes everything else in `/var/lib/apps/{id}/`, and the whole folder only when there's no `achievements.json` ([apps](apps.md#public-api)). It rewrites the kept file with `progress: {}` (`without_progress()` in `validate.ts`, under the app's lock): the app's running totals in `app.{id}.*` reset with its data, and old maxima would hold its bars still after a reinstall. A broken file is left as it is.
 
 ## Behaviour & invariants
 
-### Merge on every change
+### One lock per app, the file is the truth
 
-A change reads the file, merges it with the record in memory (`merge_records`: union of unlocks with the earlier time, max of progress), applies itself, sets the record and writes when the result differs from the file. Two tabs or two windows never lose each other's unlocks or progress.
+Every change and every read of an app's file runs inside the Web Lock `webos.achievements.{app_id}` (`achievements_lock()` in `validate.ts`; AppsService takes it too when it clears progress on uninstall). A change reads the file, applies itself to it, writes and awaits the write when something changed, and only then sets the record in memory. Because every tab writes under the lock before anything else, the file always holds every tab's unlocks and the highest progress any of them saved: two tabs or two windows unlocking different achievements at the same moment both keep theirs. A failed write throws out of the change (logged as a warning): memory stays as it was, nothing toasts, and the app's next `achieve` or `progress` tries again.
 
 ### One toast per unlock
 
-Only ids unlocked by this change, after the merge, toast: an unlock another tab saved first is already in the merged record, so it merges in silently. Two windows of one app share the tab's record, so the second `achieve` is a no-op. The toast is the app's (`notify(app_id, …)`): its icon, "Achievement: {title}", the text as the message. Built-ins never toast.
+Only ids this change added to the file it read under the lock toast, after the write landed: an unlock another tab saved first is already in that file, so it shows up silently. Two windows of one app share the tab's record, so the second `achieve` is a no-op. The toast is the app's (`notify(app_id, …)`): its icon, "Achievement: {title}", the text as the message. Built-ins never toast.
 
 ### Secrets
 
-`secret` hides the title and text until unlocked: the App Store and Game Hub show "Secret" and "Unlock it to see what it is.", the shell `Secret` and no text. Progress bars hide too.
+`secret` hides the title and text until unlocked: the App Store and Game Hub show "Secret" and "Unlock it to see what it is.", the shell `Secret` with no id, text or progress. Progress bars hide too.
 
 ## UI
 
@@ -102,7 +101,7 @@ Only ids unlocked by this change, after the merge, toast: an unlock another tab 
 
 Contributes (`achievements/shell.ts`):
 
-- `achievements [app]`: yields `achievement` values (`app` (name), `app_id`, `id`, `title`, `text`, `unlocked` (boolean), `unlocked_at`, `progress`, `builtin`). Columns `app`, `title`, `unlocked` (the date, `yes` for a built-in, `no`), `progress`. `achievements | where unlocked == true`. Clicking one opens the app's App Store page (`apps.launch("app-library", { app })`). Uses the `app` completer.
+- `achievements [app]`: yields `achievement` values (`app` (name), `app_id`, `id`, `title`, `text`, `unlocked` (boolean), `unlocked_at`, `progress`, `builtin`). Columns `app`, `title`, `unlocked` (the date, `yes` for a built-in, `no`), `progress`. `achievements | where unlocked == true`. Clicking one opens the app's App Store page (`apps.launch("app-library", { app })`). Uses the `app` completer. Reading `list()` once starts both the definitions fetch and the record read for every app that declares some, and the command awaits `idle()` before yielding, so an unlocked one never prints as locked. A locked secret yields `Secret` with an empty `id`, `text` and `progress`.
 
 See [shell](shell.md#contributions).
 
@@ -115,5 +114,6 @@ See [shell](shell.md#contributions).
 ## Known gaps
 
 - Another tab's unlock shows here only after this tab's next change to that app or when it becomes visible again.
+- After uninstalling with data, the tab that uninstalled keeps showing the old progress until it re-reads the file (becomes visible again) or the app reports again.
 - A goal lowered in a new app version doesn't unlock already-reached progress until the next `progress` call with a higher `n`.
 - `list()` without an app runs the built-ins for every used app; fine at today's ~100 apps.

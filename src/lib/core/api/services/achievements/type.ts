@@ -19,9 +19,9 @@ export interface AchievementEntry {
 }
 
 /**
- * Achievements apps declare and report (ADR-078), kept in `/var/lib/apps/{id}/achievements.json`. Every change merges
- * with the file first (union of unlocks, max of progress), so two tabs never lose one, and an unlock toasts only in the
- * tab where it happened. Built-in active-time ones are derived and never toasted.
+ * Achievements apps declare and report (ADR-078), kept in `/var/lib/apps/{id}/achievements.json`. Every change
+ * applies to the file under a per-app Web Lock, so two tabs never lose one, and an unlock toasts only in the tab where
+ * it happened, once saved. Built-in active-time ones are derived and never toasted.
  */
 export interface AchievementsService extends IService {
   /** Unknown ids warn and do nothing. */

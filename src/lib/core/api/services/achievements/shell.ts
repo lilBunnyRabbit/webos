@@ -27,12 +27,12 @@ function value(entry: AchievementEntry, apps: AppsService): AchievementValue {
     $type: "achievement",
     app: apps.get(entry.app_id)?.name ?? entry.app_id,
     app_id: entry.app_id,
-    id: entry.def.id,
+    id: hidden ? "" : entry.def.id,
     title: hidden ? "Secret" : entry.def.title,
     text: hidden ? "" : entry.def.text,
     unlocked: entry.unlocked,
     unlocked_at: entry.unlocked_at,
-    progress: entry.progress_text ?? "",
+    progress: hidden ? "" : (entry.progress_text ?? ""),
     builtin: entry.builtin,
   };
 }
