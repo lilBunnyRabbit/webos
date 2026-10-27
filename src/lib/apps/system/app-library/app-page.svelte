@@ -1,8 +1,8 @@
 <script lang="ts">
+  import { change_kind } from "$lib/core/components/update/change-kind";
   import kernel, {
     is_core_app,
     app_history,
-    ChangeKind,
     format_usage,
     Mode,
     RouteKind,
@@ -59,11 +59,6 @@
   let { manifest, size, related, freshness, onback, onselect }: Props = $props();
 
   const HISTORY_PREVIEW = 4;
-  const KINDS = {
-    [ChangeKind.NEW]: { label: "New", tone: "primary" },
-    [ChangeKind.IMPROVED]: { label: "Improved", tone: "info" },
-    [ChangeKind.FIXED]: { label: "Fixed", tone: "success" },
-  } as const;
 
   const { app_id } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
@@ -258,7 +253,7 @@
         {#each changes as { release, change }, index (index)}
           <li class="flex flex-col gap-1 border-b border-foreground/8 py-2 first:pt-0">
             <div class="flex items-center gap-2">
-              <Badge tone={KINDS[change.kind].tone}>{KINDS[change.kind].label}</Badge>
+              <Badge tone={change_kind(change.kind).tone}>{change_kind(change.kind).label}</Badge>
               <span class="font-mono text-2xs text-foreground/80">v{release.version}</span>
               <time class="ml-auto font-mono text-2xs text-foreground/80" datetime={release.date}>{day(release.date)}</time>
             </div>

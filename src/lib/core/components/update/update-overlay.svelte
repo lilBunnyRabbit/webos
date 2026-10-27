@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { ChangeKind, UpdateStage, type VersionService } from "$lib/core/api";
+  import kernel, { UpdateStage, type VersionService } from "$lib/core/api";
   import { progress_line } from "$lib/core/api/services/version/precache";
   import { compare_versions } from "$lib/core/api/services/version/semver";
   import { cn } from "$lib/core/utils";
@@ -7,6 +7,7 @@
   import { fade } from "svelte/transition";
   import { motion_reduced } from "$lib/core/utils/motion";
   import LogoMark from "../brand/logo-mark.svelte";
+  import { change_kind } from "./change-kind";
   import { Badge, Button, Spinner } from "../ui";
 
   const version = $derived(kernel.service<VersionService>("version"));
@@ -29,11 +30,6 @@
 
   const fraction = $derived(progress?.total ? Math.min(progress.done / progress.total, 1) : 0);
 
-  const KINDS = {
-    [ChangeKind.NEW]: { label: "New", tone: "primary" },
-    [ChangeKind.IMPROVED]: { label: "Improved", tone: "info" },
-    [ChangeKind.FIXED]: { label: "Fixed", tone: "success" },
-  } as const;
   const notes = $derived((version.update_available?.notes ?? []).filter((note) => !version.info || compare_versions(note.version, version.info.version) > 0));
 </script>
 
@@ -49,11 +45,13 @@
     <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--background-dark),transparent_70%)]"></div>
     <div
       class={cn(
-        "relative grid max-h-full w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-2xl bg-background-dark/80 ring-1 ring-foreground/8",
-        notes.length > 0 ? "max-w-3xl @2xl:max-h-[min(36rem,100%)] @2xl:grid-cols-[18rem_minmax(0,1fr)] @2xl:grid-rows-1" : "max-w-sm",
+        "relative grid max-h-full w-full overflow-y-auto rounded-2xl bg-background-dark ring-1 ring-foreground/8",
+        notes.length > 0
+          ? "max-w-3xl grid-rows-[auto_minmax(12rem,1fr)] @2xl:max-h-[min(36rem,100%)] @2xl:grid-cols-[18rem_minmax(0,1fr)] @2xl:grid-rows-[minmax(0,1fr)]"
+          : "max-w-sm",
       )}
     >
-      <div class="flex flex-col gap-6 p-6">
+      <div class="flex flex-col gap-6 p-6 @2xl:min-h-0 @2xl:overflow-y-auto">
         <div class="flex items-center gap-3">
           <LogoMark class="size-11 shrink-0 text-primary" />
           <div class="min-w-0">
@@ -114,7 +112,7 @@
                 <ul class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1.5">
                   {#each note.changes as change, index (index)}
                     <li class="col-span-2 grid grid-cols-subgrid items-baseline text-ui text-pretty">
-                      <span><Badge tone={KINDS[change.kind].tone}>{KINDS[change.kind].label}</Badge></span>
+                      <span><Badge tone={change_kind(change.kind).tone}>{change_kind(change.kind).label}</Badge></span>
                       <span>{change.text}</span>
                     </li>
                   {/each}

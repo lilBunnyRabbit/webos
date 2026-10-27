@@ -1,16 +1,12 @@
 <script lang="ts">
-  import kernel, { ChangeKind, type VersionService } from "$lib/core/api";
+  import { change_kind } from "$lib/core/components/update/change-kind";
+  import kernel, { type VersionService } from "$lib/core/api";
   import { Badge } from "$lib/core/components/ui";
   import { format_date } from "$lib/core/utils";
 
   const version = $derived(kernel.service<VersionService>("version"));
   void kernel.service<VersionService>("version").load_changelog();
 
-  const KINDS = {
-    [ChangeKind.NEW]: { label: "New", tone: "primary" },
-    [ChangeKind.IMPROVED]: { label: "Improved", tone: "info" },
-    [ChangeKind.FIXED]: { label: "Fixed", tone: "success" },
-  } as const;
 
   const unseen = $derived(new Set(version.unseen.map((release) => release.version)));
 </script>
@@ -29,7 +25,7 @@
       <ul class="flex flex-col gap-1.5">
         {#each release.changes as change, index (index)}
           <li class="grid grid-cols-[4.5rem_1fr] items-baseline gap-2 text-ui">
-            <span><Badge tone={KINDS[change.kind].tone}>{KINDS[change.kind].label}</Badge></span>
+            <span><Badge tone={change_kind(change.kind).tone}>{change_kind(change.kind).label}</Badge></span>
             <span>{change.text}</span>
           </li>
         {/each}
