@@ -465,7 +465,7 @@
     editor.ensure_id();
     const snapshot = editor.snapshot();
     const content = serialize_document(snapshot);
-    const changed = editor.dirty || file_path === null;
+    const changed = editor.dirty || (file_path === null && draft === null);
     try {
       await write_file(path, content);
       file_path = path;
