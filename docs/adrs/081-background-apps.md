@@ -2,6 +2,8 @@
 **Date:** 2026-10-27
 **Status:** Implemented
 
+> **Revision 2026-10-27: stopping.** A stopped job shows the status "Stopping" until it has ended. It leaves the lists (this tab's and, through `jobs`, the others') only after its lock is released, so another tab never sees it idle while the lock is held. `start()` while this tab's job is still stopping waits for it to end and starts a new one, instead of answering `true` for the job on its way out.
+
 ## Context
 Motion Watch has to keep a camera open, detect motion and save clips with no window open: closing the window must not stop the watch, and two windows must show one watch, not open the camera twice. Nothing in WebOS runs app code without a window except the scheduler's `on_fire` hook, which runs once per fired job and ends. The owner asked whether this wants a kernel worker service ([brainstorm](../brainstorm/2026-10-27_motion-watch.md)); decided 2026-10-27: a service that runs app *jobs* (any windowless code), with workers as a detail inside a job, plus a kit worker helper for everyone else.
 

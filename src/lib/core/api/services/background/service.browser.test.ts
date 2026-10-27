@@ -127,6 +127,40 @@ describe("BackgroundService", () => {
     expect(worker!.alive).toBe(false);
   });
 
+  test("Start right after Stop waits for the old job and runs a new one", async () => {
+    const log: string[] = [];
+    const watch = until_stopped(log);
+    runs.watch = async (context) => {
+      await watch(context);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    };
+    const one = await open_tab();
+    const two = await open_tab();
+    await one.background.start("watch");
+    const stopping = one.background.stop("watch");
+    await vi.waitFor(() => expect(two.background.get("watch")?.status).toBe("Stopping"));
+    expect(await one.background.start("watch")).toBe(true);
+    await stopping;
+    expect(log).toEqual(["start", "stop", "start"]);
+    expect(one.background.get("watch")).toMatchObject({ here: true, status: "Watching" });
+  });
+
+  test("another tab sees the job until its lock is free", async () => {
+    runs.watch = async (context) => {
+      await new Promise<void>((resolve) => context.signal.addEventListener("abort", () => resolve(), { once: true }));
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    };
+    const one = await open_tab();
+    const two = await open_tab();
+    await one.background.start("watch");
+    await vi.waitFor(() => expect(two.background.get("watch")).toBeDefined());
+    const stopped = one.background.stop("watch");
+    await vi.waitFor(() => expect(two.background.get("watch")?.status).toBe("Stopping"));
+    await vi.waitFor(() => expect(two.background.list()).toEqual([]));
+    expect(await two.background.start("watch")).toBe(true);
+    await stopped;
+  });
+
   test("a job that throws is reported and taken off the list", async () => {
     runs.watch = async () => {
       throw new Error("No camera");

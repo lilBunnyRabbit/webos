@@ -174,7 +174,7 @@ export async function register_default_services(kernel: Kernel) {
     dependencies: ["files", "notifications", "apps"],
   });
 
-  // Same class on every platform and in solo (ADR-081): a solo tab runs its own app's job but never takes a lock.
+  // Same class on every platform and in solo (ADR-081): a solo tab runs its own app's job but never steals a lock.
   kernel.register("background", {
     instance: background.BackgroundService,
     dependencies: ["files", "notifications", "apps", "session"],

@@ -155,10 +155,13 @@ export class BackgroundService implements IBackgroundService {
   }
 
   public start(app_id: AppId, props: AppProps = {}): Promise<boolean> {
-    if (this.local.has(app_id)) return Promise.resolve(true);
+    const running = this.local.get(app_id);
+    if (running && !running.controller.signal.aborted) return Promise.resolve(true);
     let pending = this.starting.get(app_id);
     if (!pending) {
-      pending = this.begin(app_id, props).finally(() => this.starting.delete(app_id));
+      // A job still stopping holds the lock: the new one starts once it has let go.
+      const after = running ? running.finished : Promise.resolve();
+      pending = after.then(() => this.begin(app_id, props)).finally(() => this.starting.delete(app_id));
       this.starting.set(app_id, pending);
     }
     return pending;
@@ -178,32 +181,53 @@ export class BackgroundService implements IBackgroundService {
     const { default: run } = await load();
 
     return new Promise<boolean>((resolve, reject) => {
+      let job: LocalJob | null = null;
+      let done!: () => void;
       navigator.locks
         .request(lock_name(app_id), { ifAvailable: true }, async (lock) => {
           if (!lock || this.destroyed) return resolve(false);
           if (this.local.has(app_id)) return resolve(true);
-          const job = new LocalJob(app_id, checked, Date.now());
-          let done!: () => void;
-          job.finished = new Promise((settle) => (done = settle));
-          this.local.set(app_id, job);
+          const started = new LocalJob(app_id, checked, Date.now());
+          job = started;
+          started.finished = new Promise((settle) => (done = settle));
+          started.controller.signal.addEventListener("abort", () => {
+            if (!this.destroyed) this.set_status(started, "Stopping");
+          }, { once: true });
+          this.local.set(app_id, started);
           this.announce();
           resolve(true);
           try {
-            await run(this.context(job));
+            await run(this.context(started));
           } catch (error) {
-            if (!job.controller.signal.aborted) this.report(app_id, error);
+            if (!started.controller.signal.aborted) this.report(app_id, error);
           } finally {
-            for (const handle of job.handles.values()) handle.terminate();
-            this.local.delete(app_id);
-            if (!this.destroyed) {
-              this.announce();
-              await this.write_resume(app_id, null).catch(() => {});
-            }
-            done();
+            for (const handle of started.handles.values()) handle.terminate();
+            if (!this.destroyed) await this.write_resume(app_id, null).catch(() => {});
           }
         })
-        .catch(reject);
+        // Gone from the lists only once the lock is free: a tab that sees it idle can start it.
+        .then(
+          () => {
+            if (!job) return;
+            this.local.delete(app_id);
+            if (!this.destroyed) this.announce();
+            done();
+          },
+          (error: unknown) => {
+            if (job) {
+              this.local.delete(app_id);
+              done();
+            }
+            reject(error);
+          }
+        );
     });
+  }
+
+  private set_status(job: LocalJob, text: string): void {
+    if (job.status === text) return;
+    job.status = text;
+    this.announce();
   }
 
   public async stop(app_id: AppId): Promise<boolean> {
@@ -224,9 +248,7 @@ export class BackgroundService implements IBackgroundService {
       props: job.props,
       signal: job.controller.signal,
       status: (text) => {
-        if (job.status === text) return;
-        job.status = text;
-        this.announce();
+        if (!job.controller.signal.aborted) this.set_status(job, text);
       },
       share: (view) => (job.view = view),
       resumable: (props) => this.write_resume(job.app_id, props === null ? null : { props: props ?? job.props, since: job.since }),

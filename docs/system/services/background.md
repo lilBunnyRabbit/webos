@@ -15,8 +15,8 @@ The same class runs on every platform and in solo (ADR-047).
 | `tab` | `TabId` | Random per page load, 8 characters |
 | `list()` | `() => BackgroundJob[]` | Every job in this browser, this tab's first. Reactive |
 | `get(app_id)` | `(AppId) => BackgroundJob \| undefined` | |
-| `start(app_id, props?)` | `Promise<boolean>` | Loads the app's manifest and its `background` module, checks `props` against the manifest's schema (no schema: no props), then requests the lock `ifAvailable`. `true` when this tab runs it (started now, already running, or a start already on its way in this tab), `false` when another tab holds it. Rejects for an unknown app, an app with no `background`, or props that fail the schema |
-| `stop(app_id)` | `Promise<boolean>` | This tab's job: aborts its signal and resolves once the job has returned. Another tab's: posts `stop` to it and resolves `true` at once. `false` when nothing runs |
+| `start(app_id, props?)` | `Promise<boolean>` | Loads the app's manifest and its `background` module, checks `props` against the manifest's schema (no schema: no props), then requests the lock `ifAvailable`. `true` when this tab runs it (started now, already running, or a start already on its way in this tab), `false` when another tab holds it. A job here that is still stopping isn't "already running": the start waits for it to end, then takes the lock. Rejects for an unknown app, an app with no `background`, or props that fail the schema |
+| `stop(app_id)` | `Promise<boolean>` | This tab's job: aborts its signal and resolves once the job has returned and its lock is free. Another tab's: posts `stop` to it and resolves `true` at once. `false` when nothing runs |
 
 ```ts
 interface BackgroundJob {
@@ -74,6 +74,7 @@ Services come through `kernel.service`, app data through `json_file`, as in `on_
 | `{ type: "gone", tab }` | `pagehide` and `destroy()` | drop the tab |
 | `{ type: "stop", app_id }` | `stop()` of another tab's job | the holder stops it |
 
+- **Stopping.** On abort the job's status becomes "Stopping" (announced; later `ctx.status()` calls are ignored). When it returns, its workers end and its resume entry goes while the lock is still held; the job leaves this tab's list, `jobs` goes out and `stop()` resolves only after the lock is released. So no tab sees it idle while its lock is held, and a start right after one sees the lock free.
 - **Sweep.** A tab that dies without `gone` (a crash) would stay listed: while any other tab's job is listed, every 15 s `navigator.locks.query()` drops entries whose lock isn't held.
 
 ## Resume
