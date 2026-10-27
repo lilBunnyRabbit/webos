@@ -114,6 +114,11 @@
       EditorView.updateListener.of((update) => {
         if (update.docChanged) side.text = update.state.doc.toString();
         if (update.focusChanged && update.view.hasFocus) last_focused = update.view;
+        if (merge && update.startState.doc.length === 0 && update.transactions.some((t) => t.isUserEvent("input.paste"))) {
+          const other = update.view === merge.a ? merge.b : merge.a;
+          // After the first paste, the other empty side takes the next one without a click.
+          if (other.state.doc.length === 0) queueMicrotask(() => other.focus());
+        }
         if (update.docChanged || getChunks(update.startState)?.chunks !== getChunks(update.state)?.chunks) queue_summary();
       }),
     ];
