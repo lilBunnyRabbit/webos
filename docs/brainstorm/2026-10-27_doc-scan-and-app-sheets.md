@@ -42,6 +42,12 @@ Font Maker's perspective math moves to `$kit/utils/perspective` and its corner s
 ### Shopping List
 Replace the rectangular crop with a quad crop and straighten before reading, corners pre-filled by `find_paper`, **only if** a measured side-by-side shows a gain on a skewed photo: a synthetic printed list, skewed by a perspective transform, read with and without straightening. Privacy: never the real lists file, never the owner's photos. No gain: don't wire it, report the numbers.
 
+### Shopping List calls the scan sheet (decided, second session)
+The owner: "shopping list should have both camera and scanner options (always)". The sheet opens Doc Scan's scan UI inside the Shopping List window, over the list, the way the file picker does; Doc Scan doesn't open a window of its own.
+- **Both options everywhere the camera shows today:** the entry bar, both menus, the widget. Camera keeps today's flow (pick a photo, quad frame, read). Scan calls `win.request("doc-scan::scan")` with no source, so the sheet asks for the photo; the straightened image it returns is read at once, without Shopping List's own frame.
+- **`null` does nothing:** the list stays as it was. With the camera option always beside it, that is the fallback the earlier blocker was missing, so Cancel and failure no longer need telling apart.
+- **Widget prop:** `photo` widens to `boolean | "scan"`; `true` keeps today's flow, `"scan"` opens the sheet on launch. Rejected: a separate `scan` prop (two props that can both be set, needs a rule for which wins); widget camera only (breaks "always").
+
 ## Key takeaways
 - App-to-app reuse goes through a sheet the caller can't depend on: `null` is a normal answer.
 - The math was already in the repo; the scanner is mostly UI around it.
@@ -51,6 +57,8 @@ Replace the rectangular crop with a quad crop and straighten before reading, cor
 - [x] App sheets (ADR-079): `provides`, `win.request`, `app provides`, docs, tests.
 - [x] Doc Scan (ADR-080): the app, its sheet, `docs/apps/doc-scan.md`.
 - [x] Shopping List: measure straightening on a skewed synthetic list; wire it only on a gain. Measured: turned and skewed 5 → 10 of 10, skew alone 10 both ways; wired as a quad frame pre-filled by `find_paper`. `win.request("doc-scan::scan")` not used: `null` can't tell Cancel from a failure, so a fallback picker would open after every Cancel.
+
+- [ ] Shopping List: scan option beside the camera, through the sheet.
 
 ## Next session topics
 - More providers once a second use shows up (a signature sheet from PDF Tools, a colour picker).

@@ -46,6 +46,12 @@ The App Store redesign ([brainstorm](2026-10-27_app-store-design.md)) gave every
 ### First adopters
 - **Decided: every game that keeps stats:** Minesweeper, Sudoku, Hop, Snake, 2048, Solitaire, Doodlehop. Three to six each, a mix of one-off, progress with a goal, and a secret where it fits, wired at the game's own end-of-game events.
 
+### Sweep: the other apps (decided, second session)
+- **Scope:** every remaining game and puzzle, plus user apps with a natural finish line. Pure tools (Diff, Hex Viewer, Unit Converter and the like) keep only the five built-ins. System apps are skipped: built-ins only.
+- **Games and puzzles:** Sokoban, Nonogram, Kakuro, Futoshiki, Nurikabe, Hutches, Plots, Sun and Moon, Tunnels, Word Search, Blocks, Lunar Lander, Maze, Jigsaw, Tic-Tac-Toe, Color Games, Color Recall, Crack the Code, Hex Guess, Odd One Out, Gradient Sort, Checkout Challenge, Alibi, Unsaid. Three to six each, as for the first adopters.
+- **Apps with a finish line:** Pomodoro, Tea Timer, Speed Reader, Kanban, Doc Scan, Motion Watch, Recorder, Paint, Hopsprite, Font Maker, Warren, Tape Sketch, Brackets, Shopping List. Two to four each, earned by doing the app's own thing (a session finished, a page scanned, a list completed), never by opening it or counting clicks.
+- Five builders by group so files don't collide; each group gets a review before the push.
+
 ## Key takeaways
 - One service owns achievements; apps only report, the OS stores, toasts and shows.
 - Definitions are manifest data; the catalogue carries a count and a side file the definitions.
@@ -62,6 +68,7 @@ The App Store redesign ([brainstorm](2026-10-27_app-store-design.md)) gave every
 - [x] Minesweeper, Sudoku, Hop, Snake, 2048, Solitaire, Doodlehop
 - [x] Docs: system reference, per-app pages, ROADMAP, changelog
 
+- [ ] Sweep: games and puzzles (two groups), apps with a finish line (two groups), Shopping List with its scan option
+
 ## Next session topics
-- Other apps (puzzles without stats yet, Pomodoro, Typing-style apps) adopting achievements.
 - Cross-tab live refresh beyond re-reading when a tab becomes visible.
