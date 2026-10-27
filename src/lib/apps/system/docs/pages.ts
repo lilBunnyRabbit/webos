@@ -15,9 +15,28 @@ export function has_page(id: string): boolean {
   return BY_ID.has(id);
 }
 
-export function load_page(id: string): Promise<string> {
+// A page that failed to load (offline) fails again from the module map at its own URL, so it loads from a fresh one. The
+// URL is read here rather than with `load-error`'s helpers: importing those from an app moves them out of core.
+const RETRY_URLS = new Map<string, string>();
+const FAILED_URL = /(https?:\/\/[^\s?]+)\S*$/;
+let retries = 0;
+
+export function retry_page_url(error: unknown, attempt: number): string | null {
+  const failed = FAILED_URL.exec(error instanceof Error ? error.message : "")?.[1];
+  return failed ? `${failed}?retry=${attempt}` : null;
+}
+
+export async function load_page(id: string): Promise<string> {
   const load = BY_ID.get(id);
-  return load ? load() : Promise.reject(new Error(`No page called "${id}"`));
+  if (!load) throw new Error(`No page called "${id}"`);
+  const url = RETRY_URLS.get(id);
+  try {
+    return url ? ((await import(/* @vite-ignore */ url)) as { default: string }).default : await load();
+  } catch (error) {
+    const next = retry_page_url(error, ++retries);
+    if (next) RETRY_URLS.set(id, next);
+    throw error;
+  }
 }
 
 export function find_page(topic: string): string | null {

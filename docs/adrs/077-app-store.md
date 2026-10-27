@@ -179,3 +179,10 @@ Review findings fixed inside 3.74.0 ([store](../system/services/store.md), [apps
 - **Active time:** a stretch counts at most two minutes (sleep), each save re-reads `usage.json` and adds this tab's time onto it (two tabs), and the minute timer runs only during a stretch.
 - **Recent:** the saved list drops only the core apps, like recording does; the phone's home Recent shows apps opened without installing.
 - The App Store's size measuring follows the installed apps' file lists, not the slice; one ring component (`progress-ring.svelte`) draws the icon ring and the Store button's.
+
+### 2026-10-27: end-to-end fixes
+Found driving production builds (N, an app-only N+1, a core N+2) in Chromium, fixed inside 3.74.0 ([apps](../system/services/apps.md#catalogue-sources), [window](../system/shell/window.md)). Decided within scope:
+- **A failed manifest is asked for afresh.** The browser keeps a failed module fetch in its module map, so an app opened offline without installing never loaded in that tab again, and a Restart app that failed offline failed again online. `CatalogueSource.manifest(entry, attempt)` adds `?retry={attempt}` once the app's manifest has failed; AppsService counts failures per app (`failures`).
+- **The window's Try again asks AppsService first.** It used to import the URL the error named and render its default export, which for a window opened before its code landed is the manifest, so the window crashed ("u is not a function") when the connection came back. It now runs `apps.get(id).component()` and falls back to the URL retry for a component chunk.
+- **Docs pages read after reconnecting** load from the failed chunk's URL with `?retry=n` (`retry_page_url`); before, an unread page opened offline showed "This page didn't load" once online. The helper reads the URL itself: importing `load-error` from an app moved it out of `core` and over the boot budget.
+- **The App Store's offline strip** shows only offline. Online with another core's catalogue (a core update waits) it said "Offline" while listing the new apps.

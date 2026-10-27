@@ -7,7 +7,8 @@ export interface CatalogueSource {
   /** Only a catalogue built against this core has entries whose code runs here (ADR-077). */
   readonly core: string;
   fetch(): Promise<Catalogue | null>;
-  manifest(entry: CatalogueApp): Promise<AppDefinition>;
+  /** `attempt` counts this entry's failed loads, so a retry asks for a fresh URL. */
+  manifest(entry: CatalogueApp, attempt?: number): Promise<AppDefinition>;
 }
 
 const CATALOGUE_URL = "store/catalogue.json";
@@ -15,6 +16,13 @@ const CATALOGUE_URL = "store/catalogue.json";
 export function running_core(): string {
   if (import.meta.env.DEV) return DEV_CORE;
   return document.querySelector<HTMLMetaElement>(`meta[name="${CORE_META}"]`)?.content ?? "";
+}
+
+// The browser keeps a failed module fetch in its module map, so importing the same URL again fails without asking the
+// network (an app opened offline, then again online). A query makes it a new module that is fetched for real.
+export function manifest_url(base: string, entry: Pick<CatalogueApp, "manifest">, attempt: number): string {
+  const url = `${base}${entry.manifest}`;
+  return attempt > 0 ? `${url}?retry=${attempt}` : url;
 }
 
 export function bundle_source(base: string = import.meta.env.BASE_URL): CatalogueSource {
@@ -28,8 +36,8 @@ export function bundle_source(base: string = import.meta.env.BASE_URL): Catalogu
         return null;
       }
     },
-    async manifest(entry) {
-      const module = (await import(/* @vite-ignore */ `${base}${entry.manifest}`)) as { default: AppDefinition };
+    async manifest(entry, attempt = 0) {
+      const module = (await import(/* @vite-ignore */ manifest_url(base, entry, attempt))) as { default: AppDefinition };
       return module.default;
     },
   };

@@ -19,12 +19,15 @@
   let attempts = 0;
   const component = $derived(retried ?? instance.app.component);
 
+  // The failed module may be the app's manifest (a window opened before its code landed) rather than its component, so
+  // ask AppsService first; only a component chunk the browser has already failed needs its URL fetched afresh.
   function retry(error: unknown) {
     const url = failed_module_url(error, location.origin);
     attempts += 1;
+    const again = apps.get(instance.app.id)?.component() ?? instance.app.component;
     retried = url
-      ? (import(/* @vite-ignore */ retry_url(url, attempts)) as Promise<{ default: AppComponent }>).then((module) => module.default)
-      : (apps.get(instance.app.id)?.component() ?? instance.app.component);
+      ? again.catch(() => (import(/* @vite-ignore */ retry_url(url, attempts)) as Promise<{ default: AppComponent }>).then((module) => module.default))
+      : again;
   }
 
   function close() {

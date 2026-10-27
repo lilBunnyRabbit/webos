@@ -108,7 +108,7 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 ## State
 
 - `registry`, filled in `init()` from the catalogue ([below](#catalogue-adr-077)), a manifest or stub per entry.
-- `entries`, a private `SvelteMap` of `CatalogueApp`, and `code`, a private `SvelteMap` of the manifests whose chunk loaded; `loading` (the import in flight per app), `failed` (a load failed: the tile stops pulsing; coming online retries installed ones) and `foreign` (entries from another build's catalogue, listed and never run).
+- `entries`, a private `SvelteMap` of `CatalogueApp`, and `code`, a private `SvelteMap` of the manifests whose chunk loaded; `loading` (the import in flight per app), `failed` (a load failed: the tile stops pulsing; coming online retries installed ones), `failures` (failed manifest loads per app, the next load's `attempt`, so it asks for a fresh URL; a failed new version in `restart` counts too) and `foreign` (entries from another build's catalogue, listed and never run).
 - `installed`, a private `SvelteSet` of installed app ids other than the core apps (which are never stored), filled by `init()`. `provisional`, a private `SvelteSet`: optional system apps an offline boot counts as installed until the move to core apps can run, never saved.
 - `restarted`, a private `Set` of the window ids `restart()` closed (`restarting()`).
 - `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping any registered app but the core ones (installed or not, since opening isn't installing), is what `recent` returns.
@@ -191,7 +191,7 @@ A stub is an `AppManifest` built from the entry: `id`, `name`, `version`, `categ
 
 `catalogue_source()` imports `glob-source.ts` and `$lib/apps` and returns `glob_source(apps)` when `import.meta.env.DEV` (the dev server and every test), else `bundle_source()`. A build replaces the condition with `false`, so neither the glob, any manifest nor the dev build stamp (`build-info.ts`) reaches the bundle.
 
-- `bundle_source()`: `fetch("{base}store/catalogue.json", { cache: "no-cache" })` through the service worker's `NetworkFirst` rule (`webos-store`, so the last copy answers offline), `parse_catalogue`; `manifest(entry)` is `import("{base}{entry.manifest}")`.
+- `bundle_source()`: `fetch("{base}store/catalogue.json", { cache: "no-cache" })` through the service worker's `NetworkFirst` rule (`webos-store`, so the last copy answers offline), `parse_catalogue`; `manifest(entry, attempt)` is `import("{base}{entry.manifest}")`, with `?retry={attempt}` once that app's manifest has failed `attempt` times (`manifest_url`): the browser keeps a failed module fetch in its module map, so the same URL would fail again without asking the network (an app opened offline, then again online, or a Restart app that failed offline).
 - `glob_source(manifests)`: the manifests already in memory. Its catalogue is built once from `manifest_data(manifest, await manifest.meta(), system)`, the function the build plugin runs, plus this page's build stamp and version, so the dev server never waits on a built catalogue (it serves none) and both paths describe an app the same way. `manifest(entry)` returns the in-memory one.
 - `TestAppsService` overrides `catalogue_source()` with a glob source of the system apps and the stand-ins; tests that need the deployed behaviour (a slice, a fetch count, a manifest that takes time) pass their own source the same way (`service.browser.test.ts`).
 

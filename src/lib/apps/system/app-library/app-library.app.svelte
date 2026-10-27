@@ -253,7 +253,8 @@
     </Input>
   </Toolbar>
 
-  {#if catalogue === CatalogueState.OFFLINE}
+  <!-- Online, the catalogue isn't this core's (a core update waits): its new apps list, and Open says to update. -->
+  {#if catalogue === CatalogueState.OFFLINE && !store.online}
     <div class="flex shrink-0 items-center gap-2 border-b border-foreground/8 bg-warning/10 px-3 py-1.5 text-ui">
       <WifiSlashIcon class="size-4 shrink-0 text-warning" weight="fill" />
       <span class="min-w-0 flex-1">Offline: only the apps this device knows show. The rest come back with the connection.</span>

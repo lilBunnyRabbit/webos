@@ -76,6 +76,7 @@ export class AppsService implements IAppsService {
   private readonly code = new SvelteMap<AppId, AppManifest>();
   private readonly loading = new Map<AppId, Promise<AppManifest>>();
   private readonly failed = new SvelteSet<AppId>();
+  private readonly failures = new Map<AppId, number>();
   /** Entries from a catalogue built on another core: listed, never run, since their files and core aren't this page's. */
   private readonly foreign = new SvelteSet<AppId>();
   /**
@@ -281,6 +282,7 @@ export class AppsService implements IAppsService {
     try {
       next = await this.next_version(id);
     } catch (error) {
+      this.count_failure(id);
       this.notifications_service.notify("apps", {
         type: "error",
         title: `Couldn't update ${name}`,
@@ -322,10 +324,14 @@ export class AppsService implements IAppsService {
       await this.require(id);
       return null;
     }
-    const definition = await this.source.manifest(entry);
+    const definition = await this.source.manifest(entry, this.failures.get(id));
     const manifest: AppManifest = { ...definition, system: entry.system, version: entry.version };
     await manifest.component();
     return manifest;
+  }
+
+  private count_failure(id: AppId): void {
+    this.failures.set(id, (this.failures.get(id) ?? 0) + 1);
   }
 
   private commit(id: AppId, manifest: AppManifest): void {
@@ -390,7 +396,7 @@ export class AppsService implements IAppsService {
     let pending = this.loading.get(id);
     if (!pending) {
       const loading: Promise<AppManifest> = this.source
-        .manifest(entry)
+        .manifest(entry, this.failures.get(id))
         .then((definition) => {
           // A newer entry arrived while this one loaded: its code would be the old version.
           if (this.entries.get(id) !== entry) return this.require(id);
@@ -402,6 +408,7 @@ export class AppsService implements IAppsService {
         })
         .catch((error: unknown) => {
           this.failed.add(id);
+          this.count_failure(id);
           throw error;
         })
         .finally(() => {

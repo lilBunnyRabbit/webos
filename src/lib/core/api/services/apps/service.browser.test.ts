@@ -349,6 +349,10 @@ describe("AppsService catalogue (ADR-077)", () => {
     next?: (catalogue: Catalogue) => Catalogue;
     /** The manifest chunks of entries with this hash fail to load. */
     broken?: string;
+    /** This app's manifest chunk fails to load, as when opened offline. */
+    unreachable?: string;
+    /** The `attempt` each manifest load was asked with. */
+    attempts: (number | undefined)[];
   }
 
   async function sourced(): Promise<{ service: typeof AppsServiceClass; gate: Gate }> {
@@ -356,7 +360,7 @@ describe("AppsService catalogue (ADR-077)", () => {
     const base = glob_source([...glob.filter((manifest) => manifest.system), ...TEST_APPS]);
     let open = () => {};
     const ready = new Promise<void>((resolve) => (open = resolve));
-    const gate: Gate = { fetches: 0, online: true, open: () => open() };
+    const gate: Gate = { fetches: 0, online: true, open: () => open(), attempts: [] };
     const source: CatalogueSource = {
       core: DEV_CORE,
       async fetch() {
@@ -365,8 +369,10 @@ describe("AppsService catalogue (ADR-077)", () => {
         const catalogue = (await base.fetch())!;
         return gate.next ? gate.next(catalogue) : catalogue;
       },
-      async manifest(entry) {
+      async manifest(entry, attempt) {
         await ready;
+        gate.attempts.push(attempt);
+        if (entry.id === gate.unreachable) throw new Error("Failed to fetch dynamically imported module");
         if (gate.broken !== undefined && entry.hash === gate.broken) throw new Error("Failed to fetch dynamically imported module");
         // The stand-ins' components never resolve; Restart app waits for the new one's before closing anything.
         return { ...(await base.manifest(entry)), component: async () => (() => {}) as never };
@@ -556,6 +562,38 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(apps(kernel).get("example")).toBe(old);
     expect(apps(kernel).update_ready("example")).toBe(true);
     expect(toasts(kernel)).toContain("Couldn't update Example");
+  });
+
+  test("a manifest that failed to load is asked for afresh, so the app opens once the connection is back", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    gate.attempts = [];
+    gate.unreachable = "example";
+    await expect(apps(kernel).load("example")).rejects.toThrow();
+    gate.unreachable = undefined;
+    expect((await apps(kernel).load("example"))?.id).toBe("example");
+    expect(gate.attempts).toEqual([undefined, 1]);
+  });
+
+  test("Restart app that failed once asks for the new version afresh and then updates", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    const kernel = await boot_with(service);
+    await apps(kernel).catalogue();
+    await apps(kernel).load("example");
+    apps(kernel).launch("example", { count: 1 });
+    gate.next = deploy("example");
+    gate.broken = "new";
+    await apps(kernel).refresh();
+    gate.attempts = [];
+
+    expect(await apps(kernel).restart("example")).toBe(false);
+    gate.broken = undefined;
+    expect(await apps(kernel).restart("example")).toBe(true);
+    expect(gate.attempts).toEqual([undefined, 1]);
+    expect(apps(kernel).update_ready("example")).toBe(false);
   });
 
   test("Restart app asks dirty windows first; one kept reopens the ones closed, and nothing else closes", async () => {
