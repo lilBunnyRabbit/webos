@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Plugin, Rollup } from "vite";
-import { is_manifest_chunk } from "./vite-plugin-catalogue";
+import { is_manifest_chunk, OFFLINE_DIR } from "./vite-plugin-catalogue";
 
 export interface BundleFile {
   name: string;
@@ -142,7 +142,7 @@ export function offline_plugin(build: number) {
       const lists = offline_lists(to_bundle_files(bundle), boot, app_roots);
       core = new Set(lists.core);
 
-      const dir = path.join(out_dir, "offline");
+      const dir = path.join(out_dir, OFFLINE_DIR);
       mkdirSync(dir, { recursive: true });
       const write = (name: string, files: string[], content?: string[]) =>
         writeFileSync(path.join(dir, `${name}.json`), JSON.stringify({ build, files, ...(content ? { content } : {}) } satisfies OfflineListFile));

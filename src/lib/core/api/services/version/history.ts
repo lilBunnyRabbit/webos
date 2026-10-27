@@ -15,8 +15,8 @@ export interface AppHistory {
 }
 
 /**
- * The bundled changelog plus releases only `version.json` knows: an app-only update leaves the running core, and its
- * changelog chunk, as they were (ADR-077 stage 3).
+ * The changelog fetched from `store/changelog.json` plus releases only `version.json` knows: a copy fetched earlier, or
+ * kept offline, predates an app-only update (ADR-077 stage 3).
  */
 export function with_notes(changelog: readonly Release[], notes: readonly Release[]): Release[] {
   const known = new Set(changelog.map((release) => release.version));

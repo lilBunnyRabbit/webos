@@ -9,6 +9,7 @@ import { offline_plugin } from "./tooling/vite-plugin-offline";
 import { catalogue_plugin, is_manifest_chunk } from "./tooling/vite-plugin-catalogue";
 import { phosphor_imports_plugin, phosphor_plugin } from "./tooling/vite-plugin-phosphor";
 import { core_modules } from "./tooling/vite-core-chunk";
+import { ASSETS_CACHE } from "./src/lib/core/api/services/store/lists";
 import { import_map_plugin } from "./tooling/vite-plugin-import-map";
 import { PORTFOLIO_PATH, portfolio_path_plugin } from "./tooling/vite-plugin-portfolio-path";
 import path from "path";
@@ -157,7 +158,7 @@ export default defineConfig({
             // ignoreVary: StoreService stores files it fetched itself, and a server's `Vary: Origin` would make a module
             // import miss them. The names are content-hashed, so any stored copy is the right one.
             options: {
-              cacheName: "webos-assets",
+              cacheName: ASSETS_CACHE,
               cacheableResponse: { statuses: [200] },
               matchOptions: { ignoreVary: true },
             },

@@ -3,6 +3,11 @@
     is_core_app,
     app_history,
     ChangeKind,
+    format_usage,
+    milestones,
+    Mode,
+    RouteKind,
+    WIDGET_FALLBACK_SIZE,
     NotificationType,
     Platform,
     type AppListing,
@@ -16,10 +21,7 @@
     with_pin,
     without_pin,
   } from "$lib/core/api";
-  import { format_usage, milestones } from "$lib/core/api/services/apps/active-time";
-  import { WIDGET_FALLBACK_SIZE } from "$lib/core/api/services/apps/widget";
-  import { RouteKind, route_url } from "$lib/core/api/services/router/route";
-  import { Mode } from "$lib/core/api/kernel/mode";
+  import { route_url } from "$lib/core/api/services/router/route";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
   import { uninstall_app } from "$lib/core/components/apps/app-actions";

@@ -1,7 +1,7 @@
 import { createTask, createTaskGroup, type ExecutableTask } from "@lilbunnyrabbit/task-manager";
 import type { TaskContext } from "../tasks/type";
 import type { AppId } from "../apps/type";
-import { ASSETS_CACHE, pool, unshared, unused } from "./lists";
+import { ASSETS_CACHE, file_url, pool, unshared, unused } from "./lists";
 
 // Requests, not bytes, are what an update costs on a phone (ADR-065): a few in flight, never the whole list at once.
 const LANES = 6;
@@ -11,8 +11,6 @@ export interface SaveOptions {
   signal?: AbortSignal;
   on_file?: (done: number, total: number) => void;
 }
-
-const file_url = (base: string, file: string) => new URL(base + file, location.origin).href;
 
 export async function save_app(name: string, files: string[], options: SaveOptions): Promise<void> {
   const { base, signal } = options;

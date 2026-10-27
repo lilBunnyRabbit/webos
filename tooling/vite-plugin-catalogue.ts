@@ -4,6 +4,9 @@ import path from "node:path";
 import { createServer, type Plugin, type ResolvedConfig, type ViteDevServer } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { VersionInfo } from "./vite-plugin-version";
+import { compare_versions } from "../src/lib/core/api/services/version/semver";
+import type { Release, ReleaseNote } from "../src/lib/core/api/services/version/type";
+import { DEV_CORE } from "../src/lib/core/api/services/apps/source";
 import { CORE_META, manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
 
 export { json_safe, manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "../src/lib/core/api/services/apps/catalogue";
@@ -13,6 +16,7 @@ export const PREVIOUS_CATALOGUE = "https://lilbunnyrabbit.github.io/webos/store/
 const PREVIOUS_TIMEOUT_MS = 5000;
 /** Each manifest chunk is an entry named `{id}.manifest`; boot never loads one. */
 export const MANIFEST_SUFFIX = ".manifest";
+export const OFFLINE_DIR = "offline";
 export const is_manifest_chunk = (name: string) => name.endsWith(MANIFEST_SUFFIX);
 const APP_KINDS = ["system", "user"] as const;
 const COMPONENT_IMPORT = /\bcomponent\s*:\s*\(\)\s*=>\s*import\(\s*["']([^"']+)["']\s*\)/;
@@ -20,13 +24,6 @@ const TEXT_FILE = /\.(m?js|css|html|json|svg|txt|md)$/;
 const PRECACHED_PUBLIC = /\.(m?js|css|html|woff2)$/;
 // Content-hashed names (`name-HASH8.ext`), as Rollup and Vite write them.
 const HASHED_NAME = /([\w.-]+)-[\w-]{8}(\.[a-z0-9]+)\b/g;
-
-export interface ReleaseNote {
-  version: string;
-  date: string;
-  title: string;
-  changes: { kind: string; text: string; apps?: string[] }[];
-}
 
 export interface VersionFields {
   core: string;
@@ -118,16 +115,6 @@ export function hash_files(names: string[], read: (name: string) => Buffer, norm
   return sha(entries.sort());
 }
 
-function compare_versions(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const diff = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (diff !== 0) return diff;
-  }
-  return 0;
-}
-
 /** An app keeps the previous catalogue's version while its hash is the same; otherwise it's from this release. */
 export function app_version(id: string, hash: string, previous: Catalogue | null, release: string): string {
   const before = previous?.apps.find((app) => app.id === id);
@@ -135,7 +122,7 @@ export function app_version(id: string, hash: string, previous: Catalogue | null
 }
 
 /** The top release, plus every one newer than the deployed catalogue's release. */
-export function release_notes(changelog: ReleaseNote[], previous_release: string | null): ReleaseNote[] {
+export function release_notes(changelog: Release[], previous_release: string | null): ReleaseNote[] {
   const notes = changelog.filter((entry, index) => index === 0 || (previous_release !== null && compare_versions(entry.version, previous_release) > 0));
   return notes.map(({ version, date, title, changes }) => ({
     version,
@@ -145,14 +132,34 @@ export function release_notes(changelog: ReleaseNote[], previous_release: string
   }));
 }
 
-export async function fetch_previous(url: string): Promise<Catalogue | null> {
-  if (!url) return null;
+export interface PreviousCatalogue {
+  catalogue: Catalogue | null;
+  /** Why a catalogue that was asked for didn't come; `null` when it came or the URL was empty (skipped). */
+  problem: string | null;
+}
+
+export async function fetch_previous(url: string): Promise<PreviousCatalogue> {
+  if (!url) return { catalogue: null, problem: null };
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(PREVIOUS_TIMEOUT_MS), cache: "no-store" });
-    return response.ok ? parse_catalogue(await response.json()) : null;
-  } catch {
-    return null;
+    if (!response.ok) return { catalogue: null, problem: `HTTP ${response.status}` };
+    const catalogue = parse_catalogue(await response.json());
+    return catalogue ? { catalogue, problem: null } : { catalogue: null, problem: "not a version 1 catalogue" };
+  } catch (error) {
+    return { catalogue: null, problem: (error as Error).message };
   }
+}
+
+/**
+ * Without the deployed catalogue every app's version becomes this release's. Loud, but the build goes on, unless
+ * `WEBOS_REQUIRE_PREVIOUS_CATALOGUE=1` asks for it to fail.
+ */
+export function previous_or_warn({ catalogue, problem }: PreviousCatalogue, url: string, release: string, required: boolean): Catalogue | null {
+  if (problem === null) return catalogue;
+  const message = `catalogue: couldn't read the previous catalogue at ${url} (${problem}), so every app gets ${release} as its version`;
+  if (required) throw new Error(`${message}. WEBOS_REQUIRE_PREVIOUS_CATALOGUE is set.`);
+  console.warn(`\n[warning] ${message}. Set WEBOS_REQUIRE_PREVIOUS_CATALOGUE=1 to fail instead, or WEBOS_PREVIOUS_CATALOGUE= to skip the fetch.\n`);
+  return null;
 }
 
 export function app_dirs(root: string): { id: string; system: boolean; index: string }[] {
@@ -202,27 +209,6 @@ function own_hash(app: CollectedApp): string[] {
   return [JSON.stringify(app.data), app.symbol, app.source];
 }
 
-/** The dev server's and tests' catalogue: module URLs for chunks, no files, every app at the current release. */
-export function dev_catalogue(apps: CollectedApp[], info: VersionInfo): Catalogue {
-  const release = info.version;
-  return {
-    version: 1,
-    core: "dev",
-    build: info.buildTimestamp,
-    release,
-    commit: info.commit,
-    branch: info.branch,
-    apps: apps.map((app) => ({
-      ...app.data,
-      version: release,
-      hash: sha(own_hash(app)),
-      manifest: app.index,
-      entry: app.component,
-      files: [],
-    })),
-  };
-}
-
 const CHANGELOG = "src/lib/core/api/services/version/changelog.ts";
 /**
  * Change with every release, app-only ones included: no chunk may hold them, or `sw.js` and the precache would change
@@ -230,8 +216,8 @@ const CHANGELOG = "src/lib/core/api/services/version/changelog.ts";
  */
 export const RELEASE_MODULES = [CHANGELOG, "src/lib/core/api/services/version/build-info.ts"];
 
-async function load_changelog(load: Load): Promise<ReleaseNote[]> {
-  return ((await load(`/${CHANGELOG}`)) as { CHANGELOG: ReleaseNote[] }).CHANGELOG;
+async function load_changelog(load: Load): Promise<Release[]> {
+  return ((await load(`/${CHANGELOG}`)) as { CHANGELOG: Release[] }).CHANGELOG;
 }
 
 async function with_node_loader<T>(config: ResolvedConfig, run: (load: Load) => Promise<T>): Promise<T> {
@@ -256,7 +242,7 @@ async function with_node_loader<T>(config: ResolvedConfig, run: (load: Load) => 
 }
 
 function list_file(out_dir: string, name: string): { files: string[]; content: string[] } {
-  const file = path.join(out_dir, "offline", `${name}.json`);
+  const file = path.join(out_dir, OFFLINE_DIR, `${name}.json`);
   if (!existsSync(file)) return { files: [], content: [] };
   const list = JSON.parse(readFileSync(file, "utf8")) as { files: string[]; content?: string[] };
   return { files: list.files, content: list.content ?? [] };
@@ -271,7 +257,7 @@ export function catalogue_plugin(info: VersionInfo) {
   const previous_url = process.env.WEBOS_PREVIOUS_CATALOGUE ?? PREVIOUS_CATALOGUE;
   let config: ResolvedConfig;
   let dev: ViteDevServer | null = null;
-  let collected: Promise<{ apps: CollectedApp[]; changelog: ReleaseNote[] }> | null = null;
+  let collected: Promise<{ apps: CollectedApp[]; changelog: Release[] }> | null = null;
   let previous: Promise<Catalogue | null> = Promise.resolve(null);
   let fields: VersionFields | null = null;
   const refs = new Map<string, string>();
@@ -298,7 +284,10 @@ export function catalogue_plugin(info: VersionInfo) {
         );
       }
       collected = with_node_loader(config, async (load) => ({ apps: await collect_apps(config.root, load), changelog: await load_changelog(load) }));
-      previous = fetch_previous(previous_url);
+      const required = process.env.WEBOS_REQUIRE_PREVIOUS_CATALOGUE === "1";
+      previous = fetch_previous(previous_url).then((result) => previous_or_warn(result, previous_url, info.version, required));
+      // Marked handled, so Node doesn't abort before writeBundle awaits it and fails the build with the message.
+      previous.catch(() => {});
     },
     configureServer(server) {
       dev = server;
@@ -315,13 +304,12 @@ export function catalogue_plugin(info: VersionInfo) {
           }
           return;
         }
-        if (url !== `${config.base}store/catalogue.json` && url !== `${config.base}store/icons.svg`) return next();
+        if (url !== `${config.base}store/icons.svg`) return next();
         try {
           const apps = await collect_apps(config.root, load);
-          const json = url.endsWith(".json");
-          res.setHeader("Content-Type", json ? "application/json" : "image/svg+xml");
+          res.setHeader("Content-Type", "image/svg+xml");
           res.setHeader("Cache-Control", "no-store");
-          res.end(json ? JSON.stringify(dev_catalogue(apps, info)) : icon_sprite(apps.map((app) => app.symbol)));
+          res.end(icon_sprite(apps.map((app) => app.symbol)));
         } catch (error) {
           next(error);
         }
@@ -395,12 +383,12 @@ export function catalogue_plugin(info: VersionInfo) {
 
   return {
     plugin,
-    /** For `version.json`: the build's after `writeBundle`; the dev server's core is `dev`, its notes the top release. */
+    /** For `version.json`: the build's after `writeBundle`; the dev server's core is `DEV_CORE`, its notes the top release. */
     version_fields: async (): Promise<VersionFields | null> => {
       if (fields) return fields;
       if (!dev) return null;
       const server = dev;
-      return { core: "dev", notes: release_notes(await load_changelog((id) => server.ssrLoadModule(id)), null) };
+      return { core: DEV_CORE, notes: release_notes(await load_changelog((id) => server.ssrLoadModule(id)), null) };
     },
   };
 }

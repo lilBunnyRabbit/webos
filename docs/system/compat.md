@@ -194,7 +194,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `view-transitions` | View transitions | Window and list animations. | `shopping-list` | 111 | 144 | 18 |
 | `base-select` | Customizable select | Dropdowns use the browser's plain look. |  | 135 | no | 27 |
 | `scroll-timeline` | Scroll-driven animations | Terminal tables don't fade at their scroll edge. | `terminal` | 115 | 159 | 26 |
-| `text-wrap` | Balanced text wrapping | Headings wrap less evenly. |  | 114 | 121 | 17.5 |
+| `text-wrap` | Balanced and pretty text wrapping | Headings and paragraphs wrap less evenly. |  | 117 | no | 26 |
 | `scrollbar-styling` | Scrollbar styling | Scrollbars keep the browser's look. |  | 121 | 64 | 26.2 |
 | `content-visibility` | content-visibility | Long lists and hidden windows render slower. | `csv-viewer` `gw2` | 85 | 125 | 18 |
 | `backdrop-filter` | Backdrop blur | No frosted-glass blur behind dialogs, docks and widgets. |  | 76 | 103 | 18 |

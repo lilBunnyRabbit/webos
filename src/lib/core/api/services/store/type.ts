@@ -2,7 +2,7 @@ import type { IService } from "../../type";
 import type { AppId } from "../apps/type";
 
 export const StoreStatus = {
-  /** Every file the app reaches is in this build's cache: it opens offline. */
+  /** Every file the app reaches is in `webos-assets`: it opens offline. */
   SAVED: "saved",
   DOWNLOADING: "downloading",
   /** Installed, but its files aren't all on this device yet (offline, or a download still to come). */
@@ -13,8 +13,8 @@ export type StoreStatus = (typeof StoreStatus)[keyof typeof StoreStatus];
 
 /**
  * Keeps installed apps on the device (ADR-077). The service worker precaches only the core; every app, system apps
- * included, loads into a per-build cache. Installing an app downloads its whole file list, an update downloads every
- * installed app again (unchanged files copied), and uninstalling deletes the files no other installed app lists.
+ * included, loads into one `webos-assets` cache for every release. Installing an app downloads its whole file list, an
+ * update downloads only the files not cached yet, and uninstalling deletes the files no other installed app lists.
  */
 export interface StoreService extends IService {
   readonly online: boolean;
@@ -22,7 +22,7 @@ export interface StoreService extends IService {
   /** True while this tab runs a download job. */
   readonly syncing: boolean;
 
-  /** Every file the app's window can reach is in this build's cache. A set lookup. */
+  /** Every file the app's window can reach is in `webos-assets`. A set lookup. */
   is_saved(id: AppId): boolean;
 
   status(id: AppId): StoreStatus;

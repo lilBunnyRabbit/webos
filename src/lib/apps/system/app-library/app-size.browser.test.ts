@@ -1,16 +1,26 @@
 import { afterEach, describe, expect, test } from "vitest";
+import { ASSETS_CACHE } from "$lib/core/api/services/store/lists";
 import { cached_size } from "./app-size";
 
-const CACHE = "app-size-test";
+const OTHER = "app-size-test";
 
-afterEach(async () => await caches.delete(CACHE));
+afterEach(async () => {
+  await caches.delete(ASSETS_CACHE);
+  await caches.delete(OTHER);
+});
 
 describe("cached_size", () => {
   test("sums the cached files and skips the missing ones", async () => {
-    const cache = await caches.open(CACHE);
+    const cache = await caches.open(ASSETS_CACHE);
     await cache.put(new URL("/size-test/assets/a.js", location.origin).href, new Response("abcd"));
     await cache.put(new URL("/size-test/assets/b.css", location.origin).href, new Response("123456"));
     expect(await cached_size("/size-test/", ["assets/a.js", "assets/b.css", "assets/gone.js"])).toBe(10);
+  });
+
+  test("only the installed apps' cache counts", async () => {
+    const other = await caches.open(OTHER);
+    await other.put(new URL("/size-test/assets/a.js", location.origin).href, new Response("abcd"));
+    expect(await cached_size("/size-test/", ["assets/a.js"])).toBeNull();
   });
 
   test("nothing cached is unknown, not zero", async () => {

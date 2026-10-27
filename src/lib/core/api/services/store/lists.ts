@@ -1,6 +1,9 @@
-/** One cache for every app's files, across releases (ADR-077 stage 3); `vite.config.ts` names the same one. */
+/** One cache for every app's files, across releases (ADR-077 stage 3); the service worker rule in `vite.config.ts` uses it too. */
 export const ASSETS_CACHE = "webos-assets";
-const LEGACY_PREFIX = "webos-assets-";
+const LEGACY_PREFIX = `${ASSETS_CACHE}-`;
+
+/** The URL a list's file (`assets/…`, relative to the base) is cached under. */
+export const file_url = (base: string, file: string) => new URL(base + file, location.origin).href;
 
 /** The per-build caches from before. Only `webos-assets-*`: every lilbunnyrabbit site on the host shares the origin. */
 export function legacy_caches(keys: string[]): string[] {

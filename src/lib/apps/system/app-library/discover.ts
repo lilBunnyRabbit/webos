@@ -1,7 +1,7 @@
 import { app_authors, OWNER } from "$lib/core/api/services/apps/authors";
 import type { FeaturedApp } from "$lib/core/api/services/apps/featured";
 import type { Interest } from "$lib/core/api/services/apps/suggestions";
-import type { AppUsage } from "$lib/core/api/services/apps/active-time";
+import type { AppUsage } from "$lib/core/api";
 import { AppCategory, type AppId, type AppListing } from "$lib/core/api/services/apps/type";
 import { introduced_apps } from "$lib/core/api/services/version/history";
 import type { Change, Release } from "$lib/core/api/services/version/type";

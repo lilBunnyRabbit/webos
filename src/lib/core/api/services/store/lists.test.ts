@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { ASSETS_CACHE, legacy_caches, pool, unshared, unused } from "./lists";
-import { parse_picked, parse_state, serialize_picked, serialize_state } from "./persistence";
+import { parse_picked, parse_state, serialize_state } from "./persistence";
 
 describe("caches", () => {
   test("one cache for every release; only the per-build caches from before are legacy", () => {
@@ -50,8 +50,7 @@ describe("unshared", () => {
 });
 
 describe("persistence", () => {
-  test("picked apps round-trip, sorted and unique", () => {
-    expect(serialize_picked(["paint", "cards"])).toBe(JSON.stringify({ version: 1, apps: ["cards", "paint"] }, null, 2));
+  test("picked apps read unique", () => {
     expect(parse_picked(JSON.stringify({ version: 1, apps: ["cards", "cards", "paint"] }))).toEqual(["cards", "paint"]);
   });
 

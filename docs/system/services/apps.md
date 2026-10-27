@@ -110,7 +110,7 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 - `registry`, filled in `init()` from the catalogue ([below](#catalogue-adr-077)), a manifest or stub per entry.
 - `entries`, a private `SvelteMap` of `CatalogueApp`, and `code`, a private `SvelteMap` of the manifests whose chunk loaded; `loading` (the import in flight per app), `failed` (a load failed: the tile stops pulsing; coming online retries installed ones) and `foreign` (entries from another build's catalogue, listed and never run).
 - `installed`, a private `SvelteSet` of installed app ids other than the core apps (which are never stored), filled by `init()`.
-- `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping only installed user apps, is what `recent` returns.
+- `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping any registered app but the core ones (installed or not, since opening isn't installing), is what `recent` returns.
 - `active_time`, a private `ActiveTime` holding the usage record (`$state.raw`), read by `usage()` ([Active time](#active-time)).
 - `all_listings`, a private `$derived` over `registry` and `entries`: each manifest or stub merged with its entry's text and `daily`. `listings()` returns it, filtered when asked.
 
@@ -133,7 +133,7 @@ Constructed by the kernel after its dependencies. Nothing registers in the const
 
 `/var/lib/apps/installed.json`: `{ "version": 1, "installed": AppId[], "system": true }`, sorted, every installed app but the core ones, written through a `LatestWriter` on every change. `system` marks a list that covers system apps (ADR-077).
 
-`/var/lib/apps/catalogue.json` (ADR-077): `{ "version": 1, "core", "build", "release", "apps": CatalogueApp[] }`, the installed apps' entries and every system app's, sorted by id. System apps are always there, installed or not, so a file's default viewer, Kernel's Docs link or the `docs` command opens one on demand from what boot knows. This service only reads it, at boot; StoreService writes it ([store](store.md#the-installed-apps-catalogue)).
+`/var/lib/apps/catalogue.json` (ADR-077): `{ "version": 1, "core", "build", "release", "commit", "branch", "apps": CatalogueApp[] }` (`serialize_slice`), the entries of the installed apps, every system app, and the recent and taskbar-pinned apps, installed or not, sorted by id. System apps are always there, installed or not, so a file's default viewer, Kernel's Docs link or the `docs` command opens one on demand from what boot knows. This service only reads it, at boot; StoreService writes it ([store](store.md#the-installed-apps-catalogue)).
 
 `/var/lib/apps/usage.json`: `{ "version": 1, "apps": { [id]: { "seconds", "last", "days" } } }`, ids sorted, minified, through a `LatestWriter` with a 2 s delay ([Active time](#active-time)). Missing or invalid reads as empty; an entry without `days` counts one. Backed up with `/var/lib`, never sent anywhere.
 
@@ -148,7 +148,7 @@ Constructed by the kernel after its dependencies. Nothing registers in the const
 3. Code loaded → validate props (below), then private `instantiate(manifest, props)`: split off `component` (the window gets the manifest without it) and call `component()` now, so the lazy import starts at launch, not at render. The instance holds the promise.
    Still a stub (`open_pending`) → the window opens at once from the stub (name, icon, size, raw props), and its component promise loads the manifest, validates the props against the real schema (the same warning and toast on failure) and sets them on the window through `windows.get(id).app.props`, before the component renders.
 5. `windows.open({ id, manifest, component, props })` → the new `WindowId`.
-6. `remember(id)`: a user app moves to the front of the recent list ([below](#recent-apps)).
+6. `remember(id)`: any app but the core ones moves to the front of the recent list ([below](#recent-apps)).
 7. `track_launch(id, kernel.mode, kernel.platform)` (`core/utils/analytics.ts`, ADR-070): pushes gtag's `app_open` event with `app_id`, `mode` (`desktop` for the full OS, `solo`) and `platform` (`desktop` | `mobile`). Never props, paths, file names or command text. A no-op when `window.gtag` is missing (tests, dev, localhost, blocked). Session restore goes through `create_instance`, so restored windows aren't counted; a solo tab counts its one window, not the blocked launches after it.
 
 No single-instance mode, no "focus the existing window". Every call is a new window.
@@ -190,7 +190,7 @@ A stub is an `AppManifest` built from the entry: `id`, `name`, `version`, `categ
 `catalogue_source()` imports `glob-source.ts` and `$lib/apps` and returns `glob_source(apps)` when `import.meta.env.DEV` (the dev server and every test), else `bundle_source()`. A build replaces the condition with `false`, so neither the glob, any manifest nor the dev build stamp (`build-info.ts`) reaches the bundle.
 
 - `bundle_source()`: `fetch("{base}store/catalogue.json", { cache: "no-cache" })` through the service worker's `NetworkFirst` rule (`webos-store`, so the last copy answers offline), `parse_catalogue`; `manifest(entry)` is `import("{base}{entry.manifest}")`.
-- `glob_source(manifests)`: the manifests already in memory. Its catalogue is built once from `manifest_data(manifest, await manifest.meta(), system)`, the function the build plugin runs, plus this page's build stamp and version, so the dev server never waits for its own `store/catalogue.json` middleware (several seconds on first request) and both paths describe an app the same way. `manifest(entry)` returns the in-memory one.
+- `glob_source(manifests)`: the manifests already in memory. Its catalogue is built once from `manifest_data(manifest, await manifest.meta(), system)`, the function the build plugin runs, plus this page's build stamp and version, so the dev server never waits on a built catalogue (it serves none) and both paths describe an app the same way. `manifest(entry)` returns the in-memory one.
 - `TestAppsService` overrides `catalogue_source()` with a glob source of the system apps and the stand-ins; tests that need the deployed behaviour (a slice, a fetch count, a manifest that takes time) pass their own source the same way (`service.browser.test.ts`).
 
 ### App text

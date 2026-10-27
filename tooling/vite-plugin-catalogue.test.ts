@@ -1,12 +1,11 @@
 import path from "node:path";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import {
   app_dirs,
   app_version,
   collect_apps,
   component_import,
-  dev_catalogue,
   fetch_previous,
   hash_files,
   icon_sprite,
@@ -18,8 +17,9 @@ import {
   content_normalizer,
   with_core_meta,
   type Catalogue,
-  type ReleaseNote,
+  previous_or_warn,
 } from "./vite-plugin-catalogue";
+import type { Release } from "../src/lib/core/api/services/version/type";
 import type { VersionInfo } from "./vite-plugin-version";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -135,12 +135,12 @@ describe("app_version", () => {
 });
 
 describe("release_notes", () => {
-  const entry = (version: string): ReleaseNote & { introduces?: string[] } => ({
+  const entry = (version: string): Release => ({
     version,
     date: "2026-10-26",
     title: version,
     introduces: ["x"],
-    changes: [{ kind: "new", text: version, apps: ["x"] } as ReleaseNote["changes"][number]],
+    changes: [{ kind: "new", text: version, apps: ["x"] }],
   });
   const changelog = [entry("3.10.0"), entry("3.9.1"), entry("3.9.0"), entry("3.8.0")];
 
@@ -167,9 +167,29 @@ test("parse_catalogue rejects anything but version 1", () => {
   expect(parse_catalogue({ version: 1, core: "c", release: "1.0.0", apps: [] })).not.toBeNull();
 });
 
-test("fetch_previous never throws", async () => {
-  expect(await fetch_previous("")).toBeNull();
-  expect(await fetch_previous("http://127.0.0.1:9/store/catalogue.json")).toBeNull();
+test("fetch_previous never throws, and says why when an asked-for catalogue didn't come", async () => {
+  expect(await fetch_previous("")).toEqual({ catalogue: null, problem: null });
+  const failed = await fetch_previous("http://127.0.0.1:9/store/catalogue.json");
+  expect(failed.catalogue).toBeNull();
+  expect(failed.problem).toBeTruthy();
+});
+
+describe("previous_or_warn", () => {
+  const url = "https://example.test/store/catalogue.json";
+
+  test("a skipped or fetched catalogue passes through quietly", () => {
+    const catalogue: Catalogue = { version: 1, core: "c", build: 1, release: "1.0.0", apps: [] };
+    expect(previous_or_warn({ catalogue, problem: null }, url, "1.1.0", true)).toBe(catalogue);
+    expect(previous_or_warn({ catalogue: null, problem: null }, url, "1.1.0", true)).toBeNull();
+  });
+
+  test("a failed fetch warns and goes on, or throws when required", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(previous_or_warn({ catalogue: null, problem: "HTTP 404" }, url, "1.1.0", false)).toBeNull();
+    expect(warn.mock.calls[0][0]).toContain("every app gets 1.1.0 as its version");
+    warn.mockRestore();
+    expect(() => previous_or_warn({ catalogue: null, problem: "HTTP 404" }, url, "1.1.0", true)).toThrow("HTTP 404");
+  });
 });
 
 describe("every app", () => {
@@ -186,10 +206,9 @@ describe("every app", () => {
     expect(sprite).toContain("currentColor");
     expect(sprite).toContain("var(--primary)");
 
-    const catalogue = dev_catalogue(apps, { version: "1.0.0", commit: "c", branch: "b", buildTime: "", buildTimestamp: 1 });
-    for (const app of catalogue.apps) {
-      expect(app.manifest).toMatch(new RegExp(`^src/lib/apps/(system|user)/${app.id}/index\\.ts$`));
-      expect(app.entry).toMatch(/^src\/lib\/apps\/.+\.svelte$/);
+    for (const app of apps) {
+      expect(app.index).toMatch(new RegExp(`^src/lib/apps/(system|user)/${app.data.id}/index\\.ts$`));
+      expect(app.component).toMatch(/^src\/lib\/apps\/.+\.svelte$/);
     }
   });
 });

@@ -31,10 +31,6 @@ export function parse_picked(text: string | null): AppId[] | null {
   return parsed ? [...new Set(parsed.apps)] : null;
 }
 
-export function serialize_picked(apps: Iterable<AppId>): string {
-  return JSON.stringify({ version: 1, apps: [...apps].sort() }, null, 2);
-}
-
 export function parse_state(text: string | null): StoreState | null {
   const parsed = parse(state_schema, text);
   return parsed ? { build: parsed.build, apps: [...new Set(parsed.apps)] } : null;

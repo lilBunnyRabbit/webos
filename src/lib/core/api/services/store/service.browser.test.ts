@@ -4,7 +4,7 @@ import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { NotificationsService } from "../notifications/service.svelte";
 import { BUILD_INFO } from "../version/build-info";
-import { LEGACY_PICKED_PATH, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_state, serialize_picked, serialize_state } from "./persistence";
+import { LEGACY_PICKED_PATH, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_state, serialize_state } from "./persistence";
 import { StoreService } from "./service.svelte";
 import { StoreStatus } from "./type";
 import { CATALOGUE_PATH } from "../apps/installed";
@@ -106,7 +106,7 @@ describe("boot", () => {
 
 describe("migration (ADR-077)", () => {
   test("apps kept offline join the installed apps, and the old file goes", async () => {
-    await seed(LEGACY_PICKED_PATH, serialize_picked(["cards"]));
+    await seed(LEGACY_PICKED_PATH, JSON.stringify({ version: 1, apps: ["cards"] }));
     const tab = await open_tab();
     expect(tab.install).toHaveBeenCalledWith(["cards"]);
     expect(tab.store.status("cards")).toBe(StoreStatus.NOT_SAVED);
@@ -117,7 +117,7 @@ describe("migration (ADR-077)", () => {
   });
 
   test("a kept app that was replaced installs the apps that replaced it (ADR-071)", async () => {
-    await seed(LEGACY_PICKED_PATH, serialize_picked(["old-art", "gone"]));
+    await seed(LEGACY_PICKED_PATH, JSON.stringify({ version: 1, apps: ["old-art", "gone"] }));
     const tab = await open_tab([]);
     expect([tab.install.mock.calls[0][0]].flat().sort()).toEqual(["cards", "paint"]);
   });

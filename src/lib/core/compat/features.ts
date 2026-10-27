@@ -579,12 +579,13 @@ export const FEATURES: Feature[] = [
     probe: () => css("animation-timeline: scroll()"),
   },
   {
+    // Headings use `balance`; paragraphs use `pretty` (Tailwind's `text-pretty`), which Firefox hasn't shipped.
     id: "text-wrap",
-    name: "Balanced text wrapping",
-    lost: "Headings wrap less evenly.",
+    name: "Balanced and pretty text wrapping",
+    lost: "Headings and paragraphs wrap less evenly.",
     level: Level.COSMETIC,
-    min: min("114", "121", "17.5"),
-    probe: () => css("text-wrap: balance"),
+    min: min("117", null, "26"),
+    probe: () => css("text-wrap: balance") && css("text-wrap: pretty"),
   },
   {
     // `scrollbar-width` is Safari 18.2, `scrollbar-color` 26.2.

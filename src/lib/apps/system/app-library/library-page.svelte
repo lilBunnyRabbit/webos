@@ -1,6 +1,5 @@
 <script lang="ts">
-  import kernel, { is_core_app, type AppListing, type AppsService, type StoreService } from "$lib/core/api";
-  import { format_usage } from "$lib/core/api/services/apps/active-time";
+  import kernel, { format_usage, is_core_app, type AppListing, type AppsService, type StoreService } from "$lib/core/api";
   import { uninstall_app } from "$lib/core/components/apps/app-actions";
   import { EmptyState, IconButton, Select } from "$lib/core/components/ui";
   import { format_bytes, format_date } from "$lib/core/utils";
