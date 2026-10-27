@@ -13,6 +13,7 @@
     SquaresFour as SquaresFourIcon,
     Sticker as StickerIcon,
     TerminalWindow as TerminalWindowIcon,
+    Trophy as TrophyIcon,
   } from "phosphor-svelte";
   import IconTile from "./icon-tile.svelte";
   import { category_label, LIBRARY_CATEGORIES, LibraryCategory, LibraryFilter, LibrarySort, SearchSection, ViewMode, type LibrarySection } from "./library";
@@ -122,7 +123,15 @@
                   class="tile-open line-clamp-2 max-w-full text-ui leading-tight font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none"
                   onclick={() => onselect(manifest)}>{manifest.name}</button
                 >
-                <span class="truncate text-2xs text-foreground/65">{category_label(manifest)}</span>
+                <span class="flex items-center justify-center gap-1 text-2xs text-foreground/65">
+                  <span class="truncate">{category_label(manifest)}</span>
+                  {#if manifest.achievement_count}
+                    <span class="flex shrink-0 items-center gap-0.5" title="{manifest.achievement_count} achievements"
+                      ><span aria-hidden="true">·</span><TrophyIcon class="size-3" weight="fill" aria-hidden="true" /><span class="sr-only">Achievements:</span
+                      >{manifest.achievement_count}</span
+                    >
+                  {/if}
+                </span>
               </div>
               <span class={cn("flex min-h-5 items-center", !fresh.has(manifest.id) && !updated.has(manifest.id) && "hidden")}>{@render freshness(manifest)}</span>
               <StoreButton {manifest} class="relative mt-auto pt-1" />

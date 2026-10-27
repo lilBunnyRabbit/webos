@@ -7,7 +7,7 @@ import { svelte } from "@sveltejs/vite-plugin-svelte";
 import type { VersionInfo } from "./vite-plugin-version";
 import { compare_versions } from "../src/lib/core/api/services/version/semver";
 import type { Release, ReleaseNote } from "../src/lib/core/api/services/version/changelog-types";
-import { CORE_META, DEV_CORE, manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
+import { CORE_META, DEV_CORE, json_safe, manifest_data, parse_catalogue, type Catalogue, type CatalogueData } from "../src/lib/core/api/services/apps/catalogue";
 
 export { json_safe, manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "../src/lib/core/api/services/apps/catalogue";
 
@@ -35,6 +35,8 @@ export interface VersionFields {
 
 export interface CollectedApp {
   data: CatalogueData;
+  /** The manifest's `achievements`, for `store/achievements.json` (ADR-078). */
+  achievements?: unknown[];
   symbol: string;
   index: string;
   component: string;
@@ -202,6 +204,7 @@ export async function collect_apps(root: string, load: Load): Promise<CollectedA
     if (!component) throw new Error(`catalogue: ${index} has no \`component: () => import("…")\``);
     apps.push({
       data: manifest_data(manifest, meta, system),
+      achievements: Array.isArray(manifest.achievements) && manifest.achievements.length > 0 ? (json_safe(manifest.achievements) as unknown[]) : undefined,
       symbol: icon_symbol(id, render(manifest.icon, { props: {} }).body),
       index,
       component: path.posix.join(path.posix.dirname(index), component),
@@ -212,7 +215,12 @@ export async function collect_apps(root: string, load: Load): Promise<CollectedA
 }
 
 function own_hash(app: CollectedApp): string[] {
-  return [JSON.stringify(app.data), app.symbol, app.source];
+  // Only apps with achievements hash them, so adding the field changed no other app's version.
+  return [JSON.stringify(app.data), app.symbol, app.source, ...(app.achievements ? [JSON.stringify(app.achievements)] : [])];
+}
+
+export function achievement_definitions(apps: CollectedApp[]): Record<string, unknown[]> {
+  return Object.fromEntries(apps.flatMap((app) => (app.achievements ? [[app.data.id, app.achievements]] : [])));
 }
 
 const CHANGELOG = "src/lib/core/api/services/version/changelog.ts";
@@ -382,6 +390,7 @@ export function catalogue_plugin(info: VersionInfo) {
         writeFileSync(path.join(dir, "catalogue.json"), JSON.stringify(catalogue));
         writeFileSync(path.join(dir, "icons.svg"), icon_sprite(apps.map((app) => app.symbol)));
         writeFileSync(path.join(dir, "changelog.json"), JSON.stringify(changelog));
+        writeFileSync(path.join(dir, "achievements.json"), JSON.stringify(achievement_definitions(apps)));
       },
     },
   };

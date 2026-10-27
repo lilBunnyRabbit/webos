@@ -2,6 +2,7 @@ import type { Kernel } from "./kernel.svelte";
 import { Platform } from "./platform";
 import { Mode } from "./mode";
 import type {
+  AchievementsService as IAchievementsService,
   AiService as IAiService,
   DesktopService as IDesktopService,
   SpeechService as ISpeechService,
@@ -59,10 +60,11 @@ async function mode_services(mode: Mode) {
 }
 
 export async function register_default_services(kernel: Kernel) {
-  const [platform, mode, speech] = await Promise.all([
+  const [platform, mode, speech, achievements] = await Promise.all([
     platform_services(kernel.platform),
     mode_services(kernel.mode),
     import("../services/speech/service.svelte"),
+    import("../services/achievements/service.svelte"),
   ]);
 
   kernel.register("settings", {
@@ -163,6 +165,12 @@ export async function register_default_services(kernel: Kernel) {
   kernel.register<ISpeechService>("speech", {
     instance: speech.SpeechService,
     dependencies: ["settings", "windows", "files"],
+  });
+
+  // Same class everywhere, solo included: an unlock in a solo link counts (ADR-078). Loaded beside the boot chunk like speech.
+  kernel.register<IAchievementsService>("achievements", {
+    instance: achievements.AchievementsService,
+    dependencies: ["files", "notifications", "apps"],
   });
 
   kernel.register("router", {

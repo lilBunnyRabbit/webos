@@ -26,5 +26,12 @@ export default define_app({
     },
   },
   shell: () => import("./commands"),
+  achievements: [
+    { id: "first-win", title: "Patience pays", text: "Win a game." },
+    { id: "draw-3", title: "Three at a time", text: "Win a game with Draw 3." },
+    { id: "daily", title: "Daily deal", text: "Win a daily deal." },
+    { id: "wins-25", title: "Card shark", text: "Win 25 games.", goal: 25 },
+    { id: "fast", title: "Fast hands", text: "Win in under 2 minutes.", secret: true },
+  ],
   component: () => import("./solitaire.app.svelte"),
 });

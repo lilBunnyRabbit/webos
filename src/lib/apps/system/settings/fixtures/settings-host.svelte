@@ -24,6 +24,7 @@
     app_id: "settings",
     window: handle as WindowHandle,
     storage: create_storage_handle("settings", window_state),
+    achievements: { achieve: () => {}, progress: () => {} },
   } satisfies AppContext);
 
   const initial = untrack(() => ({ section, setting }));

@@ -46,6 +46,7 @@ import { on_idle } from "$lib/core/utils/idle";
 import { ActiveTime } from "./active-time.svelte";
 import type { AppUsage } from "./active-time";
 import { snapshot_window } from "../session/snapshot.svelte";
+import { ACHIEVEMENTS_FILE } from "../achievements/validate";
 import CatalogueIcon, { type CatalogueIconSource } from "$lib/core/components/apps/catalogue-icon.svelte";
 
 export class AppsService implements IAppsService {
@@ -103,7 +104,7 @@ export class AppsService implements IAppsService {
   private readonly all_listings: AppListing[] = $derived(
     [...this.registry.values()].map((manifest) => {
       const entry = this.entries.get(manifest.id);
-      return entry ? { ...manifest, ...text_of(entry), daily: entry.daily } : manifest;
+      return entry ? { ...manifest, ...text_of(entry), daily: entry.daily, achievement_count: entry.achievements } : manifest;
     })
   );
 
@@ -627,9 +628,13 @@ export class AppsService implements IAppsService {
 
     const prefix = `app.${id}.`;
     for (const key of Object.keys(localStorage)) if (key.startsWith(prefix)) localStorage.removeItem(key);
+    // Achievements are a record of what was done, not data to reset (ADR-078): the rest of the folder goes.
     const parent = await this.files_service.get_directory(`${PATHS.var_lib}/apps`);
-    if (parent && (await this.files_service.exists(parent, id, "directory"))) {
-      await this.files_service.delete_entry(parent, id, { recursive: true });
+    const folder = await this.files_service.get_directory(`${PATHS.var_lib}/apps/${id}`);
+    if (parent && folder) {
+      const items = await this.files_service.list(folder);
+      if (!items.some((item) => item.name === ACHIEVEMENTS_FILE)) await this.files_service.delete_entry(parent, id, { recursive: true });
+      else for (const item of items) if (item.name !== ACHIEVEMENTS_FILE) await this.files_service.delete_entry(folder, item.name, { recursive: true });
     }
     if (!manifest.on_uninstall_data) return;
     try {

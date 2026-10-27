@@ -16,5 +16,12 @@ export default define_app({
     },
   },
   highlights: () => import("./highlights"),
+  achievements: [
+    { id: "first-round", title: "First doodle", text: "Finish a round." },
+    { id: "half", title: "Getting the picture", text: "Get 3 drawings recognised in one round." },
+    { id: "perfect", title: "Gallery", text: "Get all 6 drawings recognised in one round." },
+    { id: "recognised-50", title: "Prolific", text: "Get 50 drawings recognised in all.", goal: 50 },
+    { id: "lightning", title: "Lightning sketch", text: "Get a drawing recognised in under 3 seconds.", secret: true },
+  ],
   component: () => import("./doodlehop.app.svelte"),
 });

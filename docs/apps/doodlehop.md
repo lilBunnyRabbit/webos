@@ -81,10 +81,14 @@ Each word keeps its strokes and the last guesses. The recap draws them with the 
 | What | Where |
 |------|-------|
 | Best round `{ recognised, ms }` | `app.doodlehop.best` (app storage) |
+| Drawings recognised in all | `app.doodlehop.recognised` (app storage), for the `recognised-50` achievement |
+| Achievements | `/var/lib/apps/doodlehop/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)) |
 | Play time | `/var/lib/games/plays.json` through `track_play` |
 | Saved drawings | Wherever the user picks, PNG |
 
 No props, no shell commands, no daily. Drawings aren't kept after the window closes unless saved.
+
+**Achievements** (ADR-078), reported when a round ends: `first-round`, `half` (3 or more recognised), `perfect` (all 6), `recognised-50` (progress: the running total), secret `lightning` (a drawing recognised with under 3 s on its clock).
 
 ## Dependencies & licences
 
@@ -99,5 +103,6 @@ None beyond the repo's. The word list is our own pick of concrete nouns (some ov
 
 ## Decisions
 
+- [ADR-078](../adrs/078-achievements.md): achievements.
 - [ADR-061](../adrs/061-ai-games.md): code owns the rules, the kit gate, `extract()` with pictures, phones, no dailies, no shell.
 - [Brainstorm 2026-10-21](../brainstorm/2026-10-21_ai-games.md), sections Doodlehop, Image call, Phones, AI availability gate, Dailies, Shell, Names.

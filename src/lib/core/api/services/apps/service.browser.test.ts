@@ -182,6 +182,20 @@ describe("AppsService installed apps", () => {
     await expect(apps(kernel).uninstall("settings")).rejects.toThrow(/can't be uninstalled/);
   });
 
+  test("uninstall with data keeps the app's achievements", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["notes"]));
+    await write("/var/lib/apps/notes/notes.json", "{}");
+    await write("/var/lib/apps/notes/drafts/a.json", "{}");
+    await write("/var/lib/apps/notes/achievements.json", "{}");
+    const kernel = await boot();
+    const files = kernel.service<FilesService>("files");
+
+    await apps(kernel).uninstall("notes", { data: true });
+    expect(await files.get_file("/var/lib/apps/notes/achievements.json")).not.toBeNull();
+    expect(await files.get_file("/var/lib/apps/notes/notes.json")).toBeNull();
+    expect(await files.get_directory("/var/lib/apps/notes/drafts")).toBeNull();
+  });
+
   test("uninstall with data runs the app's own cleanup; a failing one leaves a toast", async () => {
     await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
     const kernel = await boot();

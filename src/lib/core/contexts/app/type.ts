@@ -11,6 +11,8 @@ export interface AppContext {
   app_id: AppId;
   window: WindowHandle;
   storage: StorageHandle;
+  /** Reports the achievements the manifest declares (ADR-078), bound to this app. */
+  achievements: AchievementsHandle;
 }
 
 export interface WindowHandle {
@@ -56,6 +58,13 @@ export interface WindowHandle {
   pick_directory(options?: Omit<PickOptions, "accept"> & { title?: string }): Promise<string | null>;
   /** The picker in save mode: a folder plus a file name. Resolves the full path, or `null`. Writing is the caller's job. */
   pick_save(options?: SaveOptions & { title?: string }): Promise<string | null>;
+}
+
+export interface AchievementsHandle {
+  /** Unlocks it; the OS toasts the first time. An id the manifest doesn't declare warns and does nothing. */
+  achieve(id: string): void;
+  /** The running total toward its `goal` (say, games won so far); the highest seen counts, and reaching the goal unlocks it. */
+  progress(id: string, n: number): void;
 }
 
 export interface StorageHandle {

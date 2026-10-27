@@ -4,12 +4,12 @@
     app_history,
     ChangeKind,
     format_usage,
-    milestones,
     Mode,
     RouteKind,
     WIDGET_FALLBACK_SIZE,
     NotificationType,
     Platform,
+    type AchievementsService,
     type AppListing,
     type AppsService,
     type ClipboardService,
@@ -24,14 +24,13 @@
   import { route_url } from "$lib/core/api/services/router/route";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
+  import AchievementList from "$lib/core/components/achievements/achievement-list.svelte";
   import { uninstall_app } from "$lib/core/components/apps/app-actions";
   import { Badge, Button, IconButton } from "$lib/core/components/ui";
   import { cn, format_bytes, format_date } from "$lib/core/utils";
   import {
     ArrowLeft as ArrowLeftIcon,
     ArrowRight as ArrowRightIcon,
-    CheckCircle as CheckCircleIcon,
-    Circle as CircleIcon,
     LinkSimple as LinkSimpleIcon,
     Package as PackageIcon,
     PushPin as PushPinIcon,
@@ -68,6 +67,7 @@
 
   const { app_id } = get_app_context();
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const achievements = $derived(kernel.service<AchievementsService>("achievements"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const version = $derived(kernel.service<VersionService>("version"));
@@ -85,7 +85,8 @@
   const released = $derived(release_of(version.changelog, manifest.version));
   const usage = $derived(apps.usage(manifest.id));
   const game = $derived(is_game(manifest));
-  const goals = $derived(milestones(usage, game));
+  const achievements_list = $derived(achievements.list(manifest.id));
+  const unlocked_count = $derived(achievements_list.filter((entry) => entry.unlocked).length);
   const types = $derived(app_file_types(manifest));
   const commands = $derived(app_commands(manifest, shell.commands));
   const widget_size = $derived(manifest.widget_size);
@@ -237,19 +238,12 @@
     {/if}
   {/await}
 
-  <section class="flex flex-col gap-2" aria-labelledby="goals">
+  <section class="flex flex-col gap-2" aria-labelledby="achievements">
     <div class="flex items-baseline gap-2">
-      <h3 id="goals" class="text-base leading-tight font-semibold">Goals</h3>
-      <span class="font-mono text-2xs text-foreground/80">{goals.filter((goal) => goal.done).length} of {goals.length}</span>
+      <h3 id="achievements" class="text-base leading-tight font-semibold">Achievements</h3>
+      <span class="font-mono text-2xs text-foreground/80">{unlocked_count} of {achievements_list.length}</span>
     </div>
-    <ul class="grid gap-1 @md:grid-cols-2">
-      {#each goals as goal (goal.id)}
-        <li class={cn("flex items-center gap-2 text-ui", !goal.done && "text-foreground/80")}>
-          {#if goal.done}<CheckCircleIcon class="size-4 shrink-0 text-success" weight="fill" />{:else}<CircleIcon class="size-4 shrink-0 text-foreground/65" />{/if}
-          {goal.label}
-        </li>
-      {/each}
-    </ul>
+    <AchievementList entries={achievements_list} />
     {#if usage}
       <p class="text-2xs text-foreground/80">Last {game ? "played" : "used"} {format_date(new Date(usage.last))}, on {usage.days} day{usage.days === 1 ? "" : "s"} so far.</p>
     {:else}

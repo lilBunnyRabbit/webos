@@ -62,7 +62,7 @@
   const DRAW_MODES: Draw[] = [1, 3];
   const CASCADE = Array.from({ length: 13 }, (_, i) => SUITS.map((suit) => ({ suit, card: suit * 13 + 12 - i }))).flat();
 
-  const { window_id, app_id, window: win, storage } = get_app_context();
+  const { window_id, app_id, window: win, storage, achievements } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
   const draw_pref = storage.persisted<Draw>("draw", 1, draw_schema);
@@ -214,6 +214,11 @@
     stats.value = record_win(stats.value, draw, ms, total);
     if (daily) tracker.daily(daily, ms);
     held = null;
+    achievements.achieve("first-win");
+    if (draw === 3) achievements.achieve("draw-3");
+    if (daily) achievements.achieve("daily");
+    if (ms < 120_000) achievements.achieve("fast");
+    achievements.progress("wins-25", stats.value.draw1.won + stats.value.draw3.won);
   }
 
   function draw_card() {

@@ -19,3 +19,4 @@ export * from "./ai";
 export * from "./scheduler";
 export * from "./store";
 export * from "./speech";
+export * from "./achievements";

@@ -66,6 +66,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `replaces` | yes (3.70) | `AppReplacement[]`, `{ app, props? }`: ids this app took over (ADR-071). Launches, files, links, the installed list and offline picks naming a removed id open the app whose entry's props match, without those props; an entry without props takes the rest. Rename an app by giving the new one `replaces: [{ app: "old-id" }]`; its `app.{id}.*` data doesn't move ([manifest](apps/manifest.md)) |
 | `shell` | yes | `() => import("./commands")`, the module default-exporting a `ShellContribution`. [Shell contributions](#shell-contributions) |
 | `badge` | yes | `() => number \| null` |
+| `achievements` | yes (3.75) | `Achievement[]`, `{ id, title, text, goal?, secret? }`, plain data in `index.ts` (ADR-078): what the app reports through `get_app_context().achievements`. Every member of `Achievement` is stable ([manifest](apps/manifest.md), [achievements](services/achievements.md)) |
 | `on_uninstall_data` | yes (3.57) | `() => import("./uninstall")`, the module default-exporting `() => Promise<void>`, run after an uninstall with data cleared `app.{id}.*` and `/var/lib/apps/{id}`, for stores the OS can't see (IndexedDB, caches). A throw is toasted; the uninstall stands ([manifest](apps/manifest.md)) |
 | `on_fire` | yes (3.57) | `() => import("./on-fire")`, the module default-exporting an `OnFire` `(job, { outcome, due })`, called by the scheduler when one of the app's jobs fires or is missed ([manifest](apps/manifest.md#on_fire-adr-062)) |
 | `widget`, `widget_size`, `default_widget` | yes | [Widgets and badges](#widgets-and-badges) |
@@ -91,7 +92,8 @@ Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `App
 
 | Name | Members |
 |------|---------|
-| `AppContext` | `window_id`, `app_id`, `window`, `storage` |
+| `AppContext` | `window_id`, `app_id`, `window`, `storage`, `achievements` (3.75) |
+| `AchievementsHandle` | `achieve(id)`, `progress(id, n)` (3.75, ADR-078) |
 | `WindowHandle` | Getters `id`, `is_focused`, `is_maximized`, `is_minimized`, `is_visible`, `bounds`. Controls `focus`, `close`, `minimize`, `maximize`, `restore`, `set_title`, `set_dirty`, `on_back`. Sheets `confirm`, `prompt`, `pick_file`, `pick_directory`, `pick_save` |
 | `StorageHandle` | `get`, `set`, `remove`, `persisted`, `window`, `file` |
 
@@ -158,6 +160,7 @@ The rule for methods: what at least two user apps call is stable. Methods only o
 | `tasks` | `run` (3.57; API Client, Birdseye, Example, Format Lab, HopSprite, Image Tools, PDF Tools, Shopping List, Soundboard, Video Tools and more). `build` returns `@lilbunnyrabbit/task-manager` tasks; the package is promised at the version `package.json` pins (1.0.1), and a breaking package upgrade is a WebOS major | `jobs`, `active_count`, `get`, `cancel`, `retry`, `remove`, `clear` (Activity Monitor, the taskbar, the toast) |
 | `ai` | `features` (read), `availability`, `summarize`, `translate`, `detect`, `prompt`, `extract`, `measure` (3.57; Ask, Unsaid, Doodlehop, Alibi, Shopping List, Warren, the kit's `AiGate`). Chrome's built-in AI is still experimental: when Chrome changes, the wrapper absorbs it where it can, and what it can't is a WebOS major. `MobileAiService` answers "unavailable" and stays that way | `downloads`, `sessions` (Activity Monitor, the Kernel inspector) |
 | `speech` | Nothing yet: one user app (Ask) uses it, since 3.71 | `voices`, `speaking`, `queued`, `supported`, `speak`, `feed`, `end`, `stop` (Ask, Settings, the shell) |
+| `achievements` | Nothing: apps report through `get_app_context().achievements` (3.75) | `achieve`, `progress`, `list`, `idle` (the app context, App Store, Game Hub, the shell) |
 | `shell`, `session`, `clipboard`, `ui`, `router`, `version` | nothing | Apps reach the shell through their manifest; the rest are OS-only |
 
 Types that come with the stable methods: `AppsService`, `OpenOptions`, `FilesService`, `FileSystemItem`, `FileSystemFileItem`, `FileSystemDirectoryItem`, `CreateFileOptions`, `ListOptions`, `NotificationsService`, `NotifyOptions`, `NotificationUpdate`, `NotificationAction`, `NotificationId`, `NotificationType`, `DesktopService`, `DesktopItem`, `DialogsService`, `DialogProps`, `DialogOptions`, `MenuItem`, `ShortcutsService`, `KeyShortcut`, `RunShortcut`, `CommandShortcut`, `ShortcutCategory`, `WindowsService`, `WindowId`, `SettingsService`, `Theme`, `Platform`, `Mode` (since 3.63); since 3.57 `TasksService`, `TaskContext`, `TaskRunOptions`, `TaskReport`, `TaskJob`, `TaskJobId`, `TaskJobStatus`, `AiService`, `AiFeature`, `AiAvailability`, `AiMessage`, `AiPart`, `AiTextPart`, `AiImagePart`, `AiUsage`, `LanguagePair`, `SummarizeOptions`, `TranslateOptions`, `DetectedLanguage`, `SchedulerService`, `Job`, `JobId`, `JobKind`, `JobAt`, `JobRepeat`, `Repeat`, `JobAction`, `JobOpen`, `JobInput`, `JobPatch`, `JobFire`, `FireOutcome`, `OnFire`. `Job` can gain optional fields in a minor: `before` (lead time in minutes, off each occurrence on the wall clock) is the first, in 3.57. A service interface type being stable means the stable methods on it, not every member.
@@ -263,6 +266,7 @@ Users' data sits in these, so moving one is a major even when no code signature 
 |----------|------------|--------|
 | `localStorage` `app.{id}.{key}` | `storage.get/set/persisted`, `create_storage_handle` | JSON |
 | `/var/lib/apps/{id}/` | `storage.file`, `json_file(app_data_path(...))` | Whatever the app writes |
+| `/var/lib/apps/{id}/achievements.json` | AchievementsService | Version 1, `{ unlocked: { [id]: epoch_ms }, progress: { [id]: number } }`; kept by an uninstall with data (3.75, ADR-078) |
 | `/var/lib/games/plays.json` | Games kit | Version 1, `PlaysSchema` |
 | `/home/Desktop/*.widget` | `desktop.pin_widget`, the desktop | `{ app, props?, w, h, style? }` |
 | `storage.window()` values | SessionService, with the window | Internal file; the promise is that values come back on restore if they pass the schema |

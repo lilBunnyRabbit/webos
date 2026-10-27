@@ -73,8 +73,11 @@ Hints are counted; best times count only solves without them.
 | `app.hop.daily` | Daily in progress: `{ day, game }` |
 | `app.hop.stats` | Per size `{ solved, best }` |
 | `app.hop.size` | Last size |
+| `/var/lib/apps/hop/achievements.json` | Achievements, written by the OS ([achievements](../system/services/achievements.md)) |
 
 A solved daily calls `PlayTracker.daily(day, ms)`; `daily_rank` stays at its default, time ascending. Props: `daily` (`YYYY-MM-DD`), the Game Hub contract. The daily seed is `daily_seed(day, "hop")`, size 7×7. No shell commands beyond `games daily`.
+
+**Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (8×8 without a hint), `solves-25` (progress: the solves of every size added up), secret `quick` (7×7 in under 30 s without a hint).
 
 ## Dependencies & licences
 
@@ -90,3 +93,4 @@ None beyond the repo's own: `zod`, `phosphor-svelte`.
 
 - [Daily puzzles brainstorm, 2026-10-21](../brainstorm/2026-10-21_daily-puzzles.md): one app per puzzle, rabbit names, generated with one answer, drag-path input as a small kit helper for Hop and the word game.
 - [ADR-035](../adrs/035-app-platform-wave-2.md): `daily` prop, `track_play`, Game Hub.
+- [ADR-078](../adrs/078-achievements.md): achievements.

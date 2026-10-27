@@ -63,7 +63,7 @@
   const daily_day = untrack(() => daily_prop);
   const mode_size = untrack(() => mode_prop);
 
-  const { window_id, app_id, window: win, storage } = get_app_context();
+  const { window_id, app_id, window: win, storage, achievements } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   // 9×9 keeps the keys it had before 6×6 existed, so its stats and saves carry over.
   const key_for = (base: string, of: Size) => (of === Size.NINE ? base : `${base}-${of}`);
@@ -181,6 +181,18 @@
     if (daily) play.daily(daily, time, undefined, size);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, difficulty, time, game.hints);
+    report_solve(time);
+  }
+
+  function report_solve(time: number) {
+    const nine = size === Size.NINE;
+    achievements.achieve("first-solve");
+    if (daily) achievements.achieve("daily");
+    if (nine && difficulty === Difficulty.HARD && game.hints === 0) achievements.achieve("hard");
+    if (nine && difficulty === Difficulty.EXPERT) achievements.achieve("expert");
+    if (nine && difficulty === Difficulty.EASY && game.hints === 0 && time < 180_000) achievements.achieve("speedrun");
+    const solved = Object.values(all_stats).flatMap((each) => Object.values(each.value)).reduce((sum, entry) => sum + entry.solved, 0);
+    achievements.progress("solves-50", solved);
   }
 
   function undo() {

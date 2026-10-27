@@ -11,7 +11,7 @@
   const SWIPE_THRESHOLD_PX = 24;
   const CELLS = Array.from({ length: SIZE * SIZE }, (_, i) => ({ row: Math.floor(i / SIZE), col: i % SIZE }));
 
-  const { app_id, window_id, window: win, storage } = get_app_context();
+  const { app_id, window_id, window: win, storage, achievements } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   $effect(() => shortcuts.register({ id: "twenty-forty-eight.undo", keys: "mod+z", label: "Undo", category: ShortcutCategory.APP, window: window_id, run: undo }));
@@ -63,6 +63,16 @@
     if (!result.moved) return;
     last = { consumed: result.consumed, merged: new Set(result.merged_ids), spawned: result.spawned_id };
     commit(result.game, game);
+    report(result.game);
+  }
+
+  function report(next: Game) {
+    const top = Math.max(0, ...next.tiles.map((tile) => tile.value));
+    if (top >= 256) achievements.achieve("tile-256");
+    if (top >= 1024) achievements.achieve("tile-1024");
+    if (top >= 4096) achievements.achieve("tile-4096");
+    achievements.progress("tile-2048", top);
+    if (next.score >= 20_000) achievements.achieve("score-20000");
   }
 
   function undo() {

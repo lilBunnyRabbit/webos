@@ -2,12 +2,12 @@
 
 ADR: [003](../../adrs/003-app-context.md) · Source: `src/lib/core/contexts/app/` · Set in: `src/lib/core/components/window/window.svelte`
 
-What an app knows about where it runs: its window and its storage. Import from `$lib/core/contexts/app`.
+What an app knows about where it runs: its window, its storage and its achievements. Import from `$lib/core/contexts/app`.
 
 ## `get_app_context()`
 
 ```ts
-const { window_id, app_id, window, storage } = get_app_context();
+const { window_id, app_id, window, storage, achievements } = get_app_context();
 ```
 
 | Field | Type | |
@@ -16,6 +16,7 @@ const { window_id, app_id, window, storage } = get_app_context();
 | `app_id` | `AppId` | The manifest id |
 | `window` | `WindowHandle` | Window state and controls |
 | `storage` | `StorageHandle` | `localStorage` under `app.{app_id}.`, plus this window's state (`window()`) |
+| `achievements` | `AchievementsHandle` | Reports the manifest's achievements, bound to `app_id` (ADR-078), [below](#achievementshandle) |
 
 - Svelte `getContext` under a private symbol. Call it during component init, in any component inside the app's window (children included).
 - Outside a window, or outside init, it throws "get_app_context must be called during init of a component inside a window".
@@ -149,6 +150,17 @@ await boards.edit((file) => ({ ...file, boards: [...file.boards, board] }));
 ### `confirm_discard()`
 
 `confirm_discard(win, name)` from `$lib/core/contexts/app` shows the danger sheet "Discard changes to “{name}”?" ("Your unsaved changes will be lost.", Discard) and resolves the answer. Document apps (Text Editor, Paint, Image Editor, Markdown to PDF, the Nonogram editor) call it as `!dirty || confirm_discard(win, name)` before New, Open or a dropped file. The close prompt is the OS's (ADR-029), not this.
+
+## `AchievementsHandle`
+
+`create_achievements_handle(app_id)` (`achievements-handle.ts`), set by `window.svelte`, `mobile-window.svelte` and `solo-window.svelte`. Each call goes to AchievementsService with the app's id ([achievements](../services/achievements.md)).
+
+| Member | Type | Behaviour |
+|--------|------|-----------|
+| `achieve(id)` | `void` | Unlocks a declared achievement; the first unlock toasts. Undeclared ids warn and do nothing |
+| `progress(id, n)` | `void` | The running total toward the achievement's `goal` (games won so far, not "one more"); the highest seen counts and reaching the goal unlocks it |
+
+Report at the game's own events (a win, a finished round), not every frame: each new value reads and writes the app's `achievements.json`.
 
 ## Divergence from ADR
 

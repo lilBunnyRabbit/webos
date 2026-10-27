@@ -9,6 +9,7 @@
   import { create_storage_handle } from "$lib/core/contexts/app";
   import { set_app_context } from "$lib/core/contexts/app/context";
   import { create_window_handle } from "$lib/core/contexts/app/window-handle";
+  import { create_achievements_handle } from "$lib/core/contexts/app/achievements-handle";
   import { RESIZE_EDGES, WindowGeometryHandler } from "./window.handler.svelte";
   import { cubicOut } from "svelte/easing";
   import { view_transition } from "$lib/core/utils/view-transition";
@@ -45,6 +46,7 @@
       app_id,
       window: create_window_handle(id),
       storage: create_storage_handle(app_id, instance.app.state),
+      achievements: create_achievements_handle(app_id),
     });
   });
   const contexts = getAllContexts();

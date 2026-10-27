@@ -2,6 +2,8 @@
   import kernel, {
     NotificationType,
     Platform,
+    type AchievementEntry,
+    type AchievementsService,
     type AppsService,
     type DesktopItem,
     type DesktopService,
@@ -9,6 +11,7 @@
   } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import AchievementList from "$lib/core/components/achievements/achievement-list.svelte";
   import { format_time, use_plays } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import {
@@ -20,6 +23,7 @@
     Play as PlayIcon,
     SquaresFour as SquaresFourIcon,
     Sticker as StickerIcon,
+    Trophy as TrophyIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
@@ -45,6 +49,7 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  const achievements = $derived(kernel.service<AchievementsService>("achievements"));
 
   const tab = storage.window<Tab>("tab", untrack(() => initial_tab ?? Tab.LIBRARY), z.enum(Tab));
   const sort = storage.persisted<Sort>("sort", Sort.RECENT, z.enum(Sort));
@@ -55,6 +60,7 @@
     { value: Tab.LIBRARY, label: "Library", icon: SquaresFourIcon },
     { value: Tab.TODAY, label: "Today", icon: CalendarCheckIcon },
     { value: Tab.STATS, label: "Stats", icon: ChartBarIcon },
+    { value: Tab.ACHIEVEMENTS, label: "Trophies", icon: TrophyIcon },
   ];
 
 
@@ -75,6 +81,17 @@
   const total = $derived(totals(plays.value));
   const by_time = $derived(sort_entries(entries(games, plays.value), Sort.MOST_PLAYED).filter((entry) => entry.stats));
   const top_ms = $derived(Math.max(1, ...by_time.map((entry) => entry.stats?.ms ?? 0)));
+  const trophies = $derived.by(() => {
+    const by_game = new Map<string, AchievementEntry[]>();
+    for (const entry of achievements.list()) by_game.set(entry.app_id, [...(by_game.get(entry.app_id) ?? []), entry]);
+    return games
+      .flatMap((game) => {
+        const list = by_game.get(game.id);
+        return list ? [{ game, list, declared: list.filter((entry) => !entry.builtin).length, unlocked: list.filter((entry) => entry.unlocked).length }] : [];
+      })
+      .sort((a, b) => Number(b.declared > 0) - Number(a.declared > 0) || b.unlocked / b.list.length - a.unlocked / a.list.length || a.game.name.localeCompare(b.game.name));
+  });
+  const trophy_total = $derived(trophies.reduce((sum, group) => ({ unlocked: sum.unlocked + group.unlocked, all: sum.all + group.list.length }), { unlocked: 0, all: 0 }));
   const today_label = $derived(new Date(`${today.value}T12:00:00`).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }));
 
   const can_pin = kernel.platform !== Platform.MOBILE;
@@ -113,9 +130,10 @@
         size="sm"
         pressed={widget !== undefined}
         title={widget ? "Game Hub is on the desktop. Click to remove it." : "Put your games, today's puzzles and your streak on the desktop."}
+        aria-label={widget ? "On desktop" : "Add to desktop"}
         onclick={toggle_widget}
       >
-        <StickerIcon />{widget ? "On desktop" : "Add to desktop"}
+        <StickerIcon /><span class="hidden @xl:inline">{widget ? "On desktop" : "Add to desktop"}</span>
       </Button>
     {/if}
   </Toolbar>
@@ -198,6 +216,40 @@
               {/each}
             </ul>
           </Section>
+        </div>
+      {/if}
+    {:else if tab.value === Tab.ACHIEVEMENTS}
+      {#if trophies.length === 0}
+        <EmptyState icon={TrophyIcon} title="No achievements yet" description="Games list what you can earn here, and play time unlocks a few of its own." />
+      {:else}
+        <div class="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6 @md:px-6">
+          <header class="flex items-center gap-4">
+            <div class="min-w-0 flex-1">
+              <h1 class="text-lg font-semibold">Achievements</h1>
+              <p class="text-ui text-foreground/65">
+                <span class="font-mono tabular-nums">{trophy_total.unlocked}</span> of <span class="font-mono tabular-nums">{trophy_total.all}</span> unlocked across
+                {trophies.length} {trophies.length === 1 ? "game" : "games"}
+              </p>
+            </div>
+          </header>
+          {#each trophies as { game, list, unlocked } (game.id)}
+            <section class="flex flex-col gap-2" aria-labelledby="trophies-{game.id}">
+              <div class="flex items-center gap-3">
+                {@render game_icon(game.icon, "sm")}
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <h2 id="trophies-{game.id}" class="truncate text-sm font-semibold">{game.name}</h2>
+                    <p class="shrink-0 font-mono text-2xs tabular-nums text-foreground/80">{unlocked} of {list.length}</p>
+                  </div>
+                  <div class="mt-1 h-1 overflow-hidden rounded-full bg-foreground/8">
+                    <div class="h-full rounded-full bg-primary" style:width="{(unlocked / list.length) * 100}%"></div>
+                  </div>
+                </div>
+                <IconButton size="sm" label="Play {game.name}" onclick={() => apps.launch(game.id)}><PlayIcon weight="fill" /></IconButton>
+              </div>
+              <AchievementList entries={list} />
+            </section>
+          {/each}
         </div>
       {/if}
     {:else if total.sessions === 0 && total.ms === 0}

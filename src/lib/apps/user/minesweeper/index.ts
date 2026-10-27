@@ -22,5 +22,13 @@ export default define_app({
       .optional(),
   }),
   shell: () => import("./commands"),
+  achievements: [
+    { id: "first-win", title: "All clear", text: "Win a game." },
+    { id: "intermediate", title: "Getting serious", text: "Win on Intermediate." },
+    { id: "expert", title: "Expert", text: "Win on Expert." },
+    { id: "quick", title: "Quick sweep", text: "Win on Beginner in under 10 seconds." },
+    { id: "wins-25", title: "Sweeper", text: "Win 25 games.", goal: 25 },
+    { id: "bare-hands", title: "Bare hands", text: "Win on Intermediate or Expert without placing a flag.", secret: true },
+  ],
   component: () => import("./minesweeper.app.svelte"),
 });

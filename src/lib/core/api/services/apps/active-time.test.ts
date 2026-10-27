@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { add_delta, add_time, format_usage, merge_usage, milestones, parse_usage, serialize_usage, stretch_seconds } from "./active-time";
+import { add_delta, add_time, format_usage, merge_usage, parse_usage, serialize_usage, stretch_seconds } from "./active-time";
 
 const day = (date: number, hour = 12) => new Date(2026, 9, date, hour);
 
@@ -58,15 +58,6 @@ describe("format_usage", () => {
     expect(format_usage(25 * 60)).toBe("25 min");
     expect(format_usage(90 * 60)).toBe("1.5 h");
     expect(format_usage(12.7 * 3600)).toBe("12 h");
-  });
-});
-
-describe("milestones", () => {
-  test("follow time and days, worded for games", () => {
-    const list = milestones({ seconds: 3700, last: "", days: 5 }, true);
-    expect(list.filter((item) => item.done).map((item) => item.id)).toEqual(["first", "hour", "days-5"]);
-    expect(list[1].label).toBe("Played for an hour");
-    expect(milestones(null, false).every((item) => !item.done)).toBe(true);
   });
 });
 

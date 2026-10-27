@@ -142,12 +142,12 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-mammoth", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 2 } },
           },
-          // The app catalogue, icon sprite and changelog (ADR-077): fresh online, the last copy offline, so the App Store and
-          // search still list apps that aren't installed and What's new still reads.
+          // The app catalogue, icon sprite, changelog (ADR-077) and achievement definitions (ADR-078): fresh online, the last copy
+          // offline, so the App Store and search still list apps that aren't installed and What's new still reads.
           {
             urlPattern: new RegExp(`^[^?#]*${BASE}store/`),
             handler: "NetworkFirst",
-            options: { cacheName: "webos-store", networkTimeoutSeconds: 4, cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 4 } },
+            options: { cacheName: "webos-store", networkTimeoutSeconds: 4, cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 5 } },
           },
           // Last, so the rules above keep their files. One cache for every release, so an app-only deploy leaves sw.js
           // alone: StoreService fills it with the installed apps and prunes what no app lists (ADR-077). No expiration,

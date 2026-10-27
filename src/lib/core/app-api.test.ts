@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import type {
+  Achievement,
   AppConfig,
   AppAuthor,
   AppDefinition,
@@ -89,6 +90,7 @@ import type {
 } from "$lib/core/api";
 import type { FileValue } from "$lib/core/api/services/files/shell";
 import type {
+  AchievementsHandle,
   AppContext,
   ConfirmOptions,
   JsonFile,
@@ -314,6 +316,7 @@ type Members<T, K extends keyof T> = [Exclude<keyof T, K>] extends [never] ? tru
 
 const manifest_fields: Members<
   AppConfig,
+  | "achievements"
   | "associations"
   | "author"
   | "badge"
@@ -366,7 +369,9 @@ const window_handle_members: Members<
 > = true;
 
 const storage_handle_members: Members<StorageHandle, "file" | "get" | "persisted" | "remove" | "set" | "window"> = true;
-const app_context_members: Members<AppContext, "app_id" | "storage" | "window" | "window_id"> = true;
+const app_context_members: Members<AppContext, "achievements" | "app_id" | "storage" | "window" | "window_id"> = true;
+const achievements_handle_members: Members<AchievementsHandle, "achieve" | "progress"> = true;
+const achievement_members: Members<Achievement, "goal" | "id" | "secret" | "text" | "title"> = true;
 const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
@@ -406,6 +411,8 @@ const pick_file_multiple: WindowHandle["pick_file"] extends (options: PickOption
   : false = true;
 
 type StableTypes = [
+  Achievement,
+  AchievementsHandle,
   AppConfig,
   AppAuthor,
   AppDefinition,

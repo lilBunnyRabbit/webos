@@ -1,7 +1,7 @@
 // Kept apart from hub.ts: the manifest imports these at boot, and a module the app also imports lands whole in the boot chunk.
 export const HUB_ID = "game-hub";
 
-export const Tab = { LIBRARY: "library", TODAY: "today", STATS: "stats" } as const;
+export const Tab = { LIBRARY: "library", TODAY: "today", STATS: "stats", ACHIEVEMENTS: "achievements" } as const;
 export type Tab = (typeof Tab)[keyof typeof Tab];
 
 export function format_duration(ms: number): string {

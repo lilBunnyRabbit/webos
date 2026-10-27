@@ -16,6 +16,7 @@
   import { untrack } from "svelte";
   import {
     activate,
+    Cell,
     clamp_config,
     config_of,
     config_schema,
@@ -51,7 +52,7 @@
   const { daily: daily_prop }: { daily?: string } = $props();
   const daily_day = untrack(() => daily_prop);
 
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   const play = track_play(app_id, () => win.is_visible);
   const stats = storage.persisted("stats", empty_stats(), stats_schema);
   const custom = storage.persisted<Config>("custom", { width: 20, height: 12, mines: 40 }, config_schema);
@@ -96,6 +97,7 @@
 
   function apply(next: Game) {
     if (next === game) return;
+    const before = game;
     game = next;
     if (!clock.running && next.status !== Status.READY) clock.start();
     if (next.status === Status.WON || next.status === Status.LOST) {
@@ -105,7 +107,19 @@
       const best = stats.value[difficulty].best;
       new_best = won && difficulty !== Difficulty.CUSTOM && (best === null || time < best);
       stats.value = record(stats.value, difficulty, won, time);
+      if (won) report_win(before, time);
     }
+  }
+
+  function report_win(before: Game, time: number) {
+    const hard = difficulty === Difficulty.INTERMEDIATE || difficulty === Difficulty.EXPERT;
+    achievements.achieve("first-win");
+    if (difficulty === Difficulty.INTERMEDIATE) achievements.achieve("intermediate");
+    if (difficulty === Difficulty.EXPERT) achievements.achieve("expert");
+    if (difficulty === Difficulty.BEGINNER && time < 10_000) achievements.achieve("quick");
+    // A win flags every mine itself, so the board before the last click tells whether the player placed any.
+    if (hard && !before.cells.includes(Cell.FLAGGED)) achievements.achieve("bare-hands");
+    achievements.progress("wins-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.won, 0));
   }
 
   function restart(next_config: Config = config_of(difficulty, custom.value)) {

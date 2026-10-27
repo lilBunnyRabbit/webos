@@ -7,6 +7,7 @@ import type { ShellContribution } from "../shell/type";
 import type { OnFire } from "../scheduler/type";
 import type { Catalogue, CatalogueHeader } from "./catalogue";
 import type { AppUsage } from "./active-time";
+import type { Achievement } from "../achievements/type";
 
 export interface AppsService extends IService {
   register(manifest: AppManifest): void;
@@ -220,6 +221,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * loads it; read it through `meta(id)` or `listings()`.
    */
   meta?: () => Promise<{ default: AppMeta }>;
+  /**
+   * What users can earn (ADR-078), as plain data: the build copies it to `store/achievements.json` and gives the
+   * catalogue entry the count. Reported through `get_app_context().achievements`.
+   */
+  achievements?: Achievement[];
   /** Every prop is optional: apps are also launched with none (start menu, desktop). */
   component: () => Promise<Component<Partial<TProps>>>;
 }
@@ -240,6 +246,8 @@ export interface AppMeta {
 export type AppListing = AppManifest & AppMeta & {
   /** Its props take `daily` (ADR-035), from the catalogue: a listing's `props` stays empty until its code loads. */
   daily?: boolean;
+  /** How many achievements it declares (ADR-078), from the catalogue. */
+  achievement_count?: number;
 };
 
 export interface AppReplacement {

@@ -2,7 +2,7 @@
   import type { AppListing } from "$lib/core/api";
   import { set_drag_app } from "$lib/core/components/apps/drag";
   import { Button, IconButton } from "$lib/core/components/ui";
-  import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
+  import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon, Trophy as TrophyIcon } from "phosphor-svelte";
   import IconTile from "./icon-tile.svelte";
   import { app_story, category_label } from "./library";
   import { ScrollRow } from "./scroll-row.svelte";
@@ -59,7 +59,15 @@
               class="card-open block max-w-full truncate text-left text-ui font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none"
               onclick={() => onselect(manifest)}>{manifest.name}</button
             >
-            <p class="truncate text-2xs text-foreground/65">{category_label(manifest)}</p>
+            <p class="flex items-center gap-1 text-2xs text-foreground/65">
+              <span class="truncate">{category_label(manifest)}</span>
+              {#if manifest.achievement_count}
+                <span class="flex shrink-0 items-center gap-0.5" title="{manifest.achievement_count} achievements"
+                  ><span aria-hidden="true">·</span><TrophyIcon class="size-3" weight="fill" aria-hidden="true" /><span class="sr-only">Achievements:</span
+                  >{manifest.achievement_count}</span
+                >
+              {/if}
+            </p>
           </div>
         </div>
         <p class="line-clamp-2 min-h-[2lh] text-2xs text-pretty text-foreground/80">{app_story(manifest).solution}</p>

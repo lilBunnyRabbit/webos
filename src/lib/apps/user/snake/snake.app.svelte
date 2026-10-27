@@ -21,9 +21,10 @@
   const SWIPE_THRESHOLD = 24;
 
   const settings = $derived(kernel.service<SettingsService>("settings"));
-  const { app_id, window: win, storage } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   track_play(app_id, () => win.is_visible);
   const high_scores = storage.persisted<HighScores>("high_scores", {}, high_scores_schema);
+  const eaten = storage.persisted("eaten", 0, z.number().int().nonnegative());
 
   // Per window, so two open games don't change each other's mode; storage only remembers the last pick.
   let speed = $state<Speed>(storage.get("speed", speed_schema) ?? Speed.NORMAL);
@@ -104,12 +105,18 @@
     let next = game;
     for (let i = 0; i < steps && next.status === Status.PLAYING; i++) next = step(next, Math.random);
     game = next;
-    if (next.status === Status.OVER || next.status === Status.WON) record(next.score);
+    if (next.status === Status.OVER || next.status === Status.WON) record(next);
   }
 
-  function record(score: number) {
+  function record({ score, status, wrap: wrapped }: typeof game) {
     new_best = score > best;
     if (new_best) high_scores.value[key] = score;
+    eaten.value += score;
+    if (score > 0) achievements.achieve("first-point");
+    achievements.progress("score-50", score);
+    if (speed === Speed.FAST && !wrapped && score >= 25) achievements.achieve("fast-25");
+    achievements.progress("eaten-500", eaten.value);
+    if (status === Status.WON) achievements.achieve("full-board");
   }
 
   function focus_board() {

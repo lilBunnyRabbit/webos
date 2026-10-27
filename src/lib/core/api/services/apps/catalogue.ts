@@ -41,6 +41,8 @@ export interface CatalogueApp {
   badge?: boolean;
   on_fire?: boolean;
   on_uninstall_data?: boolean;
+  /** How many achievements the manifest declares; their text is in `store/achievements.json` (ADR-078). */
+  achievements?: number;
 }
 
 export type CatalogueData = Omit<CatalogueApp, "version" | "hash" | "manifest" | "entry" | "files" | "content">;
@@ -109,6 +111,7 @@ export function manifest_data(manifest: Record<string, unknown>, meta: Record<st
     badge: has("badge"),
     on_fire: has("on_fire"),
     on_uninstall_data: has("on_uninstall_data"),
+    achievements: Array.isArray(manifest.achievements) && manifest.achievements.length > 0 ? manifest.achievements.length : undefined,
   };
   return json_safe(data) as CatalogueData;
 }

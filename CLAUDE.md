@@ -50,6 +50,7 @@ The kernel is a service registry with dependency resolution. `kernel.init()` bui
 | `extract` | ExtractService | Desktop only: pops one window out into an always-on-top Document Picture-in-Picture window, the app remounted there; the window's sheets, menus and dialogs follow it; `win pop` / `win back`; asks before discarding unsaved work on the way back (ADR-043) | windows, dialogs, notifications |
 | `ai` | AiService | Chrome's on-device AI (Gemini Nano): availability per feature, summarize, translate, detect, streaming prompt; sessions kept and reused, model downloads as tasks. `MobileAiService` answers "no" on mobile (ADR-046) | files, tasks, notifications |
 | `speech` | SpeechService | Reads text aloud through the browser's `speechSynthesis`: one speaker at a time (newest preempts), sentence by sentence while text streams, markdown read without symbols; voice and rate from Settings, a window's speech stops when it closes (ADR-074) | settings, windows, files |
+| `achievements` | AchievementsService | Achievements apps declare in the manifest (`define_app({ achievements })`) and report through `get_app_context().achievements` (`achieve`, `progress`): `/var/lib/apps/{id}/achievements.json` merged on every change (union of unlocks, max of progress), one toast per unlock, kept by an uninstall with data; definitions from the loaded manifest or the build's `store/achievements.json`; five built-in active-time ones per app; `achievements [app]` (ADR-078) | files, notifications, apps |
 | `scheduler` | SchedulerService | Scheduled notifications for every app (alarms, timers, Pomodoro phases, reminders) while any WebOS tab lives: registry in `/var/lib/scheduler/jobs.json`, one leader tab per browser (Web Locks) with one timer, OS notifications through the service worker with shell-command buttons, missed summary at boot, one in-page chime per pass (`silent` jobs skip it), apps' lazy `on_fire` handlers run in the leader, Triggers when flagged (ADR-062) | files, notifications, apps, shell |
 | `router` | RouterService | Deep links: opens `#/app/{id}?{props}` after the Restore answer, then clears the hash; `#/solo/{id}?{props}` stays in the URL (ADR-047); Copy link and Copy solo link for every window, without device paths (ADR-010) | windows, apps, session, clipboard, notifications |
 
@@ -62,7 +63,7 @@ const windows = $derived(kernel.service<WindowsService>("windows"));
 windows.focus(id); // always via the prefix, never destructured
 ```
 
-Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using `define_app()` plus a lazy `{id}.app.svelte`. See CONVENTIONS. Inside an app, `get_app_context()` from `$lib/core/contexts/app` gives its window handle (reactive state, controls) and `app.{id}.*` localStorage (ADR-003).
+Apps are auto-discovered from `src/lib/apps/{system,user}/{id}/index.ts`, using `define_app()` plus a lazy `{id}.app.svelte`. See CONVENTIONS. Inside an app, `get_app_context()` from `$lib/core/contexts/app` gives its window handle (reactive state, controls), `app.{id}.*` localStorage (ADR-003) and its achievements handle (ADR-078).
 
 ### Long-running work: use tasks
 

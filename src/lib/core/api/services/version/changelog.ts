@@ -11,6 +11,11 @@ export const CHANGELOG: Release[] = [
     changes: [
       {
         kind: NEW,
+        apps: ["minesweeper", "sudoku", "hop", "snake", "twenty-forty-eight", "solitaire", "doodlehop", "game-hub", "app-library"],
+        text: "Games now have achievements: Minesweeper, Sudoku, Hop, Snake, 2048, Solitaire and Doodlehop each have some to earn, a few of them secret, shown on each app's App Store page and in Game Hub's new Trophies tab.",
+      },
+      {
+        kind: NEW,
         apps: ["tape-sketch"],
         text: "Turn a Tape Sketch with two fingers while you zoom; it settles square near each quarter turn, the numbers stay upright, and the compass button turns it back.",
       },

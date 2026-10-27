@@ -28,5 +28,13 @@ export default define_app({
     [Size.NINE]: DailyRank.TIME,
     [Size.SIX]: DailyRank.TIME,
   },
+  achievements: [
+    { id: "first-solve", title: "Solved", text: "Solve a puzzle." },
+    { id: "daily", title: "Puzzle of the day", text: "Solve a daily puzzle." },
+    { id: "hard", title: "No help needed", text: "Solve a Hard 9×9 puzzle without a hint." },
+    { id: "expert", title: "Expert", text: "Solve an Expert 9×9 puzzle." },
+    { id: "solves-50", title: "Grid regular", text: "Solve 50 puzzles.", goal: 50 },
+    { id: "speedrun", title: "Speedrun", text: "Solve an Easy 9×9 puzzle in under 3 minutes without a hint.", secret: true },
+  ],
   component: () => import("./sudoku.app.svelte"),
 });

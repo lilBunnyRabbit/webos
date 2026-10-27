@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import {
+  achievement_definitions,
   app_dirs,
   app_version,
   collect_apps,
@@ -21,6 +22,8 @@ import {
   previous_or_warn,
 } from "./vite-plugin-catalogue";
 import type { Release } from "../src/lib/core/api/services/version/changelog-types";
+import { achievements_problem } from "../src/lib/core/api/services/achievements/validate";
+import type { Achievement } from "../src/lib/core/api/services/achievements/definition";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -79,6 +82,12 @@ describe("manifest_data", () => {
   test("an app without props or extras has no flags", () => {
     const data = manifest_data({ id: "a", name: "A", category: "media", icon: null }, {}, true);
     expect(data).toEqual({ id: "a", name: "A", category: "media", system: true });
+  });
+
+  test("achievements become a count", () => {
+    const achievements = [{ id: "x", title: "X", text: "Do x." }, { id: "y", title: "Y", text: "Do y.", goal: 3 }];
+    expect(manifest_data({ id: "a", name: "A", category: "games", icon: null, achievements }, {}, false).achievements).toBe(2);
+    expect(manifest_data({ id: "a", name: "A", category: "games", icon: null, achievements: [] }, {}, false)).not.toHaveProperty("achievements");
   });
 });
 
@@ -207,6 +216,12 @@ describe("every app", () => {
     expect(symbols).toEqual(ids);
     expect(sprite).toContain("currentColor");
     expect(sprite).toContain("var(--primary)");
+
+    const definitions = achievement_definitions(apps);
+    expect(Object.keys(definitions)).toEqual(apps.filter((app) => app.data.achievements).map((app) => app.data.id));
+    for (const [id, list] of Object.entries(definitions)) expect(list, id).toHaveLength(apps.find((app) => app.data.id === id)!.data.achievements!);
+    expect(definitions.minesweeper?.length).toBeGreaterThan(0);
+    for (const [id, list] of Object.entries(definitions)) expect(achievements_problem(list as Achievement[]), id).toBeNull();
 
     for (const app of apps) {
       expect(app.index).toMatch(new RegExp(`^src/lib/apps/(system|user)/${app.data.id}/index\\.ts$`));

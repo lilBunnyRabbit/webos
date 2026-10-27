@@ -111,6 +111,7 @@ What are the implications of this decision?
 | [075](./075-docs-app.md) | Docs App | 2026-10-26 | Implemented |
 | [076](./076-paste-to-open.md) | Paste to Open | 2026-10-26 | Implemented |
 | [077](./077-app-store.md) | App Store | 2026-10-26 | Implemented |
+| [078](./078-achievements.md) | Achievements | 2026-10-27 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
