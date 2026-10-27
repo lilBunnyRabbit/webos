@@ -1,6 +1,16 @@
 import { describe, expect, test } from "vitest";
-import { ASSETS_CACHE, legacy_caches, pool, unshared, unused } from "./lists";
+import { ASSETS_CACHE, BUILD_LOCK, legacy_caches, older_build_held, pool, unshared, unused } from "./lists";
 import { parse_picked, parse_state, serialize_state } from "./persistence";
+
+describe("build locks", () => {
+  test("only another tab's older catalogue build holds a prune back", () => {
+    const names = [`${BUILD_LOCK}200`, "webos.store.sync", "webos.scheduler.leader"];
+    expect(older_build_held(names, 200)).toBe(false);
+    expect(older_build_held(names, 300)).toBe(true);
+    expect(older_build_held([`${BUILD_LOCK}400`], 300)).toBe(false);
+    expect(older_build_held([], 300)).toBe(false);
+  });
+});
 
 describe("caches", () => {
   test("one cache for every release; only the per-build caches from before are legacy", () => {

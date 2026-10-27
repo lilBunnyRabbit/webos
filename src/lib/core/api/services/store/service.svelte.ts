@@ -6,12 +6,12 @@ import { on_idle } from "$lib/core/utils/idle";
 import { Mode } from "../../kernel/mode";
 import { LatestWriter } from "../files/latest-writer";
 import { TaskJobStatus } from "../tasks/type";
-import { legacy_caches } from "./lists";
+import { BUILD_LOCK, legacy_caches, missing_apps, older_build_held } from "./lists";
 import { current_ids } from "../apps/replaces";
-import { serialize_slice, type CatalogueApp } from "../apps/catalogue";
+import { parse_catalogue_text, serialize_slice, type Catalogue, type CatalogueApp } from "../apps/catalogue";
 import { CATALOGUE_PATH } from "../apps/installed";
 import { running_core } from "../apps/source";
-import { LEGACY_PICKED_PATH, LEGACY_STATE_DIR, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_picked, parse_state, serialize_state } from "./persistence";
+import { LEGACY_PICKED_PATH, LEGACY_STATE_DIR, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_picked, parse_state, serialize_state, type StoreState } from "./persistence";
 import { StoreStatus, type StoreService as IStoreService } from "./type";
 
 const SYNC_LOCK = "webos.store.sync";
@@ -52,6 +52,14 @@ export class StoreService implements IStoreService {
   private updated: AppId[] = [];
   /** The catalogue the saved set is for: the build's own, or a newer one taken on the same core. */
   private build = 0;
+  /**
+   * The state file read while no catalogue said which release runs (offline with another core's slice): which files
+   * are here is decided once the catalogue arrives, and nothing counts as saved meanwhile.
+   */
+  private unsettled: { state: StoreState | null } | null = null;
+  /** Shared Web Locks naming the catalogue builds whose files this tab may still load, so no tab prunes them. */
+  private readonly build_locks = new Map<number, () => void>();
+  private slice_write: Promise<void> = Promise.resolve();
   private readonly base = import.meta.env.BASE_URL;
   private running: Promise<void> | null = null;
   private channel: BroadcastChannel | null = null;
@@ -97,12 +105,14 @@ export class StoreService implements IStoreService {
     const state_text = await this.read(STORE_STATE_PATH);
     this.state_writer.seed(state_text);
     const state = parse_state(state_text) ?? (state_text === null ? await this.migrate_state() : null);
-    // Unknown (offline with another core's slice): keep what the file says until the catalogue arrives.
-    this.build = catalogue?.build ?? state?.build ?? this.build;
-    const new_build = state?.build !== this.build;
-    if (!new_build) this.add_saved(state.apps);
-    else this.write_state();
-    if (new_build) this.reason = state === null ? SyncReason.SETUP : SyncReason.UPDATE;
+    let new_build = false;
+    if (catalogue) {
+      this.build = catalogue.build;
+      new_build = this.settle(state);
+    } else {
+      this.unsettled = { state };
+      this.build = state?.build ?? this.build;
+    }
     if (this.kernel.mode !== Mode.SOLO) await this.migrate_picked();
     this.installed = this.installed_ids();
     this.catalogue_writer.seed(await this.read(CATALOGUE_PATH));
@@ -129,24 +139,100 @@ export class StoreService implements IStoreService {
           if (!slice) return;
           untrack(() => {
             this.remember(slice.apps);
-            this.catalogue_writer.write(serialize_slice(slice, slice.apps));
+            this.take_first_catalogue(slice);
+            this.write_slice(slice);
           });
         });
         $effect(() => {
           const update = this.apps_service.last_update;
           if (update) untrack(() => void this.take_update(update));
         });
+        // The old build's lock stays while a window still runs an app's old version.
+        $effect(() => {
+          const build = this.apps_service.header?.build;
+          const waiting = Array.from(this.apps_service.list(), ([id]) => id).some((id) => this.apps_service.update_ready(id));
+          untrack(() => this.hold_builds(build, waiting));
+        });
       })
     );
 
-    // After an update the old build's cache still has to go; off the boot path either way.
-    if (new_build || this.pending().length > 0) on_idle(() => void this.sync());
+    // Off the boot path: a restored backup or an evicted cache can leave `saved` naming apps whose files are gone.
+    this.cleanups.push(
+      on_idle(() => {
+        void this.verify_saved().then(() => {
+          if (!this.destroyed && (new_build || this.pending().length > 0)) void this.sync();
+        });
+      })
+    );
   }
 
   destroy(): void {
     this.destroyed = true;
     this.channel?.close();
+    for (const release of this.build_locks.values()) release();
+    this.build_locks.clear();
     for (const cleanup of this.cleanups.splice(0)) cleanup();
+  }
+
+  private settle(state: StoreState | null): boolean {
+    if (state?.build === this.build) {
+      this.add_saved(state.apps);
+      return false;
+    }
+    this.saved.clear();
+    this.write_state();
+    this.reason = state === null ? SyncReason.SETUP : SyncReason.UPDATE;
+    return true;
+  }
+
+  /** Boot had no catalogue for this core (offline on a release's first boot); now it's here, the state is checked against it. */
+  private take_first_catalogue(slice: Catalogue): void {
+    if (!this.unsettled) return;
+    const { state } = this.unsettled;
+    this.unsettled = null;
+    this.build = slice.build;
+    if (this.settle(state)) void this.sync();
+  }
+
+  /** Another tab may have taken a newer catalogue on this core since this one's: its slice stays. */
+  private write_slice(slice: Catalogue): void {
+    this.slice_write = this.slice_write.then(async () => {
+      const disk = parse_catalogue_text(await this.read(CATALOGUE_PATH));
+      if (disk && disk.core === slice.core && disk.build > slice.build) return;
+      this.catalogue_writer.write(serialize_slice(slice, slice.apps));
+    });
+  }
+
+  private async verify_saved(): Promise<void> {
+    const apps = [...this.saved].flatMap((id) => {
+      const first = this.entries.get(id)?.files[0];
+      return first ? [{ id, file: first }] : [];
+    });
+    if (apps.length === 0) return;
+    try {
+      const missing = await missing_apps(apps, this.base);
+      if (missing.length === 0 || this.destroyed) return;
+      for (const id of missing) this.saved.delete(id);
+      this.write_state();
+    } catch (error) {
+      console.warn("[StoreService] Couldn't check the saved apps' files", error);
+    }
+  }
+
+  private hold_builds(build: number | undefined, keep_old: boolean): void {
+    if (typeof navigator.locks === "undefined") return;
+    if (build !== undefined && !this.build_locks.has(build)) {
+      let release = () => {};
+      const held = new Promise<void>((resolve) => (release = resolve));
+      this.build_locks.set(build, release);
+      navigator.locks.request(`${BUILD_LOCK}${build}`, { mode: "shared" }, () => held).catch(() => {});
+    }
+    if (keep_old) return;
+    for (const [held, release] of [...this.build_locks]) {
+      if (held === build) continue;
+      release();
+      this.build_locks.delete(held);
+    }
   }
 
   public is_saved(id: AppId): boolean {
@@ -303,6 +389,7 @@ export class StoreService implements IStoreService {
       try {
         const { drop_files } = await work();
         const others = [...this.installed].map((other) => [...(this.entries.get(other)?.files ?? []), ...(this.entries.get(other)?.content ?? [])]);
+        others.push([...this.apps_service.files_in_use()]);
         await drop_files([...own.files, ...(own.content ?? [])], others, this.base);
       } catch (error) {
         console.warn(`[StoreService] Couldn't delete ${id}'s files`, error);
@@ -312,13 +399,16 @@ export class StoreService implements IStoreService {
 
   /**
    * Drops the caches from before one cache held every release, then every file no installed app and nothing running
-   * here lists. Skipped when another tab took a newer catalogue: its new files aren't in this tab's lists.
+   * here lists. Skipped when another tab took a newer catalogue (its new files aren't in this tab's lists) or still
+   * runs an older one (its old files aren't either); a later sync prunes.
    */
   private async prune(): Promise<void> {
     try {
       await Promise.all(legacy_caches(await caches.keys()).map((key) => caches.delete(key)));
       const state = parse_state(await this.read(STORE_STATE_PATH));
       if (state && state.build !== this.build) return;
+      const { held = [] } = await navigator.locks.query();
+      if (older_build_held(held.map((lock) => lock.name ?? ""), this.build)) return;
       const { prune_files } = await work();
       await prune_files(this.apps_service.files_in_use(), this.base);
     } catch (error) {
@@ -365,7 +455,7 @@ export class StoreService implements IStoreService {
 
   // Never while a write of ours is on its way: the file would still hold the text before it.
   private async reload(): Promise<void> {
-    if (this.state_writer.busy) return;
+    if (this.state_writer.busy || this.unsettled) return;
     const state = parse_state(await this.read(STORE_STATE_PATH));
     if (state?.build === this.build) this.add_saved(state.apps.filter((id) => this.installed.has(id)));
   }

@@ -7,8 +7,9 @@ import { BUILD_INFO } from "../version/build-info";
 import { LEGACY_PICKED_PATH, LEGACY_STATE_PATH, STORE_STATE_PATH, parse_state, serialize_state } from "./persistence";
 import { StoreService } from "./service.svelte";
 import { StoreStatus } from "./type";
+import { SvelteMap } from "svelte/reactivity";
 import { CATALOGUE_PATH } from "../apps/installed";
-import { parse_catalogue_text } from "../apps/catalogue";
+import { parse_catalogue_text, serialize_slice, type Catalogue } from "../apps/catalogue";
 import { running_core } from "../apps/source";
 
 const BUILD = BUILD_INFO.buildTimestamp;
@@ -29,8 +30,15 @@ async function seed(path: string, text: string): Promise<void> {
   await opfs.write_file(await handle.getFileHandle(segments.at(-1)!, { create: true }), text);
 }
 
-async function open_tab(installed: string[] = ["paint"]) {
+interface TabOptions {
+  /** `null` while boot knows no catalogue for this core; reactive, like AppsService's. */
+  catalogue?: SvelteMap<"slice", Catalogue | null>;
+  files?: string[];
+}
+
+async function open_tab(installed: string[] = ["paint"], options: TabOptions = {}) {
   const set = new Set([...installed, ...Object.keys(APPS).filter((id) => APPS[id].system)]);
+  const slice = (): Catalogue => ({ version: 1, core: "c", build: BUILD, release: "1.0.0", apps: [...set].sort().map((id) => ({ ...entry_of(id), files: options.files ?? [] })) });
   const install = vi.fn((ids: string | string[]) => {
     for (const id of [ids].flat()) set.add(id);
     return [ids].flat();
@@ -52,7 +60,9 @@ async function open_tab(installed: string[] = ["paint"]) {
       refresh,
       last_update: null,
       files_in_use: () => new Set<string>(),
-      installed_catalogue: () => ({ version: 1, core: "c", build: BUILD, release: "1.0.0", apps: [...set].sort().map(entry_of) }),
+      installed_catalogue: () => (options.catalogue ? (options.catalogue.get("slice") ?? null) : slice()),
+      header: null,
+      update_ready: () => false,
     }),
     tasks: stub_service("tasks", {}),
     store: StoreService,
@@ -64,6 +74,7 @@ async function open_tab(installed: string[] = ["paint"]) {
     notifications: booted.kernel.service<NotificationsService>("notifications"),
     install,
     refresh,
+    slice,
   };
 }
 
@@ -104,6 +115,38 @@ describe("boot", () => {
   });
 });
 
+describe("boot without this core's catalogue", () => {
+  test("offline on a release's first boot nothing counts as saved; the catalogue arriving decides for this build", async () => {
+    await seed(STORE_STATE_PATH, serialize_state({ build: BUILD - 1, apps: ["paint"] }));
+    const catalogue = new SvelteMap<"slice", Catalogue | null>();
+    const tab = await open_tab(["paint"], { catalogue });
+    expect(tab.store.status("paint")).toBe(StoreStatus.NOT_SAVED);
+
+    catalogue.set("slice", tab.slice());
+    await vi.waitFor(async () => expect(parse_state(await read(tab.files, STORE_STATE_PATH))).toEqual({ build: BUILD, apps: [] }));
+    expect(tab.store.status("paint")).toBe(StoreStatus.NOT_SAVED);
+  });
+
+  test("a state already for the catalogue that arrives keeps its saved apps", async () => {
+    await seed(STORE_STATE_PATH, serialize_state({ build: BUILD, apps: ["paint"] }));
+    const catalogue = new SvelteMap<"slice", Catalogue | null>();
+    const tab = await open_tab(["paint"], { catalogue });
+    expect(tab.store.is_saved("paint")).toBe(false);
+    catalogue.set("slice", tab.slice());
+    await vi.waitFor(() => expect(tab.store.is_saved("paint")).toBe(true));
+  });
+});
+
+describe("saved apps' files", () => {
+  test("an app saved by the state file but missing from the cache (a restored backup) isn't saved", async () => {
+    await seed(STORE_STATE_PATH, serialize_state({ build: BUILD, apps: ["paint"] }));
+    const tab = await open_tab(["paint"], { files: ["assets/not-cached.js"] });
+    expect(tab.store.is_saved("paint")).toBe(true);
+    await vi.waitFor(() => expect(tab.store.is_saved("paint")).toBe(false), { timeout: 3000 });
+    await vi.waitFor(async () => expect(parse_state(await read(tab.files, STORE_STATE_PATH))).toEqual({ build: BUILD, apps: [] }));
+  });
+});
+
 describe("migration (ADR-077)", () => {
   test("apps kept offline join the installed apps, and the old file goes", async () => {
     await seed(LEGACY_PICKED_PATH, JSON.stringify({ version: 1, apps: ["cards"] }));
@@ -139,6 +182,14 @@ describe("installed apps' catalogue (ADR-077)", () => {
       expect(slice?.build).toBe(BUILD);
       expect(slice?.apps.map(({ id }) => id)).toEqual(["paint", "settings"]);
     });
+  });
+
+  test("a newer build on the same core, written by another tab, isn't replaced by this tab's older one", async () => {
+    const newer = serialize_slice({ version: 1, core: "c", build: BUILD + 5, release: "1.0.1" }, []);
+    await seed(CATALOGUE_PATH, newer);
+    const tab = await open_tab(["paint"]);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(await read(tab.files, CATALOGUE_PATH)).toBe(newer);
   });
 });
 
