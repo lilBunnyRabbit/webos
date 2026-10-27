@@ -225,7 +225,12 @@ export default defineConfig({
   worker: { format: "es" },
   // jSquash and ONNX Runtime find their wasm with `new URL("x.wasm", import.meta.url)`; pre-bundling moves the module
   // away from the file.
-  optimizeDeps: { exclude: ["@jsquash/avif", "@jsquash/jxl", "onnxruntime-web"] },
+  // Apps load lazily (ADR-077), so the dev server's start-up scan must see them: a dependency found only when an app
+  // opens re-bundles the others, and the import already in flight fails with 504 until the page reloads.
+  optimizeDeps: {
+    entries: ["index.html", "src/lib/apps/**/*.{svelte,ts}", "!src/**/*.test.ts"],
+    exclude: ["@jsquash/avif", "@jsquash/jxl", "onnxruntime-web"],
+  },
   resolve: {
     alias: {
       $lib: path.resolve("./src/lib"),
