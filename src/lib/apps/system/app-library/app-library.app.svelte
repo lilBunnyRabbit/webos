@@ -149,11 +149,13 @@
   const updated = $derived(updated_apps(version.unseen));
 
   const sizes = new AppSizes();
+  const measured = $derived((apps.installed_catalogue()?.apps ?? []).filter(({ id }) => apps.is_installed(id)));
+  // Keyed on what's measured: a launch or a pin changes the slice, not the installed apps' files.
+  const measured_key = $derived(measured.map(({ id, files }) => `${id}:${files.join(",")}`).join("|"));
   $effect(() => {
     if (place.value !== StorePlace.LIBRARY && !selected) return;
-    const slice = apps.installed_catalogue();
-    if (store.syncing || !slice) return;
-    untrack(() => void sizes.measure(slice.apps.map(({ id, files }) => ({ id, files }))));
+    if (store.syncing || !measured_key) return;
+    untrack(() => void sizes.measure(measured.map(({ id, files }) => ({ id, files }))));
   });
 
   const related = $derived(

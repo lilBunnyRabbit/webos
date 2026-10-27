@@ -4,6 +4,7 @@
   import { RouteKind, route_url } from "$lib/core/api/services/router/route";
   import { Button, IconButton, button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
+  import ProgressRing from "$lib/core/components/apps/progress-ring.svelte";
   import { waiting_download } from "./waiting";
   import { ArrowSquareOut as ArrowSquareOutIcon, ArrowsClockwise as ArrowsClockwiseIcon, DownloadSimple as DownloadSimpleIcon, Play as PlayIcon } from "phosphor-svelte";
 
@@ -48,21 +49,7 @@
       aria-valuenow={percent}
       class={cn(button({ size }), "pointer-events-none gap-1.5 rounded-full font-mono tabular-nums")}
     >
-      <svg viewBox="0 0 24 24" class="size-4 -rotate-90" aria-hidden="true">
-        <circle cx="12" cy="12" r="9" fill="none" stroke-width="3" class="stroke-foreground/20" />
-        <circle
-          cx="12"
-          cy="12"
-          r="9"
-          fill="none"
-          stroke-width="3"
-          stroke-linecap="round"
-          pathLength="100"
-          stroke-dasharray="100"
-          stroke-dashoffset={100 - percent}
-          class="stroke-primary transition-[stroke-dashoffset] duration-300"
-        />
-      </svg>
+      <ProgressRing {percent} radius={9} stroke={3} class="size-4" />
       {percent}%
     </span>
   {:else}
