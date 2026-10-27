@@ -246,16 +246,14 @@ describe("AppsService recent apps", () => {
     await vi.waitFor(async () => expect(await recent_on_disk(kernel)).toEqual(["board", "notes"]));
   });
 
-  test("the saved list loads, dropping system, unknown and uninstalled apps", async () => {
+  test("the saved list loads, dropping core and unknown apps but keeping ones opened without installing", async () => {
     await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
     await write(RECENT_PATH, serialize_recent(["gone", "notes", "settings", "game", "board"]));
     const kernel = await boot();
-    expect(apps(kernel).recent).toEqual(["notes", "board"]);
+    expect(apps(kernel).recent).toEqual(["notes", "game", "board"]);
 
     await apps(kernel).uninstall("notes");
-    expect(apps(kernel).recent).toEqual(["board"]);
-    apps(kernel).install("notes");
-    expect(apps(kernel).recent).toEqual(["notes", "board"]);
+    expect(apps(kernel).recent).toEqual(["notes", "game", "board"]);
   });
 
   test("a replaced id in the saved list shows as the app a bare launch opens (ADR-071)", async () => {

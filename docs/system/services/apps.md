@@ -58,7 +58,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `open(path, options?)` | `(path: string, options?: OpenOptions): Promise<WindowId \| null>` | File → app resolution, below |
 | `meta(id)` | `(id: AppId): Promise<AppMeta>` | The app's text from its catalogue entry, `{}` without any; an unknown id fetches the catalogue first. [App text](#app-text) |
 | `listings(filter?)` | `(filter?: AppsFilter): AppListing[]` | Every known app (or the installed / not installed ones, like `list`), its manifest or stub merged with its entry's text and `daily`. Reactive. [App text](#app-text) |
-| `recent` | `readonly AppId[]` (getter) | User apps `launch()` opened lately, newest first, each once, at most 16. Installed ones only: an uninstalled app drops out (and comes back if reinstalled). Reactive. [Recent apps](#recent-apps) |
+| `recent` | `readonly AppId[]` (getter) | Apps `launch()` opened lately, newest first, each once, at most 16, except the four core apps (always listed). Installed or not: opening isn't installing (ADR-077), and the boot slice keeps their entries so they stay listed after a reload. Reactive. [Recent apps](#recent-apps) |
 | `clear_recent()` | `(): void` | Empties the list and saves it |
 | `usage(id)` | `(id): AppUsage \| null` | `{ seconds, last, days }`: time the app was in front, when it last was (ISO) and on how many local days. `null` before its first use. Reactive. [Active time](#active-time) |
 
@@ -204,8 +204,8 @@ An app's display text (`description`, `keywords`, `pitch`, `authors`) is written
 
 The Recent row in the start menu, the Recent rows on the mobile home, and `app recent` read `recent` ([brainstorm](../../brainstorm/2026-10-20_recent-apps.md)).
 
-- **Recording.** Every `launch()` calls the protected `remember(id)`, so a file, a shortcut, a deep link or the shell all count; `create_instance()` (session restore, reopen closed) doesn't. Only installed user apps are recorded: system apps (Settings, File Explorer, Terminal…) never. The app moves to the front, each id once, capped at 16, and the list is saved. Launching the app already in front writes nothing.
-- **Reading.** `load_recent()` runs at the end of `init()`, after the installed list: it parses the file and drops ids no app has and system apps. `recent` also leaves out apps that aren't installed at read time, so an uninstall hides the app without rewriting the file.
+- **Recording.** Every `launch()` calls the protected `remember(id)`, so a file, a shortcut, a deep link or the shell all count; `create_instance()` (session restore, reopen closed) doesn't. Every app is recorded, installed or opened without installing (ADR-077), except the four core apps (App Store, Settings, File Explorer, Terminal), which the start menu always lists. The app moves to the front, each id once, capped at 16, and the list is saved. Launching the app already in front writes nothing.
+- **Reading.** `load_recent()` runs at the end of `init()`, after the installed list: it parses the file and drops ids no app has and the core apps. The boot slice (`installed_catalogue()`) keeps the entries of recent apps, so one opened without installing is still known, and listed, after a reload.
 - **Clearing.** `clear_recent()` (the tile menu's "Clear recent", `app recent --clear`) empties and saves.
 - **Inspector.** A Recent count; detailed mode adds the list, newest first, and the file path.
 

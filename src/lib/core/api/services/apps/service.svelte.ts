@@ -90,7 +90,7 @@ export class AppsService implements IAppsService {
   private writer = new LatestWriter(() => this.files_service, INSTALLED_PATH, "installed apps");
   private recent_writer = new LatestWriter(() => this.files_service, RECENT_PATH, "recent apps");
   private readonly active_time = new ActiveTime(() => this.files_service, () => this.windows_service);
-  /** As saved: can hold apps uninstalled since, which `recent` leaves out until they're reinstalled. */
+  /** As saved: can hold apps no catalogue knows any more, which `recent` leaves out. */
   private recent_ids: AppId[] = $state.raw([]);
   private readonly recent_listed: AppId[] = $derived(this.recent_ids.filter((id) => this.is_recent_candidate(id)));
   private readonly all_listings: AppListing[] = $derived(
@@ -294,6 +294,8 @@ export class AppsService implements IAppsService {
     const ids = new Set(Array.from(this.list({ installed: true }), ([id]) => id));
     // System apps that aren't installed still open on demand from what boot knows: a file's default, Docs from Kernel.
     for (const [id, entry] of this.entries) if (entry.system) ids.add(id);
+    // Recent apps stay listed after a reload even when they were opened without installing.
+    for (const id of this.recent_ids) if (this.entries.has(id)) ids.add(id);
     if ([...ids].some((id) => this.foreign.has(id))) return null;
     return { ...header, apps: [...ids].map((id) => this.entries.get(id)!) };
   }
@@ -457,7 +459,8 @@ export class AppsService implements IAppsService {
   }
 
   private is_recent_candidate(id: AppId): boolean {
-    return this.registry.get(id)?.system === false && this.is_installed(id);
+    // Opening isn't installing (ADR-077), so an app opened without installing counts too; the core apps are always listed.
+    return this.registry.has(id) && !is_core_app(id);
   }
 
   private tidy(all: AppId[], used: Set<AppId>): void {
