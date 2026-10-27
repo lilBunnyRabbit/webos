@@ -57,6 +57,28 @@ export function add_time(usage: Usage, id: AppId, seconds: number, now: Date): U
   };
 }
 
+/** Time a tab counted since its last write, per app: added onto what the file holds then, so tabs don't overwrite each other. */
+export interface UsageDelta {
+  seconds: number;
+  last: string;
+}
+
+export function add_delta(deltas: Record<AppId, UsageDelta>, id: AppId, seconds: number, now: Date): Record<AppId, UsageDelta> {
+  if (seconds <= 0) return deltas;
+  return { ...deltas, [id]: { seconds: (deltas[id]?.seconds ?? 0) + seconds, last: now.toISOString() } };
+}
+
+export function merge_usage(usage: Usage, deltas: Record<AppId, UsageDelta>): Usage {
+  let merged = usage;
+  for (const [id, delta] of Object.entries(deltas)) merged = add_time(merged, id, delta.seconds, new Date(delta.last));
+  return merged;
+}
+
+/** A stretch longer than this wasn't watched by the timer (the device slept, or the tab was frozen): counted up to it. */
+export function stretch_seconds(since: number, now: number, max_ms: number): number {
+  return Math.max(0, Math.min(now - since, max_ms)) / 1000;
+}
+
 export function format_usage(seconds: number): string {
   if (seconds < 60) return "under a minute";
   const minutes = Math.floor(seconds / 60);

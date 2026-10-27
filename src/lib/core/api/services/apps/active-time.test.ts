@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { add_time, format_usage, milestones, parse_usage, serialize_usage } from "./active-time";
+import { add_delta, add_time, format_usage, merge_usage, milestones, parse_usage, serialize_usage, stretch_seconds } from "./active-time";
 
 const day = (date: number, hour = 12) => new Date(2026, 9, date, hour);
 
@@ -67,5 +67,29 @@ describe("milestones", () => {
     expect(list.filter((item) => item.done).map((item) => item.id)).toEqual(["first", "hour", "days-5"]);
     expect(list[1].label).toBe("Played for an hour");
     expect(milestones(null, false).every((item) => !item.done)).toBe(true);
+  });
+});
+
+describe("stretch_seconds", () => {
+  test("counts the stretch, at most the cap, never below zero", () => {
+    expect(stretch_seconds(1_000, 31_000, 120_000)).toBe(30);
+    expect(stretch_seconds(0, 8 * 3600_000, 120_000)).toBe(120);
+    expect(stretch_seconds(5_000, 1_000, 120_000)).toBe(0);
+  });
+});
+
+describe("merge_usage", () => {
+  test("adds a tab's time onto what another tab saved since", () => {
+    const saved = add_time({}, "snake", 100, day(1));
+    const deltas = add_delta(add_delta({}, "snake", 20, day(2)), "paint", 5, day(2));
+    const merged = merge_usage(saved, deltas);
+    expect(merged.snake).toEqual({ seconds: 120, last: day(2).toISOString(), days: 2 });
+    expect(merged.paint).toEqual({ seconds: 5, last: day(2).toISOString(), days: 1 });
+  });
+
+  test("a delta sums its stretches and keeps the latest time", () => {
+    const deltas = add_delta(add_delta({}, "snake", 20, day(1, 9)), "snake", 10, day(1, 10));
+    expect(deltas.snake).toEqual({ seconds: 30, last: day(1, 10).toISOString() });
+    expect(add_delta(deltas, "snake", 0, day(2))).toBe(deltas);
   });
 });
