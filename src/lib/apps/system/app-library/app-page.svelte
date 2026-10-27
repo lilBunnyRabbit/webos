@@ -163,8 +163,8 @@
 
     {#if !solo}
       <div class="flex flex-wrap gap-1.5">
-        {#if installed}
-          <Button size="sm" onclick={pin}><PushPinIcon weight="bold" /> {mobile ? "Add to home screen" : "Pin to desktop"}</Button>
+        <!-- Pins and widgets open the app on demand, so they don't need it installed (ADR-077). -->
+        <Button size="sm" onclick={pin}><PushPinIcon weight="bold" /> {mobile ? "Add to home screen" : "Pin to desktop"}</Button>
           {#if !mobile}
             <Button
               size="sm"
@@ -174,7 +174,6 @@
             </Button>
           {/if}
           {#if manifest.widget}<Button size="sm" onclick={add_widget}><StickerIcon weight="bold" /> Add widget</Button>{/if}
-        {/if}
         <Button size="sm" onclick={copy_link}><LinkSimpleIcon weight="bold" /> Copy solo link</Button>
         {#if installed && !is_core_app(manifest.id)}
           <Button size="sm" variant="quiet" onclick={(event) => void uninstall_app(manifest.id, { x: event.clientX, y: event.clientY })}>

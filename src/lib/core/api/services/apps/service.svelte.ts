@@ -294,8 +294,8 @@ export class AppsService implements IAppsService {
     const ids = new Set(Array.from(this.list({ installed: true }), ([id]) => id));
     // System apps that aren't installed still open on demand from what boot knows: a file's default, Docs from Kernel.
     for (const [id, entry] of this.entries) if (entry.system) ids.add(id);
-    // Recent apps stay listed after a reload even when they were opened without installing.
-    for (const id of this.recent_ids) if (this.entries.has(id)) ids.add(id);
+    // Recent and taskbar-pinned apps stay known after a reload even when they aren't installed.
+    for (const id of [...this.recent_ids, ...this.settings_service.taskbar.pinned]) if (this.entries.has(id)) ids.add(id);
     if ([...ids].some((id) => this.foreign.has(id))) return null;
     return { ...header, apps: [...ids].map((id) => this.entries.get(id)!) };
   }
