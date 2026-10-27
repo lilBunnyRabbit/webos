@@ -1,4 +1,6 @@
 import path from "node:path";
+import { rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import {
@@ -162,6 +164,16 @@ test("fetch_previous never throws, and says why when an asked-for catalogue didn
   const failed = await fetch_previous("http://127.0.0.1:9/store/catalogue.json");
   expect(failed.catalogue).toBeNull();
   expect(failed.problem).toBeTruthy();
+  const missing = await fetch_previous("previous-catalogue-that-is-not-here.json");
+  expect(missing.catalogue).toBeNull();
+  expect(missing.problem).toMatch(/ENOENT/);
+});
+
+test("fetch_previous reads a catalogue file CI downloaded", async () => {
+  const file = path.join(tmpdir(), `previous-catalogue-${process.pid}.json`);
+  writeFileSync(file, JSON.stringify({ version: 1, core: "c", build: 1, release: "1.0.0", apps: [] }));
+  expect((await fetch_previous(file)).catalogue?.release).toBe("1.0.0");
+  rmSync(file);
 });
 
 describe("previous_or_warn", () => {

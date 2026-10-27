@@ -51,8 +51,15 @@ jobs:
       - name: Core browser tests
         run: bunx vitest run --project browser src/lib/core src/lib/kit src/lib/apps/system
 
+      # The live catalogue keeps unchanged apps' versions (ADR-077). Downloaded here, so the build makes no request;
+      # missing (the first deploy, or Pages down) leaves the build's warning and every app on this release.
+      - name: Previous catalogue
+        run: curl -fsS --retry 3 --max-time 30 -o previous-catalogue.json https://lilbunnyrabbit.github.io/webos/store/catalogue.json || true
+
       - name: Build
         run: bun run build
+        env:
+          WEBOS_PREVIOUS_CATALOGUE: previous-catalogue.json
 
   deploy:
     needs: fork
@@ -79,8 +86,15 @@ jobs:
       - name: Unit tests
         run: bun run test:unit
 
+      # The live catalogue keeps unchanged apps' versions (ADR-077). Downloaded here, so the build makes no request;
+      # missing (the first deploy, or Pages down) leaves the build's warning and every app on this release.
+      - name: Previous catalogue
+        run: curl -fsS --retry 3 --max-time 30 -o previous-catalogue.json https://lilbunnyrabbit.github.io/webos/store/catalogue.json || true
+
       - name: Build
         run: bun run build
+        env:
+          WEBOS_PREVIOUS_CATALOGUE: previous-catalogue.json
 
       - name: Boot budget
         run: bun run budget

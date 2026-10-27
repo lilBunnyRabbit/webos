@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createServer, type Plugin, type ResolvedConfig, type ViteDevServer } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
@@ -10,9 +11,12 @@ import { CORE_META, DEV_CORE, manifest_data, parse_catalogue, type Catalogue, ty
 
 export { json_safe, manifest_data, parse_catalogue, type Catalogue, type CatalogueApp } from "../src/lib/core/api/services/apps/catalogue";
 
-/** Where the build finds the live catalogue, to keep each unchanged app's version. Overridden by `WEBOS_PREVIOUS_CATALOGUE`; empty skips it. */
+/**
+ * Where the build finds the live catalogue, to keep each unchanged app's version. Overridden by `WEBOS_PREVIOUS_CATALOGUE`:
+ * a URL, or a file CI downloaded first (the deploy does, so the build itself makes no request); empty skips it.
+ */
 export const PREVIOUS_CATALOGUE = "https://lilbunnyrabbit.github.io/webos/store/catalogue.json";
-const PREVIOUS_TIMEOUT_MS = 5000;
+const PREVIOUS_TIMEOUT_MS = 15_000;
 /** Each manifest chunk is an entry named `{id}.manifest`; boot never loads one. */
 export const MANIFEST_SUFFIX = ".manifest";
 export const OFFLINE_DIR = "offline";
@@ -131,13 +135,24 @@ export interface PreviousCatalogue {
 
 export async function fetch_previous(url: string): Promise<PreviousCatalogue> {
   if (!url) return { catalogue: null, problem: null };
+  // `AbortSignal.timeout`'s timer doesn't keep Node alive: on CI the build exited mid-download ("Unexpected early exit").
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(new Error("timed out")), PREVIOUS_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(PREVIOUS_TIMEOUT_MS), cache: "no-store" });
-    if (!response.ok) return { catalogue: null, problem: `HTTP ${response.status}` };
-    const catalogue = parse_catalogue(await response.json());
+    let data: unknown;
+    if (/^https?:/.test(url)) {
+      const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
+      if (!response.ok) return { catalogue: null, problem: `HTTP ${response.status}` };
+      data = await response.json();
+    } else {
+      data = JSON.parse(await readFile(url, "utf8"));
+    }
+    const catalogue = parse_catalogue(data);
     return catalogue ? { catalogue, problem: null } : { catalogue: null, problem: "not a version 1 catalogue" };
   } catch (error) {
     return { catalogue: null, problem: (error as Error).message };
+  } finally {
+    clearTimeout(timer);
   }
 }
 
