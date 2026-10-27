@@ -1,4 +1,5 @@
 import kernel, { type AppsService, type FilesService } from "$lib/core/api";
+import type { SourceFile } from "$kit/components/drop-zone";
 import { available_name } from "$lib/core/api/services/files/opfs";
 import { resolve_path, base_name, parent_path } from "$lib/core/api/services/files/path";
 import { assert_writable, file_value, is_file_value, type FileValue } from "$lib/core/api/services/files/shell";
@@ -24,7 +25,7 @@ import {
 } from "./naming";
 import { initial_pages, normalize_rotation } from "./pages";
 import { load_pdf, organize_pdf, PdfSplitter, PdfWriter } from "./pdf";
-import { SIGNATURES_DIR, is_image, prepare_image, read_bytes, write_at, type SourceFile } from "./pdf-files";
+import { SIGNATURES_DIR, is_image, prepare_image, read_bytes, write_at } from "./pdf-files";
 import { flatten_groups, parse_ranges, split_groups } from "./ranges";
 import { canvas_blob, open_document, render_page } from "./render";
 import { Section } from "./sections";

@@ -1,5 +1,6 @@
 import { load_pdf } from "./pdf";
-import { read_bytes, type SourceFile } from "./pdf-files";
+import type { SourceFile } from "$kit/components/drop-zone";
+import { read_bytes } from "./pdf-files";
 import { open_document, type PdfDocument } from "./render";
 
 export interface LoadedPdf {

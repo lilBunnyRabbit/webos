@@ -1,5 +1,6 @@
 <script lang="ts">
   import kernel, { type AppsService, type NotificationsService } from "$lib/core/api";
+  import { DropZone } from "$kit/components/drop-zone";
   import { Button, IconButton, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn, format_date } from "$lib/core/utils";
@@ -17,7 +18,6 @@
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
   import { z } from "zod";
-  import DropZone from "./drop-zone.svelte";
   import { clamp_placement, type Placement } from "./geometry";
   import { signed_name, signature_file_name } from "./naming";
   import { DATE_SCALE, Ink, ink_css, sign_pdf } from "./pdf";

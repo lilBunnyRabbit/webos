@@ -31,3 +31,4 @@ Photographing a page is how most people "scan" today, and the photo comes out sk
 - **`page_size` and `warp`** joined `find_paper` in `$kit/utils/perspective`; Shopping List straightens with them.
 - **Magnifier:** `QuadFrame` gained `loupe`: a 96 px circle at 3× with a crosshair, placed clear of the finger. The handles keep `touchstart` from reaching a bottom sheet's swipe-to-dismiss, so a corner dragged down in the phone sheet doesn't drag the sheet.
 - **Unsaved pages:** the window is dirty while pages differ from the last saved PDF; Save in the close prompt runs the export.
+- **Drop zone in the kit.** PDF Tools' `DropZone` moved to `$kit/components/drop-zone` once Doc Scan used it too; PDF Tools and Doc Scan import it from there.

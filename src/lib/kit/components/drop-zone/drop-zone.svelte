@@ -4,7 +4,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { paste_files } from "$kit/utils/paste";
   import type { Snippet } from "svelte";
-  import { accepts_drop, device_source, read_drop, type SourceFile } from "./pdf-files";
+  import { accepts_drop, device_source, read_drop, type SourceFile } from "./drop";
 
   interface Props {
     ondrop: (sources: SourceFile[]) => void;

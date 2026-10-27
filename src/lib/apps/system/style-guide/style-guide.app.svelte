@@ -54,6 +54,7 @@
   import { ai_icon } from "$kit/components/ai-icon";
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
+  import { DropZone, type SourceFile } from "$kit/components/drop-zone";
   import { QuadFrame } from "$kit/components/quad-frame";
   import type { Quad } from "$kit/utils/perspective";
   import { SwipeCompare } from "$kit/components/swipe-compare";
@@ -120,6 +121,7 @@
   let sheet_open = $state(false);
   let split = $state(50);
   let crop = $state({ x: 60, y: 40, width: 200, height: 120 });
+  let dropped = $state.raw<SourceFile[]>([]);
   let quad = $state<Quad>([
     { x: 92, y: 30 },
     { x: 250, y: 46 },
@@ -468,6 +470,19 @@
             <QuadFrame bind:quad image={{ src: paper_photo, width: 320, height: 200 }} alt="A sheet of paper on a table" loupe class="aspect-[320/200] w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-foreground/10" />
             <span class="font-mono text-2xs text-foreground/80 tabular-nums">{quad.map((corner) => `${Math.round(corner.x)},${Math.round(corner.y)}`).join("  ")}</span>
           </div>
+        </Section>
+        <Section
+          title="Drop zone"
+          description="A panel that takes files, from $kit: drag files from File Explorer or the device onto it, or paste one, and it lists what arrived. PDF Tools and Doc Scan use it."
+          flush
+        >
+          <DropZone ondrop={(sources) => (dropped = sources)} label="Drop files here" accept={[]} multiple active class="grid min-h-28 max-w-sm place-items-center rounded-xl bg-background-darker p-4 text-center text-ui text-foreground/80 ring-1 ring-foreground/10">
+            {#if dropped.length}
+              <span class="font-mono text-2xs tabular-nums">{dropped.map((source) => source.path ?? source.name).join(", ")}</span>
+            {:else}
+              Drop or paste files here
+            {/if}
+          </DropZone>
         </Section>
         <Section
           title="Waveform"

@@ -1,10 +1,11 @@
 import { PDFDocument, StandardFonts, degrees } from "pdf-lib";
+import { device_source } from "$kit/components/drop-zone";
 import { describe, expect, test } from "vitest";
 import { PageSize } from "./geometry";
 import { initial_pages, insert_blank, move_page, remove_page, rotate_page } from "./pages";
 import { EncryptedPdfError, images_to_pdf, load_pdf, merge_pdfs, organize_pdf, page_count, sign_pdf, split_pdf } from "./pdf";
 import { build_signature } from "./stroke";
-import { device_source, prepare_image } from "./pdf-files";
+import { prepare_image } from "./pdf-files";
 import { concat, latin1, tiff } from "$kit/utils/exif/fixtures";
 
 async function make_pdf(labels: string[], size: [number, number] = [200, 300]): Promise<Uint8Array> {

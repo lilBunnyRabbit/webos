@@ -1,5 +1,6 @@
 <script lang="ts">
   import kernel, { type AppsService } from "$lib/core/api";
+  import { DropZone, source_at, type SourceFile } from "$kit/components/drop-zone";
   import { Button, EmptyState, IconButton, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
@@ -15,12 +16,11 @@
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
   import { z } from "zod";
-  import DropZone from "./drop-zone.svelte";
   import { PageSize } from "./geometry";
   import { run_job } from "./job";
   import { images_pdf_name } from "./naming";
   import { PdfWriter } from "./pdf";
-  import { IMAGE_ACCEPT, is_image, prepare_image, source_at, write_at, type SourceFile } from "./pdf-files";
+  import { IMAGE_ACCEPT, is_image, prepare_image, write_at } from "./pdf-files";
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
 

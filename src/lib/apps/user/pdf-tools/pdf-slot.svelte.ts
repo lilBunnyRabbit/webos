@@ -1,6 +1,7 @@
 import { close_loaded, load_source, type LoadedPdf } from "./loaded";
+import { source_at, type SourceFile } from "$kit/components/drop-zone";
 import { EncryptedPdfError } from "./pdf";
-import { is_pdf, source_at, type SourceFile } from "./pdf-files";
+import { is_pdf } from "./pdf-files";
 import { error_message } from "$lib/core/utils";
 
 export interface SlotError {

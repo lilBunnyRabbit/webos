@@ -1,11 +1,11 @@
 <script lang="ts">
   import kernel, { type AppsService } from "$lib/core/api";
+  import { DropZone } from "$kit/components/drop-zone";
   import { Button, IconButton, Input, Section as Group, Segmented, Select, SettingRow, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { Export as ExportIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
   import { z } from "zod";
-  import DropZone from "./drop-zone.svelte";
   import { run_job } from "./job";
   import { page_image_name } from "./naming";
   import { PDF_ACCEPT, write_into } from "./pdf-files";

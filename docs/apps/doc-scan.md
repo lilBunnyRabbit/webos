@@ -39,7 +39,7 @@ Text, holes and shadows inside the page don't break it: they're islands in the r
 
 ## App
 
-- **Pages:** a grid (2 columns, 3 from `@md`, 4 from `@2xl`) of straightened thumbnails with the page number; ‹ › move a page, the bin deletes it, a tap opens the editor. Add photos (device picker, several at once), From files… (WebOS picker), drop or paste pictures (PDF Tools' `DropZone` and `paste_files`). One photo added opens its editor straight away.
+- **Pages:** a grid (2 columns, 3 from `@md`, 4 from `@2xl`) of straightened thumbnails with the page number; ‹ › move a page, the bin deletes it, a tap opens the editor. Add photos (device picker, several at once), From files… (WebOS picker), drop or paste pictures (the kit's `DropZone`, which also takes pastes). One photo added opens its editor straight away.
 - **Editor:** the status line, `QuadFrame` or the preview, and a bar with the filter, Find edges, Whole photo and Preview / Corners. Back (and the phone's Back) returns to the pages and renders the page if its corners changed.
 - **Dirty:** while the pages differ from the last saved PDF (ids, filters, corners), the window is dirty; the close prompt's Save runs the export.
 - **Props:** `photo` opens the device picker, `path` / `paths` open pictures as pages. Only on the window's first launch (window storage `launched`): pages aren't restored, so a restored window starts empty rather than asking again.

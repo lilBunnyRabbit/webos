@@ -1,5 +1,6 @@
 <script lang="ts">
   import kernel, { ShortcutCategory, type ShortcutsService } from "$lib/core/api";
+  import { DropZone, type SourceFile } from "$kit/components/drop-zone";
   import { Button, IconButton, Separator, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
@@ -16,11 +17,10 @@
   import { untrack, type Snippet } from "svelte";
   import { initial_pages, insert_blank, is_unchanged, move_page, move_to_slot, remove_page, rotate_page, type PageItem } from "./pages";
   import { organize_pdf } from "./pdf";
-  import { PDF_ACCEPT, write_at, type SourceFile } from "./pdf-files";
+  import { PDF_ACCEPT, write_at } from "./pdf-files";
   import PdfPlaceholder from "./pdf-placeholder.svelte";
   import { PdfSlot } from "./pdf-slot.svelte";
   import PdfThumb from "./pdf-thumb.svelte";
-  import DropZone from "./drop-zone.svelte";
   import { ReorderHandler } from "./reorder.handler.svelte";
   import { ThumbCache } from "./thumbs.svelte";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";

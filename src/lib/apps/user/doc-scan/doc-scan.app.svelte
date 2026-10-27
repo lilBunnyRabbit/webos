@@ -1,13 +1,13 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
+  import { DropZone, type SourceFile } from "$kit/components/drop-zone";
   import { PATHS } from "$lib/core/api/services/files/hierarchy";
   import { base_name } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import DropZone from "$lib/apps/user/pdf-tools/drop-zone.svelte";
   import { is_image_name } from "$lib/apps/user/pdf-tools/naming";
-  import { is_image, type SourceFile } from "$lib/apps/user/pdf-tools/pdf-files";
+  import { is_image } from "$lib/apps/user/pdf-tools/pdf-files";
   import { report_error } from "$kit/utils/report-error";
   import {
     ArrowLeft as ArrowLeftIcon,
