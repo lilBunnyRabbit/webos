@@ -42,6 +42,8 @@
     position_at,
   } from "./timeline";
   import { tokenize, type ReaderToken } from "./tokens";
+  import { EMPTY_TALLY, FAST_WORDS, tally, type Tally } from "./reading";
+  import { z } from "zod";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
 
@@ -59,10 +61,11 @@
   const MAX_FRAME_MS = 250;
 
   const { path: initial_path }: { path?: string } = $props();
-  const { window: win, storage } = get_app_context();
+  const { window: win, storage, achievements } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
 
   const settings = storage.persisted("settings", DEFAULT_SETTINGS, settings_schema);
+  const words_read = storage.persisted("words", 0, z.number().int().nonnegative());
 
   let root = $state<HTMLDivElement>();
   let source = $state.raw<Source | null>(null);
@@ -74,6 +77,7 @@
   let index = $state(0);
   let progress = 0;
   let playing = $state(false);
+  let reading: Tally = EMPTY_TALLY;
 
   const tokens = $derived(source?.tokens ?? []);
   const timeline = $derived(build_timeline(tokens, settings.value.wpm, pause_settings(settings.value)));
@@ -92,13 +96,17 @@
       const delta = last === null ? 0 : Math.min(now - last, MAX_FRAME_MS);
       last = now;
       const elapsed = elapsed_at(timeline, { index, progress }) + delta;
+      const from = index;
       if (elapsed >= timeline.total_ms) {
         index = timeline.segments.length - 1;
         progress = 0;
+        reading = tally(reading, from, index + 1, settings.value.wpm);
+        achievements.achieve("the-end");
         pause();
         return;
       }
       ({ index, progress } = position_at(timeline, elapsed));
+      reading = tally(reading, from, index, settings.value.wpm);
       frame = requestAnimationFrame(step);
     });
 
@@ -109,7 +117,19 @@
     if (!win.is_visible) untrack(pause);
   });
 
-  onDestroy(save_position);
+  onDestroy(() => {
+    count_reading();
+    save_position();
+  });
+
+  function count_reading() {
+    if (reading.words > 0) {
+      words_read.value += reading.words;
+      achievements.progress("words-10000", words_read.value);
+    }
+    if (reading.fast_best >= FAST_WORDS) achievements.achieve("fast");
+    reading = EMPTY_TALLY;
+  }
 
   function save_position() {
     if (!source?.path) return;
@@ -126,6 +146,7 @@
   function pause() {
     if (!playing) return;
     playing = false;
+    count_reading();
     save_position();
   }
 

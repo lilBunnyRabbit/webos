@@ -14,6 +14,7 @@ import {
   pick_mime,
   push_level,
   Source,
+  take_achievement,
   take_name,
   TakeKind,
 } from "./media";
@@ -128,5 +129,15 @@ describe("errors", () => {
     expect(error_copy(CaptureError.DENIED, Source.SCREEN).title).toBe("Screen sharing was cancelled");
     expect(error_copy(CaptureError.DENIED, Source.MIC).title).toBe("Microphone access is blocked");
     expect(error_copy(CaptureError.MISSING, Source.CAMERA).title).toBe("No camera found");
+  });
+});
+
+describe("take_achievement", () => {
+  it("names one achievement per kind of recording", () => {
+    expect(take_achievement(TakeKind.AUDIO, Source.MIC)).toBe("voice");
+    expect(take_achievement(TakeKind.VIDEO, Source.SCREEN)).toBe("screen");
+    expect(take_achievement(TakeKind.AUDIO, Source.SCREEN)).toBe("screen");
+    expect(take_achievement(TakeKind.VIDEO, Source.CAMERA)).toBe("camera");
+    expect(take_achievement(TakeKind.PHOTO, Source.CAMERA)).toBe("photo");
   });
 });

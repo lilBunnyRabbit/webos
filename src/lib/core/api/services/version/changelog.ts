@@ -37,6 +37,11 @@ export const CHANGELOG: Release[] = [
         text: "Sokoban, Nonogram, Kakuro, Futoshiki, Nurikabe, Hutches, Plots, Sun & Moon, Tunnels and Word Search have achievements to earn, from a first solve and a daily to the biggest boards, plus a secret one each.",
       },
       {
+        kind: NEW,
+        apps: ["pomodoro", "tea-timer", "speed-reader", "kanban", "doc-scan", "motion-watch", "recorder"],
+        text: "Pomodoro, Tea Timer, Speed Reader, Kanban, Doc Scan, Motion Watch and Recorder now have achievements, earned by finishing focus sessions, brewing tea, reading, moving cards to done, scanning pages, catching motion and making recordings.",
+      },
+      {
         kind: IMPROVED,
         apps: ["shopping-list"],
         text: "Shopping List can scan a list with Doc Scan, next to the camera, in the list, its menus and its widget, and has four achievements to earn, like ticking off a whole list.",

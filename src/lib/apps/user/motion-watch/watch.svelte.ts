@@ -1,10 +1,11 @@
 import { untrack } from "svelte";
-import kernel, { type AppsService, type BackgroundRun, type NotificationsService } from "$lib/core/api";
+import kernel, { type AchievementsService, type AppsService, type BackgroundRun, type NotificationsService } from "$lib/core/api";
 import { app_data_path, json_file } from "$lib/core/contexts/app";
 import { report_error } from "$kit/utils/report-error";
 import { LiveWatch } from "./live.svelte";
 import { APP_ID, DEFAULT_SETTINGS, SettingsSchema, detect_config } from "./settings";
-import { prune_days, save_clip } from "./storage";
+import { day_of, type MotionEvent } from "./events";
+import { prune_days, read_day, save_clip } from "./storage";
 import type { WatchApi, WatchEvent } from "./watch.worker";
 import WatchWorker from "./watch.worker?worker";
 
@@ -37,6 +38,16 @@ const camera_constraints: MediaTrackConstraints = {
   height: { ideal: 480 },
   frameRate: { ideal: 15, max: 15 },
 };
+
+const NIGHT_ENDS_HOUR = 5;
+
+// Through the service: the job runs with no window, so there's no app context to report from.
+async function report_clip(saved: MotionEvent): Promise<void> {
+  const achievements = kernel.service<AchievementsService>("achievements");
+  achievements.achieve(APP_ID, "first-clip");
+  if (new Date(saved.at).getHours() < NIGHT_ENDS_HOUR) achievements.achieve(APP_ID, "night-watch");
+  achievements.progress(APP_ID, "busy-day", (await read_day(day_of(saved.at))).length);
+}
 
 const run: BackgroundRun = async (context) => {
   const settings = json_file(app_data_path(APP_ID, "settings.json"), DEFAULT_SETTINGS, SettingsSchema);
@@ -71,6 +82,7 @@ const run: BackgroundRun = async (context) => {
         .then((saved) => {
           live.saved++;
           live.last_saved = saved;
+          void report_clip(saved).catch((error: unknown) => console.warn("[motion-watch] Couldn't report a clip:", error));
         })
         .catch((error: unknown) => report_error(APP_ID, "Couldn't save a motion clip", error));
     }

@@ -31,7 +31,7 @@
   import { untrack } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import { z } from "zod";
-  import { error_copy, kind_of_file, PhotoFormat, RECORDINGS_DIR, Source, TakeKind } from "./media";
+  import { error_copy, kind_of_file, PhotoFormat, RECORDINGS_DIR, Source, take_achievement, TakeKind } from "./media";
   import type { RecorderProps } from "./props";
   import { list_recordings } from "./recordings";
   import RecorderMeter from "./recorder-meter.svelte";
@@ -39,7 +39,7 @@
   import { report_error } from "$kit/utils/report-error";
 
   const { source: initial_source }: RecorderProps = $props();
-  const { window: win, storage, app_id } = get_app_context();
+  const { window: win, storage, app_id, achievements } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const apps = $derived(kernel.service<AppsService>("apps"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -116,8 +116,10 @@
 
   async function save(): Promise<boolean> {
     try {
+      const take = session.take;
       const path = await session.save(files);
-      if (!path) return false;
+      if (!path || !take) return false;
+      achievements.achieve(take_achievement(take.kind, take.source));
       notifications.notify(app_id, {
         type: NotificationType.INFO,
         title: "Saved to Recordings",

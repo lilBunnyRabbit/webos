@@ -76,6 +76,12 @@ Cups sort ready first, then by end. A cup started in the last 3 s scrolls itself
 
 Each top-level part falls back on its own (`.catch`), so one broken part doesn't lose the rest. No props, no shell commands (`app launch tea-timer`), no widget.
 
+`app.tea-timer.brews` (app storage) counts the cups started, Brew and Steep alike, for `brews-50`. Achievements live in `/var/lib/apps/tea-timer/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)).
+
+## Achievements
+
+ADR-078. Reported from the window once the scheduler took the job (a failed Brew counts nothing): `first-brew` (any cup), `resteep` (Steep 2 or later), `own-tea` (a cup of a custom tea), `brews-50` (progress: `app.tea-timer.brews`). Brewing has no app code at the ring (no `on_fire`), so nothing needs reporting with the window closed.
+
 ## Limits
 
 - Rings while any WebOS tab is open, like every scheduler job.

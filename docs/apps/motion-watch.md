@@ -87,6 +87,10 @@ The job calls `ctx.resumable()` once the camera is running.
 
 Every wait while starting gives way to Stop: the settings read, the camera prompt (`getUserMedia` raced against the signal; a stream that arrives after Stop has its tracks stopped at once) and `resumable()`. Whatever point Stop lands on, the job ends, the camera's tracks stop and saves in flight finish first. While it ends the job's status is "Stopping", which the window shows in place of the preview; Arm right after Disarm waits for it and starts a new watch. After a reload with the watch armed, WebOS offers "Resume Motion Watch?"; Resume arms it again (the camera permission must still be granted).
 
+### Achievements
+
+ADR-078. The job has no window and no app context, so `watch.svelte.ts` reports through `kernel.service<AchievementsService>("achievements")` after each clip is saved: `first-clip`, `busy-day` (progress: the clips in that day's `events.json`, goal 10; the highest day counts) and secret `night-watch` (a clip starting before 05:00 local). A failed report only warns in the console. Stored by the OS in `/var/lib/apps/motion-watch/achievements.json` ([achievements](../system/services/achievements.md)).
+
 ## Shell
 
 Nothing of its own: `bg ls` and `bg stop motion-watch` ([background](../system/services/background.md#shell)).

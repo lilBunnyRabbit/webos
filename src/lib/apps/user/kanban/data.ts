@@ -279,6 +279,23 @@ export function archive_done(board: Board, now = new Date()): Board {
   };
 }
 
+export interface MoveOutcome {
+  finished: boolean;
+  cleared: boolean;
+}
+
+export const CLEARED_MIN_CARDS = 3;
+
+// Read on the board before the move, so a folder board (which only changes once the note is written) reads the same.
+export function move_outcome(board: Board, card_id: string, column_id: string): MoveOutcome {
+  const from = find_card(board, card_id)?.column;
+  const to = board.columns.find((column) => column.id === column_id);
+  const finished = Boolean(from && to && !from.done && to.done);
+  const open = board.columns.filter((column) => !column.done).flatMap((column) => column.cards);
+  const total = board.columns.reduce((sum, column) => sum + column.cards.length, 0);
+  return { finished, cleared: finished && open.length === 1 && total >= CLEARED_MIN_CARDS };
+}
+
 export function done_count(board: Board): number {
   return board.columns.filter((column) => column.done).reduce((sum, column) => sum + column.cards.length, 0);
 }

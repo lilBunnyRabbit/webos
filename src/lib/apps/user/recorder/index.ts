@@ -16,6 +16,12 @@ export default define_app({
       height: { min: 380 },
     },
   },
+  achievements: [
+    { id: "voice", title: "Testing, testing", text: "Save a voice recording." },
+    { id: "screen", title: "Show and tell", text: "Save a screen recording." },
+    { id: "camera", title: "Rolling", text: "Save a camera video." },
+    { id: "photo", title: "Say cheese", text: "Save a photo." },
+  ],
   shell: () => import("./commands"),
   component: () => import("./recorder.app.svelte"),
 });

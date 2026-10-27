@@ -67,6 +67,12 @@ export function take_name(source: Source, kind: TakeKind, mime: string, date: Da
 
 const MEDIA_EXTENSIONS = [".weba", ".webm", ".m4a", ".mp4", ".ogg", ".png", ".jpg", ".jpeg"];
 
+export function take_achievement(kind: TakeKind, source: Source): string {
+  if (kind === TakeKind.PHOTO) return "photo";
+  if (source === Source.SCREEN) return "screen";
+  return source === Source.CAMERA && kind === TakeKind.VIDEO ? "camera" : "voice";
+}
+
 export function is_media_file(name: string): boolean {
   const lower = name.toLowerCase();
   return MEDIA_EXTENSIONS.some((extension) => lower.endsWith(extension));

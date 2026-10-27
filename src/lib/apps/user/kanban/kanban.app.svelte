@@ -49,6 +49,7 @@
     is_due,
     KanbanFileSchema,
     move_card,
+    move_outcome,
     move_column,
     new_board,
     new_card,
@@ -64,6 +65,7 @@
     update_board,
     type Board,
     type Column,
+    type MoveOutcome,
   } from "./data";
   import { DragKind, BoardDrag } from "./drag.svelte";
   import FolderSettings from "./folder-settings.svelte";
@@ -76,13 +78,14 @@
 
   const { board: initial_board, card: initial_card }: { board?: string; card?: string } = $props();
 
-  const { window: win, storage, app_id } = get_app_context();
+  const { window: win, storage, app_id, achievements } = get_app_context();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const files = $derived(kernel.service<FilesService>("files"));
   const apps = $derived(kernel.service<AppsService>("apps"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const data = storage.file(BOARDS_FILE, default_file(), KanbanFileSchema);
+  const cards_done = storage.persisted("finished", 0, z.number().int().nonnegative());
   const board_id = storage.window<string>("board", untrack(() => initial_board ?? "life"), z.string());
   const open_card = storage.window<string | null>("card", untrack(() => initial_card ?? null), z.string().nullable());
   const archive_open = storage.window<boolean>("archive", false, z.boolean());
@@ -155,11 +158,13 @@
     const { path, field } = folder;
     const note = note_by_file.get(file);
     if (!note || (note.fields[field] ?? "") === value) return;
+    const outcome = move_outcome(board, file, value);
     // Order of first appearance follows the files, so a move would reshuffle the columns: it freezes the order first.
     if (board.columns.some((column) => column.id !== NO_VALUE && !stored.columns.some((other) => other.id === column.id))) edit_columns((board) => board);
     notes = notes.map((other) => (other.file === file ? { ...other, fields: { ...other.fields, [field]: value } } : other));
     try {
       await write_card_field(files, path, file, field, value);
+      report_move(outcome);
     } catch (reason) {
       notifications.notify(app_id, { type: NotificationType.ERROR, title: `Couldn't move “${note.title}”`, message: String(reason) });
       void reload(path);
@@ -176,11 +181,22 @@
     }
   }
 
+  function report_move(outcome: MoveOutcome) {
+    if (!outcome.finished) return;
+    cards_done.value += 1;
+    achievements.achieve("first-done");
+    achievements.progress("done-50", cards_done.value);
+    if (outcome.cleared) achievements.achieve("cleared");
+  }
+
   const drag = new BoardDrag((kind, id, target) => {
     if (kind === DragKind.CARD && target.column) {
       const column = board.columns.find((candidate) => candidate.id === target.column);
       if (column && folder) void move_note(id, column.id);
-      else if (column) edit((board) => move_card(board, id, column.id, index_before(column, target.before, id)));
+      else if (column) {
+        report_move(move_outcome(board, id, column.id));
+        edit((board) => move_card(board, id, column.id, index_before(column, target.before, id)));
+      }
     } else if (kind === DragKind.COLUMN && id !== NO_VALUE) {
       edit_columns((board) => move_column(board, id, column_index_before(board, target.before, id)));
     }
@@ -254,6 +270,7 @@
     }
     const index = dx === 0 ? found.index + dy : Math.min(found.index, to.cards.length);
     if (dx === 0 && (index < 0 || index >= found.column.cards.length)) return;
+    report_move(move_outcome(board, card_id, to.id));
     edit((board) => move_card(board, card_id, to.id, index));
     void focus_card(card_id);
   }
@@ -316,6 +333,7 @@
     );
     if (choice === "open") open(card_id);
     else if (choice?.startsWith("move:")) {
+      report_move(move_outcome(board, card_id, choice.slice(5)));
       edit((board) => move_card(board, card_id, choice.slice(5), Infinity));
       void focus_card(card_id);
     } else if (choice === "up") key_move(card_id, 0, -1);

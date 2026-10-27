@@ -23,6 +23,7 @@ import {
   LabelColor,
   move_card,
   move_column,
+  move_outcome,
   new_board,
   new_card,
   remove_board,
@@ -157,6 +158,23 @@ describe("archive", () => {
     expect(board.archive.map((c) => c.id)).toEqual(["b", "c"]);
     expect(delete_archived(board, "b").archive.map((c) => c.id)).toEqual(["c"]);
     expect(delete_archived(board, null).archive).toEqual([]);
+  });
+});
+
+describe("move outcome", () => {
+  test("a card into done from an open column finishes it", () => {
+    const board = board_with({ doing: ["a"], done: ["b"] });
+    expect(move_outcome(board, "a", "done").finished).toBe(true);
+    expect(move_outcome(board, "a", "next").finished).toBe(false);
+    expect(move_outcome(board, "b", "done").finished).toBe(false);
+    expect(move_outcome(board, "missing", "done").finished).toBe(false);
+    expect(move_outcome(board, "a", "missing").finished).toBe(false);
+  });
+
+  test("the last open card clears the board once it holds three cards", () => {
+    expect(move_outcome(board_with({ doing: ["a"], done: ["b", "c"] }), "a", "done")).toEqual({ finished: true, cleared: true });
+    expect(move_outcome(board_with({ doing: ["a"], done: ["b"] }), "a", "done").cleared).toBe(false);
+    expect(move_outcome(board_with({ next: ["x"], doing: ["a"], done: ["b", "c"] }), "a", "done").cleared).toBe(false);
   });
 });
 

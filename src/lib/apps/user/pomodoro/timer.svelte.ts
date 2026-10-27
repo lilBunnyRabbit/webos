@@ -1,14 +1,15 @@
 import { detached_root } from "$lib/core/utils/detached-root.svelte";
 import { untrack } from "svelte";
-import kernel, { type Job, type NotificationsService, type SchedulerService } from "$lib/core/api";
+import kernel, { type AchievementsService, type Job, type NotificationsService, type SchedulerService } from "$lib/core/api";
 import { app_data_path, json_file } from "$lib/core/contexts/app";
 import * as logic from "./pomodoro";
 import { APP_ID, EMPTY_TIMER, JOB_ID, Phase, Status, TimerFileSchema, type Ended, type PhaseJob, type Run, type Settings } from "./pomodoro";
-import { EMPTY_STATS, record_focus, StatsFileSchema } from "./stats";
+import { EMPTY_STATS, record_focus, StatsFileSchema, streak, totals, type StatsFile } from "./stats";
 import { report_error } from "$kit/utils/report-error";
 
 const notifications = () => kernel.service<NotificationsService>("notifications");
 const scheduler = () => kernel.service<SchedulerService>("scheduler");
+const achievements = () => kernel.service<AchievementsService>("achievements");
 
 const RETEXT_DELAY = 800;
 const READY_TIMEOUT = 5000;
@@ -18,6 +19,14 @@ const same_texts = (job: Job, input: ReturnType<typeof logic.phase_input>) =>
   job.message === input.message &&
   Boolean(job.silent) === Boolean(input.silent) &&
   JSON.stringify(job.actions ?? []) === JSON.stringify(input.actions ?? []);
+
+// Reported from here rather than a window: the on-fire handler counts an end with no window open.
+function report_focus(stats: StatsFile, ended_at: number, next: Phase): void {
+  achievements().achieve(APP_ID, "first-focus");
+  if (next === Phase.LONG) achievements().achieve(APP_ID, "full-set");
+  achievements().progress(APP_ID, "streak-7", streak(stats, new Date(ended_at)));
+  achievements().progress(APP_ID, "sessions-100", totals(stats).sessions);
+}
 
 // One per page, shared by every window, the widget, shell commands and the on-fire handler, so an end is counted once
 // per tab: `plan.settled` stops a second count. The scheduler's on-fire handler counts an end and starts what follows
@@ -139,7 +148,10 @@ class PomodoroTimer {
     const resolved = logic.resolve(this.file.value.plan, job, this.settings, Date.now());
     if (!resolved) return;
     const { completed } = resolved;
-    if (completed.phase === Phase.FOCUS) this.stats.value = record_focus(this.stats.value, completed.ended_at, completed.ms);
+    if (completed.phase === Phase.FOCUS) {
+      this.stats.value = record_focus(this.stats.value, completed.ended_at, completed.ms);
+      report_focus(this.stats.value, completed.ended_at, resolved.run.phase);
+    }
     await this.commit(resolved.run, resolved.settled, resolved.ended, job);
   }
 

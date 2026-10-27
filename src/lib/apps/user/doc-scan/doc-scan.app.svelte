@@ -35,13 +35,16 @@
   }
 
   let { photo, path, paths }: Props = $props();
-  const { window: win, storage, app_id } = get_app_context();
+  const { window: win, storage, app_id, achievements } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
 
   const IMAGE_ACCEPT = ["image/*"];
   const filter = storage.persisted<PageFilter>("filter", PageFilter.COLOR, z.enum(PageFilter));
   // Props come back with a restored window, the pages don't: without this a reload would ask for a photo again.
   const launched = storage.window("launched", false, z.boolean());
+  const scanned = storage.persisted("pages", 0, z.number().int().nonnegative());
+  // A page saved again (a fix, a reorder) is still one page scanned.
+  const counted = new Set<string>();
 
   let pages = $state.raw<ScanPage[]>([]);
   let editing = $state<string | null>(null);
@@ -121,6 +124,15 @@
     target.dispose();
   }
 
+  function count_pages() {
+    const fresh = pages.filter((each) => !counted.has(each.id));
+    for (const each of fresh) counted.add(each.id);
+    scanned.value += fresh.length;
+    achievements.achieve("first-pdf");
+    achievements.progress("booklet", pages.length);
+    achievements.progress("pages-100", scanned.value);
+  }
+
   async function save(): Promise<boolean> {
     if (!pages.length || saving) return false;
     const target = await win.pick_save({ name: scan_name(), start_path: PATHS.documents, accept: [".pdf"], title: "Save the scan" });
@@ -129,7 +141,10 @@
     const key = state_key;
     try {
       const done = await export_pdf(() => pages, target);
-      if (done) saved = key;
+      if (done) {
+        saved = key;
+        count_pages();
+      }
       return done;
     } finally {
       saving = false;

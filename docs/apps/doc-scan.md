@@ -43,7 +43,8 @@ Text, holes and shadows inside the page don't break it: they're islands in the r
 - **Editor:** the status line, `QuadFrame` or the preview, and a bar with the filter, Find edges, Whole photo and Preview / Corners. Back (and the phone's Back) returns to the pages and renders the page if its corners changed.
 - **Dirty:** while the pages differ from the last saved PDF (ids, filters, corners), the window is dirty; the close prompt's Save runs the export.
 - **Props:** `photo` opens the device picker, `path` / `paths` open pictures as pages. Only on the window's first launch (window storage `launched`): pages aren't restored, so a restored window starts empty rather than asking again.
-- **Storage:** `app.doc-scan.filter`, the filter new pages start with (the last one picked).
+- **Storage:** `app.doc-scan.filter`, the filter new pages start with (the last one picked); `app.doc-scan.pages`, the pages saved into PDFs, for `pages-100`.
+- **Achievements** (ADR-078), reported after a PDF saves: `first-pdf`, `booklet` (progress: the most pages in one saved PDF, goal 5), `pages-100` (progress: `app.doc-scan.pages`). A page counts once per window however often it's saved again (a set of counted page ids in memory). The `doc-scan::scan` sheet runs in the caller's app context, so it reports nothing. Stored by the OS in `/var/lib/apps/doc-scan/achievements.json` ([achievements](../system/services/achievements.md)).
 
 ## Sheet: `doc-scan::scan`
 

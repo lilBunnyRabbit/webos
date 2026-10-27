@@ -12,6 +12,7 @@
     Plus as PlusIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
+  import { z } from "zod";
   import BrewCard from "./brew-card.svelte";
   import { attempt, start_brew, steep_again, stop_brew } from "./jobs";
   import {
@@ -36,12 +37,13 @@
   import TeaCard from "./tea-card.svelte";
   import TeaEditor from "./tea-editor.svelte";
 
-  const { window: win, storage } = get_app_context();
+  const { window: win, storage, achievements } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
 
   const file = storage.file(DATA_FILE, EMPTY_TEAS, TeaDataSchema);
+  const brewed = storage.persisted("brews", 0, z.number().int().nonnegative());
   const teas = $derived(file.ready ? all_teas(file.value) : []);
   const brews = $derived(file.ready ? brews_of(scheduler.jobs, file.value, teas) : []);
   const hidden_count = $derived(teas.filter((tea) => tea.hidden).length);
@@ -70,13 +72,31 @@
 
   function brew(tea: TeaEntry) {
     void notifications.request_system();
-    attempt("Couldn't start the brew", start_brew(tea, strength_of(file.value, tea.id)));
+    attempt(
+      "Couldn't start the brew",
+      start_brew(tea, strength_of(file.value, tea.id)).then(() => {
+        count_brew();
+        if (!tea.built_in) achievements.achieve("own-tea");
+      })
+    );
   }
 
   function steep(brew: Brew, steep: number) {
     if (!brew.tea) return;
     void notifications.request_system();
-    attempt("Couldn't start the next steep", steep_again(brew, brew.tea, steep));
+    attempt(
+      "Couldn't start the next steep",
+      steep_again(brew, brew.tea, steep).then(() => {
+        count_brew();
+        achievements.achieve("resteep");
+      })
+    );
+  }
+
+  function count_brew() {
+    brewed.value += 1;
+    achievements.achieve("first-brew");
+    achievements.progress("brews-50", brewed.value);
   }
 
   function choose_strength(tea: TeaEntry, strength: Strength) {

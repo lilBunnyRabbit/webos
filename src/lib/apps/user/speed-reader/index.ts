@@ -13,5 +13,10 @@ export default define_app({
   tools: ["text/plain", ".txt", ".md"],
   props: FILE_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 300 } } },
+  achievements: [
+    { id: "the-end", title: "The end", text: "Read a text through to its last word." },
+    { id: "fast", title: "Skimmer", text: "Read 300 words in one go at 600 words a minute or faster." },
+    { id: "words-10000", title: "Bookworm", text: "Read 10,000 words.", goal: 10000 },
+  ],
   component: () => import("./speed-reader.app.svelte"),
 });

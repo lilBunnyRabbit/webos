@@ -17,6 +17,8 @@ let files: FilesService;
 let scheduler: SchedulerService;
 let notifications: NotificationsService;
 let execute: ReturnType<typeof vi.fn>;
+let achieve: ReturnType<typeof vi.fn>;
+let progress: ReturnType<typeof vi.fn>;
 const booted: IService[] = [];
 
 function context<T>(args: T): CommandContext<T> {
@@ -43,11 +45,14 @@ beforeEach(async () => {
   vi.setSystemTime(new Date(2026, 9, 16, 12, 0));
   await clear_opfs();
   execute = vi.fn();
+  achieve = vi.fn();
+  progress = vi.fn();
   await files.init();
   notifications = new NotificationsService();
   use("notifications", notifications);
   use("apps", stub_service("apps", { launch: vi.fn(), get: (id: string) => (id === APP_ID ? manifest : undefined), is_installed: () => true }));
   use("shell", stub_service("shell", { execute }));
+  use("achievements", stub_service("achievements", { achieve, progress }));
   scheduler = new SchedulerService(kernel);
   await scheduler.init();
   use("scheduler", scheduler);
@@ -116,6 +121,10 @@ test("a phase started from the shell rings with no window, and its end is counte
   await vi.waitFor(() => expect(scheduler.get(JOB_ID)).toBeUndefined());
   expect((await stats()).days["2026-10-16"]).toEqual({ sessions: 1, ms: 25 * MINUTE });
   expect(await status()).toBe("Short break · ready · 5:00 · Report");
+  expect(achieve).toHaveBeenCalledWith(APP_ID, "first-focus");
+  expect(achieve).not.toHaveBeenCalledWith(APP_ID, "full-set");
+  expect(progress).toHaveBeenCalledWith(APP_ID, "sessions-100", 1);
+  expect(progress).toHaveBeenCalledWith(APP_ID, "streak-7", 1);
 });
 
 test("skip from the notification's command moves past the break", async () => {

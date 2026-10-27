@@ -23,6 +23,11 @@ export default define_app({
       height: { min: 320 },
     },
   },
+  achievements: [
+    { id: "first-done", title: "Done and dusted", text: "Move a card into a done column." },
+    { id: "cleared", title: "Clean slate", text: "Finish the last open card on a board of three or more." },
+    { id: "done-50", title: "Shipped", text: "Move 50 cards into a done column.", goal: 50 },
+  ],
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
   component: () => import("./kanban.app.svelte"),
