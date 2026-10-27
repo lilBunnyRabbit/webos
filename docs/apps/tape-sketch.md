@@ -97,7 +97,7 @@ PNG and SVG from the File menu, written where the save picker says, of the whole
 - `/var/lib/apps/tape-sketch/achievements.json`: achievements, written by the OS ([achievements](../system/services/achievements.md)).
 - No shell commands; `open` covers it through the association.
 
-**Achievements** (ADR-078), reported after a save lands, from the saved sketch (`geometry.ts`): `first-save`, `every-edge` (`all_measured`: at least one edge, every edge of every path with a length; dimension lines don't count), `square` (`checks_out`: a closed path with Check lengths on, every edge measured and its closure within tolerance).
+**Achievements** (ADR-078), reported after a save lands, from the saved sketch (`geometry.ts`), only when the sketch had unsaved changes or had never been saved (Save on an untouched file earns nothing): `first-save`, `every-edge` (`all_measured`: at least one edge, every edge of every path with a length; dimension lines don't count), `square` (`checks_out`: a closed path with Check lengths on, every edge measured and its closure within tolerance).
 
 ## Dependencies & licences
 

@@ -171,12 +171,13 @@
   async function write(path: string): Promise<boolean> {
     editor.drop();
     const snapshot = editor.sprite;
+    const changed = editor.dirty || file_path === null;
     try {
       await write_text(path, serialize_sprite(snapshot));
       file_path = path;
       editor.mark_saved(snapshot);
       notifications.notify(app_id, { title: "Sprite saved", message: path });
-      achievements.achieve("first-save");
+      if (changed) achievements.achieve("first-save");
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the sprite", reason);
@@ -215,10 +216,9 @@
     const snapshot = editor.sprite;
     if (request.kind === "animation") {
       const order = frame_sequence(request.range, request.direction);
-      const done = gif
-        ? await write_gif(app_id, target, snapshot, { scale: request.scale, order, loop: request.loop })
-        : await write_animated_svg(app_id, target, snapshot, request);
-      if (done) report_animation(order);
+      const on_done = () => report_animation(order);
+      if (gif) await write_gif(app_id, target, snapshot, { scale: request.scale, order, loop: request.loop }, on_done);
+      else await write_animated_svg(app_id, target, snapshot, request, on_done);
       return;
     }
     if (gif) {

@@ -465,6 +465,7 @@
     editor.ensure_id();
     const snapshot = editor.snapshot();
     const content = serialize_document(snapshot);
+    const changed = editor.dirty || file_path === null;
     try {
       await write_file(path, content);
       file_path = path;
@@ -472,7 +473,7 @@
       editor.mark_saved();
       notifications.notify(app_id, { title: "Document saved", message: path });
       void record(content, snapshot);
-      report_saved(snapshot);
+      if (changed) report_saved(snapshot);
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the document", reason);
@@ -675,7 +676,6 @@
   async function export_pdf() {
     try {
       await print_html(await printable(editor.snapshot(), stem, inter_url, await print_faces()), { title: stem });
-      achievements.achieve("pdf");
     } catch (reason) {
       report_error(app_id, "Couldn't print the document", reason);
     }

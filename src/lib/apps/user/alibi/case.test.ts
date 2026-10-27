@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { contradicts, judge, lie_of, new_case, NEUTRAL_BEAT_CARDS, STATEMENTS, status, Status, suspect_prompt, wrong_count } from "./case";
+import { answered_in, contradicts, judge, lie_of, new_case, NEUTRAL_BEAT_CARDS, STATEMENTS, status, Status, suspect_prompt, wrong_count } from "./case";
 import { TEMPLATES } from "./templates";
 
 const SEEDS = Array.from({ length: 2000 }, (_, index) => index * 7919 + 13);
@@ -85,5 +85,27 @@ describe("judging", () => {
     expect(status(game, [miss, hit])).toBe(Status.SOLVED);
     expect(status(game, [miss, miss])).toBe(Status.LOST);
     expect(wrong_count(game, [miss, hit])).toBe(1);
+  });
+});
+
+describe("answered_in", () => {
+  test("a question still waiting for its first word doesn't count", () => {
+    expect(
+      answered_in([
+        { role: "user", content: "Where were you?" },
+        { role: "assistant", content: "Home." },
+        { role: "user", content: "Alone?" },
+        { role: "assistant", content: "" },
+      ])
+    ).toBe(1);
+  });
+
+  test("a question stopped partway through its answer counts", () => {
+    expect(
+      answered_in([
+        { role: "user", content: "Where were you?" },
+        { role: "assistant", content: "At ho", stopped: true },
+      ])
+    ).toBe(1);
   });
 });

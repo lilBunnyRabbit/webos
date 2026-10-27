@@ -226,19 +226,24 @@
   async function write(path: string): Promise<boolean> {
     editor.commit_input();
     const snapshot = editor.committed;
+    const changed = editor.dirty || file_path === null;
     try {
       await write_file(path, serialize_sketch(snapshot));
       file_path = path;
       editor.mark_saved(snapshot);
       notifications.notify(app_id, { title: "Sketch saved", message: path });
-      achievements.achieve("first-save");
-      if (all_measured(snapshot)) achievements.achieve("every-edge");
-      if (checks_out(snapshot)) achievements.achieve("square");
+      if (changed) report_saved(snapshot);
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the sketch", reason);
       return false;
     }
+  }
+
+  function report_saved(snapshot: Sketch) {
+    achievements.achieve("first-save");
+    if (all_measured(snapshot)) achievements.achieve("every-edge");
+    if (checks_out(snapshot)) achievements.achieve("square");
   }
 
   async function save_as(): Promise<boolean> {

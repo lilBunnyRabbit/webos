@@ -2,6 +2,7 @@
   import kernel, {
     Platform,
     ShortcutCategory,
+    type FilesService,
     type NotificationsService,
     type SettingsService,
     type ShortcutsService,
@@ -63,6 +64,7 @@
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage, achievements } = get_app_context();
 
+  const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
@@ -321,14 +323,15 @@
   async function write(path: string): Promise<boolean> {
     if (!history) return false;
     const state = current(history);
+    const changed = dirty || file_path === null;
     const over_itself = path === file_path && dirty;
     try {
+      const fresh = changed && (await files.get_file(path)) === null;
       await write_image(path, doc_canvas!);
-      const fresh = path !== file_path;
       file_path = path;
       saved = state;
       notifications.notify(app_id, { title: "Image saved", message: path });
-      achievements.achieve("first-save");
+      if (changed) achievements.achieve("first-save");
       if (over_itself) achievements.achieve("touch-up");
       if (fresh) {
         saved_new.value += 1;

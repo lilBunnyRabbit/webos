@@ -181,3 +181,8 @@ export type Saved = z.infer<typeof saved_schema>;
 export function questions_in(transcript: readonly Turn[]): number {
   return transcript.filter((turn) => turn.role === "user").length;
 }
+
+/** Questions with some answer: a question stopped before its first word is dropped from the transcript. */
+export function answered_in(transcript: readonly Turn[]): number {
+  return transcript.filter((turn, i) => turn.role === "user" && transcript[i + 1]?.role === "assistant" && transcript[i + 1].content !== "").length;
+}

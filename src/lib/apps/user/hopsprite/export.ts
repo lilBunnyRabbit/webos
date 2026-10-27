@@ -37,7 +37,7 @@ export async function write_frame_svg(path: string, sprite: Sprite, frame: numbe
   await write_text(path, new Blob([frame_svg(sprite, frame, scale)], { type: "image/svg+xml" }));
 }
 
-export async function write_animated_svg(app_id: string, path: string, sprite: Sprite, options: AnimationExport): Promise<boolean> {
+export async function write_animated_svg(app_id: string, path: string, sprite: Sprite, options: AnimationExport, on_done?: () => void): Promise<boolean> {
   const order = frame_sequence(options.range, options.direction);
   const name = base_name(path);
   const apps = () => kernel.service<AppsService>("apps");
@@ -82,7 +82,10 @@ export async function write_animated_svg(app_id: string, path: string, sprite: S
     },
     {
       title: `Exporting ${name}`,
-      done: () => ({ title: "Animation exported", message: path, actions: [{ label: "Open", on_click: () => void apps().open(path) }] }),
+      done: () => {
+        on_done?.();
+        return { title: "Animation exported", message: path, actions: [{ label: "Open", on_click: () => void apps().open(path) }] };
+      },
     }
   );
   await job.done;
@@ -96,7 +99,7 @@ export interface GifExport {
 }
 
 /** Indexes every frame against one growing palette, so the sprite's own colours keep their exact entries. */
-export async function write_gif(app_id: string, path: string, sprite: Sprite, options: GifExport): Promise<boolean> {
+export async function write_gif(app_id: string, path: string, sprite: Sprite, options: GifExport, on_done?: () => void): Promise<boolean> {
   const { order, scale } = options;
   const name = base_name(path);
   const apps = () => kernel.service<AppsService>("apps");
@@ -164,7 +167,10 @@ export async function write_gif(app_id: string, path: string, sprite: Sprite, op
     },
     {
       title: `Exporting ${name}`,
-      done: () => ({ title: "GIF exported", message: path, actions: [{ label: "Open", on_click: () => void apps().open(path) }] }),
+      done: () => {
+        on_done?.();
+        return { title: "GIF exported", message: path, actions: [{ label: "Open", on_click: () => void apps().open(path) }] };
+      },
     }
   );
   await job.done;

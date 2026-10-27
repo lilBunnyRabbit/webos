@@ -58,7 +58,7 @@ Game app frame: toolbar with the case title, `Case NNNN` and New case (F2); the 
 
 Written only once the case has a question or an accusation, so opening a `seed` link doesn't replace a saved case until it's played. New case clears it. Props: `{ seed?: number }` opens that case; with a saved case of the same seed it resumes. No daily, no shell commands (ADR-061).
 
-**Achievements** (ADR-078), reported from `accuse()` when the accusation solves the case (a lost case earns nothing): `first-case`, `clean` (no wrong accusation), `few-questions` (3 questions or fewer, `questions_in`), `cases-10` (progress: `app.alibi.closed`), secret `silent` (no question asked).
+**Achievements** (ADR-078), reported from `accuse()` when the accusation solves the case (a lost case earns nothing): `first-case`, `clean` (no wrong accusation), `few-questions` (3 answered questions or fewer, `answered_in`: a question still waiting for its first word when the case closes is dropped from the transcript, so it doesn't count), `cases-10` (progress: `app.alibi.closed`), secret `silent` (no answered question).
 
 ## Dependencies & licences
 

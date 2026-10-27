@@ -11,6 +11,7 @@
   import { onDestroy, tick, untrack } from "svelte";
   import { z } from "zod";
   import {
+    answered_in,
     judge,
     lie_of,
     new_case,
@@ -180,18 +181,19 @@
     if (!judge(game, accusation) && !over)
       flash.show(`The ${card_title.get(accusation.card)?.toLowerCase()} doesn't break statement ${statement_number.get(accusation.statement)}. ${tries_left} ${tries_left === 1 ? "try" : "tries"} left.`);
     if (over) {
+      const asked = answered_in(transcript);
       controller?.abort();
-      if (result === Status.SOLVED) report_solved();
+      if (result === Status.SOLVED) report_solved(asked);
     }
     save();
   }
 
-  function report_solved() {
+  function report_solved(asked: number) {
     closed.value += 1;
     achievements.achieve("first-case");
     if (wrong === 0) achievements.achieve("clean");
-    if (questions <= 3) achievements.achieve("few-questions");
-    if (questions === 0) achievements.achieve("silent");
+    if (asked <= 3) achievements.achieve("few-questions");
+    if (asked === 0) achievements.achieve("silent");
     achievements.progress("cases-10", closed.value);
   }
 

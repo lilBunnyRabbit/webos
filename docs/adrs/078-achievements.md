@@ -63,10 +63,11 @@ Decided within scope while building:
 - A tab re-reads the records it holds when it becomes visible again, so another tab's unlocks show without a toast.
 - The service worker's `store/` cache holds five entries instead of four.
 - Game Hub's tab is labelled "Trophies" to fit four tabs on a phone; its page title is "Achievements".
-- Snake and Doodlehop keep a running total in app storage (`eaten`, `recognised`) for their progress achievements; the other games derive totals from the stats they already keep.
+- Snake, Doodlehop, Alibi, Unsaid and Paint keep a running total in app storage (`eaten`, `recognised`, `closed`, `guessed`, `saved_new`) for their progress achievements; the other apps derive totals from the stats they already keep. The total is a plain `app.{id}.*` value, so two tabs counting at once is last write wins: one can lose the other's increments. The service still keeps the higher progress either reports.
 
 ## Revision 2026-10-27 (review fixes)
 - Every change runs under a Web Lock per app (`webos.achievements.{id}`): read the file, apply, write and await the write, then update memory. Under the lock the file is the truth, so the merge with memory is gone; two tabs unlocking different achievements at once both keep theirs. A tab toasts only what it added to the file it read, and only after the write landed; a failed write leaves memory unchanged, so the app's next report tries again.
 - Uninstalling with data keeps `achievements.json` but empties its `progress` (under the same lock): the app's running totals reset with its data, and kept maxima would have frozen its bars after a reinstall. Unlocks stay.
 - A failed definitions fetch retries on the next read after 30 s, as well as on `online`.
+- Apps that report on save (Paint, Hopsprite, Tape Sketch, Warren) report only when the document had unsaved changes or had never been saved, so Save on someone else's finished file earns nothing. Paint counts a save as a new image only when no file was at that path before the write. Warren's print achievement is gone: `afterprint` fires on a cancelled dialog too. Hopsprite reports an animation export from the job's done report, which a Retry runs again.
 - The shell's `achievements` reads an app's record together with its definitions, so it never prints an unlocked one as locked; a locked secret shows no id or progress.
