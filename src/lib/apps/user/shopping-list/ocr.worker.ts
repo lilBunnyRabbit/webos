@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import * as ort from "onnxruntime-web/wasm";
 import type { Bounds } from "$lib/core/utils/type";
+import type { Quad } from "$kit/utils/perspective";
 import { box_rows, is_poor, page_lines, page_score, type OcrBox, type OcrPage } from "./lines";
 import det_url from "./models/det.onnx?url";
 import dictionary from "./models/latin-dict.json";
@@ -12,7 +13,7 @@ import { GROCERY_WORDS } from "./words";
 
 export interface OcrRequest {
   image: Blob;
-  crop: Bounds | null;
+  crop: Quad | null;
   history: readonly string[];
 }
 

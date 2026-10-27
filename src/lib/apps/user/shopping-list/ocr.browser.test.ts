@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import type { Quad } from "$kit/utils/perspective";
 import { read_list } from "./ocr";
 
 const quiet = { progress: () => {}, message: () => {} };
@@ -56,7 +57,7 @@ test("turns a poor read until it reads, and keeps that one", async () => {
 
 test("snaps words to the history first, then to known spellings, and reads only the framed part", async () => {
   const image = await picture(["RIZ", "ZELENJAVVA", "KANALETO", "SEZAM"]);
-  const top = { x: 0, y: 0, width: 640, height: 160 };
+  const top: Quad = [{ x: 0, y: 0 }, { x: 640, y: 0 }, { x: 640, y: 160 }, { x: 0, y: 160 }];
   expect(await read_list(image, null, signal(), quiet, ["kanaleta"])).toEqual(["riž", "zelenjava", "kanaleta", "sezam"]);
   expect(await read_list(image, top, signal(), quiet, [])).toEqual(["riž", "zelenjava"]);
 }, 120_000);

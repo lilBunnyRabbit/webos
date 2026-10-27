@@ -16,7 +16,7 @@ Two readers. Gemini Nano goes first where Chrome has it; PP-OCRv5 runs everywher
 |------|------|-------|
 | 1. Pick | `read_method()`: Nano unless `AiFeature.PROMPT_IMAGE` is `no` (always `no` on mobile, ADR-051) | `read-image.ts:18` |
 | 2. Straighten | `createImageBitmap(…, { imageOrientation: "from-image" })`, so the EXIF orientation tag is applied before anything sees the pixels | `photo.ts:7` |
-| 3. Crop (optional) | The crop sheet (`photo-crop.svelte`, kit `CropFrame`); "Read all" skips it. At most 2000 px on the long side | `photo.ts:4`, `photo.ts:12` |
+| 3. Frame and flatten (optional) | The frame sheet (`photo-crop.svelte`, kit `QuadFrame` with its magnifier): the list's paper corners pre-filled by `find_paper` (kit `perspective`, on a 480 px copy), dragged to fix. "Read the list" pulls the quad flat through the homography (`page_size`, `warp`; the photo first scaled to 1.25× the output) before anything reads it; "Read all" skips it. At most 2000 px on the long side | `photo.ts:13`, `photo.ts:30` |
 | 4a. Nano | The straightened crop as a PNG part plus a fixed system prompt ("items only, one per line, with any amount"), streamed | `read-image.ts:35` |
 | 4b. PP-OCRv5 | A module worker inside a task job: detect, recognise, group, snap (below) | `read-image.ts:55`, `ocr.worker.ts:79` |
 | 5. Clean | Bullets, checkboxes, numbering and trailing punctuation stripped; lines without a letter and repeats dropped | `lines.ts:43` |
@@ -42,6 +42,18 @@ The parallel model test on the same photo, exact items:
 | TrOCR (handwritten) | 0 | | Hallucinates English sentences on block capitals |
 
 Speed: about 2 s a photo on the Mac, 2.7 s when it has to turn once.
+
+#### Why flatten
+
+Measured 2026-10-27 with PP-OCRv5 in Chromium on a synthetic photo (made-up printed list of 10 items, warped onto a dark table by a perspective transform; `straighten.browser.test.ts`), items read exactly:
+
+| Photo | As photographed | Flattened first |
+|-------|-----------------|-----------------|
+| Mildly skewed | 10 | 10 |
+| Strongly skewed (keystone) | 10 | 10 |
+| Turned about 15° and skewed | 5 | 10 |
+
+Axis-aligned detection boxes cut slanted lines apart; flattening makes them level again. The old rectangle crop couldn't do that. Not measured on real handwritten photos or with Gemini Nano.
 
 #### Detector: DB (differentiable binarization)
 

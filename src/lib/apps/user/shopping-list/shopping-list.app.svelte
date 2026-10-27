@@ -6,7 +6,8 @@
   import { paste_files } from "$kit/utils/paste";
   import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
-  import type { Bounds, Position } from "$lib/core/utils/type";
+  import type { Position } from "$lib/core/utils/type";
+  import type { Quad } from "$kit/utils/perspective";
   import { image_files, has_files } from "$kit/utils/image";
   import {
     ArrowsLeftRight as ArrowsLeftRightIcon,
@@ -468,7 +469,7 @@
     view = View.CROP;
   }
 
-  async function read(image: Blob, crop: Bounds | null) {
+  async function read(image: Blob, crop: Quad | null) {
     review_controller?.abort();
     const own = new AbortController();
     review_controller = own;

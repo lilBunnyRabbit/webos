@@ -15,6 +15,11 @@ export const CHANGELOG: Release[] = [
         text: "Doc Scan: photograph pages at any angle, and it finds each page's edges, straightens it, cleans it up in color, gray or black and white, and saves the pages as one PDF.",
       },
       {
+        kind: IMPROVED,
+        apps: ["shopping-list"],
+        text: "Shopping List finds the paper in a photo of your list and straightens it before reading, so a list photographed at an angle reads in full.",
+      },
+      {
         kind: NEW,
         apps: ["minesweeper", "sudoku", "hop", "snake", "twenty-forty-eight", "solitaire", "doodlehop", "game-hub", "app-library"],
         text: "Games now have achievements: Minesweeper, Sudoku, Hop, Snake, 2048, Solitaire and Doodlehop each have some to earn, a few of them secret, shown on each app's App Store page and in Game Hub's new Trophies tab.",

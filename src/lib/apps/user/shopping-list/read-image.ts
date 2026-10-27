@@ -1,5 +1,5 @@
 import kernel, { AiAvailability, AiFeature, type AiService, type TaskJob, type TasksService } from "$lib/core/api";
-import type { Bounds } from "$lib/core/utils/type";
+import type { Quad } from "$kit/utils/perspective";
 import { createTask } from "@lilbunnyrabbit/task-manager";
 import { APP_ID } from "./data";
 import { clean_lines } from "./lines";
@@ -22,7 +22,7 @@ export function read_method(): ReadMethod {
 const INSTRUCTIONS =
   "You read shopping lists from photos. Reply with the items only, one per line, written as on the list with any amount (like 2x or 500 g). No bullets, numbering, headings or other text. If there's no list in the picture, reply with nothing.";
 
-async function prepared(image: Blob, crop: Bounds | null): Promise<Blob> {
+async function prepared(image: Blob, crop: Quad | null): Promise<Blob> {
   const bitmap = await upright(image);
   try {
     return await render(bitmap, crop);
@@ -32,7 +32,7 @@ async function prepared(image: Blob, crop: Bounds | null): Promise<Blob> {
 }
 
 /** Gemini Nano on this device: reads handwriting and layout better than OCR. Rejects when the model can't. */
-export async function read_with_ai(image: Blob, crop: Bounds | null, signal: AbortSignal): Promise<string[]> {
+export async function read_with_ai(image: Blob, crop: Quad | null, signal: AbortSignal): Promise<string[]> {
   let text = "";
   const messages = [
     { role: "system" as const, content: INSTRUCTIONS },
@@ -52,7 +52,7 @@ export async function read_with_ai(image: Blob, crop: Bounds | null, signal: Abo
  * PP-OCRv5 in a worker, as a task: the first run downloads about 17 MB, then it works offline. Words snap to
  * `history` (the purchase history's names) before the built-in grocery words.
  */
-export function read_with_ocr(image: Blob, crop: Bounds | null, history: readonly string[]): TaskJob<string[]> {
+export function read_with_ocr(image: Blob, crop: Quad | null, history: readonly string[]): TaskJob<string[]> {
   return kernel.service<TasksService>("tasks").run<string[]>(
     APP_ID,
     (context) =>
