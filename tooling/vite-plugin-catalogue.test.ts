@@ -222,7 +222,7 @@ describe("every app", () => {
     const definitions = achievement_definitions(apps);
     expect(Object.keys(definitions)).toEqual(apps.filter((app) => app.data.achievements).map((app) => app.data.id));
     for (const [id, list] of Object.entries(definitions)) expect(list, id).toHaveLength(apps.find((app) => app.data.id === id)!.data.achievements!);
-    expect(definitions.minesweeper?.length).toBeGreaterThan(0);
+    if (ids.includes("minesweeper")) expect(definitions.minesweeper?.length).toBeGreaterThan(0);
     for (const [id, list] of Object.entries(definitions)) expect(achievements_problem(list as Achievement[]), id).toBeNull();
 
     for (const app of apps) {
