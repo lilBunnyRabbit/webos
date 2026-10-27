@@ -18,7 +18,7 @@ export default define_app({
   achievements: [
     { id: "first-read", title: "Off the page", text: "Add a list read from a photo or a scan." },
     { id: "all-in", title: "Every last one", text: "Tick off everything on a list of five or more." },
-    { id: "bought-100", title: "Regular", text: "Clear 100 items from the cart.", goal: 100 },
+    { id: "bought-100", title: "Regular", text: "Clear 100 items from the cart, each item counted once per trip.", goal: 100 },
     { id: "shared", title: "Two phones, one list", text: "Apply changes from another phone." },
   ],
   component: () => import("./shopping-list.app.svelte"),

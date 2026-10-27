@@ -471,19 +471,29 @@
   let read_from: "photo" | "scan" = "photo";
 
   async function photo() {
-    read_from = "photo";
     const [image] = await pick_device_files({ accept: ["image/*"] });
     if (image) choose_part(image);
   }
 
   /** Doc Scan hands back the page already straight, so it skips the frame. `null` (Cancel, or Doc Scan failing) leaves the list as it was. */
+  // The sheet can take seconds to load the first time; a second tap would stack a second sheet.
+  let scanning = false;
+
   async function scan() {
-    read_from = "scan";
-    const image = await win.request("doc-scan::scan");
-    if (image) void read(image, null);
+    if (scanning) return;
+    scanning = true;
+    try {
+      const image = await win.request("doc-scan::scan");
+      if (!image) return;
+      read_from = "scan";
+      void read(image, null);
+    } finally {
+      scanning = false;
+    }
   }
 
   function choose_part(image: Blob) {
+    read_from = "photo";
     review_controller?.abort();
     review_controller = null;
     photo_image = image;

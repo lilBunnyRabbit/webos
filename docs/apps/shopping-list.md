@@ -175,7 +175,7 @@ The bottom of a list: a strip with "N of M in the cart" and Clear done (shown on
 
 - `list`: the window opens on that list. An unknown id is ignored and the window keeps its own (first list by default).
 - `photo`: `true` starts the photo read at once, the same `photo()` as the camera button: device picker, crop, review. `"scan"` opens Doc Scan's sheet at once, the same `scan()` as the scan button. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
-- Both are acted on once per window, when the file is ready (`shopping-list.app.svelte:117`). The window's `launched` flag keeps a session restore from switching lists or opening the picker again.
+- Both are acted on once per window, when the file is ready (`shopping-list.app.svelte:126`). The window's `launched` flag keeps a session restore from switching lists or opening the picker again.
 
 ### Shell and Ask
 
@@ -209,7 +209,7 @@ Declared in `index.ts`, reported through `get_app_context().achievements` ([achi
 |----|-------|----------|
 | `first-read` | Off the page | `add_reviewed` with at least one line: a list read from a photo or a scan was added |
 | `all-in` | Every last one | `toggle` ticks the last open item of a list with five or more live items (checked against the state the tick is about to set, since `view_transition` runs the change later) |
-| `bought-100` | Regular (goal 100) | `clear_done` after recording the trip: the sum of every history `count`, so no new counter key. Undo puts the history back, but progress keeps its highest |
+| `bought-100` | Regular (goal 100) | `clear_done` after recording the trip: the sum of every history `count`, so no new counter key. Each item counts once per trip, as history does ("Milk" and "milk" are one). Undo puts the history back, but progress keeps its highest |
 | `shared` | Two phones, one list | `apply_incoming` applied at least one change from another phone |
 
 Existing history counts toward `bought-100` on the next Clear done.

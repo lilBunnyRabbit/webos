@@ -56,7 +56,7 @@ The owner: "shopping list should have both camera and scanner options (always)".
 - [x] Kit extraction: `$kit/utils/perspective`, `QuadFrame`, Font Maker on both, Style Guide demo.
 - [x] App sheets (ADR-079): `provides`, `win.request`, `app provides`, docs, tests.
 - [x] Doc Scan (ADR-080): the app, its sheet, `docs/apps/doc-scan.md`.
-- [x] Shopping List: measure straightening on a skewed synthetic list; wire it only on a gain. Measured: turned and skewed 5 → 10 of 10, skew alone 10 both ways; wired as a quad frame pre-filled by `find_paper`. `win.request("doc-scan::scan")` not used: `null` can't tell Cancel from a failure, so a fallback picker would open after every Cancel.
+- [x] Shopping List: measure straightening on a skewed synthetic list; wire it only on a gain. Measured: turned and skewed 5 → 10 of 10, skew alone 10 both ways; wired as a quad frame pre-filled by `find_paper`. `win.request("doc-scan::scan")` not used: `null` can't tell Cancel from a failure, so a fallback picker would open after every Cancel. (Superseded in the second session: with the camera always beside it, `null` needs no fallback; see "Shopping List calls the scan sheet".)
 
 - [x] Shopping List: scan option beside the camera, through the sheet.
 
