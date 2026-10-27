@@ -195,3 +195,4 @@ Found driving production builds (N, an app-only N+1, a core N+2) in Chromium, fi
 - **Shelf arrows** stay hand-built; no `::scroll-button()`.
 - **ADR-065** is superseded by this ADR.
 - **`define_app`'s `version`** is deprecated and **the manifest import rule** is lifted (follow-ups).
+- **Hashes stop rewriting the build stamp** (2026-10-27): with the release out of every chunk, the stamp replacement in `content_normalizer` only matched other text, so an app whose pages mention the current release (Docs, Kernel, Settings through the roadmap) got a new version on the next release. Hashing now only unhashes imported file names.

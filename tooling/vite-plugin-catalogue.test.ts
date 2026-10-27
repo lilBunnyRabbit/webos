@@ -14,13 +14,11 @@ import {
   manifest_data,
   parse_catalogue,
   release_notes,
-  content_normalizer,
   with_core_meta,
   type Catalogue,
   previous_or_warn,
 } from "./vite-plugin-catalogue";
 import type { Release } from "../src/lib/core/api/services/version/changelog-types";
-import type { VersionInfo } from "./vite-plugin-version";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 
@@ -92,31 +90,23 @@ test("component_import reads the lazy component path", () => {
 });
 
 describe("hashes", () => {
-  const info = (commit: string, stamp: number): VersionInfo => ({
-    version: "3.73.0",
-    commit,
-    branch: "master",
-    buildTime: new Date(stamp).toISOString(),
-    buildTimestamp: stamp,
+  test("two builds of the same code hash the same despite the imported chunks' new names", () => {
+    const file = (hash: string) => () => Buffer.from(`import"./main-${hash}.js";`);
+    expect(hash_files(["assets/x.app-AAAAAAAA.js"], file("AAAAAAAA"))).toBe(hash_files(["assets/x.app-BBBBBBBB.js"], file("BBBBBBBB")));
   });
-  const file = (version: VersionInfo) => Buffer.from(`import"./main-${version.commit}X.js";const v=${JSON.stringify(version)};`);
 
-  test("two builds of the same code hash the same despite the build stamp and the stamped chunk's new name", () => {
-    const a = info("abc1234", 1_793_000_000_000);
-    const b = info("def5678", 1_793_000_500_000);
-    expect(hash_files(["assets/x.app-AAAAAAAA.js"], () => file(a), content_normalizer(a))).toBe(
-      hash_files(["assets/x.app-BBBBBBBB.js"], () => file(b), content_normalizer(b))
-    );
+  test("text that mentions a release hashes as written, whatever the release being built", () => {
+    const read = (text: string) => () => Buffer.from(text);
+    expect(hash_files(["roadmap.js"], read("Done in 3.74.0"))).not.toBe(hash_files(["roadmap.js"], read("Done in \0stamp0\0")));
   });
 
   test("a changed file changes the hash; order doesn't", () => {
-    const stamp = info("abc1234", 1);
     const files: Record<string, string> = { "a.js": "1", "b.js": "2" };
     const read = (name: string) => Buffer.from(files[name]);
-    const before = hash_files(["a.js", "b.js"], read, content_normalizer(stamp));
-    expect(hash_files(["b.js", "a.js"], read, content_normalizer(stamp))).toBe(before);
+    const before = hash_files(["a.js", "b.js"], read);
+    expect(hash_files(["b.js", "a.js"], read)).toBe(before);
     files["b.js"] = "3";
-    expect(hash_files(["a.js", "b.js"], read, content_normalizer(stamp))).not.toBe(before);
+    expect(hash_files(["a.js", "b.js"], read)).not.toBe(before);
   });
 });
 

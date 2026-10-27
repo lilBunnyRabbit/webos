@@ -93,23 +93,15 @@ export function unhashed(text: string): string {
 }
 
 /**
- * What a hash reads instead of a file's text, so two builds of the same code hash the same: imported names lose their
- * content hash, and the build stamp (`version`, `commit`, `branch`, `buildTime`, `buildTimestamp`) becomes a
- * placeholder should any file carry it (`RELEASE_MODULES` keeps it out of chunks). A file's own change still counts,
- * because every file in a hashed set is read.
+ * Imported names lose their content hash in a text file, so two builds of the same code hash the same; a file's own
+ * change still counts, because every file in a hashed set is read. No chunk holds the build stamp (`RELEASE_MODULES`),
+ * so text is never rewritten beyond that: a page that mentions the current release keeps its hash on the next one.
  */
-export function content_normalizer(info: VersionInfo): (text: string) => string {
-  const stamps = [String(info.buildTimestamp), info.buildTime, info.commit, info.branch, info.version]
-    .filter((stamp) => stamp.length >= 4 && stamp !== "unknown")
-    .sort((a, b) => b.length - a.length);
-  return (text) => unhashed(stamps.reduce((out, stamp, index) => out.replaceAll(stamp, `\0stamp${index}\0`), text));
-}
-
-export function hash_files(names: string[], read: (name: string) => Buffer, normalize: (text: string) => string): string {
+export function hash_files(names: string[], read: (name: string) => Buffer): string {
   // Several chunks share a name (`commands-*.js`), so the unhashed name alone doesn't give a stable order.
   const entries = names.map((name) => {
     const content = read(name);
-    return `${unhashed(name)}\0${sha([TEXT_FILE.test(name) ? normalize(content.toString("utf8")) : content])}`;
+    return `${unhashed(name)}\0${sha([TEXT_FILE.test(name) ? unhashed(content.toString("utf8")) : content])}`;
   });
   return sha(entries.sort());
 }
@@ -322,7 +314,6 @@ export function catalogue_plugin(info: VersionInfo) {
         const { apps, changelog } = await collected;
         const before = await previous;
         const out_dir = path.resolve(config.root, config.build.outDir);
-        const normalize = content_normalizer(info);
         const read = (name: string) => readFileSync(path.join(out_dir, name));
 
         const chunk_of = (module: string) => {
@@ -340,8 +331,8 @@ export function catalogue_plugin(info: VersionInfo) {
         }
         const core_files = list_file(out_dir, "core").files;
         const core = sha([
-          hash_files(core_files, read, normalize),
-          hash_files(public_files, (name) => readFileSync(path.join(config.publicDir, name)), normalize),
+          hash_files(core_files, read),
+          hash_files(public_files, (name) => readFileSync(path.join(config.publicDir, name))),
         ]);
 
         const catalogue: Catalogue = {
@@ -354,7 +345,7 @@ export function catalogue_plugin(info: VersionInfo) {
           apps: apps.map((app) => {
             const { files, content } = list_file(out_dir, app.data.id);
             // Content isn't installed, but a changed page is still a new version of the app.
-            const hash = sha([hash_files([...files, ...content], read, normalize), ...own_hash(app)]);
+            const hash = sha([hash_files([...files, ...content], read), ...own_hash(app)]);
             return {
               ...app.data,
               version: app_version(app.data.id, hash, before, info.version),
