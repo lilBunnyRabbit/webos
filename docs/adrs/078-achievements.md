@@ -74,4 +74,6 @@ Decided within scope while building:
 
 ## Revision 2026-10-27 (sweep: grid puzzles)
 - Sokoban, Nonogram, Kakuro, Futoshiki, Nurikabe, Hutches, Plots, Sun & Moon, Tunnels and Word Search derive their `solves-25` totals from the per-size stats they already keep; none needed a new storage key.
-- Nonogram's one-offs count a solved `.nonogram` file at its own size (20×20 or larger is "big"), never an editor play-test; its total adds the black-and-white and colour stats, which only free play and dailies record.
+- Nonogram's `first-solve` counts a solved `.nonogram` file, never an editor play-test; `big` and `masterpiece` count only free play and dailies, since anyone can draw a 20×20 file. Its total adds the black-and-white and colour stats, which only free play and dailies record. `made` needs a save that wrote changes (or a new drawing) with at least one filled cell, so re-saving an opened file earns nothing.
+- The "quick" secrets (Futoshiki, Kakuro, Nurikabe, Sun & Moon, Sokoban) time from when the puzzle was shown in that window, kept in memory, not from the first move that starts the clock; a game resumed from storage never earns one. Sokoban's also needs a level with no best recorded before the solve, so a memorised replay doesn't count. Plots and Hutches already cover a fresh puzzle until Start.
+- Hutches' `by-hand` latches in memory whenever auto-cross is on during the game (at the start, or switched on from any window); a resumed game starts latched.

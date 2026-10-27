@@ -74,7 +74,7 @@ Props: `daily` (`YYYY-MM-DD`) opens that day's puzzle; Game Hub's Today tab pass
 
 Undo and redo are `$kit/utils/history` over the marks, up to 200 steps, per window and not saved.
 
-**Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (8×8 without a hint), `solves-25` (progress: the solves of both sizes added up), secret `quick` (6×6 in under 45 s without a hint).
+**Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (8×8 without a hint), `solves-25` (progress: the solves of both sizes added up), secret `quick` (6×6 without a hint, under 45 s from when the puzzle was shown in this window, not from the first move when the clock starts; a game resumed from storage never earns it, since when it was shown is unknown).
 
 ## Dependencies & licences
 

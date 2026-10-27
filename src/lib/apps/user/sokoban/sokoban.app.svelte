@@ -77,6 +77,8 @@
   let difficulty = $state<Difficulty>(initial_difficulty);
   let game = $state.raw<Game>(restored ?? (daily_day ? daily_game(daily_day) : new_game(initial_difficulty, random_seed())));
   const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
+  // The clock starts on the first move; a quick solve counts from when the level was shown, unknown for a resumed one.
+  let shown_at: number | null = restored ? null : performance.now();
   let new_best = $state(false);
   let show_stats = $state(false);
   let swipe: { pointer: number; x: number; y: number } | null = null;
@@ -146,16 +148,16 @@
     new_best = previous !== undefined && better(result, previous);
     bests.value = record_best(bests.value, key, result);
     stats.value = record(stats.value, game.difficulty, time);
-    report_solve(time);
+    report_solve(previous === undefined);
   }
 
-  function report_solve(time: number) {
+  function report_solve(first_clear: boolean) {
     const hard = game.difficulty === Difficulty.HARD;
     achievements.achieve("first-solve");
     if (daily) achievements.achieve("daily");
     if (hard) achievements.achieve("hard");
     if (new_best) achievements.achieve("improved");
-    if (hard && time < 120_000) achievements.achieve("quick");
+    if (hard && first_clear && shown_at !== null && performance.now() - shown_at < 120_000) achievements.achieve("quick");
     achievements.progress("solves-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.solved, 0));
   }
 
@@ -195,6 +197,7 @@
     storage.set("difficulty", next);
     game = new_game(next, random_seed());
     clock.reset();
+    shown_at = performance.now();
     new_best = false;
     save();
     board?.focus({ preventScroll: true });

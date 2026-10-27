@@ -248,9 +248,9 @@
     on_solved?.(time);
   }
 
-  /** File puzzles count too, at their own size; a play-test from the editor doesn't. */
+  /** A file counts as a solve but not for size: anyone can draw a 20×20 file. A play-test from the editor counts for nothing. */
   function report_solve() {
-    const big = width >= 20 && height >= 20;
+    const big = tracks_stats && width >= 20 && height >= 20;
     achievements.achieve("first-solve");
     if (kind === "daily") achievements.achieve("daily");
     if (big) achievements.achieve("big");

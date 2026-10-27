@@ -28,3 +28,8 @@ export function sides_for(current: number): { value: string; label: string }[] {
   if (!sides.includes(current)) sides.push(current);
   return sides.sort((a, b) => a - b).map((side) => ({ value: String(side), label: String(side) }));
 }
+
+/** A save is a made puzzle when it wrote something new and drew at least one cell. */
+export function is_made(changed: boolean, cells: readonly number[]): boolean {
+  return changed && cells.some((cell) => cell > 0);
+}

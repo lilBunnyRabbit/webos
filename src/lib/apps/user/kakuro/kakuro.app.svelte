@@ -83,6 +83,8 @@
   const initial_game = restored ?? (daily_day ? daily_game(daily_day) : new_game(initial_size, random_seed()));
   let game = $state.raw<Game>(initial_game);
   const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
+  // The clock starts on the first move; a quick solve counts from when the puzzle was shown, unknown for a resumed one.
+  let shown_at: number | null = restored ? null : performance.now();
   let new_best = $state(false);
   let tool = $state<Tool>("digit");
   let undo_stack = $state.raw<Entries[]>([]);
@@ -169,16 +171,16 @@
     if (daily) play.daily(daily, time);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, size, time, game.hints);
-    report_solve(time);
+    report_solve();
     announcement = `Solved in ${format_time(time)}`;
   }
 
-  function report_solve(time: number) {
+  function report_solve() {
     const clean = game.hints === 0;
     achievements.achieve("first-solve");
     if (daily) achievements.achieve("daily");
     if (size === Size.S12 && clean) achievements.achieve("big");
-    if (size === Size.S6 && clean && time < 60_000) achievements.achieve("quick");
+    if (size === Size.S6 && clean && shown_at !== null && performance.now() - shown_at < 60_000) achievements.achieve("quick");
     achievements.progress("solves-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.solved, 0));
   }
 
@@ -227,6 +229,7 @@
     storage.set("size", next_size);
     game = new_game(next_size, random_seed());
     clock.reset();
+    shown_at = performance.now();
     new_best = false;
     undo_stack = [];
     redo_stack = [];

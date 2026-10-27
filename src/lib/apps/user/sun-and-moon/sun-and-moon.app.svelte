@@ -67,6 +67,8 @@
   let game = $state.raw<Game>(initial_game);
   let history = $state.raw<History<readonly Mark[]>>(create_history(initial_game.values));
   const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
+  // The clock starts on the first move; a quick solve counts from when the puzzle was shown, unknown for a resumed one.
+  let shown_at: number | null = restored ? null : performance.now();
   let new_best = $state(false);
   let active = $state(first_open(initial_game));
   let flash = $state<{ index: number; fix: boolean } | null>(null);
@@ -136,15 +138,15 @@
     if (daily) play.daily(daily, time);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, size, time, game.hints);
-    report_solve(time);
+    report_solve();
   }
 
-  function report_solve(time: number) {
+  function report_solve() {
     const clean = game.hints === 0;
     achievements.achieve("first-solve");
     if (daily) achievements.achieve("daily");
     if (size === Size.S8 && clean) achievements.achieve("big");
-    if (size === Size.S6 && clean && time < 45_000) achievements.achieve("quick");
+    if (size === Size.S6 && clean && shown_at !== null && performance.now() - shown_at < 45_000) achievements.achieve("quick");
     achievements.progress("solves-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.solved, 0));
   }
 
@@ -187,6 +189,7 @@
     game = new_game(next_size, random_seed());
     history = create_history(game.values);
     clock.reset();
+    shown_at = performance.now();
     new_best = false;
     flash = null;
     hint_note.clear();

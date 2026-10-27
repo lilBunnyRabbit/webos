@@ -19,7 +19,7 @@
   import { Mark, Mode } from "./game";
   import { analyze_off_thread, type AnalysisJob } from "./analysis";
   import { BW_PALETTE, differences, from_solution, INKS, MAX_COLORS, Verdict } from "./puzzle";
-  import { resize, sides_for, to_editor } from "./drawing";
+  import { is_made, resize, sides_for, to_editor } from "./drawing";
   import Swatches from "./swatches.svelte";
   import FromImage from "./from-image.svelte";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
@@ -231,11 +231,12 @@
     try {
       const directory = await files.get_directory(parent_path(target));
       if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
+      const changed = dirty || path === null;
       const content = text;
       await files.create_file(directory, base_name(target), { content, overwrite: true });
       saved_text = content;
       path = target;
-      achievements.achieve("made");
+      if (is_made(changed, cells)) achievements.achieve("made");
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the puzzle", reason);

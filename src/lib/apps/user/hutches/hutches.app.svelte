@@ -69,6 +69,8 @@
   const clock = new Stopwatch(() => win.is_visible, restored ? saved!.elapsed : 0);
   // The timer runs from Start, so a fresh puzzle stays covered until then and nobody reads it off the clock.
   let started = $state(!!saved && (saved.elapsed > 0 || saved.marks.some((mark) => mark !== Mark.EMPTY)));
+  // "By hand" needs auto-cross off for the whole game, not just at the solve; a resumed game's history is unknown.
+  let auto_crossed = restored !== null || auto_cross.value;
   let history = $state.raw<History<readonly Mark[]>>(create_history(initial_game.marks));
   let new_best = $state(false);
   let active = $state(0);
@@ -120,6 +122,10 @@
     return () => disposers.forEach((dispose) => dispose());
   });
 
+  $effect(() => {
+    if (auto_cross.value) auto_crossed = true;
+  });
+
   function store_game(saved: Saved) {
     if (daily) storage.set("daily", { day: daily, game: saved });
     else storage.set("game", saved);
@@ -149,15 +155,15 @@
     if (daily) play.daily(daily, time);
     new_best = game.hints === 0 && (best === null || time < best);
     stats.value = record(stats.value, size, time, game.hints);
-    report_solve(time);
+    report_solve();
   }
 
-  function report_solve(time: number) {
+  function report_solve() {
     const clean = game.hints === 0;
     achievements.achieve("first-solve");
     if (daily) achievements.achieve("daily");
     if (size === Size.S10) achievements.achieve("big");
-    if (size === Size.S10 && clean && !auto_cross.value) achievements.achieve("by-hand");
+    if (size === Size.S10 && clean && !auto_crossed && !auto_cross.value) achievements.achieve("by-hand");
     achievements.progress("solves-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.solved, 0));
   }
 
@@ -197,6 +203,7 @@
     game = next;
     history = create_history(next.marks);
     clock.reset();
+    auto_crossed = auto_cross.value;
     new_best = false;
     tip = null;
     reason.clear();

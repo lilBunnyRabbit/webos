@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { compact, type Drawing } from "./file";
-import { resize, sides_for, to_editor } from "./drawing";
+import { is_made, resize, sides_for, to_editor } from "./drawing";
 import { Ink, INKS } from "./puzzle";
 
 describe("to_editor", () => {
@@ -23,5 +23,13 @@ describe("resize", () => {
 describe("sides_for", () => {
   test("adds an odd size from a file", () => {
     expect(sides_for(12).map((side) => side.value)).toEqual(["5", "10", "12", "15", "20", "25", "30"]);
+  });
+});
+
+describe("is_made", () => {
+  test("needs a change and a filled cell", () => {
+    expect(is_made(true, [0, 2, 0])).toBe(true);
+    expect(is_made(false, [0, 2, 0])).toBe(false);
+    expect(is_made(true, [0, 0, 0])).toBe(false);
   });
 });

@@ -74,7 +74,7 @@ Hints are counted; best times count only solves without hints.
 
 A solved daily calls `PlayTracker.daily(day, ms)`; the manifest leaves `daily_rank` at its default, time ascending. Props: `daily` (`YYYY-MM-DD`), the Game Hub contract. The daily seed is `daily_seed(day, "hutches")`, size 8×8. No shell commands beyond `games daily`.
 
-**Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (any 10×10), `solves-25` (progress: the solves of every size added up), secret `by-hand` (10×10 without a hint, auto-cross off when it's solved).
+**Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (any 10×10), `solves-25` (progress: the solves of every size added up), secret `by-hand` (10×10 without a hint, auto-cross never on while that game was in play: a latch in memory per window, set when the switch is on at the start or turns on from any window, and set from the start for a game resumed from storage, whose history is unknown).
 
 ## Dependencies & licences
 
