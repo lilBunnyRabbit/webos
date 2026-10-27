@@ -117,7 +117,7 @@ Parse and serialize in `persistence.ts` (zod), list helpers in `lists.ts`, both 
 ## UI
 
 - **Progress ring** (`components/apps/app-progress.svelte`, next to `AppBadge`): while `progress(id)` isn't `null`, a `bg-background/60` scrim over the icon tile with a `primary` ring (`stroke-dashoffset` over `pathLength="100"`), `role="progressbar"`. On the start menu's tiles, taskbar items and quick launch, desktop icons, the phone's home rows and app list, and the App Store's tiles, details and showcase. Plus the one progress toast from TasksService.
-- **A window whose code fails to load while offline** (`update/load-failed.svelte`, any path): "{App} isn't on this device yet" / "Installed apps download while you're online, then work offline. An app opened without installing needs a connection." with **Close window**. When the connection comes back the screen turns into the online "didn't load" state with **Try again** ([window](../shell/window.md#content-and-app-context)).
+- **A window whose code fails to load while offline** (`update/load-failed.svelte`, any path): "{App} isn't on this device yet" / "Installed apps download while you're online, then work offline. An app opened without installing needs a connection." with **Close window**. When the connection comes back the window retries by itself (a fetch failure only; the "didn't load" state with **Try again** stays if that fails too) ([window](../shell/window.md#content-and-app-context)).
 - Install and Open themselves are AppsService's ([apps](apps.md#launchid-props)); the buttons are in the App Store ([system apps](../system-apps.md#app-store)), the launchers ([taskbar](../shell/taskbar.md), [mobile](../shell/mobile.md)) and the not-installed toast.
 
 ## Divergence from ADR

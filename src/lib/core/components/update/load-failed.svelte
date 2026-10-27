@@ -43,6 +43,14 @@
   });
   // The browser keeps a module that threw, so importing it again only repeats the error.
   const retryable = $derived(!!onretry && kind === LoadFailure.FETCH);
+
+  // Opened offline without being installed: load by itself once the connection is back, as Docs pages do.
+  let was_offline = untrack(() => !store.online);
+  $effect(() => {
+    const online = store.online;
+    if (online && was_offline && retryable) untrack(() => onretry?.());
+    was_offline = !online;
+  });
 </script>
 
 {#snippet close_button()}
