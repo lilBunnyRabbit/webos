@@ -28,12 +28,14 @@
   const installed = $derived(apps.is_installed(manifest.id));
   const progress = $derived(store.progress(manifest.id));
   const variant = $derived(primary ? "primary" : "secondary");
+  // Pills, unlike the cards' and tiles' corners; Open carries the accent so it never melts into the card behind it.
+  const open_class = $derived(cn("rounded-full font-semibold", !primary && "bg-primary/15 text-primary hover:bg-primary/22 active:bg-primary/28"));
   const waiting = $derived(installed && store.online && !store.syncing && waiting_download(store, manifest.id));
 </script>
 
 <div class={cn("flex shrink-0 items-center gap-1.5", class_name)}>
   {#if solo}
-    <a href={route_url({ kind: RouteKind.APP, id: manifest.id, props: undefined })} target="_blank" rel="noopener" class={button({ variant, size })}>
+    <a href={route_url({ kind: RouteKind.APP, id: manifest.id, props: undefined })} target="_blank" rel="noopener" class={button({ variant, size, class: open_class })}>
       Open in WebOS <ArrowSquareOutIcon weight="bold" />
     </a>
   {:else if progress !== null}
@@ -44,7 +46,7 @@
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={percent}
-      class={cn(button({ size }), "pointer-events-none gap-1.5 font-mono tabular-nums")}
+      class={cn(button({ size }), "pointer-events-none gap-1.5 rounded-full font-mono tabular-nums")}
     >
       <svg viewBox="0 0 24 24" class="size-4 -rotate-90" aria-hidden="true">
         <circle cx="12" cy="12" r="9" fill="none" stroke-width="3" class="stroke-foreground/20" />
@@ -65,19 +67,19 @@
     </span>
   {:else}
     <!-- Open works without installing (ADR-077); Install only keeps the app in your apps and offline, so it never stands alone. -->
-    <Button {variant} {size} onclick={() => apps.launch(manifest.id, undefined, { offer_install: false })} aria-label="Open {manifest.name}">
+    <Button {variant} {size} class={open_class} onclick={() => apps.launch(manifest.id, undefined, { offer_install: false })} aria-label="Open {manifest.name}">
       <PlayIcon weight="fill" /> Open
     </Button>
     {#if !installed}
       {#if labelled}
-        <Button {size} onclick={() => apps.install(manifest.id)} aria-label="Install {manifest.name}"><DownloadSimpleIcon weight="bold" /> Install</Button>
+        <Button {size} class="rounded-full" onclick={() => apps.install(manifest.id)} aria-label="Install {manifest.name}"><DownloadSimpleIcon weight="bold" /> Install</Button>
       {:else}
-        <IconButton variant="secondary" {size} label="Install {manifest.name}" onclick={() => apps.install(manifest.id)}>
+        <IconButton variant="secondary" {size} class="rounded-full" label="Install {manifest.name}" onclick={() => apps.install(manifest.id)}>
           <DownloadSimpleIcon weight="bold" />
         </IconButton>
       {/if}
     {:else if waiting}
-      <IconButton variant="secondary" {size} label="Update {manifest.name}" onclick={() => void store.sync()}>
+      <IconButton variant="secondary" {size} class="rounded-full" label="Update {manifest.name}" onclick={() => void store.sync()}>
         <ArrowsClockwiseIcon weight="bold" />
       </IconButton>
     {:else if reserve}

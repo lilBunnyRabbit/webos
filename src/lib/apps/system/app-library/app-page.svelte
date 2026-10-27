@@ -134,7 +134,7 @@
 </script>
 
 {#snippet heading(text: string)}
-  <h3 class="text-sm font-semibold">{text}</h3>
+  <h3 class="text-base leading-tight font-semibold">{text}</h3>
 {/snippet}
 
 {#snippet chips(list: string[], mono = false)}
@@ -151,11 +151,11 @@
     <div class="flex items-start gap-4">
       <IconTile {manifest} size="xl" />
       <div class="flex min-w-0 flex-1 flex-col gap-1">
-        <h2 class="flex flex-wrap items-center gap-2 text-xl leading-tight font-semibold">
+        <h2 class="flex flex-wrap items-center gap-2 text-2xl leading-tight font-semibold">
           {manifest.name}
           {#if freshness === "new"}<Badge tone="primary">New</Badge>{:else if freshness === "updated"}<Badge tone="info">Updated</Badge>{/if}
         </h2>
-        <p class="text-ui text-foreground/80">{category_label(manifest)}</p>
+        <p class="text-ui text-foreground/65">{category_label(manifest)}</p>
         <AppByline {manifest} />
         <StoreButton {manifest} size="md" labelled primary class="mt-2 flex-wrap" />
       </div>
@@ -237,7 +237,7 @@
 
   <section class="flex flex-col gap-2" aria-labelledby="goals">
     <div class="flex items-baseline gap-2">
-      <h3 id="goals" class="text-sm font-semibold">Goals</h3>
+      <h3 id="goals" class="text-base leading-tight font-semibold">Goals</h3>
       <span class="font-mono text-2xs text-foreground/80">{goals.filter((goal) => goal.done).length} of {goals.length}</span>
     </div>
     <ul class="grid gap-1 @md:grid-cols-2">

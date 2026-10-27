@@ -15,7 +15,7 @@
   const GLYPH = { sm: "size-5", md: "size-7", lg: "size-9", xl: "size-11 @2xl:size-13" };
 </script>
 
-<span class={cn("relative grid shrink-0 place-items-center bg-background ring-1 ring-foreground/8", TILE[size], class_name)}>
+<span class={cn("relative grid shrink-0 place-items-center bg-background shadow-raised ring-1 ring-foreground/10", TILE[size], class_name)}>
   <manifest.icon class={GLYPH[size]} weight="duotone" />
   {#if size !== "sm"}<AppProgress app_id={manifest.id} /><AppBadge app_id={manifest.id} />{/if}
 </span>

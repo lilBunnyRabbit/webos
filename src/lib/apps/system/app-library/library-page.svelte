@@ -22,6 +22,9 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
   const store = $derived(kernel.service<StoreService>("store"));
   const list = $derived(sort_library(installed, sort, (id) => apps.usage(id), (id) => sizes.get(id)));
+  // Slots are kept only when some row fills them: Open lines up either way, without a blank column on a phone.
+  const updatable = $derived(list.some((manifest) => waiting_download(store, manifest.id)));
+  const removable = $derived(list.some((manifest) => !is_core_app(manifest.id)));
 
   let estimate = $state<StorageEstimate | null>(null);
   void navigator.storage
@@ -33,8 +36,8 @@
 <div class="mx-auto flex max-w-4xl flex-col gap-3 px-4 pt-5 pb-8 @2xl:px-8 @2xl:pt-7">
   <header class="flex flex-wrap items-center gap-2">
     <div class="min-w-0 flex-1">
-      <h2 class="text-lg font-semibold">Library</h2>
-      <p class="text-2xs text-foreground/80">
+      <h2 class="text-2xl leading-tight font-semibold">Library</h2>
+      <p class="text-2xs text-foreground/65">
         {installed.length} installed
         {#if sizes.total > 0}· <span class="font-mono">{format_bytes(sizes.total)}</span> of apps{/if}
         {#if estimate?.usage !== undefined && estimate.quota}
@@ -64,7 +67,7 @@
       {#each list as manifest (manifest.id)}
         {@const usage = apps.usage(manifest.id)}
         {@const size = sizes.get(manifest.id)}
-        <StoreRow {manifest} {onselect}>
+        <StoreRow {manifest} {onselect} reserve={updatable}>
           {#snippet detail()}
             <span class="font-mono">{manifest.version}</span>
             {#if size !== null}· <span class="font-mono">{format_bytes(size)}</span>{/if}
@@ -77,7 +80,7 @@
               <IconButton label="Uninstall {manifest.name}…" size="sm" onclick={(event) => void uninstall_app(manifest.id, { x: event.clientX, y: event.clientY })}>
                 <TrashIcon weight="bold" />
               </IconButton>
-            {:else}
+            {:else if removable}
               <span aria-hidden="true" class="w-7 shrink-0 pointer-coarse:w-9"></span>
             {/if}
           {/snippet}

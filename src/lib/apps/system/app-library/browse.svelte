@@ -15,12 +15,13 @@
     TerminalWindow as TerminalWindowIcon,
   } from "phosphor-svelte";
   import IconTile from "./icon-tile.svelte";
-  import { LibraryFilter, LibrarySort, SearchSection, ViewMode, type LibrarySection } from "./library";
+  import { category_label, LIBRARY_CATEGORIES, LibraryCategory, LibraryFilter, LibrarySort, SearchSection, ViewMode, type LibrarySection } from "./library";
   import StoreButton from "./store-button.svelte";
   import StoreRow from "./store-row.svelte";
 
   interface Props {
     title: string;
+    category: LibraryCategory;
     sections: LibrarySection[];
     filters: LibraryFilter[];
     sort: LibrarySort;
@@ -30,7 +31,7 @@
     onselect: (manifest: AppListing) => void;
   }
 
-  let { title, sections, filters = $bindable(), sort = $bindable(), view = $bindable(), fresh, updated, onselect }: Props = $props();
+  let { title, category = $bindable(), sections, filters = $bindable(), sort = $bindable(), view = $bindable(), fresh, updated, onselect }: Props = $props();
 
   const FILTERS = [
     { id: LibraryFilter.WIDGET, label: "Has widget", icon: StickerIcon },
@@ -53,10 +54,18 @@
 
 <div class="mx-auto flex max-w-6xl flex-col gap-3 px-4 pt-5 pb-8 @2xl:px-8 @2xl:pt-7">
   <header class="flex flex-wrap items-center gap-2">
-    <div class="min-w-0 flex-1">
-      <h2 class="text-lg font-semibold">{title}</h2>
-      <p class="text-2xs text-foreground/80">{shown} app{shown === 1 ? "" : "s"}</p>
+    <div class="min-w-0 flex-1 basis-full @xl:basis-0">
+      <h2 class="text-2xl leading-tight font-semibold">{title}</h2>
+      <p class="text-2xs text-foreground/65">{shown} app{shown === 1 ? "" : "s"}</p>
     </div>
+    <!-- The narrow tab row holds only the four places; categories are picked here (and on Discover). -->
+    <Select
+      bind:value={category}
+      size="sm"
+      class="w-auto @2xl:hidden"
+      aria-label="Category"
+      options={LIBRARY_CATEGORIES.map(({ id, label }) => ({ value: id, label: id === LibraryCategory.ALL ? "All categories" : label }))}
+    />
     <Select
       bind:value={sort}
       size="sm"
@@ -74,9 +83,9 @@
     </div>
   </header>
 
-  <div role="group" aria-label="Filters" class="-mx-4 flex gap-1 overflow-x-auto px-4 @2xl:mx-0 @2xl:flex-wrap @2xl:px-0">
+  <div role="group" aria-label="Filters" class="-mx-4 -my-1 flex gap-1.5 overflow-x-auto px-4 py-1 [scrollbar-width:none] @xl:mx-0 @xl:my-0 @xl:flex-wrap @xl:overflow-visible @xl:px-0 @xl:py-0">
     {#each FILTERS as filter (filter.id)}
-      <Button size="sm" variant="quiet" class="shrink-0" pressed={filters.includes(filter.id)} onclick={() => toggle(filter.id)}>
+      <Button size="sm" variant="quiet" class="shrink-0 rounded-full ring-1 ring-foreground/10 ring-inset aria-pressed:ring-primary/30" pressed={filters.includes(filter.id)} onclick={() => toggle(filter.id)}>
         <filter.icon weight={filters.includes(filter.id) ? "fill" : "regular"} />
         {filter.label}
       </Button>
@@ -99,21 +108,24 @@
         </h3>
       {/if}
       {#if view === ViewMode.GRID}
-        <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,9.5rem),1fr))] gap-2">
+        <ul class="grid grid-cols-[repeat(auto-fill,minmax(min(100%,9.5rem),1fr))] gap-3">
           {#each section.apps as manifest (manifest.id)}
             <li
-              class="relative flex flex-col items-center gap-2 rounded-xl bg-background-light px-2 pt-4 pb-3 text-center ring-1 ring-foreground/8 transition-shadow duration-150 hover:ring-foreground/20 has-[.tile-open:focus-visible]:outline-2 has-[.tile-open:focus-visible]:outline-cottontail"
+              class="relative flex flex-col items-center gap-2 rounded-xl bg-background-light px-2 pt-4 pb-3 text-center ring-1 ring-foreground/10 transition-shadow duration-150 hover:shadow-raised hover:ring-foreground/20 has-[.tile-open:focus-visible]:outline-2 has-[.tile-open:focus-visible]:outline-cottontail"
               draggable="true"
               ondragstart={(event) => set_drag_app(event, manifest.id)}
             >
-              <IconTile {manifest} />
-              <button
-                type="button"
-                class="tile-open line-clamp-2 max-w-full text-ui leading-tight font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none"
-                onclick={() => onselect(manifest)}>{manifest.name}</button
-              >
+              <IconTile {manifest} class="mb-1" />
+              <div class="flex max-w-full flex-col gap-0.5">
+                <button
+                  type="button"
+                  class="tile-open line-clamp-2 max-w-full text-ui leading-tight font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none"
+                  onclick={() => onselect(manifest)}>{manifest.name}</button
+                >
+                <span class="truncate text-2xs text-foreground/65">{category_label(manifest)}</span>
+              </div>
               <span class={cn("flex min-h-5 items-center", !fresh.has(manifest.id) && !updated.has(manifest.id) && "hidden")}>{@render freshness(manifest)}</span>
-              <StoreButton {manifest} class="relative mt-auto" />
+              <StoreButton {manifest} class="relative mt-auto pt-1" />
             </li>
           {/each}
         </ul>

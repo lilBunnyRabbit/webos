@@ -11,9 +11,11 @@
     onselect: (manifest: AppListing) => void;
     detail?: Snippet;
     actions?: Snippet;
+    /** Keep the Install / Update slot on rows without one; a list where no row ever shows it can drop it. */
+    reserve?: boolean;
   }
 
-  let { manifest, onselect, detail, actions }: Props = $props();
+  let { manifest, onselect, detail, actions, reserve = true }: Props = $props();
 </script>
 
 <li
@@ -26,12 +28,12 @@
     <button type="button" class="row-open block max-w-full truncate text-left text-ui font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none" onclick={() => onselect(manifest)}>
       {manifest.name}
     </button>
-    <div class="truncate text-2xs text-foreground/80">
+    <div class="line-clamp-2 text-2xs text-pretty text-foreground/80">
       {#if detail}{@render detail()}{:else}{category_label(manifest)}{#if manifest.description}<span class="hidden @md:inline">{` · ${manifest.description}`}</span>{/if}{/if}
     </div>
   </div>
   <div class="relative flex shrink-0 items-center gap-1">
-    <StoreButton {manifest} reserve />
+    <StoreButton {manifest} {reserve} />
     {@render actions?.()}
   </div>
 </li>

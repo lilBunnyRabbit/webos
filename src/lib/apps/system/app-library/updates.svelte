@@ -5,6 +5,7 @@
   import { ArrowCircleUp as ArrowCircleUpIcon, ArrowsClockwise as ArrowsClockwiseIcon, CheckCircle as CheckCircleIcon } from "phosphor-svelte";
   import type { AppUpdate } from "./discover";
   import StoreRow from "./store-row.svelte";
+  import { waiting_download } from "./waiting";
 
   interface Props {
     waiting: AppListing[];
@@ -23,19 +24,19 @@
 
 <div class="mx-auto flex max-w-4xl flex-col gap-6 px-4 pt-5 pb-8 @2xl:px-8 @2xl:pt-7">
   <header>
-    <h2 class="text-lg font-semibold">Updates</h2>
+    <h2 class="text-2xl leading-tight font-semibold">Updates</h2>
     <p class="text-2xs text-foreground/80">Installed apps update on their own after every release, then work offline.</p>
   </header>
 
   {#if ready.length}
     <section class="flex flex-col gap-2" aria-labelledby="updates-ready">
-      <h3 id="updates-ready" class="text-sm font-semibold">Update ready · {ready.length}</h3>
+      <h3 id="updates-ready" class="text-base leading-tight font-semibold">Update ready · {ready.length}</h3>
       <ul class="flex flex-col">
         {#each ready as manifest (manifest.id)}
-          <StoreRow {manifest} {onselect}>
-            {#snippet detail()}A new version is ready · open windows restart on it{/snippet}
+          <StoreRow {manifest} {onselect} reserve={false}>
+            {#snippet detail()}New version ready<span class="hidden @md:inline">{" · open windows restart on it"}</span>{/snippet}
             {#snippet actions()}
-              <Button size="sm" variant="primary" onclick={() => void apps.restart(manifest.id)}>
+              <Button size="sm" variant="primary" class="rounded-full" onclick={() => void apps.restart(manifest.id)}>
                 <ArrowCircleUpIcon weight="bold" /> Update
               </Button>
             {/snippet}
@@ -47,7 +48,7 @@
 
   <section class="flex flex-col gap-2" aria-labelledby="updates-waiting">
     <div class="flex flex-wrap items-center gap-2">
-      <h3 id="updates-waiting" class="min-w-0 flex-1 text-sm font-semibold">
+      <h3 id="updates-waiting" class="min-w-0 flex-1 text-base leading-tight font-semibold">
         {waiting.length ? `Waiting to download · ${waiting.length}` : "Waiting to download"}
       </h3>
       {#if waiting.length}
@@ -76,10 +77,10 @@
 
   {#if recent.length}
     <section class="flex flex-col gap-2" aria-labelledby="updates-recent">
-      <h3 id="updates-recent" class="text-sm font-semibold">Recently updated</h3>
+      <h3 id="updates-recent" class="text-base leading-tight font-semibold">Recently updated</h3>
       <ul class="flex flex-col">
         {#each recent as update (update.manifest.id)}
-          <StoreRow manifest={update.manifest} {onselect}>
+          <StoreRow manifest={update.manifest} {onselect} reserve={recent.some(({ manifest }) => waiting_download(store, manifest.id))}>
             {#snippet detail()}
               <span class="font-mono">{update.release.version}</span> · {day(update.release.date)}{#if update.change}<span class="hidden @md:inline">{` · ${update.change.text}`}</span>{/if}
             {/snippet}

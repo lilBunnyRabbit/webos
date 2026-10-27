@@ -15,7 +15,7 @@
   import { INTERESTS } from "$lib/core/api/services/apps/suggestions";
   import { get_app_context } from "$lib/core/contexts/app";
   import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";
-  import { Button, EmptyState, IconButton, Input, SideNav, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { Button, button, EmptyState, IconButton, Input, SideNav, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
     ArrowLeft as ArrowLeftIcon,
@@ -179,6 +179,8 @@
       group: "Categories",
     })),
   ]);
+  // A phone-width window gets the four places as equal tabs, so the row never scrolls sideways; categories live on Discover and in All apps.
+  const places = $derived(nav_items.filter((item) => !("group" in item)));
   const nav_value = $derived<NavValue>(
     place.value === StorePlace.APPS && category.value !== LibraryCategory.ALL ? (category.value as NavValue) : place.value
   );
@@ -221,7 +223,7 @@
 {#snippet back_bar(label: string, onback: () => void)}
   <div class="mx-auto flex w-full max-w-4xl items-center gap-2 px-4 pt-3 @2xl:px-8">
     <IconButton label="Back" class="-ml-1" onclick={onback}><ArrowLeftIcon weight="bold" /></IconButton>
-    <h2 class="truncate text-lg font-semibold">{label}</h2>
+    <h2 class="truncate text-xl font-semibold">{label}</h2>
   </div>
 {/snippet}
 
@@ -258,7 +260,28 @@
   {/if}
 
   <div class="flex min-h-0 flex-1 flex-col @2xl:flex-row">
-    <SideNav bind:value={() => nav_value, go} items={nav_items} label="App Store" />
+    <div class="hidden @2xl:flex">
+      <SideNav bind:value={() => nav_value, go} items={nav_items} label="App Store" />
+    </div>
+    <nav aria-label="App Store" class="grid shrink-0 grid-cols-4 gap-1 border-b border-foreground/8 bg-background-light p-1.5 @2xl:hidden">
+      {#each places as item (item.value)}
+        {@const active = item.value === place.value}
+        <button
+          aria-current={active ? "page" : undefined}
+          class={cn(
+            button({ variant: "quiet", size: "sm" }),
+            "h-auto min-w-0 flex-col gap-0.5 rounded-lg px-1 py-1.5 pointer-coarse:h-auto",
+            active && "bg-foreground/10 text-foreground hover:bg-foreground/10"
+          )}
+          onclick={() => go(item.value)}
+        >
+          <item.icon class={cn("size-5!", active && "text-primary")} weight={active ? "fill" : "regular"} />
+          <span class="max-w-full truncate text-2xs">
+            {item.label}{#if item.value === StorePlace.UPDATES && item.count}<span class="font-mono text-primary"> {item.count}</span>{/if}
+          </span>
+        </button>
+      {/each}
+    </nav>
 
     <div class="relative min-h-0 min-w-0 flex-1">
       <main bind:this={base} class={cn("absolute inset-0 overflow-y-auto overscroll-contain", (middle || selected) && "hidden")}>
@@ -267,6 +290,7 @@
         {:else if place.value === StorePlace.APPS}
           <Browse
             title={browse_title}
+            bind:category={category.value}
             {sections}
             bind:filters={filters.value}
             bind:sort={sort.value}
@@ -286,7 +310,7 @@
         <div class={cn("absolute inset-0 overflow-y-auto overscroll-contain", selected && "hidden")}>
           {#if searching}
             <div class="mx-auto flex max-w-4xl flex-col gap-4 px-4 pt-5 pb-8 @2xl:px-8">
-              <h2 class="text-lg font-semibold">Results for “{query.trim()}”</h2>
+              <h2 class="text-xl font-semibold">Results for “{query.trim()}”</h2>
               {#if results.length === 0 && !sentence.pending}
                 <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10">
                   {#snippet actions()}<Button size="sm" onclick={() => (query = "")}>Clear search</Button>{/snippet}

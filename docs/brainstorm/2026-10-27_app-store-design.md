@@ -48,6 +48,15 @@ One window, four places in a sidebar, categories under them:
 - **Goals are derived only, no app API:** opened once, an hour, 5 days, 10 hours, 30 days, a small checklist on the app page. Game Hub's data isn't read.
 - **An achievements API is not built**; the main session puts it on the roadmap.
 
+### Visual pass (2026-10-27)
+Owner: "the card design is meh, it all kinda blends in: the card bg, the icon bg and the button", "top borders are cut because of the scroll", and the phone's tab row of ten scrolled sideways. Polish, not a redesign: structure, the Open-first state button and tiles on the window background all stay.
+- **Three layers that don't blend:** cards keep `bg-background-light` with a `foreground/10` hairline and lift (raised shadow, stronger hairline) on hover; icon tiles stay on `bg-background` and gain `shadow-raised`; the state buttons become pills, Open tinted with the accent (solid only on the app page), Install / Update and the ‹ › arrows neutral. Shapes now differ too: cards `rounded-xl`, buttons round.
+- **Hierarchy:** page titles `text-2xl`, shelf and section titles `text-base`; name semibold › category `foreground/65` › description. Grid tiles show the category; shelf cards move the button to the bottom, so long names stop truncating and buttons line up.
+- **Scroll clipping:** every horizontal scroller (hero, shelves, phone filter chips) gets inner padding with a matching negative margin; `overflow-x: auto` clips the other axis too, which cut rings, shadows and focus outlines.
+- **Arrows:** `ScrollRow` tracks the ends; ‹ › disable at an end and hide when a shelf fits.
+- **Phone / narrow window:** four equal tabs (icon over label) instead of the kit tab row, no sideways scroll even at 360 px; categories through Discover's tiles and a category `Select` in All apps. Filter chips scroll sideways below `@xl`, wrap above.
+- **Alignment:** Library drops the empty Install / Update and Uninstall slots when no row fills them (a phone showed a blank column); Update ready rows drop the slot beside their Update button. Detail lines wrap to two lines instead of cutting "Used 3 mi…".
+
 ## Key takeaways
 - A store is places plus a state button on every app.
 - What a backend would rank, the changelog and the OS's own active time stand in for.
@@ -58,6 +67,7 @@ One window, four places in a sidebar, categories under them:
 - [x] Featured picks in core (`services/apps/featured.ts`)
 - [x] Active time per app and goals on the app page
 - [x] Docs: system apps (App Store), apps service, persistence; changelog in 3.74.0
+- [x] Visual pass: layers, hierarchy, scroll clipping, phone tabs
 - [ ] Hot updates (ADR-077 stage 3): Updates should read "Update ready" from StoreService once it exists
 
 ## Next session topics
