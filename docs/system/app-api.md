@@ -71,7 +71,7 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `widget`, `widget_size`, `default_widget` | yes | [Widgets and badges](#widgets-and-badges) |
 | `system` | no | Set by discovery for `src/lib/apps/system/`, never written by an app |
 
-`define_app` throws at boot on an invalid `widget_size`. `AppCategory` values (`productivity`, `media`, `utilities`, `developer`, `games`) are stable; a new category is a minor.
+`define_app` throws on an invalid `widget_size` wherever the manifest is evaluated: in the build's Node step (the catalogue plugin), so the build fails, and when the manifest loads lazily in a tab. `AppCategory` values (`productivity`, `media`, `utilities`, `developer`, `games`) are stable; a new category is a minor.
 
 Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `AppHighlight`, `AppPitch`, `AppId`, `AppProps`, `AppReplacement`, `WindowOptions`, `WindowFlag`.
 

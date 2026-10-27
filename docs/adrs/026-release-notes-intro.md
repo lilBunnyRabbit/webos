@@ -54,3 +54,7 @@ VersionService now depends on `files`, `notifications`, `dialogs` and `apps`.
 ## Revision 2026-10-16: lazy changelog
 
 `changelog.ts` was the largest module in the boot chunk (37 KB raw) and grows with every release; with it the boot chunk passed its 180 KB gz budget. VersionService now imports it on demand (`load_changelog()`): at boot only after an update, otherwise when Settings › What's new, the App Library or the `changelog` command needs it. `version.changelog` is empty until then.
+
+## Revision 2026-10-27: changelog as data ([ADR-077](077-app-store.md))
+
+The changelog is no longer a chunk. The build writes the whole `CHANGELOG` to `store/changelog.json` and `load_changelog()` fetches it (`cache: "no-cache"`; the service worker's `NetworkFirst` `store/` rule keeps the last copy for offline), so an app-only release doesn't rename a core file. `changelog.ts` stays the source authors edit and the Discord script reads, but no chunk may hold it (`RELEASE_MODULES`, the build fails otherwise). The running release (version, build, commit) comes from the catalogue, not a bundled stamp, and `changelog` is cut at it. See ADR-077's "release out of the bundle" revision.

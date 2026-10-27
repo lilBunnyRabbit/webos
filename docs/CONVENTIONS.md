@@ -47,7 +47,7 @@ src/lib/
         ├── index.ts              # define_app manifest (eager)
         ├── meta.ts               # description, keywords, pitch, authors: `meta: () => import("./meta")` (the build copies it into the catalogue, ADR-049, ADR-077)
         ├── icon.svelte           # the app's own icon
-        ├── highlights.ts         # App Library showcase slides, `highlights: () => import("./highlights")` (lazy)
+        ├── highlights.ts         # App Store showcase slides, `highlights: () => import("./highlights")` (lazy)
         ├── package.json          # only when the app has its own packages (ADR-045)
         ├── commands.ts           # shell commands, `shell: () => import("./commands")` (lazy, ADR-034)
         ├── shell.ts              # their bodies, `import()`ed on first run
@@ -117,8 +117,8 @@ export default define_app({
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
 - Display text (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): the build copies it into the app's catalogue entry, so the OS shows it without loading the app (ADR-077).
 - Shell commands: `shell: () => import("./commands")`, never an inline object. `commands.ts` default-exports the `ShellContribution` ([writing an app](system/apps/writing-an-app.md)).
-- A manifest may take only types and functions from `$lib/core/api`. Manifests are evaluated while that barrel is still initializing (AppsService imports the glob), so a `const` from it is in the temporal dead zone. Import constants such as `FILE_PROPS` from their own module (`$lib/core/api/services/apps/helpers`).
-- Everything a manifest imports ships in the boot chunk, and a module the app's lazy code also imports lands there whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 190 KB gz (`bun run build && bun run budget`).
+- A manifest may take only types and functions from `$lib/core/api`; import constants such as `FILE_PROPS` from their own module (`$lib/core/api/services/apps/helpers`). The rule dates from when manifests were evaluated while that barrel was still initializing (a `const` from it was in the temporal dead zone). Since ADR-077 manifests load on their own after boot and that cycle is gone; the rule stays until the owner lifts it.
+- Everything a manifest imports ships with its manifest chunk (`{id}.manifest-<hash>.js`), which loads after first paint for every installed app, and a module the app's lazy code also imports is loaded with it whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 167.2 KB gz (`bun run build && bun run budget`, `scripts/boot-budget.ts`).
 - Props are always optional at the component level. An app launched from search gets none (ADR-008).
 - Apps use `@container` queries (`@sm:`, `@md:`) for responsiveness, never viewport breakpoints. That's what makes mobile free (ADR-016).
 - Every app can open solo from a `#/solo/{id}?{props}` link (ADR-047): one window, full page, no desktop or taskbar, and launching another app only points to Open WebOS. There's no manifest flag, so an app never assumes other apps or windows are around.

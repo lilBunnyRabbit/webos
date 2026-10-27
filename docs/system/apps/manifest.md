@@ -196,7 +196,7 @@ Quick Notes: a sticky for one note (`{ note: id }`, editable in place) or the to
 component: () => import("./my-app.app.svelte"),
 ```
 
-Always explicit; there's no convention-based lookup. The import runs when the app is launched (in `launch()`, before the window renders), not at discovery. Each launch calls the loader again; the browser's module cache makes repeats free.
+Always explicit; there's no convention-based lookup. The import starts when the app is launched, not at discovery, and the window opens at once without waiting for it: `launch()` hands the window the pending import, and an app whose manifest isn't loaded yet gets its manifest first, then its component (`open_pending`, ADR-077). Each launch calls the loader again; the browser's module cache makes repeats free.
 
 ## Node-safe
 
