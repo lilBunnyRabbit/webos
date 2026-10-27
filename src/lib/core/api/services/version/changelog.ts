@@ -6,7 +6,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 export const CHANGELOG: Release[] = [
   {
     version: "3.76.0",
-    date: "2026-10-27",
+    date: "2026-10-28",
     title: "Achievements all round",
     changes: [
       {
