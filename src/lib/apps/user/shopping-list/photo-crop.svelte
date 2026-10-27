@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { Button, Spinner } from "$lib/core/components/ui";
+  import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
   import { QuadFrame } from "$kit/components/quad-frame";
   import { find_paper, to_gray, type Quad } from "$kit/utils/perspective";
-  import { Scan as ScanIcon } from "phosphor-svelte";
+  import { Scan as ScanIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { upright } from "./photo";
 
   interface Props {
@@ -25,6 +25,7 @@
   let size = $state<{ width: number; height: number } | null>(null);
   let quad = $state<Quad | null>(null);
   let found = $state(false);
+  let failed = $state(false);
 
   const whole = $derived<Quad | null>(
     size && [
@@ -37,8 +38,9 @@
   const framed = $derived(quad !== null && whole !== null && quad.some((corner, index) => Math.hypot(corner.x - whole[index].x, corner.y - whole[index].y) > 2));
 
   async function find(source: Blob) {
-    const bitmap = await upright(source);
+    let bitmap: ImageBitmap | null = null;
     try {
+      bitmap = await upright(source);
       const scale = Math.min(1, DETECT_SIDE / Math.max(bitmap.width, bitmap.height));
       const canvas = new OffscreenCanvas(Math.max(1, Math.round(bitmap.width * scale)), Math.max(1, Math.round(bitmap.height * scale)));
       const context = canvas.getContext("2d", { willReadFrequently: true })!;
@@ -50,8 +52,9 @@
       quad = paper ? (paper.map((corner) => ({ x: corner.x / scale, y: corner.y / scale })) as Quad) : whole;
     } catch {
       size = null;
+      failed = true;
     } finally {
-      bitmap.close();
+      bitmap?.close();
     }
   }
 
@@ -63,7 +66,7 @@
 <section aria-label="Choose what to read" class="mx-auto flex h-full w-full max-w-xl flex-col">
   <div class="px-4 pt-4 pb-2">
     <p class="text-sm font-medium">Read the photo</p>
-    <p class="text-ui text-foreground/65">
+    <p class={["text-ui text-foreground/65", failed && "invisible"]}>
       {found ? "Found the list's paper; it's straightened before reading. Drag a corner if it's off." : "Read all of it, or drag the corners onto the list's paper to straighten it first."}
     </p>
   </div>
@@ -77,13 +80,17 @@
         loupe
         class="absolute inset-0 p-6"
       />
+    {:else if failed}
+      <EmptyState icon={WarningIcon} tone="error" class="absolute inset-0" title="Couldn't open the photo" description="It may be damaged or in a format this browser can't read. Go back and pick another one." />
     {:else}
       <div class="absolute inset-0 grid place-items-center"><Spinner label="Opening the photo" /></div>
     {/if}
   </div>
   <div class="flex items-center justify-end gap-2 border-t border-foreground/8 bg-background-light px-4 py-3">
-    <Button variant="quiet" onclick={oncancel}>Cancel</Button>
-    <Button variant={framed ? "secondary" : "primary"} disabled={!size} onclick={() => onread(null)}>Read all</Button>
+    <Button variant={failed ? "primary" : "quiet"} onclick={oncancel}>{failed ? "Back" : "Cancel"}</Button>
+    {#if !failed}
+      <Button variant={framed ? "secondary" : "primary"} disabled={!size} onclick={() => onread(null)}>Read all</Button>
+    {/if}
     {#if framed}
       <Button variant="primary" onclick={() => quad && onread($state.snapshot(quad) as Quad)}><ScanIcon weight="bold" /> Read the list</Button>
     {/if}

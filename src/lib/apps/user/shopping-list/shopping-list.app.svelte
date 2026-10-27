@@ -621,7 +621,9 @@
     {:else if view === View.INCOMING && incoming}
       <ShareReview reviews={incoming.reviews} onapply={apply_incoming} oncancel={close_side_view} />
     {:else if view === View.CROP && photo_image}
-      <PhotoCrop image={photo_image} onread={(crop) => photo_image && void read(photo_image, crop)} oncancel={close_side_view} />
+      {#key photo_image}
+        <PhotoCrop image={photo_image} onread={(crop) => photo_image && void read(photo_image, crop)} oncancel={close_side_view} />
+      {/key}
     {:else if view === View.REVIEW}
       <PhotoReview
         bind:rows={review_rows}
