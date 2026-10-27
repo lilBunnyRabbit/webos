@@ -3,7 +3,8 @@ import { z } from "zod";
 import { define_command } from "../shell/define";
 import { AppCategory } from "./type";
 import { AppsService } from "./service.svelte";
-import { glob_source, type CatalogueSource } from "./source";
+import type { CatalogueSource } from "./source";
+import { glob_source } from "./glob-source";
 
 const never = () => new Promise<never>(() => {});
 

@@ -71,7 +71,7 @@
       <EmptyState
         icon={ArrowCircleUpIcon}
         title="This link needs a newer WebOS"
-        description="WebOS v{version.update_available.version} is out, and this copy is v{version.info.version}. Update to open the link."
+        description="WebOS v{version.update_available.version} is out{version.info ? `, and this copy is v${version.info.version}` : ''}. Update to open the link."
       >
         {#snippet actions()}
           <Button

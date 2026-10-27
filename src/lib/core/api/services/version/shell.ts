@@ -30,7 +30,7 @@ export function version_shell(version: VersionService, apps: () => AppsService):
       define_command({
         id: "version",
         description: "The running WebOS build",
-        run: () => ({ version: version.info.version, commit: version.info.commit, built: version.info.buildTime }),
+        run: () => ({ version: version.info?.version ?? "unknown", commit: version.info?.commit ?? "unknown", built: version.info?.buildTime ?? "unknown" }),
       }),
       define_command({
         id: "ci status",

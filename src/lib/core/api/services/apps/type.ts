@@ -5,7 +5,7 @@ import type { WindowId, WindowOptions } from "../windows/type";
 import type { Position } from "$lib/core/utils/type";
 import type { ShellContribution } from "../shell/type";
 import type { OnFire } from "../scheduler/type";
-import type { Catalogue } from "./catalogue";
+import type { Catalogue, CatalogueHeader } from "./catalogue";
 import type { AppUsage } from "./active-time";
 
 export interface LaunchOptions {
@@ -76,6 +76,8 @@ export interface AppsService extends IService {
   refresh(newer_than?: number): Promise<AppId[]>;
   /** The last catalogue `refresh()` (or a fetch) took on this core, with what changed. Reactive. */
   readonly last_update: AppsUpdate | null;
+  /** The release WebOS runs (ADR-077); `null` offline with another core's slice. Reactive. */
+  readonly header: CatalogueHeader | null;
   /** Open windows run an older version of the app than its entry. Reactive. */
   update_ready(id: AppId): boolean;
   /**

@@ -2,7 +2,8 @@ import type { DialogsService, FilesService, Kernel, NotificationsService, TasksS
 import { TaskJobStatus } from "../tasks/type";
 import { format_bytes } from "$lib/core/utils";
 import { backup_shell } from "./shell";
-import { BUILD_INFO } from "../version/build-info";
+import { CATALOGUE_PATH } from "../apps/installed";
+import { parse_catalogue_text } from "../apps/catalogue";
 import { flush_writers } from "../files/latest-writer";
 import {
   BACKUP_AREAS,
@@ -44,6 +45,12 @@ export class BackupService implements IBackupService {
     this.tasks_service = $derived(this.kernel.service<TasksService>("tasks"));
   }
 
+  // The release isn't in the bundle (ADR-077); the installed apps' catalogue names the one this device runs.
+  private async release(): Promise<string> {
+    const file = await this.files_service.get_file(CATALOGUE_PATH);
+    return parse_catalogue_text(file ? await file.text() : null)?.release ?? "unknown";
+  }
+
   async sizes(): Promise<Record<BackupArea, number>> {
     return (await logic()).sizes(await this.files_service.get_root(), localStorage);
   }
@@ -63,7 +70,7 @@ export class BackupService implements IBackupService {
       const plan = {
         root: await this.files_service.get_root(),
         areas: picked,
-        meta: { version: BUILD_INFO.version, created },
+        meta: { version: await this.release(), created },
         storage: localStorage,
         save: async (blob: Blob) => {
           const name = await run.save_to_device(target, blob, suggested);

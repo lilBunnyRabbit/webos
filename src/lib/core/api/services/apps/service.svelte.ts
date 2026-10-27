@@ -34,7 +34,7 @@ import { LatestWriter } from "../files/latest-writer";
 import { PATHS } from "../files/hierarchy";
 import { VERSION_STATE_PATH } from "../version/persistence";
 import { CATALOGUE_PATH, INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
-import { LAZY_PARTS, manifest_data, parse_catalogue_text, type Catalogue, type CatalogueApp, type LazyPart } from "./catalogue";
+import { LAZY_PARTS, manifest_data, parse_catalogue_text, type Catalogue, type CatalogueApp, type CatalogueHeader, type LazyPart } from "./catalogue";
 import { catalogue_source, type CatalogueSource } from "./source";
 import { current_ids, current_list, current_target, resolve_replaced } from "./replaces";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
@@ -79,7 +79,7 @@ export class AppsService implements IAppsService {
    */
   private readonly stale = new SvelteMap<AppId, CatalogueApp>();
   private readonly icons = new Map<AppId, Component>();
-  private header: Omit<Catalogue, "apps"> | null = $state.raw(null);
+  public header: CatalogueHeader | null = $state.raw(null);
   public complete = $state(false);
   public last_update: AppsUpdate | null = $state.raw(null);
   private fetching: Promise<boolean> | null = null;

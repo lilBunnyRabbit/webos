@@ -6,7 +6,6 @@ import { on_idle } from "$lib/core/utils/idle";
 import { Mode } from "../../kernel/mode";
 import { LatestWriter } from "../files/latest-writer";
 import { TaskJobStatus } from "../tasks/type";
-import { BUILD_INFO } from "../version/build-info";
 import { legacy_caches } from "./lists";
 import { current_ids } from "../apps/replaces";
 import { serialize_slice, type CatalogueApp } from "../apps/catalogue";
@@ -52,7 +51,7 @@ export class StoreService implements IStoreService {
   private reason: SyncReason = SyncReason.INSTALL;
   private updated: AppId[] = [];
   /** The catalogue the saved set is for: the build's own, or a newer one taken on the same core. */
-  private build = BUILD_INFO.buildTimestamp;
+  private build = 0;
   private readonly base = import.meta.env.BASE_URL;
   private running: Promise<void> | null = null;
   private channel: BroadcastChannel | null = null;

@@ -240,6 +240,6 @@
         {#each format_keys("mod+/", shortcuts.mac) as part, index (index)}<Kbd>{part}</Kbd>{/each} shortcuts
       </button>
     {/if}
-    <span class="font-mono">v{version.info.version} · {version.info.commit}</span>
+    {#if version.info}<span class="font-mono">v{version.info.version} · {version.info.commit}</span>{/if}
   </div>
 </footer>

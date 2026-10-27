@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Kernel } from "$lib/core/api";
 import { boot_test_kernel, stub_service } from "../../kernel/test-kernel";
 import { TestAppsService } from "../apps/test-apps";
+import type { AppsService } from "../apps/service.svelte";
 import * as opfs from "../files/opfs";
 import { FilesService } from "../files/service.svelte";
 import { NotificationsService } from "../notifications/service.svelte";
@@ -18,8 +19,9 @@ import type { Release } from "./type";
 declare const __VERSION_INFO__: { version: string };
 const current = __VERSION_INFO__.version;
 
-// A fixture, not the real release notes: the apps those introduce are gone in a fork.
-vi.mock("./changelog", () => {
+// A fixture, not the real release notes: the apps those introduce are gone in a fork. 99.0.0 is a deploy ahead of
+// this tab (a core update waiting).
+const changelog = vi.hoisted(() => {
   const release = (version: string, introduces?: string[]): Release => ({
     version,
     date: "2026-01-01",
@@ -27,8 +29,10 @@ vi.mock("./changelog", () => {
     changes: [{ kind: "improved", text: `Release ${version}.` }],
     introduces,
   });
-  return { CHANGELOG: [release(__VERSION_INFO__.version), release("1.2.0", ["example", "gone"]), release("1.1.0"), release("1.0.0")] };
+  const releases = [release("99.0.0"), release(__VERSION_INFO__.version), release("1.2.0", ["example", "gone"]), release("1.1.0"), release("1.0.0")];
+  return { releases, fetch: vi.fn(async (): Promise<Release[] | null> => releases) };
 });
+vi.mock("./release", async (original) => ({ ...(await original<typeof import("./release")>()), fetch_changelog: changelog.fetch }));
 
 let shutdown: () => Promise<void>;
 let show: ReturnType<typeof vi.fn>;
@@ -206,5 +210,39 @@ describe("VersionService update check", () => {
     fetch.mockResolvedValue(new Response("not json"));
     await version.check();
     expect(error).toHaveBeenCalledWith("Failed to check for updates:", expect.any(SyntaxError));
+  });
+});
+
+describe("the running release", () => {
+  afterEach(() => changelog.fetch.mockImplementation(async () => changelog.releases));
+
+  test("comes from the catalogue and follows an app-only update", async () => {
+    const kernel = await boot(current);
+    const version = kernel.service<VersionService>("version");
+    const apps = kernel.service<AppsService>("apps");
+    expect(version.info?.version).toBe(current);
+    expect(version.info?.buildTimestamp).toBe(apps.header?.build);
+
+    apps.header = { ...apps.header!, release: "99.0.0", build: apps.header!.build + 1 };
+    expect(version.info?.version).toBe("99.0.0");
+  });
+
+  test("the changelog leaves out releases past the running one", async () => {
+    const kernel = await boot(current);
+    const version = kernel.service<VersionService>("version");
+    await version.load_changelog();
+    expect(version.changelog[0].version).toBe(current);
+
+    const apps = kernel.service<AppsService>("apps");
+    apps.header = { ...apps.header!, release: "99.0.0" };
+    expect(version.changelog[0].version).toBe("99.0.0");
+  });
+
+  test("offline with no changelog copy, a later call asks again", async () => {
+    changelog.fetch.mockResolvedValue(null);
+    const version = (await boot(current)).service<VersionService>("version");
+    expect(await version.load_changelog()).toEqual([]);
+    changelog.fetch.mockResolvedValue(changelog.releases);
+    expect((await version.load_changelog())[0].version).toBe(current);
   });
 });

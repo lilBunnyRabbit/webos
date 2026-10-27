@@ -78,8 +78,11 @@ export interface AppIntroduction {
 }
 
 export interface VersionService extends IService {
-  /** Current build's version info. */
-  info: VersionInfo;
+  /**
+   * The release this tab runs, from the running core's catalogue (ADR-077), never the bundle: an app-only update moves it.
+   * `null` while unknown: offline on a release's first boot, with only another core's catalogue.
+   */
+  readonly info: VersionInfo | null;
 
   /** Remote version info if an update is available, otherwise null. */
   update_available: RemoteVersion | null;

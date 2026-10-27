@@ -38,7 +38,7 @@ AppsService owns the installed set ([apps](apps.md#init-the-installed-list-adr-0
 - **Apps** (`offline/{id}.json`): everything the app's roots reach without entering core or content. System apps get a list like user apps (ADR-077).
 - **Content** (ADR-077): a chunk whose every module was imported with the `content` query (`?raw&content`, Docs' pages) is never entered. The list file names the content the app's files import apart, `content`; nothing downloads it, it loads when read and the runtime rule keeps it ([overview](../overview.md#build--deploy)).
 - Both leave out what other runtime rules cache (`*.wasm`, `*.onnx`, `*.ttf|ttc`, `*.aff|dic`, `assets/mammoth-*.js`).
-- Each file is `{ "build": <buildTimestamp>, "files": ["assets/…", …], "content"?: [...] }`, sorted. The build stamp is computed once in `vite.config.ts` (`get_version_info`) and shared with `version_plugin`, so `version.json`, `BUILD_INFO` and the cache name agree. The catalogue plugin copies each list into its app's `files` ([overview](../overview.md)).
+- Each file is `{ "build": <buildTimestamp>, "files": ["assets/…", …], "content"?: [...] }`, sorted. The build stamp is computed once in `vite.config.ts` (`get_version_info`) and shared with `version_plugin`, so `version.json`, the catalogue and the lists agree. The catalogue plugin copies each list into its app's `files` ([overview](../overview.md)).
 
 Measured at 3.58.0: the precache went from 844 entries (12.4 MB) to 305 (4.2 MB). At 3.74.0, with system apps out of core: 202 entries (2.7 MB), 105 app lists. A fresh preview boot fetched no file of any system app's list before an app opened.
 
@@ -48,7 +48,7 @@ Still `generateSW` (`vite.config.ts`):
 
 - `manifestTransforms` keeps an entry when it's outside `assets/` (`index.html`, `registerSW.js`, `sw-notifications.js`, icons, manifest) or in core (`offline.precached(url)`).
 - The Portfolio path (`/webos/portfolio/`, written by `tooling/vite-plugin-portfolio-path.ts` when the Portfolio app exists) is a copy of `index.html` left out of the precache (`globIgnores`) and of the navigation fallback (`navigateFallbackDenylist`), so it always comes from the network and boots the deployed build. Its one extra script defaults a bare visit to `#/solo/portfolio` and drops the query (the `portfolio` repo's redirect adds `?t=` to skip the HTTP cache, and carries the hash so a worker from before 3.70.1, which still answers the path with its cached shell, opens Portfolio rather than the desktop). Offline it doesn't load.
-- `store/` (the catalogue and the icon sprite) is `NetworkFirst` into `webos-store` (4 s network timeout, 200 only, at most 4 entries): fresh online, the last copy offline, so the App Store and search still list apps that aren't installed. Neither file is precached.
+- `store/` (the catalogue, the icon sprite and the changelog) is `NetworkFirst` into `webos-store` (4 s network timeout, 200 only, at most 4 entries): fresh online, the last copy offline, so the App Store and search still list apps that aren't installed and What's new still reads. None is precached.
 - The last `runtimeCaching` rule is `CacheFirst` for `^[^?#]*/webos/assets/` into `webos-assets` (one name for every release, so the cache name alone no longer changes `sw.js`), 200 responses only, `ignoreVary`, no expiration (it could evict an installed app). Before 3.74.0 it was `webos-assets-{buildTimestamp}`, a cache per build; those are deleted on the next prune. Earlier rules keep the wasm, model, font, dictionary and mammoth files in their own caches.
 
 ## Sync
@@ -73,6 +73,8 @@ An app-only deploy keeps the page. VersionService's poll finds `version.json`'s 
 1. `take_update`: the state's `build` becomes the new catalogue's. When the state file already names it (another tab got there first), its saved set is read; otherwise the installed apps whose files changed (`swapped`) leave `saved`.
 2. `sync()` with the reason `apps`: "Updating Snake" / "Updating 3 apps", one progress toast, a ring on each updating icon. Done: "Snake and 2 more updated" (user apps named first; Docs, Kernel and Settings change whenever a release's docs name its version), "They work offline too.", with **What's new** (Settings › What's new, which shows the new release's notes from `version.json`).
 3. Then it posts `{ type: "apps-ready", core, apps }` on the `BroadcastChannel` `webos:store`. Every other tab on the same core calls `apps.refresh()` at once, instead of at its next poll; its `take_update` finds the saved set in the state file, so it downloads nothing and shows no toast.
+
+Nothing about the release is in the bundle (the version comes from the catalogue, the notes from `store/changelog.json`), so the deploy leaves `sw.js` and the precache as they were: the browser's own update check installs nothing, and Settings shows the new release as soon as it's taken ([version](version.md#app-only-updates)). The slice this service writes carries the catalogue's `release`, `commit` and `branch` with it.
 
 An app with open windows keeps running its old code; the window's titlebar shows **Update**, the taskbar item **Update ready**, the phone's switcher card **Update**, and the App Store's Updates place lists it under "Update ready", all running `apps.restart(id)`. Closed apps switch silently. Only the Web Lock holder downloads: two tabs that poll together both take the update, and the second one's sync finds the work done.
 
@@ -106,7 +108,7 @@ An app with open windows keeps running its old code; the window's titlebar shows
 |-------|------|--------|
 | `/var/lib/store/state.json` | Apps saved for the current catalogue | `{ "build": 1792699153883, "apps": [...] }`, sorted, through `LatestWriter`. `build` is the catalogue's (the bundle's own, or a newer one an app-only update brought). Another build's file counts as empty |
 | `/var/lib/apps/catalogue.json` | The installed apps' catalogue entries, read by AppsService at boot | `{ "version": 1, "core", "build", "release", "apps": [...] }`, the entries sorted by id, minified |
-| Cache Storage `webos-store` | The last `store/catalogue.json` and `store/icons.svg` | Written by the service worker's `NetworkFirst` rule |
+| Cache Storage `webos-store` | The last `store/catalogue.json`, `store/icons.svg` and `store/changelog.json` | Written by the service worker's `NetworkFirst` rule |
 | `/var/lib/offline/state.json` | Before 3.74.0. Read once when the new file is missing, then the folder is deleted | Same shape |
 | `/etc/offline.json` | Before 3.74.0: apps kept offline. Joined to the installed set once, then deleted | `{ "version": 1, "apps": [...] }` |
 | Cache Storage `webos-assets` | The files, every release | Written by the service worker (any `/assets/` request) and by this service (`cache.put`); pruned against `apps.files_in_use()` |
@@ -126,7 +128,6 @@ Parse and serialize in `persistence.ts` (zod), list helpers in `lists.ts`, both 
 - The per-app lists carry the build stamp (`{ build, files }`), not just the files, so a tab running an older build never saves the newer build's files under its own cache. Revision note 2026-10-22.
 - ADR-077 stage 1: the mobile "switcher menu" Install is a button on the switcher card's header, since phones have no switcher menu. Revision note 2026-10-26.
 - ADR-077 says StoreService owns update detection and hot swaps. The poll stays VersionService's and the swap is AppsService's (it owns the registry and the code); this service follows `apps.last_update`, downloads, toasts and tells other tabs. Revision note 2026-10-27.
-- `sw.js` still changes on an app-only deploy: the build stamp in `main` and the changelog chunk are precached core files. The open owner decision is in ADR-077's 2026-10-27 revision.
 
 ## Shell
 

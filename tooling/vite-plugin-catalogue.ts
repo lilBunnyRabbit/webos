@@ -97,10 +97,10 @@ export function unhashed(text: string): string {
 }
 
 /**
- * What a hash reads instead of a file's text, so two builds of the same code hash the same. Every build stamps
- * `version`, `commit`, `branch`, `buildTime` and `buildTimestamp` into the bundle, and a file that imports a stamped
- * chunk (`main`) names it by a hash that changes with the stamp: both become placeholders. A file's own change still
- * counts, because every file in a hashed set is read.
+ * What a hash reads instead of a file's text, so two builds of the same code hash the same: imported names lose their
+ * content hash, and the build stamp (`version`, `commit`, `branch`, `buildTime`, `buildTimestamp`) becomes a
+ * placeholder should any file carry it (`RELEASE_MODULES` keeps it out of chunks). A file's own change still counts,
+ * because every file in a hashed set is read.
  */
 export function content_normalizer(info: VersionInfo): (text: string) => string {
   const stamps = [String(info.buildTimestamp), info.buildTime, info.commit, info.branch, info.version]
@@ -210,6 +210,8 @@ export function dev_catalogue(apps: CollectedApp[], info: VersionInfo): Catalogu
     core: "dev",
     build: info.buildTimestamp,
     release,
+    commit: info.commit,
+    branch: info.branch,
     apps: apps.map((app) => ({
       ...app.data,
       version: release,
@@ -222,6 +224,11 @@ export function dev_catalogue(apps: CollectedApp[], info: VersionInfo): Catalogu
 }
 
 const CHANGELOG = "src/lib/core/api/services/version/changelog.ts";
+/**
+ * Change with every release, app-only ones included: no chunk may hold them, or `sw.js` and the precache would change
+ * with core unchanged (ADR-077). The runtime reads the release from the catalogue and the notes from `store/changelog.json`.
+ */
+export const RELEASE_MODULES = [CHANGELOG, "src/lib/core/api/services/version/build-info.ts"];
 
 async function load_changelog(load: Load): Promise<ReleaseNote[]> {
   return ((await load(`/${CHANGELOG}`)) as { CHANGELOG: ReleaseNote[] }).CHANGELOG;
@@ -257,8 +264,8 @@ function list_file(out_dir: string, name: string): { files: string[]; content: s
 
 /**
  * ADR-077 stage 2, build side: `store/catalogue.json` and `store/icons.svg` from every manifest, each manifest as its
- * own chunk, and the core hash and release notes for `version.json`. AppsService reads the catalogue and loads each
- * manifest chunk by URL (`src/lib/core/api/services/apps/source.ts`).
+ * own chunk, `store/changelog.json` from `changelog.ts`, and the core hash and release notes for `version.json`.
+ * AppsService reads the catalogue and loads each manifest chunk by URL (`src/lib/core/api/services/apps/source.ts`).
  */
 export function catalogue_plugin(info: VersionInfo) {
   const previous_url = process.env.WEBOS_PREVIOUS_CATALOGUE ?? PREVIOUS_CATALOGUE;
@@ -298,6 +305,16 @@ export function catalogue_plugin(info: VersionInfo) {
       const load: Load = (id) => server.ssrLoadModule(id);
       server.middlewares.use(async (req, res, next) => {
         const url = req.url?.split("?")[0];
+        if (url === `${config.base}store/changelog.json`) {
+          try {
+            res.setHeader("Content-Type", "application/json");
+            res.setHeader("Cache-Control", "no-store");
+            res.end(JSON.stringify(await load_changelog(load)));
+          } catch (error) {
+            next(error);
+          }
+          return;
+        }
         if (url !== `${config.base}store/catalogue.json` && url !== `${config.base}store/icons.svg`) return next();
         try {
           const apps = await collect_apps(config.root, load);
@@ -329,13 +346,12 @@ export function catalogue_plugin(info: VersionInfo) {
         };
 
         const public_files = config.publicDir && existsSync(config.publicDir) ? readdirSync(config.publicDir).filter((name) => PRECACHED_PUBLIC.test(name)) : [];
-        // The changelog gains a line every release, app-only ones included; the core hash must not move with it.
-        const changelog_id = path.resolve(config.root, CHANGELOG);
-        const notes_chunk = Object.values(bundle).find((file) => file.type === "chunk" && file.moduleIds.includes(changelog_id));
-        if (notes_chunk?.type === "chunk" && notes_chunk.moduleIds.length > 1) {
-          throw new Error(`catalogue: ${notes_chunk.fileName} holds more than the changelog, so the core hash would skip code`);
+        for (const module of RELEASE_MODULES) {
+          const id = path.resolve(config.root, module);
+          const holder = Object.values(bundle).find((file) => file.type === "chunk" && file.moduleIds.includes(id));
+          if (holder) throw new Error(`catalogue: ${holder.fileName} holds ${module}; the running release must come from the catalogue`);
         }
-        const core_files = list_file(out_dir, "core").files.filter((name) => name !== notes_chunk?.fileName);
+        const core_files = list_file(out_dir, "core").files;
         const core = sha([
           hash_files(core_files, read, normalize),
           hash_files(public_files, (name) => readFileSync(path.join(config.publicDir, name)), normalize),
@@ -346,6 +362,8 @@ export function catalogue_plugin(info: VersionInfo) {
           core,
           build: info.buildTimestamp,
           release: info.version,
+          commit: info.commit,
+          branch: info.branch,
           apps: apps.map((app) => {
             const { files, content } = list_file(out_dir, app.data.id);
             // Content isn't installed, but a changed page is still a new version of the app.
@@ -370,6 +388,7 @@ export function catalogue_plugin(info: VersionInfo) {
         mkdirSync(dir, { recursive: true });
         writeFileSync(path.join(dir, "catalogue.json"), JSON.stringify(catalogue));
         writeFileSync(path.join(dir, "icons.svg"), icon_sprite(apps.map((app) => app.symbol)));
+        writeFileSync(path.join(dir, "changelog.json"), JSON.stringify(changelog));
       },
     },
   };

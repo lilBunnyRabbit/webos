@@ -69,12 +69,9 @@ function preload_main_plugin(entry: string): Plugin {
   };
 }
 
-// Change with every app edit or every build, so nothing that reaches them may sit in the shared `core` chunk.
-const VOLATILE = [
-  "src/lib/apps/index.ts",
-  "src/lib/core/api/services/version/build-info.ts",
-  "src/lib/core/api/services/version/changelog.ts",
-];
+// Changes with every app edit, so nothing that reaches it may sit in the shared `core` chunk. The release and its notes
+// aren't in the bundle at all (ADR-077, `RELEASE_MODULES`).
+const VOLATILE = ["src/lib/apps/index.ts"];
 const cores = new WeakMap<object, Set<string>>();
 const BASE = "/webos/";
 const info = get_version_info(process.cwd());
@@ -144,8 +141,8 @@ export default defineConfig({
             handler: "CacheFirst",
             options: { cacheName: "webos-mammoth", cacheableResponse: { statuses: [200] }, expiration: { maxEntries: 2 } },
           },
-          // The app catalogue and icon sprite (ADR-077): fresh online, the last copy offline, so the App Store and search
-          // still list apps that aren't installed.
+          // The app catalogue, icon sprite and changelog (ADR-077): fresh online, the last copy offline, so the App Store and
+          // search still list apps that aren't installed and What's new still reads.
           {
             urlPattern: new RegExp(`^[^?#]*${BASE}store/`),
             handler: "NetworkFirst",

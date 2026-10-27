@@ -31,7 +31,7 @@ import {
 } from "./type";
 import { version_shell } from "./shell";
 import { fetch_pipeline, type Pipeline } from "./pipeline";
-import { BUILD_INFO } from "./build-info";
+import { fetch_changelog, release_info, running_changelog } from "./release";
 
 const POLL_INTERVAL = 30 * 60 * 1000; // 30 minutes
 const VISIBILITY_THROTTLE = 60 * 1000; // 1 minute
@@ -54,7 +54,8 @@ export class VersionService implements IVersionService {
   inspector = () => import("./inspector.svelte");
   shell = () => version_shell(this, () => this.apps_service);
 
-  public info = $state<VersionInfo>(BUILD_INFO);
+  // From the running core's catalogue, not the bundle (ADR-077): it follows an app-only update.
+  public readonly info: VersionInfo | null;
   public update_available = $state<RemoteVersion | null>(null);
   public is_checking = $state(false);
   public update_stage = $state<UpdateStage>(UpdateStage.IDLE);
@@ -63,22 +64,25 @@ export class VersionService implements IVersionService {
   /** The worker this page booted under. Another one active later means the browser installed an update on its own. */
   private boot_worker: ServiceWorker | null = null;
 
-  public changelog = $state.raw<Release[]>([]);
   private loading: Promise<Release[]> | null = null;
-  private bundled: Release[] | null = null;
-  /** Releases an app-only update brought, which this core's changelog chunk doesn't have. */
-  private notes: Release[] = [];
+  private loaded = $state(false);
+  private fetched = $state.raw<Release[]>([]);
+  /** Releases `version.json` brought, which a changelog fetched earlier (or offline) doesn't have. */
+  private notes = $state.raw<Release[]>([]);
+  public readonly changelog: Release[];
 
   public load_changelog(): Promise<Release[]> {
-    return (this.loading ??= import("./changelog").then(({ CHANGELOG }) => {
-      this.bundled = CHANGELOG;
-      return (this.changelog = with_notes(CHANGELOG, this.notes));
+    return (this.loading ??= fetch_changelog().then((releases) => {
+      // Offline with no copy: what version.json brought, and the next call asks again.
+      if (releases) this.fetched = releases;
+      else this.loading = null;
+      this.loaded = true;
+      return this.changelog;
     }));
   }
 
   private take_notes(notes: Release[]): void {
     this.notes = with_notes(this.notes, notes);
-    if (this.bundled) this.changelog = with_notes(this.bundled, this.notes);
   }
   public unseen = $state<Release[]>([]);
   public announced = $state<AppIntroduction[]>([]);
@@ -119,6 +123,8 @@ export class VersionService implements IVersionService {
     this.apps_service = $derived(this.kernel.service<AppsService>("apps"));
     this.session_service = $derived(this.kernel.service<SessionService>("session"));
     this.settings_service = $derived(this.kernel.service<SettingsService>("settings"));
+    this.info = $derived(release_info(this.apps_service.header));
+    this.changelog = $derived(this.loaded ? running_changelog(with_notes(this.fetched, this.notes), this.info?.version ?? null) : []);
   }
 
   async init() {
@@ -146,22 +152,24 @@ export class VersionService implements IVersionService {
       // Not awaited: the kernel awaits init() before mounting, and the dialog only renders once the shell is mounted.
       this.show_intro().then(() => {
         if (this.destroyed) return;
-        this.writer.write(serialize_seen(this.info.version));
+        if (this.info) this.writer.write(serialize_seen(this.info.version));
         this.after_restore(() => this.ask_analytics());
       });
       return;
     }
 
     this.after_restore(() => this.ask_analytics());
-    if (compare_versions(seen, this.info.version) >= 0) return;
+    // Unknown offline on a release's first boot: the marker stays, so the next boot online says what's new.
+    const running = this.info?.version;
+    if (!running || compare_versions(seen, running) >= 0) return;
 
     await this.load_changelog();
     this.unseen = this.changelog.filter(
       (release) =>
-        compare_versions(release.version, seen) > 0 && compare_versions(release.version, this.info.version) <= 0
+        compare_versions(release.version, seen) > 0 && compare_versions(release.version, running) <= 0
     );
-    this.writer.write(serialize_seen(this.info.version));
-    if (this.unseen.length > 0) this.notify_updated();
+    this.writer.write(serialize_seen(running));
+    if (this.unseen.length > 0) this.notify_updated(running);
 
     this.announced = introduced_apps(this.unseen);
     if (this.announced.length > 0) this.after_restore(() => void this.announce());
@@ -187,7 +195,7 @@ export class VersionService implements IVersionService {
   }
 
   to_string(): string {
-    return `VersionService: v${this.info.version} (${this.info.commit})`;
+    return this.info ? `VersionService: v${this.info.version} (${this.info.commit})` : "VersionService: release unknown";
   }
 
   async check(): Promise<void> {
@@ -201,7 +209,7 @@ export class VersionService implements IVersionService {
       if (!response?.ok) return;
 
       const remote: RemoteVersion = await response.json();
-      if (remote.buildTimestamp <= this.info.buildTimestamp) return;
+      if (remote.buildTimestamp <= (this.info?.buildTimestamp ?? 0)) return;
       // Same core: only apps changed (ADR-077 stage 3). They update in place and the page stays.
       if (remote.core && remote.core === running_core()) {
         this.take_notes(remote.notes ?? []);
@@ -366,14 +374,14 @@ export class VersionService implements IVersionService {
     await this.dialogs_service.show(component, { apps });
   }
 
-  private notify_updated(): void {
+  private notify_updated(version: string): void {
     const changes = this.unseen.flatMap((release) => release.changes);
     const counts = Object.values(ChangeKind)
       .map((kind) => [kind, changes.filter((change) => change.kind === kind).length] as const)
       .filter(([, count]) => count > 0);
 
     this.notifications_service.notify("version", {
-      title: `Updated to v${this.info.version}`,
+      title: `Updated to v${version}`,
       message: counts.map(([kind, count]) => `${count} ${kind}`).join(" · "),
       icon: SparkleIcon,
       // Sticky: at boot it can sit behind the introduction or the Restore dialog.

@@ -70,7 +70,7 @@
   });
 
   const relation = $derived.by(() => {
-    if (!pipeline) return null;
+    if (!pipeline || !version.info) return null;
     if (is_this_build(pipeline, version.info.commit)) return "This build";
     return pipeline.created > version.info.buildTimestamp ? `Newer than this build (v${version.info.version})` : null;
   });

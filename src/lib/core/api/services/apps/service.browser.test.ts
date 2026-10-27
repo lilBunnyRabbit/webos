@@ -15,7 +15,8 @@ import { CATALOGUE_PATH, INSTALLED_PATH, parse_installed, serialize_installed } 
 import { parse_recent, RECENT_PATH, serialize_recent } from "./recent";
 import { add_time, parse_usage, serialize_usage, USAGE_PATH } from "./active-time";
 import { AppsService as AppsServiceClass } from "./service.svelte";
-import { DEV_CORE, glob_source, type CatalogueSource } from "./source";
+import { DEV_CORE, type CatalogueSource } from "./source";
+import { glob_source } from "./glob-source";
 import type { Catalogue } from "./catalogue";
 import { TEST_APPS, TestAppsService } from "./test-apps";
 import type { AppsService } from "./type";

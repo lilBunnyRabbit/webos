@@ -10,7 +10,7 @@ Tracks what needs to be done, priority, and links to relevant ADRs/brainstorm se
 
 Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-order.md)). Work top to bottom. Small apps (Text Editor first, then Markdown Viewer, Calculator, games) go between blocks as visible releases. ADRs from February predate the Svelte rewrite: re-check each against the code when its block starts.
 
-**Next (owner, 2026-10-21): App store.** Designed 2026-10-26 as [ADR-077](adrs/077-app-store.md): installed = cached, a build catalogue so boot follows installed apps only, app updates without an OS reload. Three stages, each its own release; all three stages are done (2026-10-27); one owner call is open: `sw.js` still changes on an app-only deploy (ADR-077 revision 2026-10-27).
+**Next (owner, 2026-10-21): App store.** Designed 2026-10-26 as [ADR-077](adrs/077-app-store.md): installed = cached, a build catalogue so boot follows installed apps only, app updates without an OS reload. Three stages, each its own release; all three stages are done (2026-10-27), and an app-only deploy leaves `sw.js` alone since the release moved out of the bundle (2026-10-27).
 
 1. [x] **Foundations**
    - [x] Testing ([ADR-027](adrs/027-testing.md)): Vitest, unit + browser projects, CI gate on unit; helpers, opfs, revisions, DirectoryHandler, VersionService and SessionService through `boot_test_kernel`
@@ -702,7 +702,8 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
   - [x] Stage 1 (2026-10-26, 3.74.0): installed means downloaded and kept offline, StoreService, Install and Open, App Library renamed App Store, system apps out of the precache
   - [x] Stage 2 (2026-10-26, 3.74.0): the build writes the catalogue, icon sprite and a chunk per manifest; boot reads only the installed apps' entries and loads their code after first paint; the full catalogue on demand (Store, search, Open with, links, intro, announcements, Game Hub); sprite icons for apps that aren't installed; versions per app; release notes on the update screen; a core hash that holds across app-only releases. Boot 218.7 → 164.2 KB gz
   - [x] Four core apps (2026-10-27, 3.74.0): only App Store, Settings, File Explorer and Terminal are installed by default and locked; the other system apps install like any app; Docs' pages load on read (Docs 851 → 59 KB gz to install)
-  - [x] Stage 3 (2026-10-27, 3.74.0): an app-only deploy updates apps without a reload; open windows show Update (titlebar, taskbar, switcher card, App Store Updates) and Restart app reopens them on the new version; one asset cache pruned against installed apps; other tabs follow through a BroadcastChannel. Open: `sw.js` still changes on such a deploy (owner call in ADR-077)
+  - [x] Stage 3 (2026-10-27, 3.74.0): an app-only deploy updates apps without a reload; open windows show Update (titlebar, taskbar, switcher card, App Store Updates) and Restart app reopens them on the new version; one asset cache pruned against installed apps; other tabs follow through a BroadcastChannel
+  - [x] Release out of the bundle (2026-10-27): the running version comes from the catalogue and the changelog from `store/changelog.json`, so an app-only deploy leaves `sw.js`, the precache and the core hash unchanged and Settings shows the new release without a reload
   - [x] Store redesign (2026-10-27, 3.74.0, [brainstorm](brainstorm/2026-10-27_app-store-design.md)): Discover (featured carousel, shelves, categories), All apps and categories, Library (size, time used, Uninstall) and Updates (Update all) as places, an Install / Open / Update / progress button on every app, a store-like app page with goals; the OS counts each app's active time (`/var/lib/apps/usage.json`)
 
 ---

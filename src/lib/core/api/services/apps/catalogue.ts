@@ -48,8 +48,12 @@ export interface Catalogue {
   /** `buildTimestamp`: the file names inside are this build's; another build's entries never run here. */
   build: number;
   release: string;
+  commit?: string;
+  branch?: string;
   apps: CatalogueApp[];
 }
+
+export type CatalogueHeader = Omit<Catalogue, "apps">;
 
 /** `<meta name="webos-core">` in `index.html`: the build writes the core hash there, the page reads its own from it. */
 export const CORE_META = "webos-core";
@@ -126,7 +130,8 @@ export function parse_catalogue_text(text: string | null): Catalogue | null {
   }
 }
 
-export function serialize_slice(catalogue: Omit<Catalogue, "apps">, apps: Iterable<CatalogueApp>): string {
+export function serialize_slice(catalogue: CatalogueHeader, apps: Iterable<CatalogueApp>): string {
   const sorted = [...apps].sort((a, b) => a.id.localeCompare(b.id));
-  return JSON.stringify({ version: 1, core: catalogue.core, build: catalogue.build, release: catalogue.release, apps: sorted });
+  const { core, build, release, commit, branch } = catalogue;
+  return JSON.stringify({ version: 1, core, build, release, commit, branch, apps: sorted });
 }

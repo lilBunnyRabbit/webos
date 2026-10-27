@@ -16,7 +16,7 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <p class="text-ui text-foreground/65">Every release of WebOS, newest first. You're on v{version.info.version}.</p>
+  <p class="text-ui text-foreground/65">Every release of WebOS, newest first. {#if version.info}You're on v{version.info.version}.{/if}</p>
 
   {#each version.changelog as release (release.version)}
     <article class="flex flex-col gap-3 rounded-xl bg-background-light p-4 ring-1 ring-foreground/8">

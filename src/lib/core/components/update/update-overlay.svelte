@@ -31,7 +31,7 @@
 
   const NOTES_SHOWN = 5;
   const KIND_DOT: Record<ChangeKind, string> = { [ChangeKind.NEW]: "bg-primary", [ChangeKind.IMPROVED]: "bg-info", [ChangeKind.FIXED]: "bg-success" };
-  const notes = $derived((version.update_available?.notes ?? []).filter((note) => compare_versions(note.version, version.info.version) > 0));
+  const notes = $derived((version.update_available?.notes ?? []).filter((note) => !version.info || compare_versions(note.version, version.info.version) > 0));
   const changes = $derived(notes.flatMap((note) => note.changes));
 </script>
 
@@ -50,7 +50,7 @@
       <div class="text-center">
         <h2 class="text-base font-semibold">Updating WebOS</h2>
         <p class="font-mono text-2xs text-foreground/80">
-          v{version.info.version}{#if version.update_available}{` → v${version.update_available.version}`}{/if}
+          {[version.info, version.update_available].flatMap((info) => (info ? [`v${info.version}`] : [])).join(" → ")}
         </p>
       </div>
       {#if changes.length > 0}

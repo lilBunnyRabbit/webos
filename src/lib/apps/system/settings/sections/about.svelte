@@ -42,15 +42,19 @@
   const DEV = import.meta.env.DEV;
   const INSTALL_WHY = "Its own window, works offline, and the browser is far less likely to clear its storage.";
 
-  const rows = $derived([
-    ["Version", version.info.version],
-    ["Commit", version.info.commit],
-    ["Branch", version.info.branch],
-    ["Built", format_datetime(new Date(version.info.buildTime))],
-  ]);
+  const rows = $derived(
+    version.info
+      ? [
+          ["Version", version.info.version],
+          ["Commit", version.info.commit],
+          ["Branch", version.info.branch],
+          ["Built", format_datetime(new Date(version.info.buildTime))],
+        ]
+      : [["Version", "Known once online"]]
+  );
 
   function open_issue(kind: FeedbackKind) {
-    window.open(issue_url(kind, version.info, kernel.platform), "_blank", "noopener,noreferrer");
+    window.open(issue_url(kind, version.info ?? { version: "unknown", commit: "unknown" }, kernel.platform), "_blank", "noopener,noreferrer");
   }
 
 </script>
@@ -64,7 +68,7 @@
     </div>
     <div class="flex gap-1.5">
       <Badge tone={DEV ? "warning" : "primary"}>{DEV ? "Development" : "Production"}</Badge>
-      <Badge>v{version.info.version}</Badge>
+      {#if version.info}<Badge>v{version.info.version}</Badge>{/if}
     </div>
   </div>
 

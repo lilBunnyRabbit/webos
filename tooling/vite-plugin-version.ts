@@ -33,7 +33,7 @@ export function get_version_info(root: string): VersionInfo {
   };
 }
 
-// One stamp per build or dev session: the bundle, version.json and the service worker's runtime cache name must match.
+// One stamp per build or dev session: version.json and the catalogue must match.
 export function version_plugin(info: VersionInfo, extra: () => Promise<object | null> = async () => null): Plugin {
   let out_dir = "dist";
   let version_url = "/version.json";
@@ -63,7 +63,7 @@ export function version_plugin(info: VersionInfo, extra: () => Promise<object | 
       });
     },
 
-    // Build: inject __VERSION_INFO__ define and write version.json to output
+    // `__VERSION_INFO__` is read only by the dev server and tests (`build-info.ts`); a build fails if a chunk holds it.
     config() {
       return {
         define: {

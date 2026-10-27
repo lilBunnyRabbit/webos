@@ -20,7 +20,7 @@ The app registry. Holds every app the catalogue names (ADR-077): boot knows only
 | `shell.ts` | `apps_shell()`: the service's shell contribution (see [Shell](#shell)) |
 | `installed.ts` | `INSTALLED_PATH`, `parse_installed()`, `serialize_installed()` (ADR-040); `CATALOGUE_PATH` (ADR-077) |
 | `catalogue.ts` | `CatalogueApp`, `Catalogue`, `CatalogueData`, `LAZY_PARTS`, `manifest_data()`, `json_safe()`, `parse_catalogue()`, `parse_catalogue_text()`, `serialize_slice()`. Plain data and functions, no `$lib` imports: `tooling/vite-plugin-catalogue.ts` imports it, so the build, the dev server and tests describe an app with the same function |
-| `source.ts` | `CatalogueSource` and its two implementations: `bundle_source()` (the built site) and `glob_source(manifests)` (dev server and tests); `catalogue_source()` picks one by `import.meta.env.DEV` ([below](#catalogue-sources)) |
+| `source.ts`, `glob-source.ts` | `CatalogueSource` and its two implementations: `bundle_source()` (the built site) and `glob_source(manifests)` (dev server and tests, its own module so the dev build stamp it reads never reaches a build); `catalogue_source()` picks one by `import.meta.env.DEV` ([below](#catalogue-sources)) |
 | `recent.ts` | `RECENT_PATH`, `RECENT_LIMIT` (16), `parse_recent()` (tolerant: a broken file is `[]`, non-string and repeated entries drop out), `serialize_recent()`, `with_recent(ids, id)` (moves `id` to the front, capped) |
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
 | `active-time.ts` | `USAGE_PATH`, `AppUsage`, `parse_usage()` (tolerant: a broken file is `{}`), `serialize_usage()`, `add_time(usage, id, seconds, now)` (adds a stretch, stamps `last`, counts a new local day once), `format_usage()` ("under a minute", "25 min", "1.5 h", "12 h") and `milestones(usage, game)` (the App Store's goals). Unit tests in `active-time.test.ts` |
@@ -48,6 +48,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `load(id)` | `(id: AppId): Promise<AppManifest \| undefined>` | The manifest with its code (one import per app, shared). Rejects when the chunk can't load or the entry is another build's |
 | `refresh(newer_than?)` | `(newer_than?: number): Promise<AppId[]>` | An app-only update ([below](#app-only-updates-stage-3)): fetches the catalogue and takes it when it's a newer build of the running core. Skips the fetch when `newer_than` isn't newer than the catalogue held. Resolves to the apps whose version changed |
 | `last_update` | `AppsUpdate \| null` | `$state.raw`: `{ build, changed, swapped }` of the last catalogue taken on this core. StoreService follows it |
+| `header` | `CatalogueHeader \| null` | `$state.raw`: the held catalogue of the running core without its apps (`core`, `build`, `release`, `commit`, `branch`), set when one is read or taken, moved by `adopt()`. The running release: VersionService's `info` derives from it, since the bundle carries none (ADR-077 revision 2026-10-27). `null` while only another core's slice is known |
 | `update_ready(id)` | `(id: AppId): boolean` | Open windows run an older version than the app's entry. Reactive |
 | `restart(id)` | `(id: AppId): Promise<boolean>` | Restart app: snapshots the app's windows (`snapshot_window`, the session's), closes them through the guarded close (dirty ones first; a kept one stops it, `false`), loads the current version and reopens them with the same props, frames, flags and window state |
 | `files_in_use()` | `(): Set<string>` | `files` and `content` of the installed apps' entries and of every app whose code runs here (its old entry while an update waits). StoreService prunes against it |
@@ -186,7 +187,7 @@ A stub is an `AppManifest` built from the entry: `id`, `name`, `version`, `categ
 
 #### Catalogue sources
 
-`catalogue_source()` returns `glob_source((await import("$lib/apps")).apps)` when `import.meta.env.DEV` (the dev server and every test), else `bundle_source()`. A build replaces the condition with `false`, so neither the glob nor any manifest reaches the bundle.
+`catalogue_source()` imports `glob-source.ts` and `$lib/apps` and returns `glob_source(apps)` when `import.meta.env.DEV` (the dev server and every test), else `bundle_source()`. A build replaces the condition with `false`, so neither the glob, any manifest nor the dev build stamp (`build-info.ts`) reaches the bundle.
 
 - `bundle_source()`: `fetch("{base}store/catalogue.json", { cache: "no-cache" })` through the service worker's `NetworkFirst` rule (`webos-store`, so the last copy answers offline), `parse_catalogue`; `manifest(entry)` is `import("{base}{entry.manifest}")`.
 - `glob_source(manifests)`: the manifests already in memory. Its catalogue is built once from `manifest_data(manifest, await manifest.meta(), system)`, the function the build plugin runs, plus this page's build stamp and version, so the dev server never waits for its own `store/catalogue.json` middleware (several seconds on first request) and both paths describe an app the same way. `manifest(entry)` returns the in-memory one.
