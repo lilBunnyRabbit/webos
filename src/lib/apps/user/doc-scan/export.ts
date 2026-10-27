@@ -8,17 +8,20 @@ import { APP_ID } from "./ids";
 import { page_points } from "./layout";
 import type { ScanPage } from "./page.svelte";
 
-export function export_pdf(pages: ScanPage[], target: string): Promise<boolean> {
-  const count = pages.length;
+/** `pages` is read on each run, so Retry saves the pages as they are then. */
+export function export_pdf(pages: () => ScanPage[], target: string): Promise<boolean> {
+  const count = pages().length;
   return run_job(
     APP_ID,
     count === 1 ? "Saving the scan" : `Saving ${count} scanned pages`,
     () => {
       const writer = new PdfWriter();
-      const units: JobUnit[] = pages.map((page, index) => ({
+      const units: JobUnit[] = pages().map((page, index) => ({
         name: `Page ${index + 1}`,
         async run() {
+          await page.prepare();
           const blob = await page.render();
+          if (page.disposed) return "Removed";
           if (!blob) throw new Error(page.error ?? `Page ${index + 1} couldn't be straightened`);
           const bytes = new Uint8Array(await blob.arrayBuffer());
           const bitmap = await createImageBitmap(blob);

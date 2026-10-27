@@ -42,9 +42,12 @@
   async function use() {
     if (!page) return;
     using = true;
-    const blob = await page.render();
-    using = false;
-    if (blob) resolve(blob);
+    try {
+      const blob = await page.render();
+      if (blob) resolve(blob);
+    } finally {
+      using = false;
+    }
   }
 
   const source = untrack(() => input?.source);

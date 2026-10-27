@@ -33,7 +33,7 @@ Text, holes and shadows inside the page don't break it: they're islands in the r
 
 ## Model
 
-`ScanPage` (`page.svelte.ts`) holds one photo: the source `Blob` and its object URL, upright size, `quad`, the `found` corners, `filter`, and the result `Blob` and URL. `render()` straightens with the current corners and filter; a newer call wins over one still running (a version counter), and a page already rendered with the same `quad` and `filter` returns its result. The app keeps an array of pages in memory: nothing is written until the PDF.
+`ScanPage` (`page.svelte.ts`) holds one photo: the source `Blob` and its object URL, upright size, `quad`, the `found` corners, `filter`, and the result `Blob` and URL. `prepare()` finds the edges and renders once; every caller (the add loop, an export unit) shares the same run, so Save while pages are still being found waits for them. `render()` straightens with the current corners and filter; a call overtaken by a newer one (a version counter) resolves with the newer result, a call for what's already rendering shares that run, and a page already rendered with the same `quad` and `filter` returns its result. `dispose()` revokes both object URLs and marks the page; a disposed page's running detect or render keeps no result, and the add loop skips it. The export reads the page list on every run, so Retry saves the pages as they are then. The app keeps an array of pages in memory: nothing is written until the PDF.
 
 `process.ts` calls one worker for every window and sheet through the core worker helper (`spawn` here, `serve` in `scan.worker.ts`, methods `detect` and `straighten`), and ends it after 30 s with nothing pending; a worker that fails rejects every pending call and the next call starts a new one.
 
@@ -54,7 +54,7 @@ const blob = await win.request("doc-scan::scan", { source }); // source?: Blob
 if (!blob) /* cancelled or failed: carry on your own way */;
 ```
 
-Without a `source` the sheet opens the device picker right away (and shows Take or choose a photo / From files… in case the browser didn't let it). It's the same editor with Cancel, a Retake icon and "Use page", which resolves the straightened image (PNG for B&W, JPEG otherwise). It runs in the caller's window and app context and stores nothing; new pages start in Color.
+Without a `source` the sheet opens the device picker right away (and shows Take or choose a photo / From files… in case the browser didn't let it). It's the same editor with Cancel, a Retake icon and "Use page", which resolves the straightened image (PNG for B&W, JPEG otherwise) as the page is when it finishes, even if the filter or corners changed while it worked. It runs in the caller's window and app context and stores nothing; new pages start in Color.
 
 ## Shell
 

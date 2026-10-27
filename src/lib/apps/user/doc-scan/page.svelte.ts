@@ -17,7 +17,10 @@ export class ScanPage {
   busy = $state(false);
   error = $state<string | null>(null);
   private rendered: { quad: Quad; filter: PageFilter } | null = null;
+  private pending: { quad: Quad; filter: PageFilter; done: Promise<Blob | null> } | null = null;
+  private preparing: Promise<void> | null = null;
   private version = 0;
+  private is_disposed = false;
 
   constructor(
     readonly source: Blob,
@@ -28,6 +31,10 @@ export class ScanPage {
     this.filter = filter;
   }
 
+  get disposed(): boolean {
+    return this.is_disposed;
+  }
+
   get ready(): boolean {
     return this.quad !== null;
   }
@@ -36,15 +43,23 @@ export class ScanPage {
     return this.result !== null && this.rendered?.quad === this.quad && this.rendered.filter === this.filter;
   }
 
-  async prepare(): Promise<void> {
+  /** Finds the edges and renders once; every caller gets the same run. */
+  prepare(): Promise<void> {
+    if (this.disposed) return Promise.resolve();
+    return (this.preparing ??= this.detect_and_render());
+  }
+
+  private async detect_and_render(): Promise<void> {
     this.busy = true;
     try {
       const detected = await detect(this.source);
+      if (this.disposed) return;
       this.width = detected.width;
       this.height = detected.height;
       this.found = detected.quad;
       this.quad = detected.quad ?? default_quad(detected.width, detected.height);
     } catch (error) {
+      if (this.disposed) return;
       this.busy = false;
       this.error = error_message(error);
       return;
@@ -65,25 +80,38 @@ export class ScanPage {
     this.quad = this.found ?? default_quad(this.width, this.height);
   }
 
-  /** A newer call wins over one still running. */
+  /** Resolves with the page as it is when the last render started: a call overtaken by a newer one follows it. */
   async render(): Promise<Blob | null> {
-    if (!this.quad) return null;
+    if (this.disposed || !this.quad) return null;
     if (this.current) return this.result;
+    if (this.pending && this.pending.quad === this.quad && this.pending.filter === this.filter) return this.pending.done;
     const version = ++this.version;
     const wanted = { quad: this.quad, filter: this.filter };
+    const done = this.straighten(version, wanted);
+    this.pending = { ...wanted, done };
+    return done;
+  }
+
+  private async straighten(version: number, wanted: { quad: Quad; filter: PageFilter }): Promise<Blob | null> {
     this.busy = true;
     try {
       const { blob } = await straighten(this.source, wanted.quad, wanted.filter);
-      if (version !== this.version) return null;
+      if (this.disposed) return null;
+      if (version !== this.version) return this.render();
       this.set_result(blob);
       this.rendered = wanted;
       this.error = null;
       return blob;
     } catch (error) {
-      if (version === this.version) this.error = error_message(error);
+      if (this.disposed) return null;
+      if (version !== this.version) return this.render();
+      this.error = error_message(error);
       return null;
     } finally {
-      if (version === this.version) this.busy = false;
+      if (version === this.version) {
+        this.busy = false;
+        this.pending = null;
+      }
     }
   }
 
@@ -94,6 +122,7 @@ export class ScanPage {
   }
 
   dispose(): void {
+    this.is_disposed = true;
     this.version++;
     URL.revokeObjectURL(this.url);
     if (this.result_url) URL.revokeObjectURL(this.result_url);

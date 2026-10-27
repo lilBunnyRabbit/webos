@@ -70,7 +70,7 @@
     const added = images.map(({ blob, name }) => new ScanPage(blob, name, filter.value));
     pages = [...pages, ...added];
     void (async () => {
-      for (const each of added) await each.prepare();
+      for (const each of added) if (!each.disposed) await each.prepare();
     })();
     if (added.length === 1) edit(added[0]);
   }
@@ -128,7 +128,7 @@
     saving = true;
     const key = state_key;
     try {
-      const done = await export_pdf(pages, target);
+      const done = await export_pdf(() => pages, target);
       if (done) saved = key;
       return done;
     } finally {
