@@ -7,7 +7,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 ## Keeping it current
 
 - A change under `src/lib/apps/user/{id}/` for an app in the index below updates `docs/apps/{id}.md` in the same commit. A commit that leaves the page stale is incomplete.
-- A change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`) updates that page too.
+- A change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`, `$kit/utils/perspective`) updates that page too.
 - A new or changed app that gains a model, algorithm, protocol, file or share format, or a non-trivial dependency gets a page, a row in the index below and a row in the "Per-app docs" table in `CLAUDE.md`.
 - Numbers are measured, with what they were measured on. A number nobody measured isn't written down; say it's unmeasured under **Limits**.
 
@@ -41,6 +41,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [colour-atlas.md](colour-atlas.md) | Colour Atlas (`colour-atlas`) | The model table (tier, family, source), slider ranges from `Model.channels` with the sRGB extent where a range is a format ceiling, target redraws for unreachable or throwing conversions, the 2/2/1 seeded run, ΔE2000 scoring, the dex |
 | [portfolio.md](portfolio.md) | Portfolio (`portfolio`) | Content as typed records with ok/draft status and the guard test, the terminal session and its tour, the rail layout (`compose`, the View Transition re-tile), evidence and `shows`, the engagements rule, the WebGL2 particle engine, Contact's `mailto:`, props and shell, links that work in full and solo mode |
 | [moonrabbit.md](moonrabbit.md) | Moonrabbit (`moonrabbit`) | The encrypted journal format (`journal.json`, `index.bin`, one AES-GCM blob per entry and photo, additional data), the key hierarchy (data key wrapped by PBKDF2 phrase key and HKDF recovery code, X25519 inbox key), per-device quick unlock (passkey PRF, Carrot patch, PIN, device key in IndexedDB, 5 tries, 7 days, restore stamp), locking, the locked inbox (ephemeral X25519, merge on unlock), mood stats and views, the live-formatting editor, the threat model |
+| [doc-scan.md](doc-scan.md) | Doc Scan (`doc-scan`) | Finding the paper (Otsu, the biggest bright region, corners from x ± y extremes), the homography warp in a worker, the Gray and B&W filters, the PDF page size, the `doc-scan::scan` sheet |
 | [motion-watch.md](motion-watch.md) | Motion Watch (`motion-watch`) | Main thread, worker and storage split, running-average detection with blobs, lights and zones, the WebCodecs pre-roll ring and clip cutting, the day folder and `events.json` format, retention, the window as a view onto a background job |
 
 ## Page shape

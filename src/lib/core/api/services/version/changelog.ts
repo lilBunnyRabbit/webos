@@ -11,6 +11,11 @@ export const CHANGELOG: Release[] = [
     changes: [
       {
         kind: NEW,
+        apps: ["doc-scan"],
+        text: "Doc Scan: photograph pages at any angle, and it finds each page's edges, straightens it, cleans it up in color, gray or black and white, and saves the pages as one PDF.",
+      },
+      {
+        kind: NEW,
         apps: ["minesweeper", "sudoku", "hop", "snake", "twenty-forty-eight", "solitaire", "doodlehop", "game-hub", "app-library"],
         text: "Games now have achievements: Minesweeper, Sudoku, Hop, Snake, 2048, Solitaire and Doodlehop each have some to earn, a few of them secret, shown on each app's App Store page and in Game Hub's new Trophies tab.",
       },

@@ -113,6 +113,7 @@ What are the implications of this decision?
 | [077](./077-app-store.md) | App Store | 2026-10-26 | Implemented |
 | [078](./078-achievements.md) | Achievements | 2026-10-27 | Implemented |
 | [079](./079-app-sheets.md) | App Sheets | 2026-10-27 | Implemented |
+| [080](./080-doc-scan.md) | Doc Scan | 2026-10-27 | Implemented |
 | [081](./081-background-apps.md) | Background apps | 2026-10-27 | Implemented |
 | [082](./082-motion-watch.md) | Motion Watch | 2026-10-27 | Implemented |
 

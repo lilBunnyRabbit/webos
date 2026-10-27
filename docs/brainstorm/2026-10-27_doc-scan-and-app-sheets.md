@@ -49,8 +49,8 @@ Replace the rectangular crop with a quad crop and straighten before reading, cor
 ## Action items
 - [x] Kit extraction: `$kit/utils/perspective`, `QuadFrame`, Font Maker on both, Style Guide demo.
 - [x] App sheets (ADR-079): `provides`, `win.request`, `app provides`, docs, tests.
-- [ ] Doc Scan (ADR-079): the app, its sheet, `docs/apps/doc-scan.md`.
-- [ ] Shopping List: measure straightening on a skewed synthetic list; wire it only on a gain.
+- [x] Doc Scan (ADR-080): the app, its sheet, `docs/apps/doc-scan.md`.
+- [x] Shopping List: measure straightening on a skewed synthetic list; wire it only on a gain. Measured: turned and skewed 5 → 10 of 10, skew alone 10 both ways; wired as a quad frame pre-filled by `find_paper`. `win.request("doc-scan::scan")` not used: `null` can't tell Cancel from a failure, so a fallback picker would open after every Cancel.
 
 ## Next session topics
 - More providers once a second use shows up (a signature sheet from PDF Tools, a colour picker).

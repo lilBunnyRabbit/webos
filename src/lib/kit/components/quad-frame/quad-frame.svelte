@@ -1,6 +1,7 @@
 <script lang="ts">
   import { cn } from "$lib/core/utils";
   import type { Quad } from "$kit/utils/perspective";
+  import type { Attachment } from "svelte/attachments";
 
   interface QuadImage {
     src: string;
@@ -15,6 +16,8 @@
     alt?: string;
     labels?: [string, string, string, string];
     marked?: number | null;
+    /** Shows the picture magnified around a dragged corner, clear of the finger. */
+    loupe?: boolean;
     class?: string;
   }
 
@@ -24,14 +27,27 @@
     alt = "",
     labels = ["Top left", "Top right", "Bottom right", "Bottom left"],
     marked = null,
+    loupe = false,
     class: class_name,
   }: Props = $props();
 
+  const ZOOM = 3;
+  const LOUPE = 96;
+
   let frame = $state<HTMLElement>();
   let dragging = $state(-1);
+  let frame_width = $state(0);
+  let frame_height = $state(0);
 
   const { width, height } = $derived(image);
   const polygon = $derived(quad.map((corner) => `${corner.x},${corner.y}`).join(" "));
+
+  // A corner dragged down inside a phone's bottom sheet would otherwise also swipe the sheet away.
+  const own_touch: Attachment<HTMLElement> = (element) => {
+    const stop = (event: TouchEvent) => event.stopPropagation();
+    element.addEventListener("touchstart", stop, { passive: true });
+    return () => element.removeEventListener("touchstart", stop);
+  };
 
   function set_corner(index: number, x: number, y: number) {
     const next = [...quad] as Quad;
@@ -61,7 +77,7 @@
 </script>
 
 <div class={cn("stage grid min-h-0 place-items-center", class_name)}>
-  <div bind:this={frame} class="frame relative" style:aspect-ratio="{width} / {height}" style:--ratio={width / height}>
+  <div bind:this={frame} bind:clientWidth={frame_width} bind:clientHeight={frame_height} class="frame relative" style:aspect-ratio="{width} / {height}" style:--ratio={width / height}>
     <img src={image.src} {alt} class="absolute inset-0 size-full select-none" draggable="false" />
     <svg viewBox="0 0 {width} {height}" class="pointer-events-none absolute inset-0 size-full" aria-hidden="true">
       <polygon points={polygon} class="fill-primary/10 stroke-primary" stroke-width="2" vector-effect="non-scaling-stroke" />
@@ -77,12 +93,32 @@
         onpointermove={(event) => move(event, index)}
         onlostpointercapture={() => (dragging = -1)}
         onkeydown={(event) => nudge(event, index)}
+        {@attach own_touch}
       >
         <span class={["grid size-6 place-items-center rounded-full ring-2 ring-primary", index === marked ? "bg-primary/40" : "bg-background/40"]}>
           <span class="size-1.5 rounded-full bg-primary"></span>
         </span>
       </button>
     {/each}
+    {#if loupe && dragging >= 0}
+      {@const x = (quad[dragging].x / width) * frame_width}
+      {@const y = (quad[dragging].y / height) * frame_height}
+      <div
+        class="pointer-events-none absolute z-10 overflow-hidden rounded-full bg-background-darkest bg-no-repeat shadow-popover ring-2 ring-primary"
+        style:width="{LOUPE}px"
+        style:height="{LOUPE}px"
+        style:left="{Math.min(Math.max(x, LOUPE / 2), Math.max(LOUPE / 2, frame_width - LOUPE / 2))}px"
+        style:top="{y}px"
+        style:translate={y < LOUPE + 48 ? "-50% 40px" : "-50% calc(-100% - 40px)"}
+        style:background-image={`url("${image.src}")`}
+        style:background-size="{frame_width * ZOOM}px {frame_height * ZOOM}px"
+        style:background-position="{LOUPE / 2 - x * ZOOM}px {LOUPE / 2 - y * ZOOM}px"
+        aria-hidden="true"
+      >
+        <span class="absolute inset-x-0 top-1/2 h-px bg-primary"></span>
+        <span class="absolute inset-y-0 left-1/2 w-px bg-primary"></span>
+      </div>
+    {/if}
   </div>
 </div>
 

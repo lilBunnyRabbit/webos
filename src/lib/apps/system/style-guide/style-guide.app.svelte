@@ -448,7 +448,7 @@
         </Section>
         <Section
           title="Crop frame"
-          description="A crop over a picture at any scale, from $kit: drag inside to move, drag a handle to resize, arrow keys move and Shift+arrows resize. Image Editor's crop and Shopping List's photo step use it."
+          description="A crop over a picture at any scale, from $kit: drag inside to move, drag a handle to resize, arrow keys move and Shift+arrows resize. Image Editor's crop uses it."
           flush
         >
           <div class="flex flex-col gap-2">
@@ -461,11 +461,11 @@
         </Section>
         <Section
           title="Quad frame"
-          description="Four corners over a picture, from $kit: drag a corner or focus it and use the arrow keys (Shift for bigger steps) to line it up with a skewed page. Font Maker's scan step uses it."
+          description="Four corners over a picture, from $kit: drag a corner or focus it and use the arrow keys (Shift for bigger steps) to line it up with a skewed page; a magnifier shows the picture under a dragged corner. Font Maker's scan step, Doc Scan and Shopping List's photo step use it."
           flush
         >
           <div class="flex flex-col gap-2">
-            <QuadFrame bind:quad image={{ src: paper_photo, width: 320, height: 200 }} alt="A sheet of paper on a table" class="aspect-[320/200] w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-foreground/10" />
+            <QuadFrame bind:quad image={{ src: paper_photo, width: 320, height: 200 }} alt="A sheet of paper on a table" loupe class="aspect-[320/200] w-full max-w-sm overflow-hidden rounded-xl ring-1 ring-foreground/10" />
             <span class="font-mono text-2xs text-foreground/80 tabular-nums">{quad.map((corner) => `${Math.round(corner.x)},${Math.round(corner.y)}`).join("  ")}</span>
           </div>
         </Section>

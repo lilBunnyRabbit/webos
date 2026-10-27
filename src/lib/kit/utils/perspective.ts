@@ -60,14 +60,20 @@ export function dark_mask(gray: Gray, ratio = 0.72, radius = Math.max(4, Math.ro
 }
 
 export function regions(mask: Uint8Array, width: number, height: number): Region[] {
-  const seen = new Uint8Array(mask.length);
+  return labelled(mask, width, height).regions;
+}
+
+/** `labels[i]` is the index into `regions` plus one, 0 off the mask. */
+function labelled(mask: Uint8Array, width: number, height: number): { labels: Int32Array; regions: Region[] } {
+  const labels = new Int32Array(mask.length);
   const stack = new Int32Array(mask.length);
   const out: Region[] = [];
   for (let start = 0; start < mask.length; start++) {
-    if (!mask[start] || seen[start]) continue;
+    if (!mask[start] || labels[start]) continue;
+    const label = out.length + 1;
     let top = 0;
     stack[top++] = start;
-    seen[start] = 1;
+    labels[start] = label;
     const region: Region = { area: 0, x_min: width, y_min: height, x_max: 0, y_max: 0, cx: 0, cy: 0, edge: false };
     while (top) {
       const at = stack[--top];
@@ -83,8 +89,8 @@ export function regions(mask: Uint8Array, width: number, height: number): Region
       if (x === 0 || y === 0 || x === width - 1 || y === height - 1) region.edge = true;
       const neighbours = [x > 0 ? at - 1 : -1, x < width - 1 ? at + 1 : -1, y > 0 ? at - width : -1, y < height - 1 ? at + width : -1];
       for (const next of neighbours) {
-        if (next < 0 || !mask[next] || seen[next]) continue;
-        seen[next] = 1;
+        if (next < 0 || !mask[next] || labels[next]) continue;
+        labels[next] = label;
         stack[top++] = next;
       }
     }
@@ -92,7 +98,7 @@ export function regions(mask: Uint8Array, width: number, height: number): Region
     region.cy /= region.area;
     out.push(region);
   }
-  return out;
+  return { labels, regions: out };
 }
 
 export function homography(from: Quad, to: Quad): Matrix {
@@ -150,4 +156,136 @@ export function default_quad(width: number, height: number): Quad {
     { x: width - dx, y: height - dy },
     { x: dx, y: height - dy },
   ];
+}
+
+/** The threshold that best splits the histogram in two (Otsu): the paper from the table behind it. */
+export function otsu(gray: Gray): number {
+  const histogram = new Float64Array(256);
+  for (const value of gray.data) histogram[value]++;
+  const total = gray.data.length;
+  let sum = 0;
+  for (let value = 0; value < 256; value++) sum += value * histogram[value];
+  let below = 0;
+  let below_sum = 0;
+  let best = 0;
+  let threshold = 127;
+  for (let value = 0; value < 256; value++) {
+    below += histogram[value];
+    if (!below) continue;
+    const above = total - below;
+    if (!above) break;
+    below_sum += value * histogram[value];
+    const spread = below * above * (below_sum / below - (sum - below_sum) / above) ** 2;
+    if (spread > best) {
+      best = spread;
+      threshold = value;
+    }
+  }
+  return threshold;
+}
+
+export function quad_area(quad: Quad): number {
+  let twice = 0;
+  for (let index = 0; index < 4; index++) {
+    const a = quad[index];
+    const b = quad[(index + 1) % 4];
+    twice += a.x * b.y - b.x * a.y;
+  }
+  return Math.abs(twice) / 2;
+}
+
+/**
+ * A sheet of paper on a darker background: the biggest bright region after an Otsu threshold, its corners the extremes
+ * of x + y and x − y (top left, bottom right, top right, bottom left). `null` when no region stands out (paper on a
+ * white desk, a photo filled by the page) or it isn't roughly four-sided, so the caller starts from `default_quad`.
+ */
+export function find_paper(gray: Gray): Quad | null {
+  const { width, height, data } = gray;
+  const threshold = otsu(gray);
+  const mask = new Uint8Array(data.length);
+  for (let index = 0; index < data.length; index++) mask[index] = data[index] > threshold ? 1 : 0;
+  const { labels, regions: found } = labelled(mask, width, height);
+  if (!found.length) return null;
+  const biggest = found.reduce((best, region, index) => (region.area > found[best].area ? index : best), 0);
+  const paper = found[biggest];
+  const area = width * height;
+  if (paper.area < area * 0.1 || paper.area > area * 0.97) return null;
+
+  const corners = { tl: [Infinity, 0], tr: [-Infinity, 0], br: [-Infinity, 0], bl: [Infinity, 0] };
+  for (let index = 0; index < labels.length; index++) {
+    if (labels[index] !== biggest + 1) continue;
+    const x = index % width;
+    const y = (index - x) / width;
+    if (x + y < corners.tl[0]) corners.tl = [x + y, index];
+    if (x + y > corners.br[0]) corners.br = [x + y, index];
+    if (x - y > corners.tr[0]) corners.tr = [x - y, index];
+    if (x - y < corners.bl[0]) corners.bl = [x - y, index];
+  }
+  const point = (index: number) => {
+    const x = index % width;
+    return { x: x + 0.5, y: (index - x) / width + 0.5 };
+  };
+  const quad: Quad = [point(corners.tl[1]), point(corners.tr[1]), point(corners.br[1]), point(corners.bl[1])];
+  return quad_area(quad) >= paper.area * 0.75 ? quad : null;
+}
+
+export interface Rgba {
+  width: number;
+  height: number;
+  data: Uint8ClampedArray;
+}
+
+export interface Size {
+  width: number;
+  height: number;
+}
+
+const distance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+
+/** The flat page's size from its longer opposite edges, at most `max_side` on the long side. */
+export function page_size(quad: Quad, max_side = Infinity): Size {
+  const [tl, tr, br, bl] = quad;
+  const width = Math.max(distance(tl, tr), distance(bl, br));
+  const height = Math.max(distance(tl, bl), distance(tr, br));
+  const scale = Math.min(1, max_side / Math.max(width, height, 1));
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
+
+/** The quad in `source` pulled flat into `size`, sampled bilinearly through the homography. */
+export function warp(source: Rgba, quad: Quad, size: Size): Rgba {
+  const { width, height } = size;
+  const flat: Quad = [
+    { x: 0, y: 0 },
+    { x: width, y: 0 },
+    { x: width, y: height },
+    { x: 0, y: height },
+  ];
+  const matrix = homography(flat, quad);
+  const out = new Uint8ClampedArray(width * height * 4);
+  const { width: sw, height: sh, data } = source;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const point = project(matrix, { x: x + 0.5, y: y + 0.5 });
+      const fx = Math.min(sw - 1, Math.max(0, point.x - 0.5));
+      const fy = Math.min(sh - 1, Math.max(0, point.y - 0.5));
+      const x0 = Math.floor(fx);
+      const y0 = Math.floor(fy);
+      const x1 = Math.min(sw - 1, x0 + 1);
+      const y1 = Math.min(sh - 1, y0 + 1);
+      const tx = fx - x0;
+      const ty = fy - y0;
+      const a = (y0 * sw + x0) * 4;
+      const b = (y0 * sw + x1) * 4;
+      const c = (y1 * sw + x0) * 4;
+      const d = (y1 * sw + x1) * 4;
+      const at = (y * width + x) * 4;
+      for (let channel = 0; channel < 3; channel++) {
+        const top = data[a + channel] * (1 - tx) + data[b + channel] * tx;
+        const bottom = data[c + channel] * (1 - tx) + data[d + channel] * tx;
+        out[at + channel] = top * (1 - ty) + bottom * ty;
+      }
+      out[at + 3] = 255;
+    }
+  }
+  return { width, height, data: out };
 }
