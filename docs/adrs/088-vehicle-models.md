@@ -19,3 +19,9 @@ Drive Hub ([ADR-087](087-driving-hub.md)) is to carry every kind of vehicle: car
 ## Consequences
 - `step()` grows a switch; each drive kind needs its own geometry tests and planner moves.
 - The single `trailer` field becomes a one-entry `hitches` list (a refactor in W2).
+
+## Revision 2026-10-28 (the forklift's rear steer)
+- `VehicleSpec.drive` landed ahead of W2 with the forklift, as decided: a one-member union for now, `{ kind: "ackermann", steer_axle: "front" | "rear" }`; every existing vehicle is `front` and behaves as before (its tests unchanged). `all` and `crab` come with W3.
+- The pose is the centre of the unsteered axle, so for rear steer it is the front axle's. `step()`, `arc()`, the curvature and the planner need no branch; only where the body, wheels and bumpers sit relative to the pose changes (`axles()`, `body_ends()`), and a positive wheel still turns right.
+- Steered wheel angles are `atan2(x·κ, 1 − y·κ)`: at a forklift's lock the turn centre lies inside the track and the inner wheel turns past 90°, which `atan` folded back.
+- `trailer` stays as is; the hitches list is still W2.

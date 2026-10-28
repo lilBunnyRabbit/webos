@@ -4,6 +4,7 @@ import { collide, obstacles } from "../core/obstacles";
 import { MarkKind, SolidKind, SurfaceKind, type Mark, type Solid, type Surface } from "../core/scene";
 import {
   body_centre,
+  body_ends,
   create_car,
   Gear,
   hitch_point,
@@ -163,7 +164,7 @@ export function pad_car(yard: Yard, spec: VehicleSpec): Car {
 }
 
 export function nose(car: Placement, spec: VehicleSpec): Vec {
-  return to_world(car, { x: spec.length - spec.rear_overhang, y: 0 });
+  return to_world(car, { x: body_ends(spec).front, y: 0 });
 }
 
 export function door_at(yard: Yard, car: Placement, spec: VehicleSpec): number | null {

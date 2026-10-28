@@ -17,7 +17,24 @@ export interface TrailerSpec {
   wheel_width: number;
 }
 
+export const DriveKind = { ACKERMANN: "ackermann" } as const;
+export type DriveKind = (typeof DriveKind)[keyof typeof DriveKind];
+
+export const SteerAxle = { FRONT: "front", REAR: "rear" } as const;
+export type SteerAxle = (typeof SteerAxle)[keyof typeof SteerAxle];
+
+export interface AckermannDrive {
+  kind: typeof DriveKind.ACKERMANN;
+  steer_axle: SteerAxle;
+}
+
+export type Drive = AckermannDrive;
+
+export const FRONT_STEER: AckermannDrive = { kind: DriveKind.ACKERMANN, steer_axle: SteerAxle.FRONT };
+export const REAR_STEER: AckermannDrive = { kind: DriveKind.ACKERMANN, steer_axle: SteerAxle.REAR };
+
 export interface VehicleSpec {
+  drive: Drive;
   length: number;
   width: number;
   wheelbase: number;
@@ -25,7 +42,7 @@ export interface VehicleSpec {
   track: number;
   wheel_diameter: number;
   wheel_width: number;
-  /** Kerb to kerb: the radius the outer front wheel draws at full lock. */
+  /** Kerb to kerb: the radius the outer steered wheel draws at full lock. */
   turning_radius: number;
   /** Centre to lock at a steady hold; the wheel itself can go `STEER_BOOST` times faster. */
   steer_time: number;
@@ -41,6 +58,7 @@ export interface VehicleSpec {
 }
 
 export const HATCHBACK: VehicleSpec = {
+  drive: FRONT_STEER,
   length: 4.3,
   width: 1.8,
   wheelbase: 2.6,
@@ -61,6 +79,7 @@ export const HATCHBACK: VehicleSpec = {
 };
 
 export const VAN: VehicleSpec = {
+  drive: FRONT_STEER,
   length: 5.9,
   width: 2.0,
   wheelbase: 3.7,
@@ -81,6 +100,7 @@ export const VAN: VehicleSpec = {
 };
 
 export const PICKUP: VehicleSpec = {
+  drive: FRONT_STEER,
   length: 5.3,
   width: 1.9,
   wheelbase: 3.2,
@@ -101,6 +121,7 @@ export const PICKUP: VehicleSpec = {
 };
 
 export const BUS: VehicleSpec = {
+  drive: FRONT_STEER,
   length: 12,
   width: 2.55,
   wheelbase: 5.9,
@@ -172,7 +193,10 @@ export function without_creep(spec: VehicleSpec): VehicleSpec {
 
 const JACKKNIFE_ANGLE = (70 * Math.PI) / 180;
 
-/** The rear axle's centre is the pose: that's the point a car without tyre slip turns about. */
+/**
+ * The pose is the centre of the axle that doesn't steer (a car's rear axle, a forklift's front one): without tyre slip
+ * that point only moves along the heading, and the vehicle turns about a point on that axle's line.
+ */
 export interface Car extends Pose {
   speed: number;
   steer: number;
@@ -292,9 +316,10 @@ function resistance(car: Car, spec: VehicleSpec): number {
 }
 
 /**
- * One fixed step of the kinematic Ackermann (bicycle) model: no tyre slip, so the rear axle only moves along the
- * heading and the car turns about a point on the rear axle line. The arc is integrated exactly for the step; a
- * trailer follows it about the tow ball.
+ * One fixed step of the kinematic Ackermann (bicycle) model: no tyre slip, so the unsteered axle only moves along the
+ * heading and the vehicle turns about a point on that axle's line. A positive wheel turns right on either drive:
+ * steered at the rear, the rear wheels point left and the tail swings out. The arc is integrated exactly for the step;
+ * a trailer follows it about the tow ball.
  */
 export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HATCHBACK): Car {
   if (!(dt > 0)) return car;
@@ -404,10 +429,19 @@ export function bodies(car: Placement, spec: VehicleSpec = HATCHBACK): Vec[][] {
   return spec.trailer ? [body, trailer_corners(car, spec.trailer)] : [body];
 }
 
+export function axles(spec: VehicleSpec): { front: number; rear: number } {
+  return spec.drive.steer_axle === SteerAxle.REAR ? { front: 0, rear: -spec.wheelbase } : { front: spec.wheelbase, rear: 0 };
+}
+
+export function body_ends(spec: VehicleSpec): { front: number; rear: number } {
+  const rear = axles(spec).rear - spec.rear_overhang;
+  return { front: rear + spec.length, rear };
+}
+
 function rig_extent(spec: VehicleSpec): { front: number; rear: number } {
-  const front = spec.length - spec.rear_overhang;
+  const { front, rear } = body_ends(spec);
   const t = spec.trailer;
-  return { front, rear: t ? -(t.hitch + t.drawbar + t.box_length) : -spec.rear_overhang };
+  return { front, rear: t ? -(t.hitch + t.drawbar + t.box_length) : rear };
 }
 
 export function rig_length(spec: VehicleSpec): number {
@@ -416,17 +450,18 @@ export function rig_length(spec: VehicleSpec): number {
 }
 
 /**
- * Each wheel rolls along its own circle about the turn centre, so on lock the outer front wheel covers the most ground.
- * A wheel at (x, y) from the rear axle's centre turns on a radius |κ|·hypot(x, 1/κ − y) times the axle centre's.
+ * Each wheel rolls along its own circle about the turn centre, so on lock the outer steered wheel covers the most
+ * ground. A wheel at (x, y) from the pose turns on a radius |κ|·hypot(x, 1/κ − y) times the pose's.
  */
 export function roll(rolls: Rolls, curvature: number, distance: number, spec: VehicleSpec = HATCHBACK): Rolls {
   const half = spec.track / 2;
+  const { front, rear } = axles(spec);
   const ratio = (x: number, y: number) => Math.hypot(x * curvature, 1 - y * curvature);
   return [
-    rolls[0] + distance * ratio(spec.wheelbase, -half),
-    rolls[1] + distance * ratio(spec.wheelbase, half),
-    rolls[2] + distance * ratio(0, -half),
-    rolls[3] + distance * ratio(0, half),
+    rolls[0] + distance * ratio(front, -half),
+    rolls[1] + distance * ratio(front, half),
+    rolls[2] + distance * ratio(rear, -half),
+    rolls[3] + distance * ratio(rear, half),
   ];
 }
 
@@ -437,8 +472,7 @@ export function to_world(pose: Pose, local: Vec): Vec {
 }
 
 export function body_local(spec: VehicleSpec = HATCHBACK): Vec[] {
-  const front = spec.length - spec.rear_overhang;
-  const rear = -spec.rear_overhang;
+  const { front, rear } = body_ends(spec);
   const half = spec.width / 2;
   return [
     { x: front, y: -half },
@@ -463,7 +497,7 @@ export function pose_from_centre(centre: Pose, spec: VehicleSpec = HATCHBACK): P
 }
 
 export function body_centre(pose: Pose, spec: VehicleSpec = HATCHBACK): Vec {
-  return to_world(pose, { x: spec.length / 2 - spec.rear_overhang, y: 0 });
+  return to_world(pose, { x: body_ends(spec).rear + spec.length / 2, y: 0 });
 }
 
 export interface Wheel {
@@ -474,12 +508,16 @@ export interface Wheel {
 export function wheels(car: Car, spec: VehicleSpec = HATCHBACK): Wheel[] {
   const half = spec.track / 2;
   const curvature = Math.tan(car.steer) / spec.wheelbase;
-  const angle = (side: number) => (Math.abs(curvature) < 1e-9 ? 0 : Math.atan(spec.wheelbase / (1 / curvature - side)));
+  const rear_steer = spec.drive.steer_axle === SteerAxle.REAR;
+  const { front, rear } = axles(spec);
+  // atan2, not atan: a forklift's turn centre lies inside its track, so its inner wheel turns past 90°.
+  const angle = (x: number, side: number, steered: boolean) =>
+    !steered || Math.abs(curvature) < 1e-9 ? 0 : Math.atan2(x * curvature, 1 - side * curvature);
   return [
-    { at: to_world(car, { x: spec.wheelbase, y: -half }), angle: angle(-half) },
-    { at: to_world(car, { x: spec.wheelbase, y: half }), angle: angle(half) },
-    { at: to_world(car, { x: 0, y: -half }), angle: 0 },
-    { at: to_world(car, { x: 0, y: half }), angle: 0 },
+    { at: to_world(car, { x: front, y: -half }), angle: angle(front, -half, !rear_steer) },
+    { at: to_world(car, { x: front, y: half }), angle: angle(front, half, !rear_steer) },
+    { at: to_world(car, { x: rear, y: -half }), angle: angle(rear, -half, rear_steer) },
+    { at: to_world(car, { x: rear, y: half }), angle: angle(rear, half, rear_steer) },
   ];
 }
 

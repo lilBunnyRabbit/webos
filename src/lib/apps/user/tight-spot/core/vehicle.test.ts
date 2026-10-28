@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { angle_between } from "./geometry";
 import {
+  axles,
   corners,
   create_car,
   Gear,
@@ -10,6 +11,7 @@ import {
   jackknifed,
   max_steer,
   NO_INPUT,
+  REAR_STEER,
   shift,
   step,
   steer_boost,
@@ -329,5 +331,92 @@ describe("trailer", () => {
     const b = run(towing(10 * DEG, Gear.REVERSE), input, 2, spec);
     expect(a).toEqual(b);
     expect(step(a, input, 0, spec)).toBe(a);
+  });
+});
+
+describe("rear-wheel steering", () => {
+  const spec: VehicleSpec = {
+    ...HATCHBACK,
+    drive: REAR_STEER,
+    length: 2.5,
+    width: 1.2,
+    wheelbase: 1.5,
+    rear_overhang: 0.55,
+    track: 0.95,
+    turning_radius: 1.68,
+  };
+
+  function locked(gear: Gear): Car {
+    return run(create_car(START, gear, spec), { steer: 1, throttle: 0, brake: 1 }, spec.steer_time + 0.2, spec);
+  }
+
+  test("the pose is the front axle, and the rear wheels steer the opposite way to the turn", () => {
+    expect(axles(spec)).toEqual({ front: 0, rear: -1.5 });
+    const car = locked(Gear.DRIVE);
+    const [front_left, front_right, rear_left, rear_right] = wheels(car, spec);
+    expect(front_left.angle).toBe(0);
+    expect(front_right.angle).toBe(0);
+    expect(rear_left.angle).toBeLessThan(0);
+    expect(rear_right.angle).toBeLessThan(rear_left.angle);
+    expect(distance(front_left.at, car)).toBeCloseTo(spec.track / 2, 9);
+  });
+
+  test("full lock gives its turning radius at the outer rear wheel, and the front axle turns on a fixed circle", () => {
+    let car = locked(Gear.DRIVE);
+    expect(car.steer).toBeCloseTo(max_steer(spec), 6);
+    expect((max_steer(spec) * 180) / Math.PI).toBeGreaterThan(75);
+    const centre = turn_centre(car, spec)!;
+    expect(distance(wheels(car, spec)[2].at, centre)).toBeCloseTo(spec.turning_radius, 2);
+    const radius = spec.wheelbase / Math.tan(max_steer(spec));
+    for (let i = 0; i < 2000; i++) {
+      car = step(car, { steer: 1, throttle: 0, brake: 0 }, DT, spec);
+      expect(distance(car, centre)).toBeCloseTo(radius, 3);
+    }
+  });
+
+  test("steering right turns right, and the front axle only moves along the heading", () => {
+    let car = run(create_car(START, Gear.DRIVE, spec), { steer: 1, throttle: 0.5, brake: 0 }, 2, spec);
+    expect(car.heading).toBeGreaterThan(0);
+    expect(car.y).toBeGreaterThan(0);
+    for (let i = 0; i < 400; i++) {
+      const next = step(car, { steer: Math.sin(i / 40), throttle: 0.4, brake: 0 }, DT, spec);
+      const moved = Math.atan2(next.y - car.y, next.x - car.x);
+      const mid = car.heading + (next.heading - car.heading) / 2;
+      if (distance(next, car) > 1e-6) expect(angle_between(moved, mid)).toBeLessThan(1e-3);
+      car = next;
+    }
+  });
+
+  test("the tail swings out wider than anything at the front", () => {
+    const car = locked(Gear.DRIVE);
+    const centre = turn_centre(car, spec)!;
+    const [front_left, front_right, rear_right, rear_left] = corners(car, spec);
+    const tail = distance(rear_left, centre);
+    expect(tail).toBeGreaterThan(distance(front_left, centre));
+    expect(tail).toBeGreaterThan(distance(front_right, centre));
+    expect(tail).toBeGreaterThan(distance(wheels(car, spec)[2].at, centre));
+    expect(distance(rear_right, centre)).toBeGreaterThan(distance(front_right, centre));
+  });
+
+  test("on lock each wheel rolls the length of its own arc, the outer rear the most", () => {
+    const start = locked(Gear.DRIVE);
+    const centre = turn_centre(start, spec)!;
+    const radii = wheels(start, spec).map((wheel) => distance(wheel.at, centre));
+    let car = start;
+    for (let i = 0; i < 600; i++) car = step(car, { steer: 1, throttle: 0, brake: 0 }, DT, spec);
+    const turned = car.heading - start.heading;
+    car.roll.forEach((rolled, i) => expect(rolled - start.roll[i]).toBeCloseTo(radii[i] * turned, 6));
+    expect(Math.max(...car.roll)).toBe(car.roll[2]);
+    const straight = run(create_car(START, Gear.DRIVE, spec), { steer: 0, throttle: 0.6, brake: 0 }, 2, spec);
+    for (const rolled of straight.roll) expect(rolled).toBeCloseTo(straight.x, 9);
+  });
+
+  test("is deterministic, and a step of no time changes nothing", () => {
+    const input = { steer: -0.7, throttle: 0.5, brake: 0 };
+    const a = run(create_car(START, Gear.REVERSE, spec), input, 3, spec);
+    const b = run(create_car(START, Gear.REVERSE, spec), input, 3, spec);
+    expect(a).toEqual(b);
+    expect(step(a, input, 0, spec)).toBe(a);
+    expect(step(a, input, -0.01, spec)).toBe(a);
   });
 });
