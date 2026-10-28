@@ -1,72 +1,119 @@
 import { create_rng } from "$lib/core/utils/random";
 import { describe, expect, test } from "vitest";
 import {
-  accept_mistake,
   append_key,
-  arrival_gap,
-  backspace,
+  ARRIVAL_MS,
+  begin_day,
   better_run,
-  spotless_day,
-  SPOTLESS_FROM_DAY,
-  create_customer,
+  bills,
+  can_hire,
+  choose_patron,
   create_run,
-  DAY_MS,
+  current_item,
+  day_customers,
   difficulty,
-  DISPUTE_MS,
+  DIGITS,
   enter,
-  FIRST_ARRIVAL_MS,
+  entered_total,
+  FIRST_CUSTOMERS,
   format_amount,
+  hire_staff,
   LEAVE_MS,
+  list_total,
+  load_run,
+  LOW_TRUST,
+  mask,
+  MAX_CUSTOMERS,
+  MAX_JAIL_DAYS,
+  MAX_TRUST,
   Mood,
-  MAX_CLOSURES,
-  MAX_HEALTH,
-  MISTAKE_DAMAGE,
-  open_day,
   parse_amount,
   Phase,
-  scan,
-  scan_next,
-  scanned_total,
-  SORRY_DAMAGE,
-  sorry,
+  PRODUCT_CODES,
+  PRODUCTS,
+  REPORT_STRIKES,
+  restock_key,
+  save_run,
+  saved_run_schema,
+  spotless_day,
+  SPOTLESS_FROM_DAY,
+  STAFF_CUSTOMERS,
+  staff_price,
   Stage,
+  START_TRUST,
   stars,
-  STREAK_FOR_SORRY,
+  STOCK_FULL,
   tick,
+  toggle_sale,
+  TRUST_GAIN,
+  TRUST_LOSS,
   type_key,
+  warm_key,
   type Run,
 } from "./game";
 
 const rng = create_rng(42);
 
-function at_counter(run: Run = open_day(create_run())): Run {
-  return tick(run, FIRST_ARRIVAL_MS, rng);
+function warmed(run: Run): Run {
+  return run.warmup.reduce(warm_key, run);
 }
 
-function scan_all(run: Run): Run {
-  let next = run;
-  while (next.customer?.items.some((item) => !item.scanned)) next = scan_next(next);
-  return next;
+function open(run: Run = create_run()): Run {
+  return warmed(begin_day(run, rng));
+}
+
+function at_counter(run: Run = open()): Run {
+  return tick(run, ARRIVAL_MS, rng);
 }
 
 function type_text(run: Run, text: string): Run {
   return [...text].reduce(type_key, run);
 }
 
-function ring(run: Run, text: string): Run {
-  return enter(type_text(scan_all(run), text));
+function enter_text(run: Run, text: string): Run {
+  return enter(type_text(run, text), rng);
 }
 
-function total_text(run: Run): string {
-  return format_amount(scanned_total(run.customer!), true);
+const money = (cents: number) => format_amount(cents, true);
+
+function enter_items(run: Run, wrong = false): Run {
+  let next = run;
+  while (next.customer?.stage === Stage.ITEMS) {
+    const item = next.customer.items[current_item(next.customer)];
+    next = enter_text(next, money(item.cents + (wrong ? 100 : 0)));
+    wrong = false;
+  }
+  return next;
 }
 
-function wrong_text(run: Run): string {
-  return format_amount(scanned_total(run.customer!) + 100, true);
+function serve(run: Run, right = true): Run {
+  let next = enter_items(run);
+  const total = list_total(next.customer!);
+  const text = money(right ? total : total + 100);
+  next = enter_text(next, text);
+  if (next.customer?.stage === Stage.CONFIRM) next = enter_text(next, text);
+  return next;
 }
 
 function leave(run: Run): Run {
   return tick(run, LEAVE_MS, rng);
+}
+
+function next_customer(run: Run): Run {
+  return tick(leave(run), ARRIVAL_MS, rng);
+}
+
+function patron_of(run: Run) {
+  return run.roster.find((patron) => patron.id === run.customer!.patron)!;
+}
+
+function with_trust(run: Run, trust: number): Run {
+  const id = run.customer!.patron;
+  return {
+    ...run,
+    roster: run.roster.map((patron) => (patron.id === id ? { ...patron, trust } : patron)),
+    customer: { ...run.customer!, doubting: trust < LOW_TRUST },
+  };
 }
 
 describe("amounts", () => {
@@ -74,214 +121,268 @@ describe("amounts", () => {
     expect(format_amount(1200, false)).toBe("12");
     expect(format_amount(1205, false)).toBe("12.05");
     expect(format_amount(1200, true)).toBe("12.00");
-    expect(format_amount(7, true)).toBe("0.07");
+    expect(format_amount(-250, true)).toBe("-2.50");
   });
 
   test("parse reads the same amount however it's written", () => {
     expect(parse_amount("12")).toBe(1200);
     expect(parse_amount("12.5")).toBe(1250);
-    expect(parse_amount("12.50")).toBe(1250);
     expect(parse_amount(".5")).toBe(50);
     expect(parse_amount("")).toBeNull();
     expect(parse_amount(".")).toBeNull();
   });
 
   test("typing keeps one dot and two decimals", () => {
-    expect(append_key("12", ".")).toBe("12.");
     expect(append_key("12.", ".")).toBe("12.");
     expect(append_key("12.34", "5")).toBe("12.34");
     expect(append_key("0", "5")).toBe("5");
-    expect(append_key("1", "x")).toBe("1");
-  });
-});
-
-describe("customers", () => {
-  test("difficulty grows with the days", () => {
-    const first = difficulty(1);
-    const later = difficulty(9);
-    expect(first.cents).toBe(false);
-    expect(later.cents).toBe(true);
-    expect(later.max_items).toBeGreaterThan(first.max_items);
-    expect(later.max_cents).toBeGreaterThan(first.max_cents);
   });
 
-  test("whole-number days price in whole units", () => {
-    const random = create_rng(1);
-    for (let i = 0; i < 50; i++) {
-      for (const item of create_customer(i, 1, MAX_HEALTH, random).items) expect(item.cents % 100).toBe(0);
-    }
-  });
-
-  test("low health brings fewer, cheaper items and longer waits", () => {
-    const spent = (health: number) => {
-      const random = create_rng(5);
-      let items = 0;
-      let money = 0;
-      for (let i = 0; i < 300; i++) {
-        const customer = create_customer(i, 8, health, random);
-        items += customer.items.length;
-        money += customer.items.reduce((sum, item) => sum + item.cents, 0);
-      }
-      return { items, money };
-    };
-    const full = spent(MAX_HEALTH);
-    const low = spent(10);
-    expect(low.items).toBeLessThan(full.items);
-    expect(low.money).toBeLessThan(full.money);
-    expect(arrival_gap(10, () => 0.5)).toBeGreaterThan(arrival_gap(MAX_HEALTH, () => 0.5));
-  });
-});
-
-describe("a sale", () => {
-  test("the first customer arrives after opening", () => {
-    const run = open_day(create_run());
-    expect(run.phase).toBe(Phase.OPEN);
-    expect(run.customer).toBeNull();
-    expect(at_counter(run).customer).not.toBeNull();
-  });
-
-  test("scanning adds to the running total", () => {
-    const run = at_counter();
-    const first = scan(run, 0);
-    expect(scanned_total(first.customer!)).toBe(run.customer!.items[0].cents);
-    expect(scan(first, 0)).toBe(first);
-    if (run.customer!.items.length > 1) expect(scan(first, 1).customer!.receipt).toEqual([0, 1]);
-  });
-
-  test("Enter waits until every item is scanned", () => {
-    const run = at_counter();
-    const total = format_amount(run.customer!.items.reduce((sum, item) => sum + item.cents, 0), true);
-    const typed = type_text(run, total);
-    const after = enter(typed);
-    expect(after.customer!.stage).toBe(Stage.RINGING);
-    expect(after.unscanned).not.toBeNull();
-  });
-
-  test("the right total pays, cheers and heals", () => {
-    const run = at_counter({ ...open_day(create_run()), health: 50 });
-    const after = ring(run, total_text(scan_all(run)));
-    expect(after.customer!.mood).toBe(Mood.HAPPY);
-    expect(after.money).toBe(scanned_total(after.customer!));
-    expect(after.health).toBeGreaterThan(50);
-    expect(after.today.clean).toBe(1);
-  });
-
-  test("Backspace edits the typed amount", () => {
-    const run = type_text(scan_all(at_counter()), "123");
-    expect(backspace(run).typed).toBe("12");
-  });
-
-  test("a wrong total with a token waits for Sorry, then costs half on a right retype", () => {
-    const run = scan_all(at_counter());
-    const disputed = ring(run, wrong_text(run));
-    expect(disputed.customer!.stage).toBe(Stage.DISPUTED);
-    expect(disputed.customer!.mood).toBe(Mood.SAD);
-    expect(disputed.health).toBe(MAX_HEALTH);
-
-    const retyping = sorry(disputed);
-    expect(retyping.sorry_tokens).toBe(run.sorry_tokens - 1);
-    expect(retyping.typed).toBe("");
-    const after = enter(type_text(retyping, total_text(run)));
-    expect(after.customer!.mood).toBe(Mood.MEH);
-    expect(after.health).toBe(MAX_HEALTH - SORRY_DAMAGE);
-    expect(after.today.sorry).toBe(1);
-    expect(after.money).toBe(scanned_total(run.customer!));
-  });
-
-  test("a wrong retype after Sorry costs the full damage", () => {
-    const run = scan_all(at_counter());
-    const after = enter(type_text(sorry(ring(run, wrong_text(run))), wrong_text(run)));
-    expect(after.customer!.mood).toBe(Mood.SAD);
-    expect(after.health).toBe(MAX_HEALTH - MISTAKE_DAMAGE);
-    expect(after.money).toBe(0);
-  });
-
-  test("an unanswered dispute becomes a mistake", () => {
-    const run = scan_all(at_counter());
-    const disputed = ring(run, wrong_text(run));
-    const waited = tick(disputed, DISPUTE_MS, rng);
-    expect(waited.customer!.stage).toBe(Stage.DONE);
-    expect(waited.health).toBe(MAX_HEALTH - MISTAKE_DAMAGE);
-    expect(accept_mistake(disputed).today.mistakes).toBe(1);
-  });
-
-  test("without a token a wrong total is a mistake at once", () => {
-    const run = scan_all(at_counter({ ...open_day(create_run()), sorry_tokens: 0 }));
-    const after = ring(run, wrong_text(run));
-    expect(after.customer!.stage).toBe(Stage.DONE);
-    expect(after.today.mistakes).toBe(1);
-  });
-
-  test("a streak of clean sales earns a Sorry token", () => {
-    let run: Run = { ...open_day(create_run()), sorry_tokens: 0 };
-    for (let i = 0; i < STREAK_FOR_SORRY; i++) {
-      run = at_counter(run);
-      run = scan_all(run);
-      run = leave(ring(run, total_text(run)));
-      run = tick(run, 10_000, rng);
-    }
-    expect(run.sorry_tokens).toBe(1);
+  test("blind mode hides digits and keeps the point", () => {
+    expect(mask("12.50")).toBe("**.**");
+    expect(mask("7")).toBe("*");
   });
 });
 
 describe("days", () => {
-  test("the day ends after a minute", () => {
-    const run = tick(open_day(create_run()), DAY_MS + 1, rng);
-    expect(run.phase).toBe(Phase.DAY_OVER);
+  test("customers per day grow from the first day to a cap", () => {
+    expect(day_customers(1)).toBe(FIRST_CUSTOMERS);
+    expect(day_customers(2)).toBe(FIRST_CUSTOMERS + 1);
+    expect(day_customers(40)).toBe(MAX_CUSTOMERS);
+  });
+
+  test("difficulty grows with the days", () => {
+    expect(difficulty(1).cents).toBe(false);
+    expect(difficulty(9).cents).toBe(true);
+    expect(difficulty(9).max_cents).toBeGreaterThan(difficulty(1).max_cents);
+  });
+
+  test("the warm-up lights every digit once, in random order, then the shop opens", () => {
+    const run = begin_day(create_run(), rng);
+    expect(run.phase).toBe(Phase.WARMUP);
+    expect([...run.warmup].sort()).toEqual([...DIGITS]);
+    const wrong = DIGITS.find((digit) => digit !== run.warmup[0])!;
+    const missed = warm_key(run, wrong);
+    expect(missed.warmup).toEqual(run.warmup);
+    expect(missed.warm_miss).not.toBeNull();
+    const nine = run.warmup.slice(0, 9).reduce(warm_key, run);
+    expect(nine.phase).toBe(Phase.WARMUP);
+    expect(warm_key(nine, run.warmup[9]).phase).toBe(Phase.OPEN);
+  });
+
+  test("a day has no clock: it ends when its last customer leaves", () => {
+    let run = at_counter();
+    expect(tick(run, 10 * 60_000, rng).phase).toBe(Phase.OPEN);
+    for (let served = 1; served < day_customers(1); served++) run = next_customer(serve(run));
+    run = leave(serve(run));
+    expect([Phase.RESTOCK, Phase.DAY_OVER]).toContain(run.phase);
+    expect(run.today.served).toBe(day_customers(1));
     expect(run.days_survived).toBe(1);
-    const next = open_day(run);
-    expect(next.day).toBe(2);
-  });
-
-  test("empty health closes the shop early; three closures lose it", () => {
-    let run: Run = create_run();
-    for (let closure = 1; closure <= MAX_CLOSURES; closure++) {
-      run = at_counter({ ...open_day(run), health: MISTAKE_DAMAGE, sorry_tokens: 0 });
-      run = scan_all(run);
-      run = leave(ring(run, wrong_text(run)));
-      expect(run.closures).toBe(closure);
-      expect(run.phase).toBe(closure === MAX_CLOSURES ? Phase.GAME_OVER : Phase.DAY_OVER);
-    }
-    expect(open_day(run)).toBe(run);
-  });
-
-  test("a closure refills health for the next day", () => {
-    let run = at_counter({ ...open_day(create_run()), health: MISTAKE_DAMAGE, sorry_tokens: 0 });
-    run = leave(ring(scan_all(run), wrong_text(scan_all(run))));
-    expect(open_day(run).health).toBe(MAX_HEALTH);
-  });
-
-  test("stars follow accuracy, capped at one after a closure", () => {
-    expect(stars({ clean: 10, sorry: 0, mistakes: 0, money: 0 }, false)).toBe(3);
-    expect(stars({ clean: 8, sorry: 0, mistakes: 2, money: 0 }, false)).toBe(2);
-    expect(stars({ clean: 6, sorry: 2, mistakes: 2, money: 0 }, false)).toBe(1);
-    expect(stars({ clean: 1, sorry: 0, mistakes: 3, money: 0 }, false)).toBe(0);
-    expect(stars({ clean: 10, sorry: 0, mistakes: 0, money: 0 }, true)).toBe(1);
-    expect(stars({ clean: 0, sorry: 0, mistakes: 0, money: 0 }, false)).toBe(0);
-  });
-
-  test("the best run is the richest, days break a tie", () => {
-    expect(better_run({ money: 10, days: 1, accuracy: 1 }, { money: 5, days: 4, accuracy: 1 })).toBe(true);
-    expect(better_run({ money: 10, days: 2, accuracy: 0 }, { money: 10, days: 1, accuracy: 1 })).toBe(true);
-    expect(better_run({ money: 10, days: 1, accuracy: 1 }, { money: 10, days: 1, accuracy: 0 })).toBe(false);
   });
 });
 
-describe("spotless_day", () => {
-  const day = (day: number, today: Partial<ReturnType<typeof create_run>["today"]>, closed_early = false) => {
-    const run = create_run();
-    return { ...run, day, closed_early, today: { ...run.today, ...today } };
-  };
-
-  test("takes a clean day from day 5 on", () => {
-    expect(spotless_day(day(SPOTLESS_FROM_DAY, { clean: 12 }))).toBe(true);
-    expect(spotless_day(day(SPOTLESS_FROM_DAY - 1, { clean: 12 }))).toBe(false);
+describe("the typed list", () => {
+  test("each Enter enters the next price, crosses it off and adds it to the running total", () => {
+    let run = at_counter();
+    const customer = run.customer!;
+    expect(customer.stage).toBe(Stage.ITEMS);
+    run = enter_text(run, "1");
+    expect(run.customer!.items[0].entered).toBe(100);
+    expect(entered_total(run.customer!)).toBe(100);
+    expect(run.typed).toBe("");
   });
 
-  test("not with a sorry, a mistake, no sales or an early close", () => {
-    expect(spotless_day(day(6, { clean: 12, sorry: 1 }))).toBe(false);
-    expect(spotless_day(day(6, { clean: 12, mistakes: 1 }))).toBe(false);
-    expect(spotless_day(day(6, {}))).toBe(false);
-    expect(spotless_day(day(6, { clean: 12 }, true))).toBe(false);
+  test("an empty Enter does nothing", () => {
+    const run = at_counter();
+    expect(enter(run, rng)).toBe(run);
+  });
+
+  test("a right total is a sale and earns the customer's trust", () => {
+    let run = at_counter();
+    const total = list_total(run.customer!);
+    run = serve(run);
+    expect(run.customer!.stage).toBe(Stage.DONE);
+    expect(run.customer!.result).toEqual({ given: total, total });
+    expect(run.customer!.mood).toBe(Mood.HAPPY);
+    expect(run.money).toBe(total);
+    expect(patron_of(run).trust).toBe(START_TRUST + TRUST_GAIN);
+  });
+
+  test("a wrong price only shows when the total is given, as over", () => {
+    let run = enter_items(at_counter(), true);
+    expect(run.customer!.stage).toBe(Stage.TOTAL);
+    const shown = entered_total(run.customer!);
+    run = enter_text(run, money(shown));
+    expect(run.customer!.result!.given - run.customer!.result!.total).toBe(100);
+    expect(run.money).toBe(0);
+    expect(patron_of(run).trust).toBe(START_TRUST - TRUST_LOSS);
+    expect(run.today.wrong).toBe(1);
+  });
+
+  test("staff scan the list: only the total is typed", () => {
+    let run = { ...at_counter(), money: staff_price(1) };
+    expect(can_hire(run)).toBe(true);
+    run = hire_staff(run);
+    expect(run.money).toBe(0);
+    expect(run.today.wages).toBe(staff_price(1));
+    expect(can_hire(run)).toBe(false);
+    run = next_customer(serve(run));
+    expect(run.customer!.staffed).toBe(true);
+    expect(run.customer!.stage).toBe(Stage.TOTAL);
+    expect(run.staff_left).toBe(STAFF_CUSTOMERS - 1);
+  });
+});
+
+describe("trust and the police", () => {
+  test("a low-trust customer wants the total twice; either slip is wrong", () => {
+    let run = with_trust(enter_items(at_counter()), LOW_TRUST - 1);
+    const total = list_total(run.customer!);
+    run = enter_text(run, money(total + 1));
+    expect(run.customer!.stage).toBe(Stage.CONFIRM);
+    run = enter_text(run, money(total));
+    expect(run.customer!.result!.given).toBe(total + 1);
+    expect(patron_of(run).strikes).toBe(1);
+  });
+
+  test(`${REPORT_STRIKES} slips with a doubting customer bring the police, who watch blind and jail the next slip`, () => {
+    let run = with_trust(at_counter(), LOW_TRUST - 1);
+    const id = run.customer!.patron;
+    run = {
+      ...run,
+      roster: run.roster.map((patron) => (patron.id === id ? { ...patron, strikes: REPORT_STRIKES - 1 } : patron)),
+    };
+    run = serve(run, false);
+    expect(run.police_left).toBeGreaterThan(0);
+    expect(run.customer!.mood).toBe(Mood.VEXED);
+    run = next_customer(run);
+    expect(run.customer!.mood).toBe(Mood.VEXED);
+    run = serve(run, false);
+    expect(run.jailed).toBe(true);
+    expect(run.jail_days).toBe(1);
+    run = leave(run);
+    expect(run.phase === Phase.RESTOCK || run.phase === Phase.DAY_OVER).toBe(true);
+    expect(stars(run.today, run.jailed)).toBeLessThanOrEqual(1);
+  });
+
+  test("right sales while watched send the police away", () => {
+    let run = { ...at_counter(), police_left: 1 };
+    run = serve(run);
+    expect(run.police_left).toBe(0);
+    expect(run.today.cleared).toBe(1);
+  });
+
+  test(`${MAX_JAIL_DAYS} days in jail close the shop`, () => {
+    let run = { ...at_counter(), police_left: 2, jail_days: MAX_JAIL_DAYS - 1 };
+    run = leave(serve(run, false));
+    expect(run.phase).toBe(Phase.GAME_OVER);
+  });
+
+  test("regulars come back, the trusting ones more often", () => {
+    const base = create_run();
+    const roster = [
+      { id: 1, name: "Mia", tag: null, look: 0, ears: 0, trust: MAX_TRUST, visits: 3, strikes: 0 },
+      { id: 2, name: "Leo", tag: null, look: 0, ears: 0, trust: 5, visits: 3, strikes: 0 },
+    ];
+    const run = { ...base, roster, next_patron: 3 };
+    const random = create_rng(7);
+    const counts = { 1: 0, 2: 0, new: 0 };
+    for (let i = 0; i < 2000; i++) {
+      const visit = choose_patron(run, random);
+      if (!visit.returning) counts.new++;
+      else counts[visit.patron.id as 1 | 2]++;
+    }
+    expect(counts[1]).toBeGreaterThan(counts[2]);
+    expect(counts.new).toBeGreaterThan(counts[1]);
+    const on_sale = { ...run, sale: true };
+    let returning = 0;
+    for (let i = 0; i < 2000; i++) if (choose_patron(on_sale, random).returning) returning++;
+    expect(returning).toBeGreaterThan(counts[1] + counts[2]);
+  });
+
+  test("namesakes get a number to tell them apart", () => {
+    const random = create_rng(3);
+    let run: Run = create_run();
+    for (let i = 0; i < 60; i++) {
+      const visit = choose_patron({ ...run, roster: run.roster, sale: false }, random);
+      run = { ...run, roster: visit.roster, next_patron: visit.next_patron };
+    }
+    const names = new Map<string, number>();
+    for (const patron of run.roster) names.set(patron.name, (names.get(patron.name) ?? 0) + 1);
+    for (const patron of run.roster) {
+      if ((names.get(patron.name) ?? 0) > 1) expect(patron.tag).not.toBeNull();
+    }
+    const labels = run.roster.map((patron) => `${patron.name}${patron.tag ?? ""}`);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+});
+
+describe("end of day", () => {
+  function day_done(): Run {
+    let run = at_counter();
+    for (let served = 1; served < day_customers(1); served++) run = next_customer(serve(run));
+    return leave(serve(run));
+  }
+
+  test("the books take bills and stock out of the takings", () => {
+    const run = day_done();
+    expect(run.books).not.toBeNull();
+    expect(run.books!.bills).toBe(bills(1));
+    expect(run.money).toBe(run.books!.takings - run.books!.bills - run.books!.stock);
+  });
+
+  test("restock clears a line per code, no Enter; a wrong code is only a miss", () => {
+    let run = day_done();
+    expect(run.phase).toBe(Phase.RESTOCK);
+    const first = run.restock[0];
+    const code = PRODUCT_CODES[first];
+    const bad = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"].find(
+      (digit) => !run.restock.some((product) => PRODUCT_CODES[product].startsWith(digit))
+    );
+    if (bad) {
+      const missed = restock_key(run, bad);
+      expect(missed.code).toBe("");
+      expect(missed.code_miss).not.toBeNull();
+      expect(missed.restock).toEqual(run.restock);
+    }
+    run = restock_key(restock_key(run, code[0]), code[1]);
+    expect(run.restock).not.toContain(first);
+    expect(run.stock[first]).toBe(STOCK_FULL);
+    for (const product of [...run.restock]) run = [...PRODUCT_CODES[product]].reduce(restock_key, run);
+    expect(run.phase).toBe(Phase.DAY_OVER);
+    expect(PRODUCTS.every((product) => run.stock[product] === STOCK_FULL)).toBe(true);
+  });
+
+  test("codes are distinct and two digits", () => {
+    const codes = Object.values(PRODUCT_CODES);
+    expect(new Set(codes).size).toBe(codes.length);
+    for (const code of codes) expect(code).toMatch(/^\d\d$/);
+  });
+
+  test("the run saves between days and continues on the next day", () => {
+    let run = day_done();
+    for (const product of [...run.restock]) run = [...PRODUCT_CODES[product]].reduce(restock_key, run);
+    run = toggle_sale(run);
+    const saved = saved_run_schema.parse(JSON.parse(JSON.stringify(save_run(run))));
+    const loaded = load_run(saved);
+    expect(loaded.phase).toBe(Phase.DAY_OVER);
+    expect(loaded.roster).toEqual(run.roster);
+    expect(loaded.money).toBe(run.money);
+    expect(loaded.sale).toBe(true);
+    const next = begin_day(loaded, rng);
+    expect(next.day).toBe(2);
+    expect(next.phase).toBe(Phase.WARMUP);
+  });
+
+  test("spotless needs day 5 on, no slips and no jail", () => {
+    const run = { ...create_run(), day: SPOTLESS_FROM_DAY, today: { ...create_run().today, served: 4, right: 4 } };
+    expect(spotless_day(run)).toBe(true);
+    expect(spotless_day({ ...run, jailed: true })).toBe(false);
+    expect(spotless_day({ ...run, day: SPOTLESS_FROM_DAY - 1 })).toBe(false);
+  });
+
+  test("the best run is the most cash, then the most days", () => {
+    expect(better_run({ money: 10, days: 1, accuracy: 1 }, { money: 5, days: 9, accuracy: 1 })).toBe(true);
+    expect(better_run({ money: 5, days: 2, accuracy: 1 }, { money: 5, days: 1, accuracy: 1 })).toBe(true);
+    expect(better_run({ money: 5, days: 1, accuracy: 1 }, { money: 5, days: 1, accuracy: 1 })).toBe(false);
   });
 });

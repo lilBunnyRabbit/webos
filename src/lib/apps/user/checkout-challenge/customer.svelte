@@ -12,8 +12,8 @@
   const MOUTHS: Record<Mood, string> = {
     [Mood.WAITING]: "M43 79 Q50 84 57 79",
     [Mood.HAPPY]: "M39 76 Q50 90 61 76",
-    [Mood.MEH]: "M42 81 L58 81",
     [Mood.SAD]: "M41 85 Q50 76 59 85",
+    [Mood.VEXED]: "M41 83 Q45 80 50 83 Q55 86 59 82",
   };
 </script>
 
@@ -25,10 +25,10 @@
   <g class="fill-foreground stroke-foreground" stroke-width="3" stroke-linecap="round" fill-opacity="1">
     {#if mood === Mood.HAPPY}
       <path d="M36 64 Q40 59 44 64 M56 64 Q60 59 64 64" fill="none" />
-    {:else if mood === Mood.SAD}
+    {:else if mood === Mood.SAD || mood === Mood.VEXED}
       <circle cx="40" cy="65" r="2.5" stroke="none" />
       <circle cx="60" cy="65" r="2.5" stroke="none" />
-      <path d="M34 57 L44 60 M66 57 L56 60" fill="none" />
+      <path d={mood === Mood.VEXED ? "M33 55 L45 61 M67 55 L55 61" : "M34 57 L44 60 M66 57 L56 60"} fill="none" />
     {:else}
       <circle cx="40" cy="64" r="3" stroke="none" />
       <circle cx="60" cy="64" r="3" stroke="none" />

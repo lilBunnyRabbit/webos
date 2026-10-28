@@ -1,8 +1,9 @@
 import type { AppHighlight } from "$lib/core/api/services/apps/type";
-import { Barcode as BarcodeIcon, HandHeart as HandHeartIcon, Star as StarIcon } from "phosphor-svelte";
+import { Handshake as HandshakeIcon, Package as PackageIcon, Receipt as ReceiptIcon, Siren as SirenIcon } from "phosphor-svelte";
 
 export default [
-  { icon: BarcodeIcon, title: "Scan and ring up", text: "Tap each item, then type the total on your keys or the register's keypad." },
-  { icon: HandHeartIcon, title: "Say sorry", text: "Clean sales earn Sorry tokens; one lets you retype a wrong total for half the damage." },
-  { icon: StarIcon, title: "Keep the shop open", text: "Minute-long days earn stars for accuracy. Empty the health bar three times and the shop is lost." },
+  { icon: ReceiptIcon, title: "Type the list", text: "Type each price and press Enter. You only find out if you got it right when you give the total." },
+  { icon: HandshakeIcon, title: "Keep their trust", text: "Customers have names and remember your change. Trusted regulars come back with party orders." },
+  { icon: SirenIcon, title: "Mind the police", text: "Short-change a doubtful customer twice and the police watch you type blind. A slip means jail." },
+  { icon: PackageIcon, title: "Close up", text: "Warm up before each shift, pay the bills, and restock the shelves by their codes." },
 ] satisfies AppHighlight[];

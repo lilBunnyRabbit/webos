@@ -1,18 +1,19 @@
 import type { Rng } from "$lib/core/utils/random";
 import {
-  accept_mistake,
   backspace,
+  begin_day,
   create_run,
   enter,
-  open_day,
+  hire_staff,
+  load_run,
   Phase,
-  scan,
-  scan_next,
-  sorry,
-  Stage,
+  restock_key,
   tick,
+  toggle_sale,
   type_key,
+  warm_key,
   type Run,
+  type SavedRun,
 } from "./game";
 
 export const KeypadKey = {
@@ -23,67 +24,79 @@ export type KeypadKey = (typeof KeypadKey)[keyof typeof KeypadKey];
 
 const LIT_MS = 140;
 
+export interface ShopEvents {
+  on_end: (run: Run) => void;
+  on_close: (run: Run) => void;
+  on_lost: (run: Run) => void;
+}
+
 export class Shop {
   run = $state.raw<Run>(create_run());
-  paused = $state(false);
   lit = $state<string | null>(null);
   private lit_timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly rng: Rng,
-    private readonly on_end: (run: Run) => void
+    private readonly events: ShopEvents
   ) {}
 
-  get open(): boolean {
-    return this.run.phase === Phase.OPEN;
+  get phase(): Phase {
+    return this.run.phase;
   }
 
-  get disputed(): boolean {
-    return this.run.customer?.stage === Stage.DISPUTED;
+  get animating(): boolean {
+    return this.phase === Phase.OPEN || this.phase === Phase.WARMUP || this.phase === Phase.RESTOCK;
   }
 
   advance(dt: number): void {
-    const before = this.run;
-    this.run = tick(before, dt, this.rng);
-    if (before.phase === Phase.OPEN && this.run.phase !== Phase.OPEN) this.on_end(this.run);
+    this.set(tick(this.run, dt, this.rng));
   }
 
-  open_shop(): void {
-    this.paused = false;
-    this.run = open_day(this.run);
+  start(): void {
+    this.set(begin_day(this.run, this.rng));
+  }
+
+  continue_run(saved: SavedRun): void {
+    this.run = load_run(saved);
+    this.start();
   }
 
   new_run(): void {
-    this.paused = false;
-    this.run = open_day(create_run());
-  }
-
-  scan(index: number): void {
-    if (!this.paused) this.run = scan(this.run, index);
-  }
-
-  scan_next(): void {
-    if (!this.paused) this.run = scan_next(this.run);
+    this.run = create_run();
+    this.start();
   }
 
   press(key: string): void {
-    if (!this.open || this.paused) return;
     this.light(key);
-    if (key === KeypadKey.BACK) this.run = backspace(this.run);
-    else if (key === KeypadKey.ENTER) this.run = this.disputed ? accept_mistake(this.run) : enter(this.run);
-    else this.run = type_key(this.run, key);
+    const run = this.run;
+    if (run.phase === Phase.WARMUP) this.set(warm_key(run, key));
+    else if (run.phase === Phase.RESTOCK) this.set(restock_key(run, key));
+    else if (run.phase !== Phase.OPEN) return;
+    else if (key === KeypadKey.BACK) this.set(backspace(run));
+    else if (key === KeypadKey.ENTER) this.set(enter(run, this.rng));
+    else this.set(type_key(run, key));
   }
 
-  sorry(): void {
-    if (!this.paused) this.run = sorry(this.run);
+  hire(): void {
+    this.set(hire_staff(this.run));
   }
 
-  toggle_pause(): void {
-    if (this.open) this.paused = !this.paused;
+  toggle_sale(): void {
+    this.set(toggle_sale(this.run));
+    if (this.phase === Phase.DAY_OVER) this.events.on_close(this.run);
   }
 
   destroy(): void {
     clearTimeout(this.lit_timer);
+  }
+
+  private set(next: Run): void {
+    const before = this.run;
+    if (next === before) return;
+    this.run = next;
+    if (before.phase === Phase.OPEN && next.phase !== Phase.OPEN) this.events.on_end(next);
+    if (before.phase !== Phase.DAY_OVER && next.phase === Phase.DAY_OVER) this.events.on_close(next);
+    if (before.phase !== Phase.GAME_OVER && next.phase === Phase.GAME_OVER) this.events.on_lost(next);
   }
 
   private light(key: string): void {

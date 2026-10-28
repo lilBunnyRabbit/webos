@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.77.0",
+    date: "2026-10-28",
+    title: "Your own shop",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["checkout-challenge"],
+        text: "Checkout Challenge becomes a shop you run day after day: warm up on the keypad, type each customer's list and the total, keep your regulars' trust, stay out of jail when the police watch, hire staff, restock the shelves by code, and pick up where you left off.",
+      },
+    ],
+  },
+  {
     version: "3.76.1",
     date: "2026-10-28",
     title: "Room to type",

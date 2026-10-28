@@ -58,7 +58,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.alibi.case` | `user/alibi` | Case in progress or last finished: seed, transcript (questions and answers, stopped flags) and accusations; written once the case has a question or an accusation |
 | `app.archive.method` | `user/archive` | Compression method (`deflate` / `store`) |
 | `app.blocks.{mode,stats}` | `user/blocks` | Last mode; marathon and sprint stats, top five marathon scores |
-| `app.checkout-challenge.{best,sales}` | `user/checkout-challenge` | Best run; items sold over every day (achievements) |
+| `app.checkout-challenge.{run,best,sales}` | `user/checkout-challenge` | The shop between days (versioned); best run; customers served over every day (achievements) |
 | `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
 | `app.clock.stopwatch` | `user/clock` | Legacy: the stopwatch before it moved into `/var/lib/apps/clock/clock.json` (2026-10-21). Copied in once when the file has none, then removed |
 | `app.color-recall.{level,space,daily,games}` | `user/color-recall` | Last practice level; the slider space (HSB or OKLCH); the daily attempt `{ day, state }`, so a daily is played once; games finished (achievements). Before the split (ADR-071) these were `app.color-games.*`, which stay unread |

@@ -1,55 +1,87 @@
 # Checkout Challenge
 
-Id `checkout-challenge` · Source: `src/lib/apps/user/checkout-challenge/` · [Brainstorm](../brainstorm/2026-10-25_checkout-challenge.md) · idea from LaxDOTexe
+Id `checkout-challenge` · Source: `src/lib/apps/user/checkout-challenge/` · Brainstorms: [first cut](../brainstorm/2026-10-25_checkout-challenge.md), [career mode](../brainstorm/2026-10-28_checkout-career.md) · idea from LaxDOTexe
 
 ## What it does
 
-Number typing practice dressed as a shop. Customers step up with items; the player taps each item to scan it, which adds a line and a running total to the receipt, then types the shown total exactly and presses Enter. Any digit keys count (top row or numpad, with or without NumLock), `.` (or `,`), Backspace and Enter. The register's keypad is real buttons: it lights up as you type on a keyboard and is tapped on a phone. A wrong total costs the shop health; a Sorry token lets you retype it for half. Days last one minute and end with the day's money and 0 to 3 stars. Three closures and the shop is lost.
+Number typing practice dressed as a shop you run day after day. Every shift starts with a warm-up on the keypad. Customers step up with a shopping list; the player types each price and presses Enter, then gives the total, and only then learns whether it was right, or how much over or short. Customers have names and remember: right change earns their trust, wrong change loses it, and a doubtful customer who gets short-changed twice calls the police. While the police watch, the register goes red and typing is blind; a slip means a night in jail, and three of those close the shop. Staff, bought with the shop's cash, ring up lists for a few customers so only the total is typed. At closing the day's money goes to wages, bills and stock, and the shelves are restocked by typing product codes. The shop is saved between days.
+
+Any digit keys count (top row and numpad, with or without NumLock), `.` (or `,`), Backspace and Enter; H hires staff. The register's keypad is real buttons: it lights up as you type on a keyboard and is tapped on a phone, and the warm-up lights the key to press.
 
 ## How it works
 
-All rules are pure functions over one immutable `Run` in `game.ts`; `shop.svelte.ts` holds the run in `$state.raw` and the component drives it with a `requestAnimationFrame` loop (`checkout-challenge.app.svelte:112`) that calls `tick(run, dt)` with the frame time capped at 100 ms. The loop only runs while a day is open, not paused, and the window is focused and visible; losing focus pauses the day (`:101`), as Lunar Lander does.
+All rules are pure functions over one immutable `Run` in `game.ts`; `shop.svelte.ts` holds the run in `$state.raw`, routes a key to the phase that takes it, and fires three events on phase changes: `on_end` (the day shut, `OPEN` → anything), `on_close` (the restock is done, → `DAY_OVER`) and `on_lost` (→ `GAME_OVER`). The component drives `tick(run, dt)` from a `requestAnimationFrame` loop (`checkout-challenge.app.svelte:152`, frame time capped at 100 ms) while the window is focused and visible.
 
-### The day (`tick`, `game.ts:276`)
+### Phases
 
-The game clock runs from 0 to `DAY_MS` (60 s). One customer stands at the counter at a time. The first arrives `FIRST_ARRIVAL_MS` after opening; when a customer leaves (`LEAVE_MS` after the sale settles, long enough to see the face and the lamp), the next is due after `arrival_gap`. Past 60 s no one new comes in, the customer at the counter is still served ("Closing time!"), and the day ends when the counter is empty.
+| Phase | What happens | Keys |
+|-------|--------------|------|
+| `READY` | Title; with a saved shop, Continue or New shop | Enter: Continue / Open the shop |
+| `WARMUP` (`begin_day`, `warm_key`) | The ten digits in a shuffled order; the next one lights green, a wrong key wiggles the display (no penalty). The tenth opens the shop | digits |
+| `OPEN` (`tick`, `enter`) | Customers, one at a time | digits, `.`, Backspace, Enter, H |
+| `RESTOCK` (`end_day`, `restock_key`) | The day's books, then a tile per product sold today with its code | digits |
+| `DAY_OVER` | Stars, the books, the "Sale tomorrow" switch; the run is saved here | Enter: open the next day |
+| `GAME_OVER` | The shop is closed (`MAX_JAIL_DAYS` nights in jail); the save is removed | Enter: New shop |
 
-### A sale (`enter`, `game.ts:334`)
+### The day: no clock
 
-| Typed total | Customer stage | Result | Face | Health | Money |
-|-------------|----------------|--------|------|--------|-------|
-| Right | ringing | clean sale, ✓ lamp | :) | +`SALE_HEAL` (3) | the total |
-| Wrong, a Sorry token in hand | ringing | disputed, ✗ lamp, waits `DISPUTE_MS` (4 s) | :( | – | – |
-| Wrong, no token | ringing | mistake, ✗ lamp | :( | −`MISTAKE_DAMAGE` (24) | 0 |
-| (Sorry clicked or S) | disputed | token spent, screen cleared, retype | :\| | – | – |
-| (Enter, "Let it go", or the 4 s run out) | disputed | mistake | :( | −24 | 0 |
-| Right | retyping | sorry sale, ✓ lamp | :\| | −`SORRY_DAMAGE` (12) | the total |
-| Wrong | retyping | mistake | :( | −24 | 0 |
+There is no timer. A day is `day_customers(day)` customers: `FIRST_CUSTOMERS` (5) on day 1, one more each day, at most `MAX_CUSTOMERS` (12). The clock in the run only paces the walk in (`ARRIVAL_MS`, `STAFF_ARRIVAL_MS` while staff work) and out (`LEAVE_MS`, long enough to read the result) and the flashes. The day ends when the last customer has left, or at once after a jailing.
 
-Enter with items still on the counter does nothing but wiggle them ("You missed something!"); it isn't a mistake. Amounts compare as cents, so `7`, `7.0` and `7.00` are the same answer (`parse_amount`, `game.ts:197`). Typing keeps one dot, two decimals and nine characters (`append_key`).
+### A customer (`arrive`, `enter`, `settle`)
 
-### Sorry tokens
+1. **The list.** Items drop in one after another (`cc-drop`, 80 ms apart). Stage `ITEMS`: the current line is highlighted; the typed amount and Enter record it as `entered`, cross the line off and add it to the shown running total, which is the sum of what was entered, not of the prices. There is no undo after Enter and nothing to click. An Enter with nothing typed does nothing.
+2. **The total.** Stage `TOTAL`: the player types the total and presses Enter.
+3. **Once more.** A customer who stepped up with trust under `LOW_TRUST` (35) is `doubting`: stage `CONFIRM` asks for the total again. If the first one was wrong, that one counts.
+4. **The result.** Right when the given total equals the list's real total (`list_total`); otherwise the register says `x over` or `x short`, shows the real total, and marks each line whose entry was wrong.
 
-A run starts with `START_SORRY` (1). Every `STREAK_FOR_SORRY` (5) clean sales in a row earn one, up to `MAX_SORRY` (3). A dispute, a sorry sale or a mistake resets the streak. The token has to be spent before the retype: it's the only way to fix a total after Enter. A typo caught before Enter is just Backspace.
+| Result | Trust | Money | Stock | Mood |
+|--------|-------|-------|-------|------|
+| Right | +`TRUST_GAIN` (8), +`SALE_TRUST_BONUS` (4) on a sale day, at most 100 | + the total | each item −1, `STOCK_SHARE` (40 %) of the total to the day's stock cost | happy |
+| Wrong | −`TRUST_LOSS` (25), at least 0; a doubting customer adds a strike | none | none | sad, or vexed when the police are there |
 
-### Health, customers and spend
+Amounts compare as cents, so `7`, `7.0` and `7.00` are the same (`parse_amount`). Typing keeps one dot, two decimals and nine characters (`append_key`).
 
-Health runs 0 to `MAX_HEALTH` (100) and carries from day to day. It sets how busy and how generous the shop is:
+### Customers and trust (`choose_patron`)
 
-| | Formula | At 100 | At 25 |
-|---|---------|--------|-------|
-| `spend(health)` | 0.55 + 0.45 × health/100 | 1.0 | 0.66 |
-| Item count | random between the day's minimum and minimum + (max − min) × spend | full range | the cheaper half |
-| Price cap | the day's cap × spend | full | two thirds |
-| `arrival_gap` | 4.2 s → 0.9 s by health, × 0.75–1.25 jitter | ~0.9 s | ~3.4 s |
+The run keeps a roster of patrons: name, `tag`, look, trust (0 to 100, shown as a bar and as their opinion of the shop in %), visits and strikes. New patrons start at `START_TRUST` (60).
 
-So a shop that keeps making mistakes gets fewer customers with smaller baskets, earns less, and has fewer chances to heal.
+- **Coming back.** Each arrival is a returning patron with `RETURN_CHANCE` (35 %), `+SALE_RETURN_BONUS` (25 %) on a sale day, when anyone is eligible: patrons with trust above 0 who haven't come in today. Who comes is weighted by `0.25 + trust/100`, so trusted regulars come back most. Otherwise a new patron walks in.
+- **Names.** Picked from `NAMES`. When a name is already on the roster, the newcomer and any untagged namesake get a random two-digit number (`Mia #47`), unique per name.
+- **Party orders.** A returning patron with trust ≥ `PARTY_TRUST` (80) brings a party order with `PARTY_CHANCE` (40 %): `PARTY_EXTRA_MIN`–`PARTY_EXTRA_MAX` (3–5) more items, at most 10, and a confetti mark by the name.
+- **Leaving for good.** A patron at trust 0 is dropped from the roster at the end of the day. The roster holds `MAX_ROSTER` (30); a newcomer past that replaces the least trusted patron not seen today.
 
-### Closures
+### The police and jail
 
-Health reaching 0 closes the shop for the rest of the day: the customer at the counter leaves, the day ends early (at most one star) and counts a closure. The next day opens at full health. `MAX_CLOSURES` (3) closures lose the shop and end the run. Days survived counts every day that ended with the shop still in business.
+A doubting customer who collects `REPORT_STRIKES` (2) strikes calls the police; their strikes reset. The police then watch the next `POLICE_MIN`–`POLICE_MAX` (2–5) customers; the number is in the run (`police_left`) but never shown. While they watch:
 
-### Difficulty (`difficulty`, `game.ts:136`)
+- the board turns red (`error` token tint and ring), a "Police watching" tag shows, the policeman (`police.svelte`, the `info` token) stands behind the customer, and every customer is vexed;
+- blind mode: the display and the running total show each digit as `*` and keep the decimal point (`mask`);
+- a right total counts down the watch; the last one sends the police away (`today.cleared`, the Clean record achievement);
+- a wrong total is a night in jail: `jail_days` +1 and the shop shuts for the rest of the day. The books and restock still run. At `MAX_JAIL_DAYS` (3) the shop is closed and the run is over.
+
+### Staff (`hire_staff`)
+
+The Staff button (or H) costs `staff_price(day)`: `STAFF_SHARE` (1×) the day's item price cap, rounded to a whole unit (9.00 on day 1). It is paid at once from cash and booked as wages. It needs the cash, no staff already working, and customers still to come. The next `STAFF_CUSTOMERS` (4) customers arrive with their list already entered at the right prices (stage `TOTAL`, "Staff rang up") and come in quicker; only the total is typed. Doubting customers still ask twice, and the police still watch.
+
+### Closing up: the books and restock
+
+When the day ends, `end_day` books it:
+
+| Line | Amount |
+|------|--------|
+| Takings | Money from right totals today |
+| Wages | Staff hired today (already paid) |
+| Bills | `bills(day)`: `BILLS_SHARE` (1.2×) the day's item price cap, rounded to a whole unit |
+| Stock | `STOCK_SHARE` of the takings |
+| Profit | Takings − wages − bills − stock |
+
+Bills and stock come out of the cash then, which can go below zero; nothing else happens at a negative balance. Each product starts at `STOCK_FULL` (8) and customers' baskets only take products still on the shelf. Every product sold today shows as a tile with its picture and its two-digit code (`PRODUCT_CODES`, 43 is bread). Typing a listed code refills that product and clears its tile; no Enter. A digit that can't start any listed code clears the input and wiggles it red, with no penalty. With every tile cleared the day is over and saved. A day with nothing sold skips straight to `DAY_OVER`.
+
+### Sale day
+
+The `DAY_OVER` screen has a "Sale tomorrow" switch (`toggle_sale`). On a sale day every price is `SALE_DISCOUNT` (20 %) lower, more regulars come back and right totals earn more trust. The switch is saved with the run.
+
+### Difficulty (`difficulty`)
 
 | Day | Items per customer | Prices | Cap per item |
 |-----|--------------------|--------|--------------|
@@ -62,37 +94,64 @@ Health reaching 0 closes the shop for the rest of the day: the customer at the c
 | 9–10 | 3–6, then 4–6 | cents | 199.99, 299.99 |
 | 11+ | 4–7 | cents | +100 a day, at most 999.99 |
 
-Whole-number days show totals without decimals; from day 3 every amount has two.
+Whole-number days show amounts without decimals; from day 3 every amount has two.
 
-### Stars (`stars`, `game.ts:225`)
+### Stars (`stars`)
 
-Accuracy = (clean + sorry ÷ 2) ÷ sales. ≥ 95 % three stars, ≥ 80 % two, ≥ 60 % one, otherwise none; no sales, none; a day that closed early, at most one.
+Accuracy = right ÷ served. ≥ 95 % three stars, ≥ 80 % two, ≥ 60 % one, otherwise none; nobody served, none; a day that ended in jail, at most one.
 
 ### Keys and focus
 
-`typed_key` (`checkout-challenge.app.svelte:147`) reads digits from `event.code` (`Digit*`, `Numpad*`) so the numpad works with NumLock off and the top row works on AZERTY without Shift. Space scans the next item, S says sorry, P or Escape pauses. Keys count only when the board has focus; buttons inside it don't take focus on mouse down (`keep_focus`, `:143`), because a scanned item or the keypad turns disabled mid-sale and a disabled button drops focus to the page.
+`typed_key` (`checkout-challenge.app.svelte:207`) reads digits from `event.code` (`Digit*`, `Numpad*`) so the numpad works with NumLock off and the top row works on AZERTY without Shift. Keys count only when the board has focus; buttons inside it don't take focus on mouse down (`keep_focus`, `:203`), because the keypad turns disabled between customers and a disabled button drops focus to the page.
+
+### Tuning constants
+
+All in `game.ts`; a first pass, to be tuned after play.
+
+| Constant | Value | Meaning |
+|----------|-------|---------|
+| `FIRST_CUSTOMERS`, `MAX_CUSTOMERS` | 5, 12 | Customers on day 1, and the cap (+1 a day) |
+| `ARRIVAL_MS`, `STAFF_ARRIVAL_MS`, `LEAVE_MS` | 700, 150, 1800 ms | Gaps between customers; time to read the result |
+| `START_TRUST`, `MAX_TRUST` | 60, 100 | A new patron's trust; the top |
+| `TRUST_GAIN`, `SALE_TRUST_BONUS`, `TRUST_LOSS` | 8, 4, 25 | Trust per right total, extra on a sale day, lost per wrong one |
+| `LOW_TRUST` | 35 | Below it a customer asks for the total twice and counts strikes |
+| `RETURN_CHANCE`, `SALE_RETURN_BONUS` | 0.35, 0.25 | Chance an arrival is a regular |
+| `PARTY_TRUST`, `PARTY_CHANCE`, `PARTY_EXTRA_MIN`–`MAX` | 80, 0.4, 3–5 | Party orders |
+| `MAX_ROSTER` | 30 | Patrons remembered |
+| `REPORT_STRIKES` | 2 | Strikes before a call to the police |
+| `POLICE_MIN`, `POLICE_MAX` | 2, 5 | Customers watched |
+| `MAX_JAIL_DAYS` | 3 | Nights in jail that close the shop |
+| `STAFF_CUSTOMERS`, `STAFF_SHARE` | 4, 1 | Customers staff ring up; their price as a share of the day's item cap |
+| `BILLS_SHARE` | 1.2 | Bills as a share of the day's item cap |
+| `STOCK_SHARE`, `STOCK_FULL` | 0.4, 8 | Restock cost per sale; units per product |
+| `SALE_DISCOUNT` | 0.2 | Price cut on a sale day |
 
 ## Data
 
-- `app.checkout-challenge.best` (localStorage, app storage): the best run `{ money, days, accuracy }`, money in cents, validated by `best_run_schema`. Best = most money, more days breaks a tie. Updated whenever a day ends, so a run abandoned mid-way still counts what it earned.
-- `app.checkout-challenge.sales`: sales rung up in all, every run added up, for the `sales-500` achievement.
+- `app.checkout-challenge.run` (localStorage, app storage): the shop between days, `saved_run_schema` with `version: 1`: day, cash (cents, may be negative), jail days, days survived, the sale switch, run totals, the roster, the next patron id and stock. Written by `on_close` when a day's restock is done (and when the sale switch flips); read by Continue (`load_run`, back at that day's end, then the next day's warm-up). Nothing mid-day: closing the window during a day loses that day. Removed by New shop and when the shop is closed.
+- `app.checkout-challenge.best`: the best run `{ money, days, accuracy }`, `best_run_schema`. Money is cash in hand (at least 0); best = most money, more days breaks a tie. Compared whenever a day ends.
+- `app.checkout-challenge.sales`: customers served in all, every shop added up, for `sales-500`.
 - `/var/lib/apps/checkout-challenge/achievements.json`: achievements, written by the OS ([achievements](../system/services/achievements.md)).
 - `/var/lib/games/plays.json`: play time and sessions through `track_play` (Game Hub).
 - No props, no shell commands (`app launch checkout-challenge`), no files.
 
-**Achievements** (ADR-078), reported from `record_day()` whenever a day ends, before the best run is compared: `first-day` (a day that didn't close early), `three-stars` (three stars for the day), `days-7` (progress: days survived this run), `money-1000` (progress: this run's money in whole units), `sales-500` (progress: the running total above), secret `spotless` (`spotless_day`, `game.ts`: day 5 or later, open to the end, sales and no sorry or mistake).
+Two windows of the app share the saved run's cell; each plays its own day and the last to close a day wins.
+
+**Achievements** (ADR-078), reported from `record_day()` whenever a day ends: `first-day` (a day without jail), `three-stars`, `days-7` (progress: days survived this shop), `money-1000` (progress: this shop's takings in whole units), `sales-500` (progress: customers served in all), `party` (a party order right), `best-friend` (a patron at 100 % trust), secret `clean-record` (the police left without a slip), secret `spotless` (`spotless_day`: day 5 or later, out of jail, customers served and none wrong). `first-day`, `three-stars`, `days-7`, `money-1000`, `sales-500` and `spotless` keep their ids from the first rules; their text follows the new ones.
 
 ## Dependencies & licences
 
-None beyond the repo's. Item pictures are Phosphor icons; the customers are drawn in `customer.svelte`.
+None beyond the repo's. Item pictures are Phosphor icons; the customers (`customer.svelte`) and the policeman (`police.svelte`) are drawn in SVG.
 
 ## Limits
 
-- The balancing numbers are a first pass and unplayed by real users; the brainstorm lists tuning after play.
+- The balancing numbers are a first pass and unplayed by real users.
 - Customers have no patience: an idle player loses nothing but time.
+- Cash can go negative with nothing to stop it; only jail ends a shop.
 - No seeded daily, no numpad-only mode (brainstorm, next topics).
 
 ## Decisions
 
 - [ADR-078](../adrs/078-achievements.md): achievements.
-- [2026-10-25 brainstorm](../brainstorm/2026-10-25_checkout-challenge.md): any digit keys, copy the shown total rather than sum it, real keypad buttons on both platforms, best run in app storage, no shell commands.
+- [2026-10-25 brainstorm](../brainstorm/2026-10-25_checkout-challenge.md): any digit keys, real keypad buttons on both platforms, best run in app storage, no shell commands.
+- [2026-10-28 brainstorm](../brainstorm/2026-10-28_checkout-career.md): career mode replaces the first rules, everything in one cut, days by customer count with no clock, the run saved between days under one app storage key.
