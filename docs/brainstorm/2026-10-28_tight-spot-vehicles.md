@@ -37,5 +37,13 @@ Owner: "Oh no truck car option?", then: "the classic European truck you see with
 - **Loading dock:** new kind, reverse square to a dock door between parked trucks; semi and box truck. The depot also allows the box truck.
 - Rejected for now: a drawbar trailer (second hinge, model change), a truck stop.
 
+## Precision, vehicle choice and more rigs (later the same day)
+Owner: "do precision score", "love more trailers, good bus options, yes definetly pick vehicle for open lot. if possible i would have for all types of parkings the choice of car type?"
+- **Precision (decided):** its own 0–100% score from centring (side gaps and depth balanced in the bay) and straightness, with the side, depth and angle errors shown on the parked card; 95% or more earns a "Perfect" badge. Stars stay moves-only. Bests keep their order (moves, then time) and also remember the best precision. Rejected: precision gating the third star (old results can't be re-judged), precision as the tie-break (changes what a best means).
+- **Vehicle choice (decided):** a vehicle picker next to the spot picker: Any (the seed picks, as now) or one of the kind's allowed vehicles. Levels and the daily keep their seeded vehicle. The open lot gets the picker with hatchback, van, pickup and hatchback + trailer. Rejected: every vehicle in every kind (14 kinds × 6+ vehicles through the planner, combos needing new layouts), keeping it as is.
+- **Bests (decided):** per kind and vehicle, keys `kind:vehicle`; an old `kind` key reads as the hatchback's (every best before 3.82 was a hatchback).
+- **More rigs (decided):** boat trailer (long and narrow, the boat overhanging past its axle; slipway), caravan (wider than the car, axle far back; a new camping pitch spot between caravans and hedges), articulated bus (18 m, the trailer hinge model; bus stop and depot), coach (13–15 m with a tag axle) and double-decker (specs and drawing).
+- **Order:** polish pass, then precision + vehicle picker, then the new rigs (they share files).
+
 ## Next session topics
 - Trailer types (boat, caravan), rear-steer bus, a vehicle picker in the open lot
