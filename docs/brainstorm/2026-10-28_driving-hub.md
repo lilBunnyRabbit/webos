@@ -34,6 +34,22 @@ Owner: "lets test with forklift first - then we know all the gotchas then we can
 ### Driving test (decided: later, with focus)
 Owner: "for not just the fun aspect i think the driving test will be the best one", then: "keep the plan, then the easier ones. we will need to put a lot of focus on this one." Order: the forklift, then the easier games in parallel, then the driving test as its own focused piece of work (roads and junctions, traffic rules, signals, examiner prompts, fault scoring, a fixed town first). It gets its own brainstorm and ADR.
 
+### Game contract (decided)
+Each game is `games/{id}/index.ts` with `define_game({ id, name, icon, building, achievements, load })` and a lazy `games/{id}/game.svelte`; `games/index.ts` lists them. The app shell shows the yard or the active game's component, and games build from shared core components (board canvas, HUD chips, controls, cards). Rejected: one component with a branch per game (it grows with every game, parallel agents collide in it).
+### Storage (decided)
+New games use `app.tight-spot.{game}.*`; parking keeps its current keys, no migration; shared settings (sound, steering, wheel) stay at the top level. Rejected: moving parking's keys under a prefix (a migration that risks players' stars).
+### Landing (decided)
+Opening the app shows the yard with the car at the gate; the menu marks the last game. A `game` prop or the daily goes straight in.
+### Shell (decided)
+A `game` prop only: `app launch tight-spot game=forklift`, links `#/app/tight-spot?game=forklift`; values `yard`, `parking`, `forklift`. No commands.
+### Forklift details (decided)
+- **Model:** rear-wheel steering in the core: `VehicleSpec.steer_axle: "front" | "rear"`, the kinematic step mirrored about the front axle. About 2.5 m long plus 1.2 m forks, 1.2 m wide, 1.5 m wheelbase, rear lock up to about 80°, slow (about 3 m/s top). A carried pallet is a rigid box on the forks. Rejected: a front-steer car with a huge lock (no tail swing).
+- **Round:** a job of 1–4 pallets in a seeded warehouse (racks in narrow aisles, a dock): move each from its marked slot to its marked target. Pick: forks fully in, square within 5°, then Fork. Drop: pallet inside the target and straight, then Fork. Any contact ends the round, the carried pallet included.
+- **Scoring:** three stars: the job done, moves at or under par, time at or under a par time (from the planner's path at a set speed, with slack). Precision per drop is shown (average) and 95% gives Perfect. A best is fewer stars lost, then time. Levels, random jobs and a daily job. Rejected: time attack, parking's rules unchanged.
+- **Controls:** one Fork button (Lift when the forks are in a pallet, Lower when carrying over a target, disabled otherwise); key F and Space; on touch above the pedals.
+### Build order (decided)
+After 3.82.1 and 3.83.0 push: (1) refactor into `core/` and `games/parking/` with no behaviour change, (2) the yard, playground, menu and `game` prop, renamed Drive Hub, (3) the forklift. The new rigs follow as parking content.
+
 ## Key takeaways
 - One app holds every driving game; the shared core needs no kit while the hub is its only user.
 - Keeping the id keeps every player's data.

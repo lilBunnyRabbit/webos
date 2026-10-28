@@ -14,6 +14,11 @@ Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicl
 - First new game: a forklift warehouse with rear-wheel steering, picking and dropping pallets, judged like parking per pallet.
 - The restructure is a refactor with no behaviour change, after the current Tight Spot work lands.
 
+- **Game contract:** `define_game({ id, name, icon, building, achievements, load })` per `games/{id}/index.ts`, a lazy `game.svelte`, listed in `games/index.ts`; games build from shared core components.
+- **Storage:** new games under `app.tight-spot.{game}.*`; parking keeps its keys; shared settings at the top level.
+- **Landing and links:** the yard first; a `game` prop (`yard`, `parking`, `forklift`) and the daily go straight in. No shell commands.
+- **Forklift:** `VehicleSpec.steer_axle` (`front` or `rear`) in the core model; jobs of 1–4 pallets; stars for the job, moves and a par time; precision per drop; one Fork control.
+
 ## Alternatives Considered
 - Separate apps on a `$kit/drive` module: each game visible in the store, but an up-front extraction and a kit API shaped by two games.
 - Modes inside Tight Spot's toolbar: no structure, a crowded app.
