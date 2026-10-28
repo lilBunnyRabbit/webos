@@ -1,9 +1,9 @@
 <script module lang="ts">
-  import { GAMES } from "../games";
+  import { GAMES, UPCOMING } from "../games";
   import { build_yard } from "./yard";
 
   const YARD = build_yard(GAMES.length);
-  const NAMES = YARD.plots.map((_, index) => GAMES[index]?.name ?? null);
+  const NAMES = YARD.plots.map((_, index) => GAMES[index]?.name ?? UPCOMING[index - GAMES.length] ?? "Soon");
   const BUILDINGS = YARD.plots.map((_, index) => GAMES[index]?.building ?? null);
 </script>
 
@@ -13,7 +13,8 @@
   import { Button } from "$lib/core/components/ui";
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
-  import { clamp_zoom, ease, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "../core/camera";
+  import { z } from "zod";
+  import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "../core/camera";
   import type { Palette } from "../core/draw";
   import DriveFrame from "../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../core/drive-input.svelte";
@@ -43,6 +44,7 @@
     type Car,
   } from "../core/vehicle";
   import { draw_yard } from "./draw";
+  import { icon_image } from "./icons";
   import { door_at, door_car, drive, gate_car, on_pad, pad_car } from "./yard";
 
   interface Props {
@@ -59,9 +61,11 @@
 
   const CONTACT_FADE = 0.8;
   const YARD_SPAN = 34;
+  const OVERVIEW_MARGIN = 1;
   const VEHICLE_ORDER = Object.values(Vehicle);
 
-  const { window: win } = get_app_context();
+  const { window: win, storage } = get_app_context();
+  const intro_seen = storage.persisted("yard_intro", false, z.boolean());
   const input = new DriveInput();
   const sounds = new Sounds();
 
@@ -81,6 +85,8 @@
   let pedal_box = $state({ width: 0, height: 0 });
   let stage_rect = $state<DOMRectReadOnly>();
   let hud_height = $state(0);
+  let icons = $state.raw<(HTMLImageElement | null)[]>([]);
+  let icons_ready = $state(0);
 
   let camera: Camera | null = null;
   let readings = $state.raw<Record<End, number | null>>({ front: null, rear: null });
@@ -95,7 +101,7 @@
   const door_game = $derived(door === null ? null : GAMES[door]);
   const at_pad = $derived(on_pad(YARD, car, spec));
   const last_plot = $derived(last ? GAMES.findIndex((game) => game.id === last) : -1);
-  const card = $derived(door_game ? "door" : at_pad ? "pad" : moved ? null : "welcome");
+  const card = $derived(door_game ? "door" : at_pad ? "pad" : moved || intro_seen.value ? null : "welcome");
   // Held sideways the touch controls take both sides, so a card stays at the bottom between them.
   const side_card = $derived(size.height > 0 && size.width > size.height * 1.2 && !sideways());
   const wheel_degrees = $derived(Math.round((car.steer / lock) * 450));
@@ -107,6 +113,15 @@
   });
 
   $effect(() => () => sounds.close());
+
+  $effect(() => {
+    if (!palette) return;
+    const colour = palette.target;
+    icons = YARD.plots.map((_, index) => {
+      const game = GAMES[index];
+      return game ? icon_image(game.icon, colour, () => icons_ready++) : null;
+    });
+  });
 
   $effect(() =>
     win.on_back(() => {
@@ -127,7 +142,7 @@
 
   // The loop draws while something moves; this covers the rest (a gear, a menu, a resize, a new theme).
   $effect(() => {
-    void [car, palette, size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, card];
+    void [car, palette, size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, card, icons, icons_ready];
     if (awake && !blocked) return;
     untrack(() => render(0));
   });
@@ -136,9 +151,15 @@
     return contact ? Math.max(0, 1 - (performance.now() - contact.since) / 1000 / CONTACT_FADE) : 0;
   }
 
+  // The front wheels turn at a capped rate, so a flicked wheel keeps the loop up until they catch up with it.
+  function steering(): boolean {
+    const wanted = input.read(car.gear).steer;
+    return wanted !== null && Math.abs(wanted * lock - car.steer) > 1e-4;
+  }
+
   // The yard has no round to pause, so the loop sleeps once nothing moves and wakes on the next input.
   function going(): boolean {
-    const on = car.speed !== 0 || input.busy() || fade() > 0 || (settings.creep && gear_direction(car.gear) !== 0);
+    const on = car.speed !== 0 || input.busy() || steering() || fade() > 0 || (settings.creep && gear_direction(car.gear) !== 0);
     if (!on) awake = false;
     return on;
   }
@@ -146,6 +167,7 @@
   function wake() {
     awake = true;
     moved = true;
+    intro_seen.value = true;
   }
 
   function sideways(): boolean {
@@ -160,11 +182,17 @@
     return { ...insets, right: pedal_box.width + OVERLAY_GAP, left: Math.max(card_left, steer_box.width + OVERLAY_GAP) };
   }
 
+  // Until the first input the whole yard shows, so a player sees every building before driving off.
   function target_camera(): Camera {
+    const insets = control_insets();
+    if (!moved) {
+      const middle = { x: (YARD.bounds.x0 + YARD.bounds.x1) / 2, y: (YARD.bounds.y0 + YARD.bounds.y1) / 2 };
+      return frame(YARD.bounds, middle, size.width, size.height, zoom, insets, fit_span(YARD.bounds, size.width, size.height, insets, OVERVIEW_MARGIN));
+    }
     const centre = body_centre(car, spec);
     const ahead = car.speed * 0.9;
     const focus = { x: centre.x + Math.cos(car.heading) * ahead, y: centre.y + Math.sin(car.heading) * ahead };
-    return frame(YARD.bounds, focus, size.width, size.height, zoom, control_insets(), span);
+    return frame(YARD.bounds, focus, size.width, size.height, zoom, insets, span);
   }
 
   function render(dt: number) {
@@ -185,6 +213,7 @@
         vehicle,
         spec,
         names: NAMES,
+        icons,
         buildings: BUILDINGS,
         last: last_plot >= 0 ? last_plot : null,
         at_door: door,
@@ -378,7 +407,9 @@
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 basis-full">
         <p class="text-base font-semibold">Drive Hub</p>
-        <p class="text-ui text-foreground/80">Drive into a building's doorway to play. The garage on the right swaps your vehicle; the cones and bays are for practice.</p>
+        <p class="text-ui text-foreground/80">
+          Drive into a lit doorway to play. The garage on the right swaps your vehicle; the cones and bays are for practice. The guide (?) has the rest.
+        </p>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
         <KeyHint key_name="↑" text="forward" /><KeyHint key_name="↓" text="back" /><KeyHint key_name="← →" text="steer" />

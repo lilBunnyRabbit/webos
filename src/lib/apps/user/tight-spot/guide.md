@@ -1,9 +1,9 @@
 ## Drive Hub
 
-Driving games around one yard. The app opens in the yard with your car at the gate.
+Driving games around one yard. The app opens on the whole yard, your car at the gate; the view follows the car once you drive.
 
-- Drive into a building's doorway and press **Enter** (or tap **Enter** on the card) to play its game. The building you played last has a glowing doorway; a building that says **Soon** is still shut.
-- The **signpost** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
+- Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway; a building that says **Soon** (the Warehouse) is still shut.
+- **Games** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
 - **Back** in a game returns you to the yard, out of that game's doorway.
 
 ## The yard is a playground

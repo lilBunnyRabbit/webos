@@ -67,6 +67,14 @@ export function frame(
   };
 }
 
+/** The span that shows all of `bounds`, plus `margin` metres round it, in the part the insets leave clear, at zoom 1. */
+export function fit_span(bounds: Bounds, width: number, height: number, insets: Insets = NO_INSETS, margin = 0): number {
+  const clear_width = Math.max(1, width - insets.left - insets.right);
+  const clear_height = Math.max(1, height - insets.top - insets.bottom);
+  const scale = Math.min(clear_width / (bounds.x1 - bounds.x0 + margin * 2), clear_height / (bounds.y1 - bounds.y0 + margin * 2));
+  return Math.max(1, Math.min(width, height)) / scale;
+}
+
 export function ease(current: Camera | null, target: Camera, dt: number): Camera {
   if (!current) return target;
   const k = 1 - Math.exp(-dt * 6);

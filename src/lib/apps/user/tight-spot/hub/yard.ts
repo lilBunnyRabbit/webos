@@ -33,6 +33,8 @@ export interface Plot {
   shape: Polygon;
   /** The doorway and the apron in front of it: the vehicle's nose in here offers the game. */
   door: Polygon;
+  /** The doorway cut into the building, lit inside. */
+  recess: Polygon;
   mouth: Vec;
   /** A game is registered for it; a closed one has its shutter down. */
   open: boolean;
@@ -43,9 +45,10 @@ export interface Yard {
   surfaces: Surface[];
   marks: Mark[];
   solids: Solid[];
-  /** The solids the core draws (walls, posts, parked cars); buildings and cones are drawn by the yard. */
+  /** The solids the core draws (walls, gate posts, parked cars); buildings, cones and bollards are drawn by the yard. */
   props: Solid[];
   cones: Vec[];
+  bollards: Vec[];
   /** The buildings' walls around their doorways, shutters included. */
   structures: Polygon[];
   plots: Plot[];
@@ -69,6 +72,7 @@ function plot(x0: number, open: boolean): { plot: Plot; pieces: Polygon[] } {
     plot: {
       shape: rect(x0, WALL, x1, PLOT_DEPTH),
       door: rect(d0, back, d1, PLOT_DEPTH + APRON),
+      recess: rect(d0, back, d1, PLOT_DEPTH),
       mouth: { x: mid, y: PLOT_DEPTH },
       open,
     },
@@ -102,8 +106,9 @@ export function build_yard(games: number): Yard {
     rect(23.6, H - 0.7, 24.4, H),
     rect(31.6, H - 0.7, 32.4, H),
     rect(24.4, H - 0.3, 31.6, H - 0.1),
-    ...[40, 44, 48].map((x) => rect(x - 0.2, 39.3, x + 0.2, 39.7)),
   ].map((shape) => ({ kind: SolidKind.POST, shape }));
+  const bollards = [40, 44, 48].map((x) => ({ x, y: 39.5 }));
+  const bollard_solids: Solid[] = bollards.map((at) => ({ kind: SolidKind.POST, shape: rect(at.x - 0.2, at.y - 0.2, at.x + 0.2, at.y + 0.2) }));
 
   const bay = 2.7;
   const bays_y = [17, 17 + bay, 17 + bay * 2, 17 + bay * 3, 17 + bay * 4];
@@ -125,9 +130,10 @@ export function build_yard(games: number): Yard {
       { kind: SurfaceKind.FLOOR, shape: pad },
     ],
     marks,
-    solids: [...props, ...pieces, ...cone_solids],
+    solids: [...props, ...pieces, ...cone_solids, ...bollard_solids],
     props,
     cones,
+    bollards,
     structures: built.flatMap((each) => each.pieces),
     plots: built.map((each) => each.plot),
     pad,

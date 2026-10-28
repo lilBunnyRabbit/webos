@@ -1,6 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
-  import { daily_seed, format_time, track_play } from "$kit/games";
+  import { daily_seed, format_time } from "$kit/games";
   import { random_seed } from "$lib/core/utils/random";
   import { cn } from "$lib/core/utils";
   import { Badge, BoardOverlay, Button, IconButton, Segmented, Select } from "$lib/core/components/ui";
@@ -73,11 +73,10 @@
   ];
   const VERDICTS = { crooked: "Not straight in the bay", backwards: "Facing the wrong way", outside: "Not inside a bay" } as const;
 
-  const { settings, daily: daily_prop, menu, onexit }: GameProps = $props();
+  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
-  const play = track_play(app_id, () => win.is_visible);
   const bests = storage.persisted<Bests>("parking.best", {}, bests_schema);
   const level_stars = storage.persisted<LevelStars>("parking.levels", {}, levels_schema);
   const kinds = storage.persisted<string[]>("parking.kinds", [], z.array(z.string()));

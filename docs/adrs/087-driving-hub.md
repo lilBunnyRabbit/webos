@@ -34,6 +34,14 @@ Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicl
 - **Playground contact.** A step that would touch something, or jackknife, doesn't happen: the vehicle stops where it was, one thunk, a fading ring. The garage pad offers every vehicle and puts the new one on the pad.
 - **Landing.** The yard starts at the gate in the hatchback; the yard's vehicle and position aren't stored (no persistence beyond `app.tight-spot.last`). Back from a game puts the vehicle outside that game's doorway.
 
+## Revision 2026-10-28 (review fixes and yard polish)
+- **Owner-confirmed as built.** Entering a game takes the card plus Enter or a tap, never driving in alone; a building whose game isn't registered stands shut and says Soon.
+- **Play tracking in the shell.** `track_play` moved from the parking game to `tight-spot.app.svelte`: one Game Hub session per window, time in the yard and every game counts. `GameProps` gained `play` (the tracker) so a game still reports its daily.
+- **Loading and failure.** While a game's chunk loads, the shell shows its toolbar (switcher and name) over "Opening …"; a failed load reports an error and returns to the yard.
+- **Landing.** The yard is framed whole, clear of the HUD, cards and touch controls, until the first input; then the 34 m follow takes over. The welcome card shows on the first visit only (`app.tight-spot.yard_intro`); the guide keeps the help.
+- **Yard look.** Roof signs with the game's name and icon (the shut one named after what's coming, Warehouse), lit doorways, real cones and round bollards drawn at a readable size. The switcher reads "Games" where it fits.
+- **Loop.** The yard's frame loop stays up while the front wheels catch up with the steering wheel.
+
 ## Consequences
 - One large app; folders keep games apart.
 - The id `tight-spot` stays even for games that aren't parking.

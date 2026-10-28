@@ -1,4 +1,5 @@
 import type { Achievement } from "$lib/core/api/services/achievements/definition";
+import type { PlayTracker } from "$kit/games";
 import type { IconComponentProps } from "phosphor-svelte";
 import type { Component, Snippet } from "svelte";
 import type { DriveSettings } from "../core/settings.svelte";
@@ -11,6 +12,8 @@ export interface GameProps {
   /** The day of a daily the app was opened with; a game without dailies ignores it. */
   daily?: string;
   menu?: Snippet;
+  /** The window's Game Hub tracker, owned by the shell; a game reports its daily results through it. */
+  play: PlayTracker;
   /** Back to the yard. Without it Back leaves the app once the game has nothing of its own to close. */
   onexit?: () => void;
 }

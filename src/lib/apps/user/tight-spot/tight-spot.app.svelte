@@ -1,7 +1,9 @@
 <script lang="ts">
   import kernel, { type DialogsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { IconButton } from "$lib/core/components/ui";
+  import { Button, Spinner, Toolbar } from "$lib/core/components/ui";
+  import { track_play } from "$kit/games";
+  import { report_error } from "$kit/utils/report-error";
   import { MapTrifold as MapIcon, Signpost as SignpostIcon } from "phosphor-svelte";
   import { untrack, type Component } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
@@ -15,7 +17,9 @@
   const { daily: daily_prop, game: game_prop }: { daily?: string; game?: GameChoice } = $props();
 
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
-  const { storage } = get_app_context();
+  const { app_id, window: win, storage } = get_app_context();
+  // One Game Hub session per window, whichever game or the yard is up.
+  const play = track_play(app_id, () => win.is_visible);
   const settings = new DriveSettings(storage);
   const loaded = new SvelteMap<string, Component<GameProps>>();
 
@@ -28,13 +32,25 @@
   let last = $state<string | null>(storage.get("last", z.string()) ?? null);
   if (first !== YARD) remember(first);
 
+  const loading = $derived(active === YARD ? null : (game_of(active) ?? null));
   const Game = $derived(active === YARD ? null : (loaded.get(active) ?? null));
 
   $effect(() => {
     const id = active;
     const game = game_of(id);
     if (!game || loaded.has(id)) return;
-    void game.load().then((module) => loaded.set(id, module.default));
+    let current = true;
+    game.load().then(
+      (module) => loaded.set(id, module.default),
+      (reason: unknown) => {
+        if (!current) return;
+        report_error(app_id, `Couldn't open ${game.name}`, reason);
+        open(YARD);
+      }
+    );
+    return () => {
+      current = false;
+    };
   });
 
   function remember(id: string) {
@@ -44,7 +60,7 @@
 
   function open(id: string) {
     if (id === active) return;
-    if (id === YARD) from = active;
+    if (id === YARD) from = loaded.has(active) ? active : null;
     else remember(id);
     daily = undefined;
     active = id;
@@ -69,15 +85,26 @@
 </script>
 
 {#snippet menu()}
-  <IconButton size="sm" label="Drive Hub: yard and games" onclick={switch_game}>
+  <Button size="sm" variant="quiet" aria-label="Games" title="Yard and games" onclick={switch_game}>
     <SignpostIcon weight="bold" />
-  </IconButton>
+    <span class="hidden @sm:inline">Games</span>
+  </Button>
 {/snippet}
 
 {#if active === YARD}
   <Yard {settings} bind:vehicle {from} {last} {menu} onenter={open} />
 {:else if Game}
   {#key active}
-    <Game {settings} {daily} {menu} onexit={() => open(YARD)} />
+    <Game {settings} {daily} {menu} {play} onexit={() => open(YARD)} />
   {/key}
+{:else if loading}
+  <div class="grid h-full grid-rows-[auto_1fr] @container">
+    <Toolbar>
+      {@render menu()}
+      <span class="truncate px-1 text-ui font-medium">{loading.name}</span>
+    </Toolbar>
+    <p class="flex items-center justify-center gap-2 text-ui text-foreground/65">
+      <Spinner label="Loading {loading.name}" />Opening {loading.name}…
+    </p>
+  </div>
 {/if}
