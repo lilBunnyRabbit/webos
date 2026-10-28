@@ -56,7 +56,8 @@ After 3.82.1 and 3.83.0 push: (1) refactor into `core/` and `games/parking/` wit
 
 ## Action items
 - [x] ADR-087 (accepted)
-- [ ] Shell question before the hub build: a `game` prop for deep links (`app launch tight-spot game=forklift`), commands.
+- [x] Shell question before the hub build: a `game` prop for deep links (`app launch tight-spot game=forklift`), no commands.
+- [x] Steps 1 and 2: the split into `core/` and `games/parking/`, then the yard, playground, menu, `game` prop and the Drive Hub name (2026-10-28, ADR-087 revision).
 - [x] Display name: **Drive Hub** (owner). The app's display name changes when the hub ships (step 4); the id stays `tight-spot`, and the parking game inside keeps the name Tight Spot.
 - [ ] Forklift details at its build: model change for rear steer, pallet and rack shapes, job generator, proof, scoring, achievements.
 

@@ -1,4 +1,5 @@
 import type { Achievement } from "$lib/core/api/services/achievements/definition";
+import type { IconComponentProps } from "phosphor-svelte";
 import type { Component, Snippet } from "svelte";
 import type { DriveSettings } from "../core/settings.svelte";
 
@@ -17,7 +18,7 @@ export interface GameProps {
 export interface GameDefinition {
   id: string;
   name: string;
-  icon: Component;
+  icon: Component<IconComponentProps>;
   building: Building;
   /** Merged into the app's achievements; ids stay unique across games. */
   achievements: Achievement[];

@@ -1,4 +1,4 @@
-import ParkingIcon from "../../icon.svelte";
+import { LetterCircleP as ParkingIcon } from "phosphor-svelte";
 import { Building, define_game } from "../define";
 
 export default define_game({

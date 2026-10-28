@@ -79,6 +79,10 @@ export class DriveInput {
     this.held = { ...this.held, left: false, right: false };
   }
 
+  busy(): boolean {
+    return this.keys.size > 0 || Object.values(this.holds).some((pointers) => pointers.size > 0);
+  }
+
   release() {
     this.keys.clear();
     for (const pointers of Object.values(this.holds)) pointers.clear();

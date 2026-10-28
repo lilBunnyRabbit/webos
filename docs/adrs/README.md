@@ -120,7 +120,7 @@ What are the implications of this decision?
 | [084](./084-four-walls.md) | Four Walls | 2026-10-28 | Implemented |
 | [085](./085-app-guides.md) | App Guides | 2026-10-28 | Implemented |
 | [086](./086-tight-spot.md) | Tight Spot | 2026-10-28 | Implemented |
-| [087](./087-driving-hub.md) | Drive Hub | 2026-10-28 | Accepted |
+| [087](./087-driving-hub.md) | Drive Hub | 2026-10-28 | Implemented (steps 1–2) |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

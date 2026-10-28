@@ -1,4 +1,19 @@
-## The goal
+## Drive Hub
+
+Driving games around one yard. The app opens in the yard with your car at the gate.
+
+- Drive into a building's doorway and press **Enter** (or tap **Enter** on the card) to play its game. The building you played last has a glowing doorway; a building that says **Soon** is still shut.
+- The **signpost** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
+- **Back** in a game returns you to the yard, out of that game's doorway.
+
+## The yard is a playground
+
+- Nothing is judged here. Touching something just stops you with a bump; back away and carry on.
+- Stop on the **Garage** pad to pick any vehicle: the hatchback, the van, the pickup, the city bus or the car with a trailer. It waits on the pad, ready to drive off, and stays yours in the yard until you close the window.
+- The cones are for a slalom, the bays on the left wall for practice parking.
+- The gears, pedals, wheel, sensors and settings work as in every game below.
+
+## Tight Spot: the goal
 
 Park the car in the marked bay without touching anything. The bay pulses; its arrow shows which way the nose must point (two heads: either way).
 
@@ -32,9 +47,9 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - **Gas** drives forward and **Brake** backs up, like the arrow keys: against the way you're going it brakes, and pressing it again once the car stands switches to D or R. Brake in P reverses.
 - Tap **P**, **R**, **N** or **D** in the strip at the top to pick a gear; P parks.
 - Held sideways, the map fills the screen and the wheel and pedals sit over its sides; the time and moves move up next to the gears.
-- Pinch the map to zoom. **Back** pauses a round before it leaves the game.
+- Pinch the map to zoom. **Back** pauses a round, then takes you to the yard.
 
-## Judging
+## Tight Spot judging
 
 - Touching a car, wall, kerb, pillar, post or the water ends the round, like a driving test. The red ring shows where.
 - It counts as parked when the whole car (and its trailer) is inside the bay lines, within 5° of the bay, stopped and in **P**.
@@ -45,7 +60,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - Parking sensors watch the bumper you're driving towards: the beeps quicken as it closes in on something and go steady under 30 cm. The garage is where you'll lean on them.
 - The **end bay** sits in the corner of a full, narrow aisle with no room past it: get in with a few short moves, back and forth. Par allows two.
 
-## Modes
+## Tight Spot modes
 
 - **Spots:** a random spot of the kind you pick, or any. The daily is the same spot for everyone, and Game Hub keeps your results.
 - **Levels:** 42 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot and the slipway. Park one to open the next.

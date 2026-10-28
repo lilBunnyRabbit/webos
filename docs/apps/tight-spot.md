@@ -1,12 +1,12 @@
-# Tight Spot
+# Drive Hub
 
-Id `tight-spot` · Source: `src/lib/apps/user/tight-spot/` (`core/` shared driving code, `games/parking/` the parking game) · [ADR-086](../adrs/086-tight-spot.md), [brainstorm](../brainstorm/2026-10-28_tight-spot.md)
+Id `tight-spot` · Source: `src/lib/apps/user/tight-spot/` (`core/` the shared driving code, `hub/` the yard, `games/{id}/` one folder per game) · [ADR-087](../adrs/087-driving-hub.md) and [its brainstorm](../brainstorm/2026-10-28_driving-hub.md), [ADR-086](../adrs/086-tight-spot.md) and [the parking brainstorm](../brainstorm/2026-10-28_tight-spot.md)
 
 ## What it does
 
-A top-down parking game. The car steers like a real one at parking speed: it turns about its rear axle, the front swings wide, the turning circle comes from the wheelbase and the steering lock. Five vehicles: a hatchback, a van, a pickup, a city bus and the hatchback towing a box trailer. Spots are generated from a seed: parallel at a kerb, nose in, reverse in, angled, a garage up to the wall, bays between pillars, a narrow aisle, a tight garage door, a dead-end turnaround, the end bay of a full dead-end aisle, a bus stop, a bus depot, a driveway and a slipway (the last two with the trailer). Modes: a random spot of a picked kind (or any) with a seeded daily, a 42-level ladder, and a 3 × 3 open lot where any free bay counts.
+A hub for top-down driving games on one driving core: vehicles that steer like real ones at low speed (they turn about the rear axle, the front swings wide, the turning circle comes from the wheelbase and the steering lock), polygon collision, a following camera, a steering wheel and pedals on touch, parking sensors. The app opens in a yard: each game is a building to drive into, a garage pad swaps the vehicle, and the yard is a playground where nothing is judged. The one game so far is **Tight Spot**, parking: five vehicles (a hatchback, a van, a pickup, a city bus and the hatchback towing a box trailer), spots generated from a seed (parallel at a kerb, nose in, reverse in, angled, a garage up to the wall, bays between pillars, a narrow aisle, a tight garage door, a dead-end turnaround, the end bay of a full dead-end aisle, a bus stop, a bus depot, a driveway and a slipway), a random spot of a picked kind (or any) with a seeded daily, a 42-level ladder, and a 3 × 3 open lot where any free bay counts. The app was Tight Spot before the hub; its id stayed `tight-spot`, so achievements, the daily and links carried over.
 
-Three layers, each replaceable on its own (the brainstorm's later steps):
+Three layers, each replaceable on its own (the parking brainstorm's later steps):
 
 | Layer | Files | Replaced by |
 |-------|-------|-------------|
@@ -14,9 +14,49 @@ Three layers, each replaceable on its own (the brainstorm's later steps):
 | World | `core/scene.ts` (shapes), `games/parking/world.ts` (chunks, plans), `lots.ts` (layouts), `kinds.ts` (kinds) | streamed chunks for the infinite world |
 | Drawing | `core/draw.ts` (palette, ground, vehicles, markers), `games/parking/draw.ts` (the frame), `core/draw-math.ts`, `core/camera.ts` | a tilted 3D renderer |
 
-`games/parking/game.svelte` runs the round on the shared pieces in `core/`: the frame loop (`loop.ts`), the input (`drive-input.svelte.ts`), the board, touch controls and toolbar frame (`drive-frame.svelte`), the gear strip, the round cards and the settings panel; `sensors.ts` and `sound.ts` are the parking sensors; `planner.ts` (with `games/parking/poses.ts`) is test-only. `tight-spot.app.svelte` loads the game lazily and owns the shared settings (`core/settings.svelte.ts`).
+`games/parking/game.svelte` runs a round on the core components; `core/sensors.ts` and `core/sound.ts` are the parking sensors and the sounds; `core/planner.ts` (with `games/parking/poses.ts`) is test-only.
 
-## How it works
+## Structure
+
+```
+tight-spot/
+├── index.ts               define_app: name Drive Hub, props `game` and `daily`, the games' achievements
+├── tight-spot.app.svelte  the shell: the yard or the active game, the switcher, per-window shared state
+├── core/                  the driving core every game builds on
+├── hub/                   the yard: layout (yard.ts), drawing (draw.ts), the component (yard.svelte)
+└── games/
+    ├── define.ts          define_game and GameProps
+    ├── index.ts           the registry (GAMES) and the `game` prop's values
+    └── parking/           Tight Spot: index.ts (define_game), game.svelte (lazy), its model and tests
+```
+
+**The game contract.** `games/{id}/index.ts` default-exports `define_game({ id, name, icon, building, achievements, load })`: `icon` a Phosphor icon (the switcher and the doorway card show it), `building` how its building looks in the yard (`Building.CAR_PARK`), `achievements` merged into the manifest's list (ids stay unique across games; parking kept its old ids), `load` the lazy `game.svelte`. `games/index.ts` lists the games in yard order. A game component takes `GameProps`: `settings` (the shared `DriveSettings`), `daily` (the day the app was opened with), `menu` (the switcher snippet, first in its toolbar) and `onexit` (back to the yard). It builds from the core components and keeps its own state; nothing is shared through a context. Each game stores under `app.tight-spot.{game}.*`.
+
+**Core components.** `drive-frame.svelte` is a game's whole frame: toolbar, status bar and board (`toolbar`, `overlay` and `status` snippets), the canvas with its device-pixel resize observer, the theme palette, wheel and pinch zoom, the touch steering (wheel or buttons) and pedals, the keys from anywhere in the window, and the board focus. The game binds `size`, `palette`, `zoom` and the boxes its camera keeps clear of, and passes `engage` (a touch control was pressed; may start the round), `onpress` (the first pointer on a pedal), `onsteer`, `onkeydown` and `onrelease`. `drive-input.svelte.ts` (`DriveInput`) holds the keys, the held controls and the wheel and turns them into the model's `Input`; `loop.ts` (`frame_loop`) splits each animation frame into physics steps; `keys.ts` has the key maps; `gear-strip.svelte`, `speed-chip.svelte`, `round-card.svelte`, `key-hint.svelte` and `settings-panel.svelte` are the HUD and card pieces; `settings.svelte.ts` (`DriveSettings`) the settings every game shares; `obstacles.ts` the bounding-box broad phase over a scene's solids (`collide`); `scene.ts` the shapes (solids, bays, marks, surfaces).
+
+
+## The hub
+
+### Shell
+
+`tight-spot.app.svelte` holds which view is up (`yard` or a game id), loads a game's component on first use (kept for the window), and owns the per-window state the views share: the `DriveSettings`, the yard's vehicle (a bus picked in the garage is still there after a game), and the game just left. Opening the app shows the yard with the car at the gate. The `game` prop (`yard`, `parking`, `forklift`) opens a game straight away, and one not registered yet (the forklift) opens the yard; `daily` opens parking's daily. `#/app/tight-spot?game=parking` and `app launch tight-spot game=parking` pass the same prop. Entering a game stores its id in `app.tight-spot.last`.
+
+The switcher is the signpost `IconButton` first in every toolbar: a system menu (`dialogs.menu`, a bottom sheet on phones) with the Yard and each game, the current one disabled and the last one played labelled "· last". Back (`window.on_back`) in a game closes its settings, then pauses a running round, then returns to the yard, where the vehicle comes out of that game's doorway facing away. Back in the yard closes the settings, then leaves the app.
+
+### The yard
+
+`hub/yard.ts`, pure and fixed: a 56 × 44 m walled yard (`build_yard(games)`). Two buildings on the north wall, 18 × 11.6 m, each with a 6 m wide, 5 m deep doorway cut into its front; a building with a registered game is open, one past the last game has its shutter down (a solid across the doorway, drawn as slats, labelled Soon). The gate is a gap in the south wall closed by a bar between two posts. A row of five bays runs along the west wall with a car and a van in two of them, five cones make a slalom across the middle, three bollards stand in the south-east, and the garage pad (7.5 × 17 m, floor surface) is on the east side. Everything that stops the vehicle is in `solids`; the core draws `props` (walls, posts, parked cars), the yard draws the buildings (`structures`, a roof deck with painted bays for a car park), the cones (warning paint with a light band) and the labels (canvas text in screen pixels in the UI font).
+
+- **Doorway.** `door_at` is the open building whose doorway plus a 4 m apron in front holds the vehicle's nose (the middle of its front bumper). Doorways are outlined; the last game's and the one the vehicle is in glow in the primary colour. In one, a card offers the game (icon, name, Enter); Enter or the button enters it.
+- **Garage.** `on_pad` is the rig's body centre inside the pad. On it a card lists every vehicle; picking one puts it on the pad's centre facing north (`pad_car`).
+- **Placement.** `place(centre, spec)` puts a rig by its middle, front bumper to the trailer's tail. `gate_car` backs the rig up to 1.6 m inside the gate facing in; `door_car` puts it 0.5 m past a doorway's apron facing out.
+- **Bump.** `drive` runs the model's `step`; a step that would touch a solid, or fold a trailer past the jackknife angle, doesn't happen: the vehicle keeps its pose at speed 0 (the wheel and the pedals still move), and the touch point comes back. The yard plays one thunk when a touch starts and draws the red rings fading over 0.8 s. Backing away works on the next step.
+- **Loop.** The yard has nothing to pause, so its frame loop runs only while something moves (speed, a held key or control, a fading ring, Creep in gear) and sleeps until the next input; a resize, the theme or a gear change redraws once.
+- **Camera.** It follows the vehicle with the round's look-ahead, kept inside the yard, at 34 m across the board's shorter side (more for a long rig), wider than a round's 26 m so the buildings show from the gate. A card sits at the bottom, or on the left of a wide board; on a phone held sideways it stays at the bottom between the wheel and the pedals.
+
+`hub/yard.test.ts`: every vehicle fits at the gate, out of each doorway (past its apron) and on the pad; the pad touches no solid; a shut building has a solid in its doorway and offers nothing; the planner drives the hatchback from the gate into each doorway and onto the pad; a car driven into a cone stops clear of it with the touch point, and backs away again.
+
+## Core
 
 ### The car
 
@@ -93,6 +133,29 @@ The canvas backing store follows `devicePixelContentBoxSize`. Under Playwright's
 
 `contact_point` is where the red ring goes: the average of the corners of each shape inside the other and the edge crossings.
 
+### Sensors
+
+`sensors.ts`: for the bumper the gear drives toward, each solid's edges are taken into the car's frame, clipped to the strip the car would sweep driving straight (half a width plus 5 cm each side) and to 1.6 m ahead; the nearest point is the reading. Towing, the rear sensor is the trailer's (`sensor_frame`): its frame, its width and its tail 1.15 m behind its axle, and the arcs are drawn there. `sound.ts` beeps a 1750 Hz tone, quicker the closer (`beep_period`), steady under 30 cm, from an `AudioContext` made on first use. The readout in the corner and the arcs at the bumper go from warning to error under 50 cm. The same `Sounds` plays the other cues, all behind the Sound setting: a quiet tick on a gear change, a falling thunk on a touch, two rising notes when parked and a third for a new best.
+
+### Controls
+
+Keyboard: arrows or WASD turn the wheel and work the pedals by direction. The wheel turns at the spec's steady rate (`steer_time`). Only winding it back from the other side speeds up: held while the wheel still points the opposite way, it eases up to `STEER_BOOST` times that (`steer_boost(held, against)`: 1 until 0.25 s, then a smoothstep to 1.6 over 0.3 s), and drops back to the steady rate once the wheel passes centre, so turning toward a side is always the fine rate. Letting go or flipping the direction starts over. The touch ◀ ▶ buttons run through the same `step_wheel`, so they ramp the same way. Pedals: ↑/W is gas in D (and P or N) and the brake in R, ↓/S the other way round; a fresh press (not a key repeat) while the car stands below 0.05 m/s shifts to that direction (`choose_direction`), so braking to a stop and pressing again backs up; E, R or Q, N, P or Space pick gears; C centres the wheel; + and − zoom. Escape pauses and resumes; Enter starts, resumes, and after a round runs the card's main button (`primary_action`); R tries again after a round. The keys are read on the app's root, not only the board, so a click on a toolbar button or a HUD gear doesn't strand them (fields, the Segmented radios and the open settings panel keep theirs). Closing the settings hands the focus back to the board, and a key that lands on the page body (after the guide closes) is routed to the board while the window is in front. The setting "Keyboard wheel" picks between self-centring as the car rolls (default) and staying put; on touch it shows only in Buttons mode, as "Steering buttons".
+
+Touch (`pointer: coarse`): steering is a wheel you drag round by the rim (`steering-wheel.svelte`, about 1.25 turns each way, held where you leave it, the hub centres it, movement near the hub ignored so a slipping thumb doesn't spin it), or, with the Steering setting on Buttons (`app.tight-spot.steering`), two held ◀ ▶ buttons that turn the wheel at the keyboard's rate and follow the same Centres/Stays setting as the arrow keys (shown on touch only in Buttons mode). Held Gas and Brake pedals (pointer capture, released on `lostpointercapture`, lit while held) work like ↑ and ↓: Gas means forward and Brake back, so the one against the gear brakes, and a fresh press while the car stands (P and N included) shifts that way through the same `choose_direction` as the keys. Brake from P at the start reverses. The one gear control is the P R N D strip on the board's top edge, 44 px targets on touch; the speed then stacks over the sensor readout at the top right so the strip has room. Pinch to zoom. Each control takes its own pointer, so steering and the pedals work at once.
+
+A phone held sideways (`pointer: coarse` and the app's own `ts-app` size container wider than 1.25 × its height and under 30rem tall) folds the status bar away and tightens the toolbar to 4 px of padding, so the board gets about 30 px more of its ~300; the time and moves show as a chip next to the gear strip instead. Pure CSS: `@container ts-app` inside `@media (pointer: coarse)`.
+
+Upright, the controls sit in a row under the board: steering left, pedals right. When the stage is wider than 1.25 × its height (a phone held sideways) a container query lets the board fill the whole stage and floats the steering over its left edge and the pedals over its right, near the bottom where the thumbs rest, on translucent backgrounds mixed from the theme's background and foreground. The steering hides while a round card is up (the card sits on the left there), the pedals while paused. Back (`window.on_back`) closes the settings, then pauses a running round, then returns to the yard.
+
+The camera follows the car with a little look-ahead, framed in the part of the board left clear by the top chips (always), the end card once a round is over (bottom, or left on a wide board) and the sideways touch controls (`frame` takes insets: the focus sits in the middle of the clear part and the world's edge may slide under a covered strip, so the car never ends up under a thumb at the edge of the map). At zoom 1 it shows 26 m across the board's shorter side for the hatchback and more for a longer rig (`view_span`: 26 m × the rig's length over 4.3 m, capped at 1.6×), so a bus fills about the share of the screen a hatchback does without bay lines shrinking to hairlines on a phone. Before the start it frames the car and its bay together, clear of the start card and, held sideways, of the pedals; an arrow on the edge points to an off-screen bay. The toolbar's Play button starts, pauses and resumes; below `@md` it moves onto the board's top-left corner, next to the gear strip and speed, which only show once a round has started.
+
+Round cards sit at the bottom of a tall board and on the left, centred, of a board wider than 1.2 × its height (a desktop window, a phone held sideways; `side_card`) so the bay, the car and the contact ring stay visible. The start card has the kind's brief, the vehicle as a badge, its par and the best result with the best precision, the vehicle picker on a narrow board, and the keys on a fine pointer; the parked card reveals its stars one by one, shows the precision with its three offsets, and marks a Perfect park, a first park or a new best; the crashed card names what was touched, or says the trailer jackknifed. Pause covers the board (`BoardOverlay`) with Restart and Resume. The status bar carries the round's name, time, moves, wheel angle (fine pointer) and best.
+
+
+## Tight Spot (parking)
+
+`games/parking/`: the round model (`game.ts`), the world and lots, the frame (`draw.ts`), the component (`game.svelte`), the tests.
+
 ### World: chunks and plans
 
 `world.ts`. The world is a grid of 32 m chunks. `chunk(seed, cx, cy, plan)` is pure: the same seed, cell and plan give the same chunk. A `Plan` says what each cell is in a mode (a road, a lot of some kind facing some side, or outside the world); the chunk reads its neighbours through it to open exits:
@@ -163,24 +226,6 @@ Moves are changes between D and R, the first gear and N or P not counted. Stars:
 
 Each error is its share `e` of that room, clamped to 0–1, and the score is `100 × (1 − e_s²)(1 − e_d²)(1 − e_a²)`: 100 dead centre and square, 0 against a line or 5° off, and falling as any one grows. A trailer rig is judged as one footprint, not by whichever body seems to matter: in a driveway or on a slipway both are in the bay and both have to be placed. Squaring the shares keeps small slips cheap (6 cm off in a bay with 45 cm either side is 98 %) and the edges expensive. The parked card shows "Precision N %" with ↔ the side offset, ↕ the depth offset (cm) and ∠ the angle; 95 % or more (rounded) adds a Perfect badge next to the stars and unlocks the Perfect park achievement. The bays are sized differently, so the same centimetres score differently by kind: a parallel gap or a bus stop box has metres of depth to spare, a garage with the shelf very little.
 
-### Sensors
-
-`sensors.ts`: for the bumper the gear drives toward, each solid's edges are taken into the car's frame, clipped to the strip the car would sweep driving straight (half a width plus 5 cm each side) and to 1.6 m ahead; the nearest point is the reading. Towing, the rear sensor is the trailer's (`sensor_frame`): its frame, its width and its tail 1.15 m behind its axle, and the arcs are drawn there. `sound.ts` beeps a 1750 Hz tone, quicker the closer (`beep_period`), steady under 30 cm, from an `AudioContext` made on first use. The readout in the corner and the arcs at the bumper go from warning to error under 50 cm. The same `Sounds` plays the other cues, all behind the Sound setting: a quiet tick on a gear change, a falling thunk on a touch, two rising notes when parked and a third for a new best.
-
-### Controls
-
-Keyboard: arrows or WASD turn the wheel and work the pedals by direction. The wheel turns at the spec's steady rate (`steer_time`). Only winding it back from the other side speeds up: held while the wheel still points the opposite way, it eases up to `STEER_BOOST` times that (`steer_boost(held, against)`: 1 until 0.25 s, then a smoothstep to 1.6 over 0.3 s), and drops back to the steady rate once the wheel passes centre, so turning toward a side is always the fine rate. Letting go or flipping the direction starts over. The touch ◀ ▶ buttons run through the same `step_wheel`, so they ramp the same way. Pedals: ↑/W is gas in D (and P or N) and the brake in R, ↓/S the other way round; a fresh press (not a key repeat) while the car stands below 0.05 m/s shifts to that direction (`choose_direction`), so braking to a stop and pressing again backs up; E, R or Q, N, P or Space pick gears; C centres the wheel; + and − zoom. Escape pauses and resumes; Enter starts, resumes, and after a round runs the card's main button (`primary_action`); R tries again after a round. The keys are read on the app's root, not only the board, so a click on a toolbar button or a HUD gear doesn't strand them (fields, the Segmented radios and the open settings panel keep theirs). Closing the settings hands the focus back to the board, and a key that lands on the page body (after the guide closes) is routed to the board while the window is in front. The setting "Keyboard wheel" picks between self-centring as the car rolls (default) and staying put; on touch it shows only in Buttons mode, as "Steering buttons".
-
-Touch (`pointer: coarse`): steering is a wheel you drag round by the rim (`steering-wheel.svelte`, about 1.25 turns each way, held where you leave it, the hub centres it, movement near the hub ignored so a slipping thumb doesn't spin it), or, with the Steering setting on Buttons (`app.tight-spot.steering`), two held ◀ ▶ buttons that turn the wheel at the keyboard's rate and follow the same Centres/Stays setting as the arrow keys (shown on touch only in Buttons mode). Held Gas and Brake pedals (pointer capture, released on `lostpointercapture`, lit while held) work like ↑ and ↓: Gas means forward and Brake back, so the one against the gear brakes, and a fresh press while the car stands (P and N included) shifts that way through the same `choose_direction` as the keys. Brake from P at the start reverses. The one gear control is the P R N D strip on the board's top edge, 44 px targets on touch; the speed then stacks over the sensor readout at the top right so the strip has room. Pinch to zoom. Each control takes its own pointer, so steering and the pedals work at once.
-
-A phone held sideways (`pointer: coarse` and the app's own `ts-app` size container wider than 1.25 × its height and under 30rem tall) folds the status bar away and tightens the toolbar to 4 px of padding, so the board gets about 30 px more of its ~300; the time and moves show as a chip next to the gear strip instead. Pure CSS: `@container ts-app` inside `@media (pointer: coarse)`.
-
-Upright, the controls sit in a row under the board: steering left, pedals right. When the stage is wider than 1.25 × its height (a phone held sideways) a container query lets the board fill the whole stage and floats the steering over its left edge and the pedals over its right, near the bottom where the thumbs rest, on translucent backgrounds mixed from the theme's background and foreground. The steering hides while a round card is up (the card sits on the left there), the pedals while paused. Back (`window.on_back`) closes the settings, then pauses a running round, then leaves.
-
-The camera follows the car with a little look-ahead, framed in the part of the board left clear by the top chips (always), the end card once a round is over (bottom, or left on a wide board) and the sideways touch controls (`frame` takes insets: the focus sits in the middle of the clear part and the world's edge may slide under a covered strip, so the car never ends up under a thumb at the edge of the map). At zoom 1 it shows 26 m across the board's shorter side for the hatchback and more for a longer rig (`view_span`: 26 m × the rig's length over 4.3 m, capped at 1.6×), so a bus fills about the share of the screen a hatchback does without bay lines shrinking to hairlines on a phone. Before the start it frames the car and its bay together, clear of the start card and, held sideways, of the pedals; an arrow on the edge points to an off-screen bay. The toolbar's Play button starts, pauses and resumes; below `@md` it moves onto the board's top-left corner, next to the gear strip and speed, which only show once a round has started.
-
-Round cards sit at the bottom of a tall board and on the left, centred, of a board wider than 1.2 × its height (a desktop window, a phone held sideways; `side_card`) so the bay, the car and the contact ring stay visible. The start card has the kind's brief, the vehicle as a badge, its par and the best result with the best precision, the vehicle picker on a narrow board, and the keys on a fine pointer; the parked card reveals its stars one by one, shows the precision with its three offsets, and marks a Perfect park, a first park or a new best; the crashed card names what was touched, or says the trailer jackknifed. Pause covers the board (`BoardOverlay`) with Restart and Resume. The status bar carries the round's name, time, moves, wheel angle (fine pointer) and best.
-
 ## Data
 
 - `app.tight-spot.parking.best`: best `{ moves, ms, precision? }` per kind and vehicle, keyed `kind:vehicle` (`open:vehicle` for the open lot), fewer moves first, then time (`record_best`). `precision` is the best seen on that key, whichever run set it, so it can come from a slower park. The start card shows the best and its precision.
@@ -189,7 +234,9 @@ Round cards sit at the bottom of a tall board and on the left, centred, of a boa
 - `app.tight-spot.parking.mode`, `.pick`, `.vehicle`, `.level`: last choices (`.vehicle` is `any` or a vehicle id).
 - `app.tight-spot.sound`, `.guides`, `.creep`, `.wheel`, `.steering`: settings every game shares.
 - Parking data before the split (`app.tight-spot.best` and the rest at the top level) is left behind, not migrated.
-- Props: `daily` (`YYYY-MM-DD`), which Game Hub passes; the day's seed picks the kind and difficulty, and the result goes to `plays.json` with moves as the score (`SCORE_ASC`).
+- `app.tight-spot.last`: the id of the game entered last, which the switcher and the yard mark.
+- The yard keeps nothing: it starts at the gate in the hatchback, and its vehicle lives only as long as the window.
+- Props: `game` (`yard`, `parking`, `forklift`; a game that isn't registered yet opens the yard) and `daily` (`YYYY-MM-DD`), which Game Hub passes and which opens parking; the day's seed picks the kind and difficulty, and the result goes to `plays.json` with moves as the score (`SCORE_ASC`).
 
 ## Dependencies & licences
 
@@ -203,7 +250,9 @@ None.
 - The open lot is fixed at 3 × 3 and only uses three kinds of lot.
 - Precision isn't comparable across kinds: it's a share of each bay's room, and the rooms differ.
 - The bus stop has no tapered lay-by: a 32 m lot has no room for one with cars at both ends.
+- The yard is fixed with two building plots; a third game needs a bigger yard.
+- A contact in the yard stops the vehicle dead; nothing is pushed, cones included.
 
 ## Decisions
 
-[ADR-086](../adrs/086-tight-spot.md) and its [brainstorm](../brainstorm/2026-10-28_tight-spot.md), and the [vehicles brainstorm](../brainstorm/2026-10-28_tight-spot-vehicles.md).
+[ADR-087](../adrs/087-driving-hub.md) and its [brainstorm](../brainstorm/2026-10-28_driving-hub.md) (the hub); [ADR-086](../adrs/086-tight-spot.md) and its [brainstorm](../brainstorm/2026-10-28_tight-spot.md), and the [vehicles brainstorm](../brainstorm/2026-10-28_tight-spot-vehicles.md) (parking).
