@@ -115,7 +115,7 @@ Touch (`pointer: coarse`): a wheel you drag round by the rim (`steering-wheel.sv
 
 The camera follows the car with a little look-ahead; before the start it frames the car and its bay together, clear of the start card; an arrow on the edge points to an off-screen bay. The toolbar's Play button starts, pauses and resumes; below `@md` it moves onto the board's top-left corner, next to the gear strip and speed, which only show once a round has started.
 
-Round cards sit at the bottom of the board (on its left when the board is short and wide, `side_card`) so the bay, the car and the contact ring stay visible. The start card has the kind's brief, its par and the best result, and the keys on a fine pointer; the parked card reveals its stars one by one and marks a first park or a new best; the crashed card names what was touched. Pause covers the board (`BoardOverlay`) with Restart and Resume. The status bar carries the round's name, time, moves, wheel angle (fine pointer) and best.
+Round cards sit at the bottom of a tall board and on the left, centred, of a board wider than 1.2 × its height (a desktop window, a phone held sideways; `side_card`) so the bay, the car and the contact ring stay visible. The start card has the kind's brief, its par and the best result, and the keys on a fine pointer; the parked card reveals its stars one by one and marks a first park or a new best; the crashed card names what was touched. Pause covers the board (`BoardOverlay`) with Restart and Resume. The status bar carries the round's name, time, moves, wheel angle (fine pointer) and best.
 
 ## Data
 

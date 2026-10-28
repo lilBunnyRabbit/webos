@@ -150,8 +150,8 @@
     })
   );
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNT);
-  // A short wide board (a phone held sideways) has no room under the car for a card, so cards sit on its left.
-  const side_card = $derived(size.height > 0 && size.height < 340 && size.width > size.height * 1.5);
+  // A wide board (a desktop window, a phone held sideways) takes cards on its left, centred: a strip at the bottom read as detached there.
+  const side_card = $derived(size.height > 0 && size.width > size.height * 1.2);
   const speed = $derived(Math.round(Math.abs(game.car.speed) * 3.6));
   const wheel_degrees = $derived(Math.round((game.car.steer / LOCK) * 450));
   const time = $derived(format_time(game.ms, { tenths: true }));
@@ -254,8 +254,8 @@
     if (game.status === Status.READY && game.world.bays.length === 1) {
       // Before the start, frame the car and its bay together so the player sees the task.
       const bay = centroid(game.world.bays[0].shape);
-      // The start card covers the bottom of the board, or its left on a short wide one; the framing keeps clear of it.
-      const covered_x = side_card ? Math.min(card_size.width + 8, size.width * 0.6) : 0;
+      // The start card covers the bottom of the board, or its left on a wide one; the framing keeps clear of it.
+      const covered_x = side_card ? Math.min(card_size.width + 16, size.width * 0.6) : 0;
       const covered_y = side_card ? 0 : Math.min(card_size.height + 8, size.height * 0.5);
       const width = size.width - covered_x;
       const height = size.height - covered_y;
@@ -754,7 +754,7 @@
           </p>
         {/if}
 
-        <!-- Cards sit at the bottom instead of covering the board, so the bay, the car and where it touched stay in sight. -->
+        <!-- Cards sit at the bottom or on the left instead of covering the board, so the bay, the car and where it touched stay in sight. -->
         {#if game.status === Status.READY}
           <div bind:clientWidth={card_size.width} bind:clientHeight={card_size.height} class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
             <div class="min-w-0 flex-1 basis-52">
@@ -983,9 +983,13 @@
   }
 
   .ts-card-side {
-    inset-inline: 0.5rem auto;
-    width: min(17rem, 50%);
-    margin-inline: 0;
+    inset-inline: 0.75rem auto;
+    inset-block: 0.75rem;
+    width: min(19rem, 45%);
+    height: fit-content;
+    max-height: calc(100% - 1.5rem);
+    margin: auto 0;
+    overflow-y: auto;
   }
 
   .ts-star {
