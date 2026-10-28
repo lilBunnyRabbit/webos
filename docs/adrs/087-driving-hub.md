@@ -6,7 +6,7 @@
 Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicles with trailers, polygon collision, a camera with insets, controls, vehicle drawing, sensors, a solvability planner) that more games than parking could use: a forklift warehouse, airport pushback, a ferry loader and others. Decided in [the driving hub brainstorm](../brainstorm/2026-10-28_driving-hub.md).
 
 ## Decision
-- Tight Spot becomes **Drive Hub**, a hub for driving games, and keeps its id `tight-spot`; the parking game inside keeps the name Tight Spot. The display name changes when the hub ships, so storage, bests, achievements, the daily and links carry over.
+- Tight Spot becomes **Drive Hub**, a hub for driving games, and keeps its id `tight-spot`; the parking game inside keeps the name Tight Spot. The display name changes when the hub ships; the id keeps achievements, the daily and links.
 - The app splits into `core/` (shared driving code), `games/{id}/` (one folder per game, parking first) and `hub/` (the yard).
 - A game is picked by driving into its building in a small hub yard, or from a menu that jumps straight to it.
 - The yard is also a playground: free driving with a garage pad that swaps to any vehicle the app has.
@@ -15,7 +15,7 @@ Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicl
 - The restructure is a refactor with no behaviour change, after the current Tight Spot work lands.
 
 - **Game contract:** `define_game({ id, name, icon, building, achievements, load })` per `games/{id}/index.ts`, a lazy `game.svelte`, listed in `games/index.ts`; games build from shared core components.
-- **Storage:** new games under `app.tight-spot.{game}.*`; parking keeps its keys; shared settings at the top level.
+- **Storage:** every game under `app.tight-spot.{game}.*`, parking included; shared settings at the top level; no migration of older keys (the app has no other players yet).
 - **Landing and links:** the yard first; a `game` prop (`yard`, `parking`, `forklift`) and the daily go straight in. No shell commands.
 - **Forklift:** `VehicleSpec.steer_axle` (`front` or `rear`) in the core model; jobs of 1–4 pallets; stars for the job, moves and a par time; precision per drop; one Fork control.
 

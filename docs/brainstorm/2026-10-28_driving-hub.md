@@ -37,7 +37,7 @@ Owner: "for not just the fun aspect i think the driving test will be the best on
 ### Game contract (decided)
 Each game is `games/{id}/index.ts` with `define_game({ id, name, icon, building, achievements, load })` and a lazy `games/{id}/game.svelte`; `games/index.ts` lists them. The app shell shows the yard or the active game's component, and games build from shared core components (board canvas, HUD chips, controls, cards). Rejected: one component with a branch per game (it grows with every game, parallel agents collide in it).
 ### Storage (decided)
-New games use `app.tight-spot.{game}.*`; parking keeps its current keys, no migration; shared settings (sound, steering, wheel) stay at the top level. Rejected: moving parking's keys under a prefix (a migration that risks players' stars).
+Every game uses `app.tight-spot.{game}.*`, parking included (`app.tight-spot.parking.*`); shared settings (sound, steering, wheel) stay at the top level. No migration of old keys: owner: "Dont worry about legacy support its basically just me who used the app". Old parking data is left behind.
 ### Landing (decided)
 Opening the app shows the yard with the car at the gate; the menu marks the last game. A `game` prop or the daily goes straight in.
 ### Shell (decided)
