@@ -519,6 +519,38 @@ describe("AppsService catalogue (ADR-077)", () => {
     expect(windows.get(bad)?.app.props).toBeUndefined();
   });
 
+  test("the full catalogue landing while an app's code loads never leaves its window loading forever", async () => {
+    const { service, gate } = await sourced();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example"]));
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    const windows = kernel.service<WindowsService>("windows");
+    const window_id = apps(kernel).launch("example")!;
+    const component = windows.get(window_id)!.app.component;
+    expect(await apps(kernel).catalogue()).toBe(true);
+    gate.open();
+    await expect(component).resolves.toBeTypeOf("function");
+    expect((await apps(kernel).load("example"))?.id).toBe("example");
+  });
+
+  test("an entry with other code landing while the app's code loads loads that code instead", async () => {
+    const { service, gate } = await sourced();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example"]));
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    const windows = kernel.service<WindowsService>("windows");
+    const window_id = apps(kernel).launch("example")!;
+    const component = windows.get(window_id)!.app.component;
+    gate.next = (catalogue) => ({ ...catalogue, apps: catalogue.apps.map((entry) => (entry.id === "example" ? { ...entry, manifest: "assets/example.manifest-new.js" } : entry)) });
+    expect(await apps(kernel).catalogue()).toBe(true);
+    gate.attempts = [];
+    gate.open();
+    await expect(component).resolves.toBeTypeOf("function");
+    expect(gate.attempts.length).toBeGreaterThanOrEqual(2);
+  });
+
   test("a newer build on the same core: closed apps switch at once, an open one waits for its last window (stage 3)", async () => {
     const { service, gate } = await sourced();
     gate.open();

@@ -398,9 +398,14 @@ export class AppsService implements IAppsService {
       const loading: Promise<AppManifest> = this.source
         .manifest(entry, this.failures.get(id))
         .then((definition) => {
-          // A newer entry arrived while this one loaded: its code would be the old version.
-          if (this.entries.get(id) !== entry) return this.require(id);
-          const manifest: AppManifest = { ...definition, system: entry.system, version: entry.version };
+          // A newer entry arrived while this one loaded: its code would be the old version. The newer one loads afresh;
+          // asked from here, `load` would hand back this very promise, which then waits on itself forever.
+          const current = this.entries.get(id);
+          if (!current || current.manifest !== entry.manifest) {
+            if (this.loading.get(id) === loading) this.loading.delete(id);
+            return this.require(id);
+          }
+          const manifest: AppManifest = { ...definition, system: current.system, version: current.version };
           this.code.set(id, manifest);
           this.registry.set(id, manifest);
           this.failed.delete(id);
