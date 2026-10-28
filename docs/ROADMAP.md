@@ -710,7 +710,7 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
   - Favourites shipped as the first step ([ADR-083](adrs/083-favourite-apps.md)); collections, folders and hiding without uninstall are still open
 - [-] **App information** (owner, 2026-10-28: a friend had no idea how to play Plots). A way to open, from inside any app, what the app is and how to use or play it. Today an app's `description`, `pitch` and `highlights` only show in the App Library and the Showcase, and Getting started covers the OS, not each app. Open: where it opens (window menu, title-bar button, Mod+? or a first-launch card), what it shows (the existing pitch and highlights, or a new per-app "how to play" field in the manifest), and whether games get rules written for every one of them
   - [x] Mechanism shipped ([ADR-085](adrs/085-app-guides.md)): a lazy `guide.md` per app, the window's ? button (nav bar on phones), F1 (`win guide`), `app guide <app>`, shown by itself on an app's first launch with no props; Plots has the first guide
-  - [ ] Writing pass: a guide for every app
+  - [x] Writing pass (2026-10-28): a guide for every app; apps that explain themselves set `guide_on_launch: false` and only open it from ? or F1; the guide became a modal card (a bottom sheet on phones)
 
 ---
 

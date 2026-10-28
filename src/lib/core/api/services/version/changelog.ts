@@ -10,6 +10,10 @@ export const CHANGELOG: Release[] = [
     title: "A guide for every app",
     changes: [
       {
+        kind: NEW,
+        text: "Every app now has a guide on how to use or play it: press the ? button or F1. Games and less obvious tools show it the first time you open them.",
+      },
+      {
         kind: IMPROVED,
         text: "An app's guide now opens as a card over the app instead of covering the whole window; tap outside it to close it.",
       },
