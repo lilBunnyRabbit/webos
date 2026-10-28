@@ -13,6 +13,7 @@ export default define_app({
   tools: [".xml"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
   component: () => import("./funky.app.svelte"),
 });

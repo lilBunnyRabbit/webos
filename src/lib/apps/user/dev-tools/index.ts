@@ -7,6 +7,8 @@ export default define_app({
   name: "Dev Tools",
   icon: AppIcon,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   category: AppCategory.DEVELOPER,
   defaults: { constraints: { width: { min: 320 }, height: { min: 320 } } },
   shell: () => import("./commands"),

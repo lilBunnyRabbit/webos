@@ -19,6 +19,8 @@ export default define_app({
   },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   widget: () => import("./widget.svelte"),
   widget_size: { min: { w: 3, h: 1 }, max: { w: 6, h: 4 }, default: { w: 4, h: 2 } },
   default_widget: true,

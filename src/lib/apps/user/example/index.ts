@@ -18,6 +18,8 @@ export default define_app({
     flags: [WindowFlag.DEBUG],
   },
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   props: z.object({ count: z.number() }),
   shell: () => import("./commands"),
   component: () => import("./example.app.svelte"),

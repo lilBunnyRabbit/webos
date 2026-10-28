@@ -49,6 +49,7 @@ The range is the channel's reference range, except where that range is a format 
 - `app.colour-atlas.daily`: `{ day, state: { guesses, ms } }`, each submitted round's slider values. A daily is one attempt: reopening resumes at the next round, or shows the result.
 - Daily results go to `/var/lib/games/plays.json` through `track_play` (`DailyRank.SCORE_DESC`).
 - **Props:** `daily` (Game Hub's contract), `seed` (a day or a number, from a share link; a day other than today plays as a challenge and isn't counted), `pool` (`mixed`, a tier or a model id).
+- **Guide** (`guide.md`, ADR-085): a round, scoring and bands, keyboard, the atlas and model pages, daily and practice. The window's `?` button or F1 shows it; it opens by itself the first time Colour Atlas is launched with no props, so a daily from Game Hub or a challenge link skips it. Keep it in step with the scoring above.
 
 ## Limits
 

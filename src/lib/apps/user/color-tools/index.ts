@@ -12,6 +12,7 @@ export default define_app({
   associations: [".palette"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 420 } } },
   component: () => import("./color-tools.app.svelte"),
 });

@@ -54,6 +54,7 @@ Kept per window in `storage.window("state")` (`state.ts`, each field with its ow
 
   `name` up to 80 characters, at most 256 colours, `css` any string `parse()` reads (up to 200 characters). Added colours are stored as `format_color(color, 5)` in their own model. The open file is a `json_file` (ADR-035 cell): edits save as you go, other windows on the same file follow. A file that fails the schema (another version, bad JSON, one unreadable colour) is shown as unreadable and left untouched. From device… copies the file into Documents under a free name.
 - **Props:** `path` (`FILE_PROPS`), from the association: the window opens on Palette with that file.
+- **Guide** (`guide.md`, ADR-085): the current colour, each Pick source with its pointer and keyboard controls, the other sections in a line each, and palettes (create, add, rename, remove, open). The window's `?` button or F1 shows it; it opens by itself the first time Color Tools is launched with no props, so opening a `.palette` skips it. Keep it in step with the sections above.
 
 ## Dependencies & licences
 

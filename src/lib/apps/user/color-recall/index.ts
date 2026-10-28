@@ -23,5 +23,6 @@ export default define_app({
     { id: "dead-on", title: "Dead on", text: "Score a perfect 10 in a round.", secret: true },
   ],
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./color-recall.app.svelte"),
 });

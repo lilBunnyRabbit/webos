@@ -12,6 +12,7 @@ export default define_app({
   associations: [".fontmaker"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 420 } } },
   achievements: [
     { id: "first-font", title: "Typesetter", text: "Export a font." },

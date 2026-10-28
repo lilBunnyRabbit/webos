@@ -21,5 +21,6 @@ export default define_app({
     { id: "no-wasted-swaps", title: "No wasted swaps", text: "Sort a gradient in the fewest swaps it takes.", secret: true },
   ],
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./gradient-sort.app.svelte"),
 });

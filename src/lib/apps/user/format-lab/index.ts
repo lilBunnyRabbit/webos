@@ -15,5 +15,6 @@ export default define_app({
   defaults: { constraints: { width: { min: 360 }, height: { min: 420 } } },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./format-lab.app.svelte"),
 });

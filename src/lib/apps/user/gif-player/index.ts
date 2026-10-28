@@ -10,6 +10,8 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   tools: ["image/gif", ".gif", "video/*"],
   props: FILE_PROPS,
   defaults: {

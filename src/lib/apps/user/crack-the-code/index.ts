@@ -31,5 +31,6 @@ export default define_app({
     { id: "hunch", title: "Hunch", text: "Crack a code of 4 digits or more in 5 guesses or fewer.", secret: true },
   ],
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./crack-the-code.app.svelte"),
 });

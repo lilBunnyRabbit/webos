@@ -21,5 +21,6 @@ export default define_app({
     { id: "three", title: "Hex whisperer", text: "Guess the code in 3 guesses or fewer.", secret: true },
   ],
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./hex-guess.app.svelte"),
 });

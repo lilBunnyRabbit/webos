@@ -9,6 +9,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   defaults: {
     constraints: {
       width: { min: 360 },

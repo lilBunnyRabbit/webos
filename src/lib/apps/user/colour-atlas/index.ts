@@ -21,5 +21,6 @@ export default define_app({
   }),
   daily_rank: DailyRank.SCORE_DESC,
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./colour-atlas.app.svelte"),
 });

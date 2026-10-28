@@ -16,6 +16,7 @@ export default define_app({
     },
   },
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   achievements: [
     { id: "first-round", title: "First doodle", text: "Finish a round." },
     { id: "half", title: "Getting the picture", text: "Get 3 drawings recognised in one round." },
