@@ -48,7 +48,7 @@ A `game` prop only: `app launch tight-spot game=forklift`, links `#/app/tight-sp
 - **Scoring:** three stars: the job done, moves at or under par, time at or under a par time (from the planner's path at a set speed, with slack). Precision per drop is shown (average) and 95% gives Perfect. A best is fewer stars lost, then time. Levels, random jobs and a daily job. Rejected: time attack, parking's rules unchanged.
 - **Controls:** one Fork button (Lift when the forks are in a pallet, Lower when carrying over a target, disabled otherwise); key F and Space; on touch above the pedals.
 ### Build order (decided)
-After 3.82.1 and 3.83.0 push: (1) refactor into `core/` and `games/parking/` with no behaviour change, (2) the yard, playground, menu and `game` prop, renamed Drive Hub, (3) the forklift. The new rigs follow as parking content.
+After 3.82.1 and 3.83.0 push: (1) refactor into `core/` and `games/parking/` with no behaviour change, (2) the yard, playground, menu and `game` prop, renamed Drive Hub, (3) the forklift. The new rigs run in parallel with the forklift (owner: "do rigs in parallel with forklift"): they're parking content, not a second game. The forklift's rear-steer change to the core vehicle model lands first; the rigs agent rebases on it and only adds specs and drawings to the core.
 
 ## Key takeaways
 - One app holds every driving game; the shared core needs no kit while the hub is its only user.
