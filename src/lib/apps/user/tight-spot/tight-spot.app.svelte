@@ -292,9 +292,15 @@
     return frame(bounds, focus, size.width, size.height, zoom, control_insets());
   }
 
+  // Everything drawn over the board: the HUD always, the end card once a round is over, the touch controls sideways.
+  // The camera centres the car in what's left and lets the world's edge slide under them.
   function control_insets(): Insets {
-    if (!steer_box.width || !stage_rect || stage_rect.width <= stage_rect.height * OVERLAY_ASPECT) return NO_INSETS;
-    return { top: hud_height + 8, right: pedal_box.width + OVERLAY_GAP, bottom: 0, left: steer_box.width + OVERLAY_GAP };
+    const ended = game.status === Status.PARKED || game.status === Status.CRASHED;
+    const card_bottom = ended && !side_card ? Math.min(card_size.height + 16, size.height * 0.5) : 0;
+    const card_left = ended && side_card ? Math.min(card_size.width + 16, size.width * 0.6) : 0;
+    const insets = { top: hud_height + 8, right: 0, bottom: card_bottom, left: card_left };
+    if (!steer_box.width || !stage_rect || stage_rect.width <= stage_rect.height * OVERLAY_ASPECT) return insets;
+    return { ...insets, right: pedal_box.width + OVERLAY_GAP, left: Math.max(card_left, steer_box.width + OVERLAY_GAP) };
   }
 
   function render(dt: number) {
@@ -847,7 +853,7 @@
             <Button size="sm" variant="primary" onclick={start}>Resume</Button>
           </BoardOverlay>
         {:else if game.status === Status.PARKED}
-          <div class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
+          <div bind:clientWidth={card_size.width} bind:clientHeight={card_size.height} class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
             <div class="min-w-0 flex-1 basis-52">
               <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
                 Parked
@@ -871,7 +877,7 @@
             </p>
           </div>
         {:else if game.status === Status.CRASHED}
-          <div class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
+          <div bind:clientWidth={card_size.width} bind:clientHeight={card_size.height} class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
             <div class="min-w-0 flex-1 basis-52">
               <p class="text-base font-semibold">Touched {game.hit ? HIT_NAMES[game.hit.kind] : "something"}</p>
               <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · {moves_text(game.moves)}</p>
