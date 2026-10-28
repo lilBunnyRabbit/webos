@@ -121,11 +121,12 @@ export function bay_for(pose: Pose, world: World, spec: VehicleSpec = HATCHBACK)
   return world.bays.find((bay) => parked_in(pose, bay, spec)) ?? null;
 }
 
-export function verdict(state: GameState): "inside" | "crooked" | "outside" {
+export function verdict(state: GameState): "inside" | "crooked" | "backwards" | "outside" {
   const body = corners(state.car);
   for (const bay of state.world.bays) {
     if (!body.every((corner) => inside_convex(corner, bay.shape))) continue;
-    return parked_in(state.car, bay) ? "inside" : "crooked";
+    if (parked_in(state.car, bay)) return "inside";
+    return Math.PI - angle_between(state.car.heading, bay.heading) <= MAX_ANGLE ? "backwards" : "crooked";
   }
   return "outside";
 }
@@ -207,7 +208,10 @@ export function level_round(level: number): Round {
 
 export function unlocked(levels: LevelStars): number {
   let highest = 1;
-  for (const key of Object.keys(levels)) highest = Math.max(highest, Number(key) + 1);
+  for (const key of Object.keys(levels)) {
+    const level = Number(key);
+    if (Number.isInteger(level) && level >= 1) highest = Math.max(highest, level + 1);
+  }
   return Math.min(LEVEL_COUNT, highest);
 }
 

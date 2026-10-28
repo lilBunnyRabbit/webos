@@ -55,7 +55,7 @@ Plans today:
 | Mode | Plan |
 |------|------|
 | Spot, level, daily | `scenario_world`: the lot at (0, 0) facing south, a straight road at (0, 1); the car waits on the road facing north in the right lane, unless the lot names its own `start` |
-| Open lot | `open_plan`: roads on the middle row and column of a 3 × 3, a lot in each corner opening onto one of its two roads (picked by hash), kinds from nose-in rows, angled rows and pillars, with 45 % of bays free and every free bay a target |
+| Open lot | `open_plan`: roads on the middle row and column of a 3 × 3, a lot in each corner opening onto one of its two roads (picked by hash), kinds from nose-in rows, angled rows and pillars, each bay taken with a chance of 0.45 (about 55 % free) and every free bay a target |
 
 The infinite world is another plan over the same `chunk()`.
 
@@ -84,7 +84,7 @@ Parked cars never overlap each other, a wall or the target, and keep clear of pi
 
 ### Judging
 
-`game.ts`. Any contact ends the round (`advance` returns `crashed` with the contact point and what was hit). Shifting into P checks `bay_for`: parked when every body corner is inside the bay polygon and the heading is within 5° of the bay's (or of its reverse when `either`). P anywhere else just stops the car, and the status line says "Not in a bay" or "Not straight" (`verdict`).
+`game.ts`. Any contact ends the round (`advance` returns `crashed` with the contact point and what was hit). Shifting into P checks `bay_for`: parked when every body corner is inside the bay polygon and the heading is within 5° of the bay's (or of its reverse when `either`). P anywhere else just stops the car, and the status line says "Not in a bay", "Not straight" or "Facing the wrong way" (within 5° of the reverse of a bay that isn't `either`) (`verdict`), but only once the car has been in gear, since a round starts in P.
 
 Moves are changes between D and R, the first gear and N or P not counted. Stars: at or under the kind's par is three, two more is two, else one (pars: parallel 2, nose in 0, reverse 1, angled 0, garage 0, pillars 1, narrow 2, door 2, dead end 2; open lot 1). Time is the sim's own clock (`ms`), so pauses and a hidden window don't count.
 
@@ -94,7 +94,7 @@ Moves are changes between D and R, the first gear and N or P not counted. Stars:
 
 ### Controls
 
-Keyboard: arrows or WASD turn the wheel at its own rate and work the pedals; E, R or Q, N, P or Space pick gears; C centres the wheel; + and − zoom. The setting "Keyboard wheel when let go" picks between self-centring as the car rolls (default) and staying put. Touch (`pointer: coarse`): a wheel you drag round (`steering-wheel.svelte`, about 1.25 turns each way, held where you leave it, the hub centres it), held Brake and Gas pedals (pointer capture, released on `lostpointercapture`), a D/R toggle and P; pinch to zoom. The camera follows the car with a little look-ahead; before the start it frames the car and its bay together; an arrow on the edge points to an off-screen bay.
+Keyboard: arrows or WASD turn the wheel at its own rate and work the pedals; E, R or Q, N, P or Space pick gears; C centres the wheel; + and − zoom. The setting "Keyboard wheel when let go" picks between self-centring as the car rolls (default) and staying put. Touch (`pointer: coarse`): a wheel you drag round (`steering-wheel.svelte`, about 1.25 turns each way, held where you leave it, the hub centres it), held Brake and Gas pedals (pointer capture, released on `lostpointercapture`), a D/R toggle and P; pinch to zoom. The camera follows the car with a little look-ahead; before the start it frames the car and its bay together; an arrow on the edge points to an off-screen bay. Escape or the toolbar's Pause pauses; below `@md` that button moves onto the board's top-left corner, next to the gear and speed readout, which only shows once a round has started.
 
 ## Data
 

@@ -113,6 +113,7 @@
   let canvas: HTMLCanvasElement | undefined = $state();
   let board: HTMLDivElement | undefined = $state();
   let root: HTMLDivElement | undefined = $state();
+  let root_width = $state(0);
 
   // Read every physics step, never rendered, so holding a key doesn't re-run effects.
   const keys = new Set<string>();
@@ -228,7 +229,7 @@
       // Before the start, frame the car and its bay together so the player sees the task.
       const bay = centroid(game.world.bays[0].shape);
       // Below the side-card width the start card covers the bottom of the board, so the framing keeps above it.
-      const covered = size.width < 768 ? Math.min(160, size.height * 0.4) : 0;
+      const covered = root_width < 768 ? Math.min(160, size.height * 0.4) : 0;
       const height = size.height - covered;
       const across = Math.abs(bay.x - car.x) + 12;
       const along = Math.abs(bay.y - car.y) + 12;
@@ -464,7 +465,8 @@
       if (target instanceof HTMLButtonElement) return;
       event.preventDefault();
       if (game.status === Status.READY || game.status === Status.PAUSED) start();
-      else if (game.status === Status.PARKED) next_round();
+      else if (game.status === Status.PARKED && game.round.level === undefined) new_spot();
+      else if (game.status === Status.PARKED && has_next_level) next_round();
       else if (game.status === Status.CRASHED) retry();
       return;
     }
@@ -542,7 +544,7 @@
 <svelte:window onkeyup={on_keyup} onblur={release_all} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={root} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
+<div bind:this={root} bind:clientWidth={root_width} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
   <Toolbar>
     <Segmented size="sm" class="hidden @xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
     <Select class="w-[5.75rem] @xl:hidden" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
@@ -604,13 +606,23 @@
       <canvas bind:this={canvas} class="block size-full"></canvas>
 
       {#if game.status !== Status.READY}
-        <div class="pointer-events-none absolute top-2 left-2 flex items-center gap-2" aria-hidden="true">
-          <div class="flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 font-mono text-ui backdrop-blur-[2px]">
+        <div class="pointer-events-none absolute top-2 left-2 flex items-center gap-2">
+          <!-- The toolbar's Pause is hidden when narrow, so phones pause from here. -->
+          <IconButton
+            size="sm"
+            class="pointer-events-auto bg-background/80 backdrop-blur-[2px] @md:hidden pointer-coarse:size-11"
+            label={game.status === Status.DRIVING ? "Pause" : "Resume"}
+            disabled={!can_pause}
+            onclick={toggle_pause}
+          >
+            {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
+          </IconButton>
+          <div class="flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 font-mono text-ui backdrop-blur-[2px]" aria-hidden="true">
             {#each GEARS as gear (gear)}
               <span class={cn("grid w-5 place-items-center rounded-sm", game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/50")}>{gear}</span>
             {/each}
           </div>
-          <div class="rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]">{speed} km/h</div>
+          <div class="rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">{speed} km/h</div>
         </div>
       {/if}
       {#if facing_reading !== null}
@@ -684,7 +696,7 @@
     <span class="tabular-nums">{time}</span>
     <span class="tabular-nums">Moves {game.moves}</span>
     <span class="tabular-nums">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 2 ? " R" : wheel_degrees < -2 ? " L" : ""}</span>
-    {#if judged === "crooked"}<span class="text-warning">Not straight</span>{:else if judged === "outside"}<span class="text-warning">Not in a bay</span>{/if}
+    {#if judged === "crooked"}<span class="text-warning">Not straight</span>{:else if judged === "backwards"}<span class="text-warning">Facing the wrong way</span>{:else if judged === "outside"}<span class="text-warning">Not in a bay</span>{/if}
     {#if best}<span class="hidden tabular-nums @md:inline">Best {best.moves} · {format_time(best.ms, { tenths: true })}</span>{/if}
     <span class="hidden @5xl:inline">Arrows steer and drive · E drive · R reverse · P park · C centres</span>
   </StatusBar>

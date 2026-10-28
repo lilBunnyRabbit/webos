@@ -21,7 +21,7 @@ import {
 } from "./game";
 import { parked_poses } from "./planner";
 import { beep_period, End, sensor, SENSOR_RANGE } from "./sensors";
-import { create_car, Gear, NO_INPUT } from "./vehicle";
+import { corners, create_car, Gear, NO_INPUT } from "./vehicle";
 import { SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;
@@ -63,6 +63,14 @@ describe("judging", () => {
     expect(parked_in(state.car, state.world.bays[0])).toBe(true);
     const turned = { ...state.car, heading: state.car.heading + Math.PI };
     expect(parked_in(turned, state.world.bays[0])).toBe(false);
+  });
+
+  test("turned round in the bay reads as facing the wrong way", () => {
+    const state = park_in_bay(driving(scenario_round(Scenario.FORWARD, 4)));
+    const body = corners(state.car);
+    const centre = { x: body.reduce((sum, p) => sum + p.x, 0) / 4, y: body.reduce((sum, p) => sum + p.y, 0) / 4 };
+    const turned = { ...state.car, x: 2 * centre.x - state.car.x, y: 2 * centre.y - state.car.y, heading: state.car.heading + Math.PI };
+    expect(verdict({ ...state, car: turned })).toBe("backwards");
   });
 
   test("touching anything ends the round and records where", () => {
@@ -128,6 +136,7 @@ describe("rounds", () => {
     expect(unlocked({})).toBe(1);
     expect(unlocked({ 1: 3, 2: 1 })).toBe(3);
     expect(unlocked({ [LEVEL_COUNT]: 2 })).toBe(LEVEL_COUNT);
+    expect(unlocked({ x: 3, 2: 1 })).toBe(3);
   });
 
   test("open lot has no single scenario", () => {
