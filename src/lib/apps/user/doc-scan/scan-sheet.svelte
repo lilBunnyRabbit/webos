@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type AppSheetProps, type FilesService } from "$lib/core/api";
   import { base_name } from "$lib/core/api/services/files/path";
-  import { Button, EmptyState, IconButton, Spinner } from "$lib/core/components/ui";
+  import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import { Camera as CameraIcon, FolderOpen as FolderOpenIcon, Scan as ScanIcon } from "phosphor-svelte";
@@ -58,16 +58,7 @@
 </script>
 
 <div class="flex h-[min(40rem,calc(100cqh-2rem))] w-[min(46rem,calc(100cqw-2rem))] flex-col overflow-hidden rounded-2xl bg-background shadow-popover">
-  <div class="flex shrink-0 flex-wrap items-center gap-2 border-b border-foreground/8 bg-background-lighter px-4 py-2.5">
-    <h2 class="mr-auto text-ui font-semibold">Scan a page</h2>
-    <Button size="sm" variant="quiet" onclick={() => resolve(null)}>Cancel</Button>
-    {#if page}
-      <IconButton size="sm" label="Retake" onclick={() => void take()}><CameraIcon /></IconButton>
-    {/if}
-    <Button size="sm" variant="primary" disabled={!page?.ready || using} onclick={() => void use()}>
-      {#if using}<Spinner label="Straightening" class="size-3.5" />{/if}Use page
-    </Button>
-  </div>
+  <h2 class="shrink-0 border-b border-foreground/8 bg-background-lighter px-4 py-3 text-ui font-semibold">Scan a page</h2>
   <div class="min-h-0 flex-1">
     {#if page}
       <PageEditor {page} bind:preview />
@@ -79,5 +70,14 @@
         {/snippet}
       </EmptyState>
     {/if}
+  </div>
+  <div class="flex shrink-0 items-center gap-2 border-t border-foreground/8 bg-background-lighter px-3 py-2.5">
+    {#if page}
+      <Button variant="quiet" onclick={() => void take()}><CameraIcon /> Retake</Button>
+    {/if}
+    <Button variant="quiet" class="ml-auto" onclick={() => resolve(null)}>Cancel</Button>
+    <Button variant="primary" disabled={!page?.ready || using} onclick={() => void use()}>
+      {#if using}<Spinner label="Straightening" class="size-3.5" />{/if}Use page
+    </Button>
   </div>
 </div>

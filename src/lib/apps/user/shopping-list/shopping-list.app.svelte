@@ -361,6 +361,18 @@
     else if (choice === "delete") await delete_list();
   }
 
+  async function read_menu(event: MouseEvent) {
+    const choice = await dialogs.menu(
+      [
+        { id: "photo", label: "Read a photo…", icon: CameraIcon },
+        { id: "scan", label: "Scan a list…", icon: ArticleIcon },
+      ],
+      { anchor: below(event) },
+    );
+    if (choice === "photo") await photo();
+    else if (choice === "scan") await scan();
+  }
+
   async function all_menu(event: MouseEvent) {
     const entries: MenuItem[] = [
       { id: "share", label: "Share…", icon: QrCodeIcon },
@@ -739,7 +751,7 @@
           </div>
         </div>
       {/if}
-      <EntryBar history={file.value.history} exclude={open_keys} again={!store.value} compact={store.value} onadd={add} onphoto={() => void photo()} onscan={() => void scan()}>
+      <EntryBar history={file.value.history} exclude={open_keys} again={!store.value} compact={store.value} onadd={add} onread={(event) => void read_menu(event)}>
         {#snippet before()}
           {#if all && target}
             <button

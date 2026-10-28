@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { Button, IconButton, Input } from "$lib/core/components/ui";
-  import { Article as ArticleIcon, Camera as CameraIcon, ClockCounterClockwise as ClockCounterClockwiseIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import { Camera as CameraIcon, ClockCounterClockwise as ClockCounterClockwiseIcon, Plus as PlusIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import type { History } from "./data";
   import { entry_text, format_amount, parse_entry } from "./parse";
@@ -12,17 +12,17 @@
     /** History keys already open on the list: never suggested. */
     exclude: ReadonlySet<string>;
     onadd: (text: string) => void;
-    onphoto: () => void;
-    onscan: () => void;
+    /** Opens the choice of reading a photo or scanning a list. */
+    onread: (event: MouseEvent) => void;
     /** Off in the store: a planning aid, and a stray tap there adds an item. Suggestions while typing stay. */
     again?: boolean;
     /** In the store: one "+ Add" button until tapped, so the list keeps the room. */
     compact?: boolean;
-    /** Before the camera and scan buttons, like All's list picker. */
+    /** Before the camera button, like All's list picker. */
     before?: Snippet;
   }
 
-  let { history, exclude, onadd, onphoto, onscan, again = true, compact = false, before }: Props = $props();
+  let { history, exclude, onadd, onread, again = true, compact = false, before }: Props = $props();
 
   let draft = $state("");
   let field = $state<HTMLInputElement | null>(null);
@@ -88,8 +88,7 @@
       }}
     >
       {@render before?.()}
-      <IconButton label="Read a list from a photo" size="lg" class="pointer-coarse:size-11" onclick={onphoto}><CameraIcon weight="bold" /></IconButton>
-      <IconButton label="Scan a list with Doc Scan" size="lg" class="pointer-coarse:size-11" onclick={onscan}><ArticleIcon weight="bold" /></IconButton>
+      <IconButton label="Read a list from a photo or a scan" size="lg" class="pointer-coarse:size-11" onclick={onread}><CameraIcon weight="bold" /></IconButton>
       <Input
         bind:value={draft}
         bind:element={field}
@@ -110,7 +109,7 @@
         }}
       />
       <Button type="submit" variant="primary" size="lg" disabled={!typing} class="px-3 pointer-coarse:h-11" aria-label="Add">
-        <PlusIcon weight="bold" /><span class="hidden @xs:inline">Add</span>
+        <PlusIcon weight="bold" /><span class="hidden @md:inline">Add</span>
       </Button>
     </form>
   {/if}

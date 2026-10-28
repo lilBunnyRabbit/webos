@@ -12,10 +12,10 @@ A shopping list for use in the store, phone first. Several coloured lists, tick 
 
 Two readers. Gemini Nano goes first where Chrome has it; PP-OCRv5 runs everywhere else, and also when Nano throws.
 
-Two ways in, side by side wherever one shows (entry bar, both ⋯ menus, the empty list, the widget; owner: "both camera and scanner options (always)"):
+Two ways in, both offered wherever one shows (both ⋯ menus, the empty list, the widget; owner: "both camera and scanner options (always)"). The entry bar has one camera button that opens a menu of the two (`read_menu`), so the field keeps its width on a phone:
 
 - **Camera** (`photo()`, `CameraIcon`): the device picker, then every step below.
-- **Scan** (`scan()`, phosphor `Article`, Doc Scan's own icon is an app file): `win.request("doc-scan::scan")` with no source, so Doc Scan's sheet opens over the list and asks for the photo itself ([ADR-079](../adrs/079-app-sheets.md), [doc-scan](doc-scan.md)). The Blob it hands back is already straight, so it goes to `read(image, null)` at once, skipping step 3. `null` (Cancel, offline, Doc Scan failing to load) does nothing: the list stays as it was, and the camera beside it is the way on. No fallback picker.
+- **Scan** (`scan()`, phosphor `Article`, Doc Scan's own icon is an app file): `win.request("doc-scan::scan")` with no source, so Doc Scan's sheet opens over the list and asks for the photo itself ([ADR-079](../adrs/079-app-sheets.md), [doc-scan](doc-scan.md)). The Blob it hands back is already straight, so it goes to `read(image, null)` at once, skipping step 3. `null` (Cancel, offline, Doc Scan failing to load) does nothing: the list stays as it was, and Read a photo in the same menu is the way on. No fallback picker.
 
 "Try again" and "Another photo" on the review go back the same way the read started (`read_from`).
 
@@ -163,7 +163,7 @@ A row (`item-row.svelte`) is swiped, not tapped, to tick (owner: taps were miscl
 
 List settings (`list-settings.svelte`, `View.SETTINGS`) edit name, colour (swatches named by how the theme paints them, `color_names()` in `colors.ts`: each token resolved through a hidden element, its hue named, look-alikes split into Light and Dark; the token names say nothing about the colour, owner) and icon (a grid of 16, the picked one tinted in the picked colour, `ListIcon` in `data.ts`, components in `colors.ts`), with a live preview tile; New list opens the same view empty. Renaming also renames the list's widget file.
 
-The bottom of a list: a strip with "N of M in the cart" and Clear done (shown once something is ticked; the button turns primary only when nothing is left open), then the entry bar. Both are centred at the list's `max-w-xl`, so a wide window keeps them under the list. Clear done shows a "Cleared N items" toast for 8 s whose Undo puts the items back and restores the history as it was before the trip was recorded. The entry bar's field, camera, scan and Add are 44 px on touch; in store mode the Buy again chips are hidden (a stray tap there adds an item), suggestions while typing stay, and the bar is one "+ Add" button (`compact`) until tapped: it then opens and focuses the field, and collapses again when the field is left empty (owner).
+The bottom of a list: a strip with "N of M in the cart" and Clear done (shown once something is ticked; the button turns primary only when nothing is left open), then the entry bar. Both are centred at the list's `max-w-xl`, so a wide window keeps them under the list. Clear done shows a "Cleared N items" toast for 8 s whose Undo puts the items back and restores the history as it was before the trip was recorded. The entry bar's field, camera and Add are 44 px on touch, and Add drops its label below `@md`; in store mode the Buy again chips are hidden (a stray tap there adds an item), suggestions while typing stay, and the bar is one "+ Add" button (`compact`) until tapped: it then opens and focuses the field, and collapses again when the field is left empty (owner).
 
 ### Adding an item
 
@@ -174,7 +174,7 @@ The bottom of a list: a strip with "N of M in the cart" and Clear done (shown on
 `props: { list?: string, photo?: boolean | "scan" }` (`index.ts`, a zod union). Every launch opens a new window, as for any app.
 
 - `list`: the window opens on that list. An unknown id is ignored and the window keeps its own (first list by default).
-- `photo`: `true` starts the photo read at once, the same `photo()` as the camera button: device picker, crop, review. `"scan"` opens Doc Scan's sheet at once, the same `scan()` as the scan button. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
+- `photo`: `true` starts the photo read at once, the same `photo()` as Read a photo in the entry bar's camera menu: device picker, crop, review. `"scan"` opens Doc Scan's sheet at once, the same `scan()` as Scan a list in that menu. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
 - Both are acted on once per window, when the file is ready (`shopping-list.app.svelte:126`). The window's `launched` flag keeps a session restore from switching lists or opening the picker again.
 
 ### Shell and Ask

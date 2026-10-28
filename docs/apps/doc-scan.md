@@ -55,7 +55,7 @@ const blob = await win.request("doc-scan::scan", { source }); // source?: Blob
 if (!blob) /* cancelled or failed: carry on your own way */;
 ```
 
-Without a `source` the sheet opens the device picker right away (and shows Take or choose a photo / From files… in case the browser didn't let it). It's the same editor with Cancel, a Retake icon and "Use page", which resolves the straightened image (PNG for B&W, JPEG otherwise) as the page is when it finishes, even if the filter or corners changed while it worked. It runs in the caller's window and app context and stores nothing; new pages start in Color.
+Without a `source` the sheet opens the device picker right away (and shows Take or choose a photo / From files… in case the browser didn't let it). It's the same editor under a plain title, with a footer of Retake (once there's a photo), Cancel and "Use page" (Cancel and Use page on the right, where a sheet's actions sit); which resolves the straightened image (PNG for B&W, JPEG otherwise) as the page is when it finishes, even if the filter or corners changed while it worked. It runs in the caller's window and app context and stores nothing; new pages start in Color.
 
 ## Shell
 
