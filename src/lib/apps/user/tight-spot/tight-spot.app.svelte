@@ -142,7 +142,8 @@
   const speed = $derived(Math.round(Math.abs(game.car.speed) * 3.6));
   const wheel_degrees = $derived(Math.round((game.car.steer / LOCK) * 450));
   const time = $derived(format_time(game.ms, { tenths: true }));
-  const judged = $derived(game.status === Status.DRIVING && game.car.gear === Gear.PARK ? verdict(game) : null);
+  // Only once the car has been in gear: the round starts in P, and a verdict before driving reads as a scolding.
+  const judged = $derived(game.status === Status.DRIVING && game.car.gear === Gear.PARK && game.last_drive !== null ? verdict(game) : null);
   const facing_reading = $derived.by(() => {
     if (game.status !== Status.DRIVING) return null;
     if (game.car.gear === Gear.DRIVE) return readings.front;
@@ -602,14 +603,16 @@
     >
       <canvas bind:this={canvas} class="block size-full"></canvas>
 
-      <div class="pointer-events-none absolute top-2 left-2 flex items-center gap-2" aria-hidden="true">
-        <div class="flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 font-mono text-ui backdrop-blur-[2px]">
-          {#each GEARS as gear (gear)}
-            <span class={cn("grid w-5 place-items-center rounded-sm", game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/50")}>{gear}</span>
-          {/each}
+      {#if game.status !== Status.READY}
+        <div class="pointer-events-none absolute top-2 left-2 flex items-center gap-2" aria-hidden="true">
+          <div class="flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 font-mono text-ui backdrop-blur-[2px]">
+            {#each GEARS as gear (gear)}
+              <span class={cn("grid w-5 place-items-center rounded-sm", game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/50")}>{gear}</span>
+            {/each}
+          </div>
+          <div class="rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]">{speed} km/h</div>
         </div>
-        <div class="rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]">{speed} km/h</div>
-      </div>
+      {/if}
       {#if facing_reading !== null}
         <div
           class={cn(
