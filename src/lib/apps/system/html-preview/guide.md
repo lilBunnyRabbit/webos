@@ -1,0 +1,5 @@
+- Open an `.html` or `.htm` file from File Explorer, or use **Open…** in the toolbar.
+- **Preview** shows the page, **Source** shows its code.
+- **Reload** reads the file again, after you've changed it somewhere else.
+- The page is sealed off from WebOS: nothing in it can reach your files or settings.
+- Images and styles the page loads from files next to it don't show. Only what's inside the HTML file, or on the web, does.

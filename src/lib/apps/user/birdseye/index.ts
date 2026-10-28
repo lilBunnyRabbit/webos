@@ -13,5 +13,6 @@ export default define_app({
   props: z.object({ path: z.string().optional() }),
   defaults: { constraints: { width: { min: 340 }, height: { min: 420 } } },
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./birdseye.app.svelte"),
 });

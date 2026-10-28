@@ -16,5 +16,6 @@ export default define_app({
     run: z.string().optional(),
   }),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./terminal.app.svelte"),
 });

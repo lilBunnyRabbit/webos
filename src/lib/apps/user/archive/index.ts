@@ -19,5 +19,6 @@ export default define_app({
   },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./archive.app.svelte"),
 });

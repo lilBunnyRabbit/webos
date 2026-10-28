@@ -10,6 +10,8 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   associations: ["text/*", ".md", ".json", ".ts", ".js", ".svelte", ".yaml", ".yml", ".toml", ".ini", ".log", ".env"],
   tools: [".http", ".rest", ".cook", ".fdsl"],
   props: FILE_PROPS,

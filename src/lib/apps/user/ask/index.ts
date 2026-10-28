@@ -36,6 +36,7 @@ export default define_app({
   props: FILE_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 320 } } },
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   shell: () => import("./commands"),
   component: () => import("./ask.app.svelte"),
 });

@@ -10,6 +10,8 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   // A folder path to open at; defaults to /home.
   props: FILE_PROPS,
   highlights: () => import("./highlights"),

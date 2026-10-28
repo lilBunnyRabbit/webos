@@ -94,7 +94,7 @@ No rotation, ever (ADR-056). The preview draws on a canvas at up to 1280 px wide
 
 Nothing is persisted: the track lives in the window and is lost when it closes. Output: `{stem}-birdseye.webm` beside the source, or in `/home/Videos` for a file from the device; a taken name gets a free one.
 
-Props: `path` (optional), a video to open. The manifest lists `tools: ["video/*"]`, so Birdseye is under Open with for videos; Media Preview stays the default. No shell commands (owner decision, ADR-056).
+Props: `path` (optional), a video to open. The manifest lists `tools: ["video/*"]`, so Birdseye is under Open with for videos; Media Preview stays the default. Its `guide` (`guide.md`) is the how-to the window shows on first launch and from the ? button. No shell commands (owner decision, ADR-056).
 
 ## Dependencies & licences
 

@@ -26,5 +26,6 @@ export default define_app({
     { id: "spotless", title: "Spotless", text: "Get through a whole day from day 5 on without a wrong total.", secret: true },
   ],
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./checkout-challenge.app.svelte"),
 });

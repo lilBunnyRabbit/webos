@@ -18,6 +18,7 @@ export default define_app({
   },
   props: z.object({ seed: z.number().int().nonnegative().optional() }),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   achievements: [
     { id: "first-case", title: "Case closed", text: "Catch a suspect in their lie." },
     { id: "clean", title: "Sharp eye", text: "Close a case without a wrong accusation." },

@@ -1,0 +1,3 @@
+- Open a PDF from File Explorer, use **Open…**, or paste a PDF file with Ctrl+V.
+- Zoom, page through, search and print with the browser's own PDF toolbar.
+- When PDF Tools is installed, the pencil button opens the same file there to edit it.

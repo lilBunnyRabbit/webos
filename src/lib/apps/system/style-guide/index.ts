@@ -6,6 +6,8 @@ export default define_app({
   id: "style-guide",
   name: "Style Guide",
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   icon: AppIcon,
   category: AppCategory.DEVELOPER,
   defaults: {

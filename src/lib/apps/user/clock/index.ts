@@ -9,6 +9,8 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   props: CLOCK_PROPS,
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },
   shell: () => import("./commands"),

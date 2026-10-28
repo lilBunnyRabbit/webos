@@ -1,0 +1,3 @@
+- Services are listed in the order they start when WebOS boots.
+- Each row shows a summary of what the service is doing right now. Click or tap a row to expand it for the full detail, or use **Expand all**.
+- **Open docs** opens that service's page in Docs.

@@ -12,6 +12,7 @@ export default define_app({
   associations: [".bracket"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
   achievements: [
     { id: "champion", title: "Champion crowned", text: "Play a tournament through to its winner." },

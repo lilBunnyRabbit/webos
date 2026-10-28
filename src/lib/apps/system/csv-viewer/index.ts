@@ -10,6 +10,8 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   associations: ["text/csv", "text/tab-separated-values", ".csv", ".tsv"],
   props: FILE_PROPS,
   defaults: {

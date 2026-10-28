@@ -12,5 +12,6 @@ export default define_app({
   props: z.object({ card: z.string().optional(), import: z.string().optional() }),
   defaults: { constraints: { width: { min: 320 }, height: { min: 400 } } },
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./cards.app.svelte"),
 });

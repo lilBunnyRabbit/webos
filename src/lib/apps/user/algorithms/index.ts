@@ -9,6 +9,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.DEVELOPER,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   associations: [".algo"],
   props: ALGORITHMS_PROPS,
   defaults: { constraints: { width: { min: 360 }, height: { min: 420 } } },

@@ -1,0 +1,5 @@
+- Open a `.csv` or `.tsv` file from File Explorer, or use **Open…**. `.csv` splits on commas, `.tsv` on tabs.
+- **First row is header** uses the first row as column names. Turn it off to see it as data, with columns named A, B, C.
+- Click or tap a cell to read its full value under the table. Click it again to close.
+- Big files show 1,000 rows at a time: **Show more** at the bottom adds the next ones.
+- It's a viewer: you can't edit the file here.

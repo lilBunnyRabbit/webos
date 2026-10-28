@@ -45,7 +45,7 @@ Questions go through `ai.prompt()` with the system message plus the whole transc
 
 ### UI
 
-Game app frame: toolbar with the case title, `Case NNNN` and New case (F2); the case file (brief, statements, evidence, Accuse and the status line) beside the interrogation from `@2xl`, stacked and scrolling as one column below it; the question box pinned above the status bar. Statements and cards are toggle buttons (`aria-pressed`). A `BoardOverlay` over the interrogation starts the case and ends it (score line, Transcript, New case); at the end the lie is marked, its card flagged, and both versions of the detail shown.
+Game app frame: toolbar with the case title, `Case NNNN` and New case (F2); the case file (brief, statements, evidence, Accuse and the status line) beside the interrogation from `@2xl`, stacked and scrolling as one column below it; the question box pinned above the status bar. Statements and cards are toggle buttons (`aria-pressed`). A `BoardOverlay` over the interrogation starts the case and ends it (score line, Transcript, New case); at the end the lie is marked, its card flagged, and both versions of the detail shown. The window's guide (`guide.md`, the ? button) explains the goal, accusing and scoring, and opens on the first launch.
 
 ## Data
 
