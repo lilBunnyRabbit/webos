@@ -30,6 +30,7 @@ export default define_app({
     { id: "licensed", title: "Licensed", text: "Park every level.", goal: 42 },
     { id: "open-lot", title: "Any free bay", text: "Find a spot in the open lot." },
     { id: "daily", title: "Daily spot", text: "Park the daily spot." },
+    { id: "perfect-park", title: "Perfect park", text: "Park with 95% precision or better: centred and square in the bay." },
     { id: "one-sweep", title: "One sweep", text: "Parallel park with a single reverse.", secret: true },
   ],
   component: () => import("./tight-spot.app.svelte"),

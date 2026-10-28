@@ -29,6 +29,7 @@ Today one car, `HATCHBACK` in `vehicle.ts`; every model function already takes a
 - [x] ADR-086 revision note (owner: a note, not a new ADR)
 - [x] Build: specs, trailer model + tests, two-body collision and hitch check, drawing (trailer, bus), four new kinds, levels, planner replay test, camera zoom, docs/apps page, guide, changelog `new`, plus the end bay
 - [ ] Feature review, then desktop and mobile visual pass before push
+- [x] Precision score (formula, card, Perfect badge, Perfect park achievement) and vehicle picker (Spots and open lot, bests per kind and vehicle), ADR-086 revision note
 
 ## Trucks (later the same day)
 Owner: "Oh no truck car option?", then: "the classic European truck you see with trailers. Lets work on that later". Parked for a later session; draft picks to revisit then:

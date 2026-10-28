@@ -35,6 +35,8 @@ export interface PlanOptions {
   max_expansions?: number;
   reach?: number;
   heading_tolerance?: number;
+  /** Restricts the moves, 1 forward and -1 back: a path out of a bay in reverse only is a forward path in, which a trailer follows stably. */
+  directions?: readonly number[];
   /** Replaces the goal of ending within `reach` and `heading_tolerance` of `to`; `to` then only steers the search. */
   arrive?: (pose: Placement) => boolean;
 }
@@ -169,7 +171,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
       }
       return { path: path.reverse(), moves: moves.reverse(), reversals: node.reversals, expansions };
     }
-    for (const direction of [1, -1]) {
+    for (const direction of options.directions ?? [1, -1]) {
       for (const curvature of curvatures) {
         // A move that runs into something stops short, the way a driver creeps up to a bumper in a tight spot.
         let pose = node.pose;

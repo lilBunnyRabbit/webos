@@ -244,7 +244,7 @@ export function scenario_world(
 
 const OPEN_LOTS: readonly Scenario[] = [Scenario.FORWARD, Scenario.ANGLED, Scenario.PILLARS];
 
-export function open_plan(seed: number): Plan {
+export function open_plan(seed: number, spec: VehicleSpec = HATCHBACK): Plan {
   return (cx, cy) => {
     if (Math.abs(cx) > 1 || Math.abs(cy) > 1) return null;
     if (cx === 0 || cy === 0) return { kind: ChunkKind.ROAD };
@@ -256,13 +256,13 @@ export function open_plan(seed: number): Plan {
       difficulty: 0.3,
       open: true,
       entry,
-      spec: HATCHBACK,
+      spec,
     };
   };
 }
 
-export function open_world(seed: number): World {
+export function open_world(seed: number, spec: VehicleSpec = HATCHBACK): World {
   const cells: Vec[] = [];
   for (let cy = -1; cy <= 1; cy++) for (let cx = -1; cx <= 1; cx++) cells.push({ x: cx, y: cy });
-  return assemble(seed, cells, open_plan(seed), { x: MID + 2, y: MID + 6, heading: -Math.PI / 2 });
+  return assemble(seed, cells, open_plan(seed, spec), { x: MID + 2, y: MID + 6, heading: -Math.PI / 2 });
 }

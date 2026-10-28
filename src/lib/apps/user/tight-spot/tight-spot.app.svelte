@@ -21,7 +21,7 @@
   import {
     advance,
     ANY,
-    better,
+    best_of,
     bests_schema,
     change_gear,
     crash_title,
@@ -34,9 +34,11 @@
     obstacles,
     open_round,
     par,
+    PERFECT,
     pick_schema,
+    precision,
+    record_best,
     round_brief,
-    round_key,
     round_title,
     SCENARIO_INFO,
     scenario_round,
@@ -49,6 +51,8 @@
     unlocked,
     verdict,
     VEHICLE_NAMES,
+    vehicle_pick_schema,
+    vehicles_for,
     wheel_schema,
     WheelMode,
     type Bests,
@@ -56,6 +60,7 @@
     type LevelStars,
     type Round,
     type ScenarioPick,
+    type VehiclePick,
   } from "./game";
   import { centroid } from "./geometry";
   import { End, sensor } from "./sensors";
@@ -116,6 +121,7 @@
   let daily = $state(daily_day ?? null);
   let mode = $state<Mode>(daily_day ? Mode.SCENARIO : (storage.get("mode", mode_schema) ?? Mode.SCENARIO));
   let pick = $state<ScenarioPick>(storage.get("pick", pick_schema) ?? ANY);
+  let vehicle_pick = $state<VehiclePick>(storage.get("vehicle", vehicle_pick_schema) ?? ANY);
   let level = $state(Math.min(untrack(() => unlocked(level_stars.value)), storage.get("level", z.number().int().min(1)) ?? 1));
   let sound_on = $state(storage.get("sound", z.boolean()) ?? true);
   let guides_on = $state(storage.get("guides", z.boolean()) ?? true);
@@ -163,7 +169,15 @@
   const over = $derived(game.status === Status.PARKED || game.status === Status.CRASHED);
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
-  const best = $derived(bests.value[round_key(game.round)]);
+  const best = $derived(best_of(bests.value, game.round));
+  // A kind with one vehicle shows it, fixed; Any spot shows Any, fixed.
+  const vehicle_options = $derived.by(() => {
+    const allowed = allowed_vehicles().map((value) => ({ value: value as VehiclePick, label: VEHICLE_NAMES[value] }));
+    return allowed.length === 1 ? allowed : [{ value: ANY as VehiclePick, label: "Any vehicle" }, ...allowed];
+  });
+  const choosing_vehicle = $derived((mode === Mode.SCENARIO && !daily) || mode === Mode.OPEN);
+  const fit = $derived(game.status === Status.PARKED && game.bay ? precision(game.car, game.bay, spec) : null);
+  const fit_percent = $derived(fit ? Math.round(fit.score) : 0);
   const round_par = $derived(par(game.round));
   const level_best = $derived(game.round.level !== undefined ? (level_stars.value[game.round.level] ?? 0) : 0);
   const max_level = $derived(unlocked(level_stars.value));
@@ -193,11 +207,21 @@
     return `${count} ${count === 1 ? "move" : "moves"}`;
   }
 
+  // With Any spot the kind isn't known yet and no vehicle fits every kind, so only Any is offered.
+  function allowed_vehicles(): readonly Vehicle[] {
+    if (mode === Mode.OPEN) return vehicles_for(null);
+    return pick === ANY ? [] : vehicles_for(pick);
+  }
+
+  function chosen_vehicle(): VehiclePick {
+    return vehicle_pick !== ANY && allowed_vehicles().includes(vehicle_pick) ? vehicle_pick : ANY;
+  }
+
   function make_round(): Round {
     if (daily) return scenario_round(ANY, daily_seed(daily, app_id), daily);
     if (mode === Mode.LEVELS) return level_round(level);
-    if (mode === Mode.OPEN) return open_round(random_seed());
-    return scenario_round(pick, random_seed());
+    if (mode === Mode.OPEN) return open_round(random_seed(), chosen_vehicle());
+    return scenario_round(pick, random_seed(), undefined, chosen_vehicle());
   }
 
   $effect(() => {
@@ -394,15 +418,16 @@
 
   function parked(state: GameState) {
     release_all();
-    const result = { moves: state.moves, ms: Math.round(state.ms) };
-    const key = round_key(state.round);
-    const had_best = bests.value[key] !== undefined;
-    new_best = better(bests.value[key], result);
-    if (new_best) bests.value[key] = result;
-    first_park = !had_best;
-    if (sound_on) sounds.parked(new_best && had_best);
+    const percent = state.bay ? Math.round(precision(state.car, state.bay, spec_of(state.round)).score) : undefined;
+    const result = { moves: state.moves, ms: Math.round(state.ms), precision: percent };
+    const recorded = record_best(bests.value, state.round, result);
+    bests.value = recorded.bests;
+    new_best = recorded.improved;
+    first_park = recorded.first;
+    if (sound_on) sounds.parked(new_best && !first_park);
     earned = stars(state.round, state.moves);
     achievements.achieve("first-park");
+    if (percent !== undefined && percent >= PERFECT) achievements.achieve("perfect-park");
     const scenario = state.round.scenario;
     if (scenario === null) achievements.achieve("open-lot");
     else {
@@ -498,6 +523,13 @@
     daily = null;
     pick = next;
     storage.set("pick", next);
+    load(make_round());
+  }
+
+  function set_vehicle(next: VehiclePick) {
+    daily = null;
+    vehicle_pick = next;
+    storage.set("vehicle", next);
     load(make_round());
   }
 
@@ -702,6 +734,18 @@
   </span>
 {/snippet}
 
+<!-- Three pickers and the buttons don't fit one row of a narrow board, so there the picker sits on the start card. -->
+{#snippet vehicle_picker(class_name: string)}
+  <Select
+    class={class_name}
+    size="sm"
+    aria-label="Vehicle"
+    disabled={vehicle_options.length === 1}
+    options={vehicle_options}
+    bind:value={() => (vehicle_options.length === 1 ? vehicle_options[0].value : chosen_vehicle()), set_vehicle}
+  />
+{/snippet}
+
 {#snippet speed_chip(class_name: string)}
   <div class={cn("rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", class_name)} aria-hidden="true">
     {speed} <span class="text-foreground/65">km/h</span>
@@ -722,6 +766,7 @@
     {:else if mode === Mode.LEVELS}
       <Select class="w-36 min-w-0 @md:w-40" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
     {/if}
+    {#if choosing_vehicle}{@render vehicle_picker("hidden w-36 min-w-0 @2xl/ts-app:inline-flex")}{/if}
     {#if daily}<span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>{/if}
     <div class="flex-1"></div>
     <IconButton size="sm" label="Settings" popovertarget="ts-settings-{uid}" style="anchor-name: --ts-settings-{uid}">
@@ -863,8 +908,13 @@
               </p>
               <p class="text-ui text-foreground/80">{round_brief(game.round)}</p>
               <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
-                Par {moves_text(round_par)}{best ? ` · Best ${moves_text(best.moves)}, ${format_time(best.ms, { tenths: true })}` : ""}
+                Par {moves_text(round_par)}{best ? ` · Best ${moves_text(best.moves)}, ${format_time(best.ms, { tenths: true })}` : ""}{best?.precision !== undefined ? ` · precision ${best.precision}%` : ""}
               </p>
+              {#if choosing_vehicle && vehicle_options.length > 1}
+                <div class="mt-1.5 flex items-center gap-2 text-2xs text-foreground/65 @2xl/ts-app:hidden">
+                  Vehicle {@render vehicle_picker("w-40 min-w-0")}
+                </div>
+              {/if}
             </div>
             <Button class="ml-auto" variant="primary" onclick={start}>Start</Button>
             <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
@@ -883,9 +933,18 @@
               <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
                 Parked
                 {@render star_row(earned, true)}
+                {#if fit_percent >= PERFECT}<Badge class="ts-pop" tone="success">Perfect</Badge>{/if}
                 {#if new_best}<Badge class="ts-pop" tone={first_park ? "neutral" : "primary"}>{first_park ? "First park" : "New best"}</Badge>{/if}
               </p>
               <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · {moves_text(game.moves)} · par {round_par}</p>
+              {#if fit}
+                <p class="flex flex-wrap gap-x-1.5 font-mono text-2xs text-foreground/80 tabular-nums" title="Off centre across the bay, along it, and off straight">
+                  <span>Precision {fit_percent}%</span>
+                  <span class="text-foreground/65">· ↔ {Math.round(fit.side * 100)} cm</span>
+                  <span class="text-foreground/65">· ↕ {Math.round(fit.depth * 100)} cm</span>
+                  <span class="text-foreground/65">· ∠ {((fit.angle * 180) / Math.PI).toFixed(1)}°</span>
+                </p>
+              {/if}
               {#if !new_best && best}<p class="font-mono text-2xs text-foreground/65 tabular-nums">Best {moves_text(best.moves)}, {format_time(best.ms, { tenths: true })}</p>{/if}
             </div>
             <div class="ml-auto flex shrink-0 gap-2">

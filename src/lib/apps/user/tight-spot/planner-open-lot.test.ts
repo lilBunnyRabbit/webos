@@ -1,0 +1,82 @@
+import { describe, expect, test } from "vitest";
+import { collide, create_game, obstacles, open_round, parked_in, vehicles_for } from "./game";
+import { drive, parked_poses, plan, type Move } from "./planner";
+import { centroid, type Pose } from "./geometry";
+import { jackknifed, VEHICLES, type Placement, type VehicleSpec } from "./vehicle";
+import { ChunkKind, CHUNK, SIDES, type Bay, type Side, type World } from "./world";
+
+/**
+ * Its own file so the trailer's searches run beside the spot sweeps. A reverse-only path out of a bay is a forward path
+ * in, which a towed trailer follows stably, so it's replayed forward from a straight trailer; reversing one would
+ * amplify any difference, so the fallback searches from the gate with the trailer straight instead.
+ */
+
+const PIECE = 0.15;
+
+function gate_pose(cx: number, cy: number, side: Side): Pose {
+  const mid = { x: (cx + 0.5) * CHUNK, y: (cy + 0.5) * CHUNK };
+  const out = { n: { x: 0, y: -1 }, e: { x: 1, y: 0 }, s: { x: 0, y: 1 }, w: { x: -1, y: 0 } }[side];
+  return { x: mid.x + out.x * (CHUNK / 2 + 4), y: mid.y + out.y * (CHUNK / 2 + 4), heading: Math.atan2(out.y, out.x) };
+}
+
+function straight(pose: Pose): Placement {
+  return { x: pose.x, y: pose.y, heading: pose.heading, trailer: { heading: pose.heading, roll: [0, 0] } };
+}
+
+function drives_into(from: Placement, moves: readonly Move[], bay: Bay, world: World, spec: VehicleSpec): boolean {
+  const near = obstacles(world);
+  let at = from;
+  for (const move of moves) {
+    const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
+    for (let k = 0; k < pieces; k++) {
+      at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, spec);
+      if (jackknifed(at) || collide(at, near, spec)) return false;
+    }
+  }
+  return parked_in(at, bay, spec);
+}
+
+function towed_in(bay: Bay, gate: Pose, world: World, spec: VehicleSpec): boolean {
+  const near = obstacles(world);
+  const poses = parked_poses(bay, near, 0.05, spec).slice(0, 6);
+  const forward = poses.some((pose) => {
+    const out = plan(pose, gate, near, { spec, directions: [-1], heading_tolerance: Math.PI, max_expansions: 60_000 });
+    if (!out) return false;
+    const moves = [...out.moves].reverse().map((move) => ({ ...move, distance: -move.distance }));
+    return drives_into(straight(out.path[out.path.length - 1]), moves, bay, world, spec);
+  });
+  if (forward) return true;
+  const inward = straight({ ...gate, heading: gate.heading + Math.PI });
+  return poses.slice(0, 3).some((pose) => {
+    const found = plan(inward, pose, near, { spec, arrive: (at) => parked_in(at, bay, spec) });
+    return found !== null && drives_into(inward, found.moves, bay, world, spec);
+  });
+}
+
+describe("every free bay in the open lot can be reached through its lot's gate", () => {
+  for (const vehicle of vehicles_for(null)) {
+    for (const seed of [42, 7]) {
+      test(`in a ${vehicle}, seed ${seed}`, { timeout: 300_000 }, () => {
+        const spec = VEHICLES[vehicle];
+        const { world, car } = create_game(open_round(seed, vehicle));
+        const near = obstacles(world);
+        const lots = world.chunks.filter((each) => each.kind === ChunkKind.LOT);
+        expect(lots).toHaveLength(4);
+        for (const lot of lots) {
+          const side = SIDES.find((each) => lot.exits[each])!;
+          const gate = gate_pose(lot.cx, lot.cy, side);
+          expect(plan(car, gate, near, { spec, heading_tolerance: Math.PI }), `gate ${lot.cx},${lot.cy}`).not.toBeNull();
+          expect(lot.bays.length).toBeGreaterThan(0);
+          for (const bay of lot.bays) {
+            const ok = spec.trailer
+              ? towed_in(bay, gate, world, spec)
+              : parked_poses(bay, near, 0.05, spec).some(
+                  (pose) => plan(pose, gate, near, { spec, heading_tolerance: Math.PI }) !== null
+                );
+            expect(ok, `bay at ${centroid(bay.shape).x.toFixed(1)},${centroid(bay.shape).y.toFixed(1)}`).toBe(true);
+          }
+        }
+      });
+    }
+  }
+});

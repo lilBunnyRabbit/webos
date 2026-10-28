@@ -12,6 +12,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 ## Vehicles
 
 - Each spot hands you a vehicle, named on the start card: the hatchback, a van or a pickup in car spots, a city bus at the bus stop and the depot, a car with a box trailer at the slipway and the driveway. Bigger ones need wider swings, and the bays and gaps grow to fit them.
+- Rather pick? In **Spots** with a kind chosen, and in the **Open lot**, the **Vehicle** picker next to the spot picker takes Any vehicle or one the spot allows (on a narrow window it sits on the start card). The open lot takes the hatchback, the van, the pickup or the car and trailer. Levels and the daily keep their own vehicle.
 - The **bus** has a 12 m body and a long tail behind the rear wheels: when it turns, the tail swings out the other way.
 - The **trailer** pivots on the tow ball. Towing forward it follows and straightens. Reversing it goes the opposite way to the wheel: steer left to send it right, and catch it early. Past about 70° it jackknifes and the round ends. The guide lines follow the trailer's tail while you reverse, and the rear sensors read from it.
 
@@ -38,6 +39,8 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - Touching a car, wall, kerb, pillar, post or the water ends the round, like a driving test. The red ring shows where.
 - It counts as parked when the whole car (and its trailer) is inside the bay lines, within 5° of the bay, stopped and in **P**.
 - **Moves** are changes between D and R. Stars come from moves: at the spot's par or under is three, up to two more is two. The start card shows the par.
+- **Precision** says how neatly you parked: centred between the side lines (↔), centred end to end (↕) and square to the bay (∠). Dead centre and straight is 100%; touching a line or 5° off is nothing. With a trailer the car and the trailer count together. 95% or more is **Perfect**. Precision doesn't change the stars.
+- Bests are kept per spot and vehicle: fewest moves, then the quickest, plus the best precision you've reached there.
 - In **P** outside a bay the line at the bottom says what's off: not inside a bay, not straight, or facing the wrong way.
 - Parking sensors watch the bumper you're driving towards: the beeps quicken as it closes in on something and go steady under 30 cm. The garage is where you'll lean on them.
 - The **end bay** sits in the corner of a full, narrow aisle with no room past it: get in with a few short moves, back and forth. Par allows two.

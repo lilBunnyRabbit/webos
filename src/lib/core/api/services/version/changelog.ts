@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.83.0",
+    date: "2026-10-28",
+    title: "Dead centre",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Tight Spot scores how precisely you park, centred and square in the bay, and a park of 95% or better earns a Perfect badge.",
+      },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Tight Spot lets you choose your vehicle for each kind of spot, and the open lot too, where you can now drive a van, a pickup or a car with a trailer.",
+      },
+    ],
+  },
+  {
     version: "3.82.1",
     date: "2026-10-28",
     title: "Room to park",

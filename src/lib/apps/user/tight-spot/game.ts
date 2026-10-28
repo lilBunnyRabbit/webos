@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { inside_convex, overlaps, contact_point } from "./collision";
-import { angle_between, bounds_of, bounds_overlap, type Bounds, type Vec } from "./geometry";
+import { angle_between, bounds_of, bounds_overlap, clamp, type Bounds, type Polygon, type Vec } from "./geometry";
 import {
   bodies,
   create_car,
@@ -121,7 +121,19 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   towing: "Car and trailer",
 };
 
-export const OPEN_INFO = { name: "Open lot", brief: "Drive around and park in any free bay.", par: 1 };
+export const OPEN_INFO = {
+  name: "Open lot",
+  brief: "Drive around and park in any free bay.",
+  par: 1,
+  vehicles: [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP, Vehicle.TOWING] as readonly Vehicle[],
+};
+
+export type VehiclePick = Vehicle | typeof ANY;
+
+/** The vehicles a picker offers for a kind, or for the open lot with `null`. */
+export function vehicles_for(scenario: Scenario | null): readonly Vehicle[] {
+  return scenario === null ? OPEN_INFO.vehicles : SCENARIO_INFO[scenario].vehicles;
+}
 
 export interface Round {
   mode: Mode;
@@ -154,14 +166,15 @@ export function spec_of(round: Round): VehicleSpec {
   return VEHICLES[round.vehicle];
 }
 
-export function vehicle_for(scenario: Scenario | null, seed: number): Vehicle {
-  if (scenario === null) return Vehicle.HATCH;
-  const choices = SCENARIO_INFO[scenario].vehicles;
+/** A picked vehicle the kind allows wins; otherwise the seed picks one, the same one for the same seed. */
+export function vehicle_for(scenario: Scenario | null, seed: number, pick: VehiclePick = ANY): Vehicle {
+  const choices = vehicles_for(scenario);
+  if (pick !== ANY && choices.includes(pick)) return pick;
   return choices[hash(seed, 13) % choices.length];
 }
 
 export function world_for(round: Round): World {
-  if (round.mode === Mode.OPEN || round.scenario === null) return open_world(round.seed);
+  if (round.mode === Mode.OPEN || round.scenario === null) return open_world(round.seed, spec_of(round));
   return scenario_world(round.seed, round.scenario, round.difficulty, spec_of(round));
 }
 
@@ -306,6 +319,8 @@ export function stars(round: Round, moves: number): 1 | 2 | 3 {
 export interface Result {
   moves: number;
   ms: number;
+  /** The best precision seen on this kind and vehicle, kept apart from which run is the best. */
+  precision?: number;
 }
 
 export function better(a: Result | undefined, b: Result): boolean {
@@ -313,13 +328,102 @@ export function better(a: Result | undefined, b: Result): boolean {
   return b.moves !== a.moves ? b.moves < a.moves : b.ms < a.ms;
 }
 
-export function round_key(round: Round): string {
+function legacy_key(round: Round): string {
   return round.scenario ?? Mode.OPEN;
 }
 
-export const result_schema = z.object({ moves: z.number().int().nonnegative(), ms: z.number().nonnegative() });
+export function round_key(round: Round): string {
+  return `${legacy_key(round)}:${round.vehicle}`;
+}
+
+export const result_schema = z.object({
+  moves: z.number().int().nonnegative(),
+  ms: z.number().nonnegative(),
+  precision: z.number().min(0).max(100).optional(),
+});
 export const bests_schema = z.record(z.string(), result_schema);
 export type Bests = z.infer<typeof bests_schema>;
+
+/** Bests from before the vehicle picker are keyed by kind alone, and every one of them was a hatchback. */
+export function best_of(bests: Bests, round: Round): Result | undefined {
+  return bests[round_key(round)] ?? (round.vehicle === Vehicle.HATCH ? bests[legacy_key(round)] : undefined);
+}
+
+export interface Recorded {
+  bests: Bests;
+  /** Fewer moves, or as many in less time: the run itself is the new best. */
+  improved: boolean;
+  first: boolean;
+}
+
+/** Order stays moves, then time; precision only ever rises, whichever run set it. */
+export function record_best(bests: Bests, round: Round, result: Result): Recorded {
+  const old = best_of(bests, round);
+  const improved = better(old, result);
+  const run = improved ? { moves: result.moves, ms: result.ms } : { moves: old!.moves, ms: old!.ms };
+  const top = Math.max(old?.precision ?? -1, result.precision ?? -1);
+  const next: Bests = { ...bests, [round_key(round)]: top >= 0 ? { ...run, precision: top } : run };
+  if (round.vehicle === Vehicle.HATCH) delete next[legacy_key(round)];
+  return { bests: next, improved, first: old === undefined };
+}
+
+export const PERFECT = 95;
+
+export interface Precision {
+  /** 0 to 100. */
+  score: number;
+  /** Metres off the middle across the bay, and along it; radians off its axis. */
+  side: number;
+  depth: number;
+  angle: number;
+}
+
+/** Distance from `from`, inside the convex polygon, to its boundary along the unit `direction`. */
+function ray_to_edge(from: Vec, direction: Vec, shape: Polygon): number {
+  let nearest = Infinity;
+  for (let i = 0; i < shape.length; i++) {
+    const a = shape[i];
+    const b = shape[(i + 1) % shape.length];
+    const edge = { x: b.x - a.x, y: b.y - a.y };
+    const denominator = direction.x * edge.y - direction.y * edge.x;
+    if (Math.abs(denominator) < 1e-12) continue;
+    const to_a = { x: a.x - from.x, y: a.y - from.y };
+    const t = (to_a.x * edge.y - to_a.y * edge.x) / denominator;
+    const u = (to_a.x * direction.y - to_a.y * direction.x) / denominator;
+    if (t >= -1e-9 && u >= -1e-9 && u <= 1 + 1e-9) nearest = Math.min(nearest, Math.max(0, t));
+  }
+  return nearest;
+}
+
+/**
+ * How well a parked rig sits in its bay. The gaps to the bay's sides and ends are the shortest rays from any corner of
+ * any body (a trailer counts with the car), so centring judges the whole rig; the angle is the worse of car and
+ * trailer against the bay's axis (either way round for an `either` bay). Each error is a share of what the bay
+ * allows (half the side room, half the end room, the 5° that still counts as straight) and the score is
+ * 100 × Π(1 − e²): 100 dead centre and square, 0 against a line or at 5°.
+ */
+export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES.hatch): Precision {
+  const reverse = bay.either && angle_between(car.heading, bay.heading) > Math.PI / 2;
+  const axis = reverse ? bay.heading + Math.PI : bay.heading;
+  const along = { x: Math.cos(axis), y: Math.sin(axis) };
+  const across = { x: -along.y, y: along.x };
+  const back = { x: -along.x, y: -along.y };
+  const other = { x: -across.x, y: -across.y };
+  const points = bodies(car, spec).flat();
+  const gap = (direction: Vec) => Math.min(...points.map((point) => ray_to_edge(point, direction, bay.shape)));
+  const front = gap(along);
+  const rear = gap(back);
+  const right = gap(across);
+  const left = gap(other);
+  const side = (right - left) / 2;
+  const depth = (front - rear) / 2;
+  const headings = car.trailer ? [car.heading, car.trailer.heading] : [car.heading];
+  const angle = Math.max(...headings.map((heading) => angle_between(heading, axis)));
+  const share = (off: number, room: number) => (room > 1e-9 ? clamp(Math.abs(off) / room, 0, 1) : 0);
+  const errors = [share(side, (right + left) / 2), share(depth, (front + rear) / 2), share(angle, MAX_ANGLE)];
+  const score = 100 * errors.reduce((product, e) => product * (1 - e * e), 1);
+  return { score, side: Math.abs(side), depth: Math.abs(depth), angle };
+}
 export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
 export type LevelStars = z.infer<typeof levels_schema>;
 
@@ -377,7 +481,7 @@ export function unlocked(levels: LevelStars): number {
   return Math.min(LEVEL_COUNT, highest);
 }
 
-export function scenario_round(pick: ScenarioPick, seed: number, daily?: string): Round {
+export function scenario_round(pick: ScenarioPick, seed: number, daily?: string, vehicle: VehiclePick = ANY): Round {
   const scenario = pick === ANY ? SCENARIOS[hash(seed, 3) % SCENARIOS.length] : pick;
   const difficulty = ((hash(seed, 5) % 1000) / 1000) * 0.7 + 0.15;
   return {
@@ -385,16 +489,17 @@ export function scenario_round(pick: ScenarioPick, seed: number, daily?: string)
     scenario,
     difficulty,
     seed,
-    vehicle: vehicle_for(scenario, seed),
+    vehicle: vehicle_for(scenario, seed, daily ? ANY : vehicle),
     ...(daily ? { daily } : {}),
   };
 }
 
-export function open_round(seed: number): Round {
-  return { mode: Mode.OPEN, scenario: null, difficulty: 0.3, seed, vehicle: Vehicle.HATCH };
+export function open_round(seed: number, pick: VehiclePick = ANY): Round {
+  return { mode: Mode.OPEN, scenario: null, difficulty: 0.3, seed, vehicle: vehicle_for(null, seed, pick) };
 }
 
 export const pick_schema = z.enum([ANY, ...SCENARIOS] as [ScenarioPick, ...ScenarioPick[]]);
+export const vehicle_pick_schema = z.enum([ANY, ...Object.values(Vehicle)] as [VehiclePick, ...VehiclePick[]]);
 export const mode_schema = z.enum(MODES as [Mode, ...Mode[]]);
 
 export const WheelMode = { CENTRES: "centres", STAYS: "stays" } as const;

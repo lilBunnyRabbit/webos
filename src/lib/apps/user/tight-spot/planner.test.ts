@@ -13,9 +13,8 @@ import {
   type GameState,
 } from "./game";
 import { drive, parked_poses, plan, type PlanResult } from "./planner";
-import { centroid, type Pose } from "./geometry";
 import { jackknifed, type Placement } from "./vehicle";
-import { ChunkKind, CHUNK, open_world, SCENARIOS, SIDES, type Side } from "./world";
+import { SCENARIOS } from "./world";
 
 /**
  * Two proofs. From the start: a search from the car exactly as `create_game` places it (a trailer straight behind)
@@ -84,35 +83,4 @@ describe("every generated spot can be reached with the vehicle's turning circle"
       expect(reachable(create_game(level_round(level)), true), `level ${level}`).toBe(true);
     }
   });
-
-  test("every free bay in the open lot, through its lot's gate", { timeout: 120_000 }, () => {
-    for (const seed of [42, 7]) {
-      const world = open_world(seed);
-      const near = obstacles(world);
-      const lots = world.chunks.filter((each) => each.kind === ChunkKind.LOT);
-      expect(lots).toHaveLength(4);
-      for (const lot of lots) {
-        const side = SIDES.find((each) => lot.exits[each])!;
-        const gate = gate_pose(lot.cx, lot.cy, side);
-        expect(
-          plan(world.start, gate, near, { heading_tolerance: Math.PI }),
-          `gate ${lot.cx},${lot.cy}`
-        ).not.toBeNull();
-        const bays = lot.bays;
-        expect(bays.length).toBeGreaterThan(0);
-        for (const bay of bays) {
-          const ok = parked_poses(bay, near).some(
-            (pose) => plan(pose, gate, near, { heading_tolerance: Math.PI }) !== null
-          );
-          expect(ok, `bay at ${centroid(bay.shape).x.toFixed(1)},${centroid(bay.shape).y.toFixed(1)}`).toBe(true);
-        }
-      }
-    }
-  });
 });
-
-function gate_pose(cx: number, cy: number, side: Side): Pose {
-  const mid = { x: (cx + 0.5) * CHUNK, y: (cy + 0.5) * CHUNK };
-  const out = { n: { x: 0, y: -1 }, e: { x: 1, y: 0 }, s: { x: 0, y: 1 }, w: { x: -1, y: 0 } }[side];
-  return { x: mid.x + out.x * (CHUNK / 2 + 4), y: mid.y + out.y * (CHUNK / 2 + 4), heading: Math.atan2(out.y, out.x) };
-}

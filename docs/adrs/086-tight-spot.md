@@ -59,6 +59,14 @@ Decided in [the vehicles brainstorm](../brainstorm/2026-10-28_tight-spot-vehicle
 - **End bay** starts inside the lot, and its walls are thin lines on pavement instead of solid blocks. **Depot** starts the bus mid-yard.
 - **Phone held sideways** folds the status bar into the HUD and tightens the toolbar (CSS container query on the app root).
 
+## Revision 2026-10-28 (precision and vehicle picker)
+Decided in the vehicles brainstorm's "Precision, vehicle choice and more rigs". Implemented the same day.
+- **Precision formula.** Gaps are the shortest rays from any body corner to the bay outline along and across the bay's axis (the reverse axis for an `either` bay entered the other way). Side offset is half the difference of the side gaps, out of half their sum; depth the same along the axis; the angle is out of the 5° parking limit. Score `100 × Π(1 − e²)`, each share clamped to 0–1. Perfect is 95 % or more, rounded. Stars stay moves only.
+- **Trailer rigs** are judged as one footprint: every corner of the car and the trailer counts for the gaps, and the angle is the worse of the two. Chosen over judging the trailer alone because both bodies have to be in the bay to park, and a car left crooked in front of a straight trailer isn't a precise park.
+- **Bests** are keyed `kind:vehicle` and `open:vehicle`; a plain `kind` or `open` key reads as the hatchback's, and the hatchback's next park moves it to the new key. Order stays moves, then time; the record gains an optional `precision`, the best seen on that key whichever run set it, so old records still validate.
+- **Picker.** With Any spot the picker offers Any only: no vehicle is common to every kind. A kind with one vehicle shows it, fixed. Below the `@2xl` container size the toolbar can't hold three pickers and its buttons in a row, so the picker moves onto the start card there. In the open lot "Any vehicle" means the seed picks one of its four (hatchback, van, pickup, trailer), not always the hatchback as before. The four fit the open lot's existing layouts through `Fit`; a planner test covers every free bay of two open lots in each. For the trailer, a reverse-only search out of the bay (a new `directions` option on the test-only planner) gives a forward path in, replayed from a straight trailer; two bays of 68 need the full search from the gate. Searching each bay from the round's real start took 15 minutes and missed one bay to the coarse grid, so the trailer's proof starts at the lot's gate with the trailer straight.
+- **Achievement:** Perfect park (`perfect-park`), on a park of 95 % or more.
+
 ## Consequences
 - The first vehicle sim and polygon collision in the repo; they stay in the app until a second app needs them.
 - Grid roads look like city blocks with 90° junctions.

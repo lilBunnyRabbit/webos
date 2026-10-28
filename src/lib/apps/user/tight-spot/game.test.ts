@@ -2,7 +2,9 @@ import { describe, expect, test } from "vitest";
 import {
   advance,
   ANY,
+  best_of,
   better,
+  bests_schema,
   change_gear,
   crash_title,
   create_game,
@@ -13,6 +15,10 @@ import {
   obstacles,
   open_round,
   parked_in,
+  PERFECT,
+  precision,
+  record_best,
+  round_key,
   scenario_round,
   SCENARIO_INFO,
   set_status,
@@ -21,12 +27,14 @@ import {
   Status,
   unlocked,
   verdict,
+  vehicles_for,
   type GameState,
 } from "./game";
 import { parked_poses } from "./planner";
 import { bounds_of } from "./geometry";
 import { beep_period, End, sensor, sensor_frame, SENSOR_RANGE } from "./sensors";
-import { corners, create_car, Gear, NO_INPUT, Vehicle } from "./vehicle";
+import { corners, create_car, Gear, NO_INPUT, pose_from_centre, Vehicle, VEHICLES, type Placement } from "./vehicle";
+import { centroid } from "./geometry";
 import { SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;
@@ -197,12 +205,24 @@ describe("sensors", () => {
 });
 
 describe("vehicles", () => {
-  test("each kind's seed picks one of its vehicles; the open lot is always the hatchback", () => {
+  test("each kind's seed picks one of its vehicles, and so does the open lot's", () => {
     for (const scenario of SCENARIOS) {
       const seen = new Set(Array.from({ length: 40 }, (_, seed) => scenario_round(scenario, seed).vehicle));
       expect([...seen].sort()).toEqual([...SCENARIO_INFO[scenario].vehicles].sort());
     }
-    expect(open_round(9).vehicle).toBe(Vehicle.HATCH);
+    const open = new Set(Array.from({ length: 40 }, (_, seed) => open_round(seed).vehicle));
+    expect([...open].sort()).toEqual([...vehicles_for(null)].sort());
+  });
+
+  test("a picked vehicle wins when the kind allows it; the seed still makes the rest", () => {
+    const picked = scenario_round(Scenario.PARALLEL, 31, undefined, Vehicle.VAN);
+    expect(picked.vehicle).toBe(Vehicle.VAN);
+    expect({ ...picked, vehicle: null }).toEqual({ ...scenario_round(Scenario.PARALLEL, 31), vehicle: null });
+    expect(scenario_round(Scenario.PARALLEL, 31, undefined, Vehicle.BUS).vehicle).toBe(scenario_round(Scenario.PARALLEL, 31).vehicle);
+    expect(scenario_round(ANY, 31, "2026-10-28", Vehicle.VAN)).toEqual(scenario_round(ANY, 31, "2026-10-28"));
+    expect(open_round(4, Vehicle.TOWING).vehicle).toBe(Vehicle.TOWING);
+    expect(open_round(4, Vehicle.BUS).vehicle).toBe(open_round(4).vehicle);
+    expect(create_game(open_round(4, Vehicle.TOWING)).car.trailer).toBeDefined();
   });
 
   test("a trailer folded past 70° ends the round at the coupling", () => {
@@ -221,5 +241,100 @@ describe("vehicles", () => {
     const pose = parked_poses(bay, obstacles(state.world), 0.05, spec)[0];
     expect(parked_in(pose, bay, spec)).toBe(true);
     expect(parked_in({ ...pose, trailer: { heading: pose.heading + 0.15, roll: [0, 0] } }, bay, spec)).toBe(false);
+  });
+});
+
+describe("precision", () => {
+  const round = scenario_round(Scenario.REVERSE, 12, undefined, Vehicle.HATCH);
+  const bay = create_game(round).world.bays[0];
+  const centre = centroid(bay.shape);
+
+  function placed(side: number, depth: number, turn: number): Placement {
+    const along = { x: Math.cos(bay.heading), y: Math.sin(bay.heading) };
+    const at = { x: centre.x + along.x * depth - along.y * side, y: centre.y + along.y * depth + along.x * side };
+    return pose_from_centre({ ...at, heading: bay.heading + turn });
+  }
+
+  test("dead centre and square is 100", () => {
+    const fit = precision(placed(0, 0, 0), bay);
+    expect(fit.score).toBeCloseTo(100, 6);
+    expect(fit.side).toBeCloseTo(0, 6);
+    expect(fit.depth).toBeCloseTo(0, 6);
+  });
+
+  test("reads the offsets back in metres and radians", () => {
+    const fit = precision(placed(0.1, -0.2, 0), bay);
+    expect(fit.side).toBeCloseTo(0.1, 6);
+    expect(fit.depth).toBeCloseTo(0.2, 6);
+    expect(precision(placed(0, 0, 0.02), bay).angle).toBeCloseTo(0.02, 6);
+  });
+
+  test("falls to nothing at the edge of what the bay allows", () => {
+    const across = { x: -Math.sin(bay.heading), y: Math.cos(bay.heading) };
+    const spans = bay.shape.map((p) => (p.x - centre.x) * across.x + (p.y - centre.y) * across.y);
+    const room = (Math.max(...spans) - Math.min(...spans) - VEHICLES.hatch.width) / 2;
+    expect(precision(placed(room - 0.005, 0, 0), bay).score).toBeLessThan(5);
+    expect(precision(placed(0, 0, (5 * Math.PI) / 180), bay).score).toBeLessThan(1);
+  });
+
+  test("worse the further off, on every axis", () => {
+    for (const make of [(k: number) => placed(k * 0.03, 0, 0), (k: number) => placed(0, k * 0.03, 0), (k: number) => placed(0, 0, k * 0.005)]) {
+      const scores = Array.from({ length: 8 }, (_, k) => precision(make(k), bay).score);
+      for (let k = 1; k < scores.length; k++) expect(scores[k]).toBeLessThan(scores[k - 1]);
+    }
+  });
+
+  test("either way round counts the same in a bay that allows both", () => {
+    const either = { ...bay, either: true };
+    const turned = placed(0.05, 0.1, Math.PI);
+    expect(precision(turned, either).score).toBeCloseTo(precision(placed(-0.05, -0.1, 0), either).score, 6);
+  });
+
+  test("a trailer is judged with the car: centring over the rig, the worse of the two angles", () => {
+    const towing = scenario_round(Scenario.DRIVEWAY, 8);
+    const state = create_game(towing);
+    const spec = VEHICLES[towing.vehicle];
+    const rig_bay = state.world.bays[0];
+    const pose = parked_poses(rig_bay, obstacles(state.world), 0.05, spec)[0];
+    const straight = precision(pose, rig_bay, spec);
+    const bent = precision({ ...pose, trailer: { heading: pose.heading + 0.03, roll: [0, 0] } }, rig_bay, spec);
+    expect(bent.angle).toBeCloseTo(Math.max(0.03, straight.angle), 6);
+    expect(bent.score).toBeLessThan(straight.score);
+  });
+
+  test("perfect is 95 or more", () => {
+    expect(precision(placed(0.01, 0.01, 0.001), bay).score).toBeGreaterThanOrEqual(PERFECT);
+  });
+});
+
+describe("bests", () => {
+  const hatch = scenario_round(Scenario.PARALLEL, 1, undefined, Vehicle.HATCH);
+  const van = { ...hatch, vehicle: Vehicle.VAN };
+
+  test("keyed per kind and vehicle; an old key reads as the hatchback's", () => {
+    expect(round_key(van)).toBe("parallel:van");
+    expect(round_key(open_round(3, Vehicle.PICKUP))).toBe("open:pickup");
+    const old = bests_schema.parse({ parallel: { moves: 2, ms: 9000 } });
+    expect(best_of(old, hatch)).toEqual({ moves: 2, ms: 9000 });
+    expect(best_of(old, van)).toBeUndefined();
+  });
+
+  test("the hatchback's record moves to its new key, keeping the old best when the run is worse", () => {
+    const old = { parallel: { moves: 2, ms: 9000 } };
+    const { bests, improved, first } = record_best(old, hatch, { moves: 3, ms: 5000, precision: 80 });
+    expect(improved).toBe(false);
+    expect(first).toBe(false);
+    expect(bests).toEqual({ "parallel:hatch": { moves: 2, ms: 9000, precision: 80 } });
+  });
+
+  test("order stays moves then time; precision only rises", () => {
+    let bests = record_best({}, van, { moves: 3, ms: 9000, precision: 90 }).bests;
+    const better_run = record_best(bests, van, { moves: 2, ms: 12000, precision: 60 });
+    expect(better_run.improved).toBe(true);
+    bests = better_run.bests;
+    expect(bests["parallel:van"]).toEqual({ moves: 2, ms: 12000, precision: 90 });
+    bests = record_best(bests, van, { moves: 4, ms: 1000, precision: 97 }).bests;
+    expect(bests["parallel:van"]).toEqual({ moves: 2, ms: 12000, precision: 97 });
+    expect(bests_schema.safeParse(bests).success).toBe(true);
   });
 });
