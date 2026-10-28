@@ -89,7 +89,7 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
   },
   "bus-stop": {
     name: "Bus stop",
-    brief: "Pull into the lay-by between the parked cars. The tail swings out as you straighten.",
+    brief: "Pull into the stop box along the kerb, short of the parked car. The tail swings out as you straighten.",
     par: 1,
     vehicles: [Vehicle.BUS],
   },
@@ -134,7 +134,7 @@ export interface Round {
 }
 
 export const JACKKNIFE = "jackknife";
-export type HitKind = SolidKind | typeof JACKKNIFE;
+type HitKind = SolidKind | typeof JACKKNIFE;
 
 export interface GameState {
   round: Round;

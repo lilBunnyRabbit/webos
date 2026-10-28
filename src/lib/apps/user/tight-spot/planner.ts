@@ -35,6 +35,8 @@ export interface PlanOptions {
   max_expansions?: number;
   reach?: number;
   heading_tolerance?: number;
+  /** Replaces the goal of ending within `reach` and `heading_tolerance` of `to`; `to` then only steers the search. */
+  arrive?: (pose: Placement) => boolean;
 }
 
 export interface Move {
@@ -106,15 +108,15 @@ const SUBSTEPS = 4;
 const REVERSE_COST = 1.3;
 const SWITCH_COST = 2.5;
 const TURN_WEIGHT = 3;
-const GREED = 2.5;
-/** A path out must end with the trailer near straight, since a round starts with it straight behind the car. */
-const STRAIGHT_TRAILER = 0.1;
+const GREED = 4;
+const HITCHES = 16;
 
 function cell_key(pose: Placement, direction: number): number {
   const ix = Math.round(pose.x / CELL) + 4096;
   const iy = Math.round(pose.y / CELL) + 4096;
   const turn = ((Math.round((pose.heading / (2 * Math.PI)) * HEADINGS) % HEADINGS) + HEADINGS) % HEADINGS;
-  return ((ix * 8192 + iy) * HEADINGS + turn) * 2 + (direction > 0 ? 1 : 0);
+  const hitch = Math.round((hitch_angle(pose) / Math.PI) * HITCHES) + HITCHES;
+  return (((ix * 8192 + iy) * HEADINGS + turn) * (HITCHES * 2 + 1) + hitch) * 2 + (direction > 0 ? 1 : 0);
 }
 
 export function drive(from: Placement, move: Move, spec: VehicleSpec): Placement {
@@ -124,9 +126,9 @@ export function drive(from: Placement, move: Move, spec: VehicleSpec): Placement
 }
 
 /**
- * Hybrid A*: poses stay exact, only the closed set is a coarse grid of position, heading and direction. With a
- * trailer the search only drives forward: towing forward is stable, so the trailer's angle can ride along in each node
- * without being part of the grid. The path back in is then the same moves reversed (`replay`).
+ * Hybrid A*: poses stay exact, only the closed set is a coarse grid of position, heading, hitch angle and direction.
+ * Every node is a placement the moves really reach from `from`, the trailer's angle integrated along, so a path found
+ * is one a driver can drive, unstable reversing included.
  */
 export function plan(from: Placement, to: Placement, near: Obstacles, options: PlanOptions = {}): PlanResult | null {
   const spec = options.spec ?? HATCHBACK;
@@ -137,14 +139,14 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   const limit = options.max_expansions ?? 200_000;
   const lock = max_steer(spec);
   const curvatures = [-1, -0.5, 0, 0.5, 1].map((share) => Math.tan(lock * share) / spec.wheelbase);
-  const directions = spec.trailer ? [1] : [1, -1];
   const distance = (pose: Placement) => Math.hypot(pose.x - to.x, pose.y - to.y);
   const turn_weight = tolerance < Math.PI ? TURN_WEIGHT : 0;
-  const heuristic = (pose: Placement) => distance(pose) + turn_weight * angle_between(pose.heading, to.heading);
-  const arrived = (pose: Placement) =>
-    distance(pose) <= reach &&
-    angle_between(pose.heading, to.heading) <= tolerance &&
-    Math.abs(hitch_angle(pose)) <= STRAIGHT_TRAILER;
+  const folded = (pose: Placement) => (pose.trailer ? angle_between(pose.trailer.heading, to.heading) : 0);
+  const heuristic = (pose: Placement) =>
+    distance(pose) + turn_weight * (angle_between(pose.heading, to.heading) + folded(pose));
+  const arrived =
+    options.arrive ??
+    ((pose: Placement) => distance(pose) <= reach && angle_between(pose.heading, to.heading) <= tolerance);
   const blocked = (pose: Placement) => jackknifed(pose) || collide(pose, near, body) !== null;
 
   if (blocked(from)) return null;
@@ -167,7 +169,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
       }
       return { path: path.reverse(), moves: moves.reverse(), reversals: node.reversals, expansions };
     }
-    for (const direction of directions) {
+    for (const direction of [1, -1]) {
       for (const curvature of curvatures) {
         // A move that runs into something stops short, the way a driver creeps up to a bumper in a tight spot.
         let pose = node.pose;
@@ -194,24 +196,6 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
     }
   }
   return null;
-}
-
-/**
- * Drives a planned path backwards from where it ended, in steps no longer than the search took, and reports each
- * placement on the way. For a trailer this is the hard direction: reversing amplifies any difference.
- */
-export function replay(result: PlanResult, spec: VehicleSpec): Placement[] {
-  let at = result.path[result.path.length - 1];
-  const placements = [at];
-  for (let i = result.moves.length - 1; i >= 0; i--) {
-    const move = result.moves[i];
-    const pieces = Math.max(1, Math.round(Math.abs(move.distance) / (STEP / SUBSTEPS)));
-    for (let k = 0; k < pieces; k++) {
-      at = drive(at, { curvature: move.curvature, distance: -move.distance / pieces }, spec);
-      placements.push(at);
-    }
-  }
-  return placements;
 }
 
 export function parked_poses(bay: Bay, near: Obstacles, margin = 0.05, spec: VehicleSpec = HATCHBACK): Placement[] {

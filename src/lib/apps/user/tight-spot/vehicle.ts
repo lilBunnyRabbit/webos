@@ -119,7 +119,7 @@ export const BUS: VehicleSpec = {
   park_speed: 0.25,
 };
 
-export const BOX_TRAILER: TrailerSpec = {
+const BOX_TRAILER: TrailerSpec = {
   hitch: 1.0,
   axle: 2.45,
   drawbar: 1.1,
@@ -161,7 +161,7 @@ export function without_creep(spec: VehicleSpec): VehicleSpec {
   return found;
 }
 
-export const JACKKNIFE_ANGLE = (70 * Math.PI) / 180;
+const JACKKNIFE_ANGLE = (70 * Math.PI) / 180;
 
 /** The rear axle's centre is the pose: that's the point a car without tyre slip turns about. */
 export interface Car extends Pose {
@@ -352,7 +352,7 @@ export function trailer_pose(car: Placement, spec: TrailerSpec): Pose {
   return { x: ball.x - Math.cos(heading) * spec.axle, y: ball.y - Math.sin(heading) * spec.axle, heading };
 }
 
-export function trailer_local(spec: TrailerSpec): Vec[] {
+function trailer_local(spec: TrailerSpec): Vec[] {
   const front = spec.axle - spec.drawbar;
   const rear = front - spec.box_length;
   const half = spec.width / 2;
@@ -379,7 +379,7 @@ export function bodies(car: Placement, spec: VehicleSpec = HATCHBACK): Vec[][] {
   return spec.trailer ? [body, trailer_corners(car, spec.trailer)] : [body];
 }
 
-export function rig_extent(spec: VehicleSpec): { front: number; rear: number } {
+function rig_extent(spec: VehicleSpec): { front: number; rear: number } {
   const front = spec.length - spec.rear_overhang;
   const t = spec.trailer;
   return { front, rear: t ? -(t.hitch + t.drawbar + t.box_length) : -spec.rear_overhang };

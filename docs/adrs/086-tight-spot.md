@@ -49,6 +49,10 @@ Decided in [the vehicles brainstorm](../brainstorm/2026-10-28_tight-spot-vehicle
 - **Camera:** 26 m across the short side × the rig's length over the hatchback's, capped at 1.6×.
 - **Hits:** water and posts are new solid kinds ("the water", "a post"); a jackknife is `hit.kind = "jackknife"`, "Jackknifed the trailer".
 
+## Revision 2026-10-28 (vehicles: review)
+- **Trailer proof from the real start.** The forward-only search above wasn't a proof: it stopped anywhere within 1.5 m and 30° of the start with the trailer up to 0.1 rad bent, and reversing from the round's real start (trailer straight) amplifies any difference, so the replay only showed that a car starting at the path's end could park. The planner now drives both ways with a trailer and keeps the hitch angle (in 11° steps) in its closed set, and the test searches from the car exactly as the round places it until the game's own judging (`parked_in`) calls it parked, then drives the moves again from that start and asserts no contact, no jackknife and the verdict "inside". Every fixed level goes the same way, whatever its vehicle. The seed sweeps of the car kinds keep the cheaper search out of the bay to near the start, sound only without a trailer; going from the start there too took the planner test from about 70 s to 180 s. The search's weight on its heuristic went from 2.5 to 4 to keep the whole test about that long. The `replay` helper and the 0.1 rad goal are gone.
+- **Bus stop brief** says stop box, not lay-by.
+
 ## Consequences
 - The first vehicle sim and polygon collision in the repo; they stay in the app until a second app needs them.
 - Grid roads look like city blocks with 90° junctions.

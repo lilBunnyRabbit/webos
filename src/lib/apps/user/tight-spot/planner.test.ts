@@ -1,56 +1,65 @@
 import { describe, expect, test } from "vitest";
-import { collide, level_round, LEVEL_COUNT, obstacles, parked_in, SCENARIO_INFO, spec_of } from "./game";
-import { parked_poses, plan, replay } from "./planner";
-import { angle_between, centroid, type Pose } from "./geometry";
-import { jackknifed, trailer_pose, VEHICLES, type Placement, type VehicleSpec } from "./vehicle";
 import {
-  ChunkKind,
-  CHUNK,
-  open_world,
-  SCENARIOS,
-  scenario_world,
-  SIDES,
-  type Bay,
-  type Side,
-  type World,
-} from "./world";
-
-const ONE_DEGREE = Math.PI / 180;
+  collide,
+  create_game,
+  level_round,
+  LEVEL_COUNT,
+  Mode,
+  obstacles,
+  parked_in,
+  SCENARIO_INFO,
+  spec_of,
+  verdict,
+  type GameState,
+} from "./game";
+import { drive, parked_poses, plan, type PlanResult } from "./planner";
+import { centroid, type Pose } from "./geometry";
+import { jackknifed, type Placement } from "./vehicle";
+import { ChunkKind, CHUNK, open_world, SCENARIOS, SIDES, type Side } from "./world";
 
 /**
- * Plans from the parked pose out to the start: the model has no slip, so the same path driven backwards gets in.
- * Towing, the reverse is the unstable direction, so the path is driven backwards for real and must land in the bay.
+ * Two proofs. From the start: a search from the car exactly as `create_game` places it (a trailer straight behind)
+ * until the game's own judging calls it parked; every node is a placement the moves really reach, so the path is one a
+ * driver can drive, reversing a trailer included. Out of the bay: a search from a parked pose to near the start, the
+ * same path backwards getting in since a car has no slip; cheaper, and only sound without a trailer, so the seed sweeps
+ * of car kinds use it and a trailer, or a fixed level, always goes from the start.
  */
-function reachable(world: World, bay: Bay, spec: VehicleSpec): boolean {
+function reachable(state: GameState, from_start: boolean): boolean {
+  const { world, car } = state;
+  const spec = spec_of(state.round);
   const near = obstacles(world);
-  const poses = parked_poses(bay, near, 0.05, spec);
-  // A few of the most central poses per way round: the search's coarse closed set can miss from one and not the next.
+  const bay = world.bays[0];
+  const start: Placement = { x: car.x, y: car.y, heading: car.heading, trailer: car.trailer };
+  const arrive = (at: Placement) => parked_in(at, bay, spec);
+  // A few of the most central poses per way round: the search's coarse closed set can miss with one and not the next.
   const tried = new Map<number, number>();
-  return poses.some((pose) => {
+  return parked_poses(bay, near, 0.05, spec).some((pose) => {
     const count = tried.get(pose.heading) ?? 0;
     if (count >= 3) return false;
     tried.set(pose.heading, count + 1);
-    const found = plan(pose, world.start, near, { spec });
+    if (!from_start && !spec.trailer) return plan(pose, world.start, near, { spec }) !== null;
+    const found = plan(start, pose, near, { spec, arrive });
     if (!found) return false;
-    if (spec.trailer) expect_replay_lands(pose, found.moves.length ? replay(found, spec) : [pose], bay, world, spec);
+    expect(parks(state, found)).toBe(true);
     return true;
   });
 }
 
-function expect_replay_lands(parked: Placement, placements: Placement[], bay: Bay, world: World, spec: VehicleSpec) {
-  const near = obstacles(world);
-  for (const at of placements) {
-    expect(jackknifed(at)).toBe(false);
-    expect(collide(at, near, spec)).toBeNull();
+const PIECE = 0.15;
+
+/** Drives the moves from the round's start in the search's own pieces and judges where they end as a round would. */
+function parks(state: GameState, found: PlanResult): boolean {
+  const spec = spec_of(state.round);
+  const near = obstacles(state.world);
+  let at: Placement = state.car;
+  for (const move of found.moves) {
+    const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
+    for (let k = 0; k < pieces; k++) {
+      at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, spec);
+      if (jackknifed(at) || collide(at, near, spec)) return false;
+    }
   }
-  const end = placements[placements.length - 1];
-  expect(Math.hypot(end.x - parked.x, end.y - parked.y)).toBeLessThan(0.05);
-  expect(angle_between(end.heading, parked.heading)).toBeLessThan(ONE_DEGREE);
-  const trailer = trailer_pose(end, spec.trailer!);
-  const wanted = trailer_pose(parked, spec.trailer!);
-  expect(Math.hypot(trailer.x - wanted.x, trailer.y - wanted.y)).toBeLessThan(0.05);
-  expect(angle_between(trailer.heading, wanted.heading)).toBeLessThan(ONE_DEGREE);
-  expect(parked_in(end, bay, spec)).toBe(true);
+  return verdict({ ...state, car: { ...state.car, ...at } }) === "inside";
 }
 
 const SEEDS = 8;
@@ -60,11 +69,10 @@ describe("every generated spot can be reached with the vehicle's turning circle"
     for (const vehicle of SCENARIO_INFO[scenario].vehicles) {
       for (const difficulty of [0, 0.5, 1]) {
         test(`${scenario} in a ${vehicle} at ${difficulty}`, { timeout: 120_000 }, () => {
-          const spec = VEHICLES[vehicle];
           for (let seed = 1; seed <= SEEDS; seed++) {
-            const world = scenario_world(seed * 7919, scenario, difficulty, spec);
-            expect(world.bays, `seed ${seed}`).toHaveLength(1);
-            expect(reachable(world, world.bays[0], spec), `seed ${seed}`).toBe(true);
+            const state = create_game({ mode: Mode.SCENARIO, scenario, difficulty, seed: seed * 7919, vehicle });
+            expect(state.world.bays, `seed ${seed}`).toHaveLength(1);
+            expect(reachable(state, false), `seed ${seed}`).toBe(true);
           }
         });
       }
@@ -73,10 +81,7 @@ describe("every generated spot can be reached with the vehicle's turning circle"
 
   test("every level", { timeout: 240_000 }, () => {
     for (let level = 1; level <= LEVEL_COUNT; level++) {
-      const round = level_round(level);
-      const spec = spec_of(round);
-      const world = scenario_world(round.seed, round.scenario!, round.difficulty, spec);
-      expect(reachable(world, world.bays[0], spec), `level ${level}`).toBe(true);
+      expect(reachable(create_game(level_round(level)), true), `level ${level}`).toBe(true);
     }
   });
 
