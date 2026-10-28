@@ -67,7 +67,7 @@ Through the kit's encoder table (`kit/utils/codecs/encoders.ts`, [app API](../sy
 ## Data
 
 - `app.image-tools.fit`: the Fit section's limit (a preset or `custom`), the custom text, format and max side.
-- Props: `section` (`fit` opens Fit), `path` (the image).
+- Props: `section` (`fit` opens Fit), `path` (the image), `paths` (several images: Join, Squash and Atlas take them all, Patch and Compare the first two, the other sections the first).
 - Guide (`guide.md`): getting images in, where each tool saves, the Redact and Patch canvas tools, Sprites' keys and gestures, the shell commands. `guide_on_launch: false`: each tool explains itself in its empty state, so the guide waits for the `?` button or F1.
 - Output names: `{stem}-fit{ext}` (Fit, `image fit`), `{stem}-squashed{ext}` (Squash, `squash --under`), `{stem}{ext}`, `{stem}-formats/` and `{stem}-formats.zip` (Convert, `image convert-all`).
 - Convert keeps nothing between visits.
