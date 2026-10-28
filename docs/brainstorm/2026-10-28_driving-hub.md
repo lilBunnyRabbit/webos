@@ -35,9 +35,9 @@ Forklift warehouse, pick and drop: rear-wheel steering (steer at the rear axle),
 ## Action items
 - [x] ADR-087 (accepted)
 - [ ] Shell question before the hub build: a `game` prop for deep links (`app launch tight-spot game=forklift`), commands.
-- [ ] Display name of the hub (Tight Spot or a new name; display only).
+- [x] Display name: **Drive Hub** (owner). The app's display name changes when the hub ships (step 4); the id stays `tight-spot`, and the parking game inside keeps the name Tight Spot.
 - [ ] Forklift details at its build: model change for rear steer, pallet and rack shapes, job generator, proof, scoring, achievements.
 
 ## Next session topics
-- Hub name, the yard's look, which buildings show before their game exists.
+- The yard's look, which buildings show before their game exists.
 - Next games after the forklift: pushback, ferry loader, valet rush, driving test, coverage.

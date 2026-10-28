@@ -1,4 +1,4 @@
-# ADR-087: Tight Spot as a driving hub
+# ADR-087: Drive Hub
 **Date:** 2026-10-28
 **Status:** Accepted
 
@@ -6,7 +6,7 @@
 Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicles with trailers, polygon collision, a camera with insets, controls, vehicle drawing, sensors, a solvability planner) that more games than parking could use: a forklift warehouse, airport pushback, a ferry loader and others. Decided in [the driving hub brainstorm](../brainstorm/2026-10-28_driving-hub.md).
 
 ## Decision
-- Tight Spot becomes a hub for driving games and keeps its id `tight-spot`, so storage, bests, achievements, the daily and links carry over.
+- Tight Spot becomes **Drive Hub**, a hub for driving games, and keeps its id `tight-spot`; the parking game inside keeps the name Tight Spot. The display name changes when the hub ships, so storage, bests, achievements, the daily and links carry over.
 - The app splits into `core/` (shared driving code), `games/{id}/` (one folder per game, parking first) and `hub/` (the yard).
 - A game is picked by driving into its building in a small hub yard, or from a menu that jumps straight to it.
 - The yard is also a playground: free driving with a garage pad that swaps to any vehicle the app has.
