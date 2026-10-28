@@ -21,6 +21,12 @@
     return (Math.atan2(event.clientY - (box.top + box.height / 2), event.clientX - (box.left + box.width / 2)) * 180) / Math.PI;
   }
 
+  // Near the hub a thumb's small slip is a big angle, so the wheel only turns from the rim side.
+  function near_hub(event: PointerEvent): boolean {
+    const box = wheel!.getBoundingClientRect();
+    return Math.hypot(event.clientX - (box.left + box.width / 2), event.clientY - (box.top + box.height / 2)) < box.width * 0.12;
+  }
+
   function on_pointerdown(event: PointerEvent) {
     if (!wheel || (event.target instanceof Element && event.target.closest("button"))) return;
     event.preventDefault();
@@ -31,6 +37,10 @@
   function on_pointermove(event: PointerEvent) {
     if (!grab || grab.id !== event.pointerId) return;
     const now = angle_of(event);
+    if (near_hub(event)) {
+      grab.last = now;
+      return;
+    }
     let delta = now - grab.last;
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;

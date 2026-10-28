@@ -71,15 +71,34 @@ export class Sounds {
   crash() {
     this.quiet();
     const audio = this.audio();
-    if (audio) this.blip(110, audio.currentTime, 0.18, 0.12, "triangle");
+    if (!audio) return;
+    const at = audio.currentTime;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = "triangle";
+    oscillator.frequency.setValueAtTime(150, at);
+    oscillator.frequency.exponentialRampToValueAtTime(55, at + 0.22);
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(0.14, at + 0.006);
+    gain.gain.exponentialRampToValueAtTime(0.001, at + 0.26);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(at);
+    oscillator.stop(at + 0.28);
   }
 
-  parked() {
+  parked(record = false) {
     this.quiet();
     const audio = this.audio();
     if (!audio) return;
-    this.blip(880, audio.currentTime, 0.09);
-    this.blip(1320, audio.currentTime + 0.11, 0.14);
+    const at = audio.currentTime;
+    this.blip(880, at, 0.09);
+    this.blip(1320, at + 0.11, 0.14);
+    if (record) this.blip(1760, at + 0.27, 0.2);
+  }
+
+  shift() {
+    const audio = this.audio();
+    if (audio) this.blip(2400, audio.currentTime, 0.025, VOLUME * 0.35, "triangle");
   }
 
   quiet() {

@@ -4,12 +4,13 @@
   import { daily_seed, format_time, track_play } from "$kit/games";
   import { random_seed } from "$lib/core/utils/random";
   import { cn } from "$lib/core/utils";
-  import { BoardOverlay, Button, IconButton, Segmented, Select, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
+  import { Badge, BoardOverlay, Button, IconButton, Kbd, Segmented, Select, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import {
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     Pause as PauseIcon,
     Play as PlayIcon,
     SlidersHorizontal as SlidersIcon,
+    Star as StarIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
@@ -31,6 +32,7 @@
     mode_schema,
     obstacles,
     open_round,
+    par,
     pick_schema,
     round_brief,
     round_key,
@@ -80,8 +82,9 @@
   };
   const DRIVE_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyA", "KeyD", "KeyW", "KeyS"]);
   const GEARS: Gear[] = [Gear.PARK, Gear.REVERSE, Gear.NEUTRAL, Gear.DRIVE];
-  // A card instead of a full cover, so the bay, the car and where it touched stay in sight.
-  const CARD = "inset-x-2 top-auto bottom-2 rounded-xl bg-background/85 py-3 @3xl:right-auto @3xl:w-72";
+  const TOUCH_GEARS: Gear[] = [Gear.PARK, Gear.REVERSE, Gear.DRIVE];
+  const GEAR_NAMES: Record<Gear, string> = { P: "Park", R: "Reverse", N: "Neutral", D: "Drive" };
+  const VERDICTS = { crooked: "Not straight in the bay", backwards: "Facing the wrong way", outside: "Not inside a bay" } as const;
 
   const { daily: daily_prop }: { daily?: string } = $props();
   const daily_day = untrack(() => daily_prop);
@@ -114,7 +117,10 @@
   let canvas: HTMLCanvasElement | undefined = $state();
   let board: HTMLDivElement | undefined = $state();
   let root: HTMLDivElement | undefined = $state();
-  let root_width = $state(0);
+  let card_size = $state({ width: 0, height: 0 });
+  let first_park = $state(false);
+  let settings_panel: HTMLDivElement | undefined = $state();
+  let held = $state({ gas: false, brake: false });
 
   // Read every physics step, never rendered, so holding a key doesn't re-run effects.
   const keys = new Set<string>();
@@ -130,8 +136,11 @@
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
   const over = $derived(game.status === Status.PARKED || game.status === Status.CRASHED);
-  const can_pause = $derived(game.status === Status.DRIVING || game.status === Status.PAUSED);
+  const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
+  const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(bests.value[round_key(game.round)]);
+  const round_par = $derived(par(game.round));
+  const level_best = $derived(game.round.level !== undefined ? (level_stars.value[game.round.level] ?? 0) : 0);
   const max_level = $derived(unlocked(level_stars.value));
   const level_options = $derived(
     Array.from({ length: max_level }, (_, i) => {
@@ -141,6 +150,8 @@
     })
   );
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNT);
+  // A short wide board (a phone held sideways) has no room under the car for a card, so cards sit on its left.
+  const side_card = $derived(size.height > 0 && size.height < 340 && size.width > size.height * 1.5);
   const speed = $derived(Math.round(Math.abs(game.car.speed) * 3.6));
   const wheel_degrees = $derived(Math.round((game.car.steer / LOCK) * 450));
   const time = $derived(format_time(game.ms, { tenths: true }));
@@ -152,6 +163,10 @@
     if (game.car.gear === Gear.REVERSE) return readings.rear;
     return null;
   });
+
+  function moves_text(count: number): string {
+    return `${count} ${count === 1 ? "move" : "moves"}`;
+  }
 
   function make_round(): Round {
     if (daily) return scenario_round(ANY, daily_seed(daily, app_id), daily);
@@ -169,6 +184,16 @@
   });
 
   $effect(() => () => sounds.close());
+
+  // The phone's Back closes the settings first, then pauses a running round before it may leave the app.
+  $effect(() =>
+    win.on_back(() => {
+      if (settings_panel?.matches(":popover-open")) return (settings_panel.hidePopover(), true);
+      if (game.status !== Status.DRIVING) return false;
+      toggle_pause();
+      return true;
+    })
+  );
 
   // The window frame focuses itself when it comes to the front; the keys belong on the board inside it.
   $effect(() => {
@@ -218,7 +243,7 @@
 
   // While driving the frame loop draws; this covers everything else (menus, a resize, a new theme).
   $effect(() => {
-    void [game, palette, size, zoom, guides_on];
+    void [game, palette, size, zoom, guides_on, card_size.width, card_size.height, side_card];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -229,15 +254,17 @@
     if (game.status === Status.READY && game.world.bays.length === 1) {
       // Before the start, frame the car and its bay together so the player sees the task.
       const bay = centroid(game.world.bays[0].shape);
-      // Below the side-card width the start card covers the bottom of the board, so the framing keeps above it.
-      const covered = root_width < 768 ? Math.min(160, size.height * 0.4) : 0;
-      const height = size.height - covered;
+      // The start card covers the bottom of the board, or its left on a short wide one; the framing keeps clear of it.
+      const covered_x = side_card ? Math.min(card_size.width + 8, size.width * 0.6) : 0;
+      const covered_y = side_card ? 0 : Math.min(card_size.height + 8, size.height * 0.5);
+      const width = size.width - covered_x;
+      const height = size.height - covered_y;
       const across = Math.abs(bay.x - car.x) + 12;
       const along = Math.abs(bay.y - car.y) + 12;
-      const short = Math.min(size.width, height);
-      const fit = Math.min(1, (26 * size.width) / short / across, (26 * height) / short / along);
-      const view = frame(bounds, { x: (bay.x + car.x) / 2, y: (bay.y + car.y) / 2 }, size.width, height, Math.max(0.25, fit) * zoom);
-      return { ...view, y: view.y + covered / 2 / view.scale };
+      const short = Math.min(width, height);
+      const fit = Math.min(1, (26 * width) / short / across, (26 * height) / short / along);
+      const view = frame(bounds, { x: (bay.x + car.x) / 2, y: (bay.y + car.y) / 2 }, width, height, Math.max(0.25, fit) * zoom);
+      return { ...view, x: view.x - covered_x / 2 / view.scale, y: view.y + covered_y / 2 / view.scale };
     }
     const ahead = game.car.speed * 0.9;
     const focus = { x: car.x + Math.cos(game.car.heading) * ahead, y: car.y + Math.sin(game.car.heading) * ahead };
@@ -309,11 +336,13 @@
 
   function parked(state: GameState) {
     release_all();
-    if (sound_on) sounds.parked();
     const result = { moves: state.moves, ms: Math.round(state.ms) };
     const key = round_key(state.round);
+    const had_best = bests.value[key] !== undefined;
     new_best = better(bests.value[key], result);
     if (new_best) bests.value[key] = result;
+    first_park = !had_best;
+    if (sound_on) sounds.parked(new_best && had_best);
     earned = stars(state.round, state.moves);
     achievements.achieve("first-park");
     const scenario = state.round.scenario;
@@ -341,6 +370,7 @@
     keys.clear();
     pedals.gas.clear();
     pedals.brake.clear();
+    held = { gas: false, brake: false };
     sounds.quiet();
   }
 
@@ -355,8 +385,20 @@
   }
 
   function toggle_pause() {
-    if (game.status === Status.DRIVING) game = set_status(game, Status.PAUSED);
-    else start();
+    if (game.status === Status.DRIVING) {
+      game = set_status(game, Status.PAUSED);
+      release_all();
+    } else start();
+  }
+
+  function primary_action() {
+    if (game.status === Status.READY || game.status === Status.PAUSED) start();
+    else if (game.status === Status.CRASHED) retry();
+    else if (game.status === Status.PARKED) {
+      if (game.round.level === undefined) new_spot();
+      else if (has_next_level) next_round();
+      else retry();
+    }
   }
 
   function load(round: Round) {
@@ -427,6 +469,7 @@
     const next = change_gear(game, gear);
     if (next === game) return;
     game = next;
+    if (sound_on && next.status === Status.DRIVING) sounds.shift();
     if (next.status === Status.PARKED) parked(next);
   }
 
@@ -449,27 +492,26 @@
     zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, next));
   }
 
+  // Keys drive from anywhere in the window but a field or the settings, so clicking a button never strands the arrows.
   function on_keydown(event: KeyboardEvent) {
     if (event.defaultPrevented || event.altKey || event.ctrlKey) return;
     if (event.metaKey) return release_all();
     const target = event.target;
-    if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement) return;
+    if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return;
+    if (settings_panel?.matches(":popover-open")) return;
     const code = event.code;
-    const on_board = target === board;
+    const on_button = target instanceof HTMLButtonElement;
 
     if (code === "Escape") {
-      if (game.status !== Status.DRIVING) return;
+      if (game.status !== Status.DRIVING && game.status !== Status.PAUSED) return;
       event.preventDefault();
       toggle_pause();
       return;
     }
     if (code === "Enter") {
-      if (target instanceof HTMLButtonElement) return;
+      if (on_button) return;
       event.preventDefault();
-      if (game.status === Status.READY || game.status === Status.PAUSED) start();
-      else if (game.status === Status.PARKED && game.round.level === undefined) new_spot();
-      else if (game.status === Status.PARKED && has_next_level) next_round();
-      else if (game.status === Status.CRASHED) retry();
+      primary_action();
       return;
     }
     if (code === "Equal" || code === "NumpadAdd" || code === "Minus" || code === "NumpadSubtract") {
@@ -477,7 +519,14 @@
       set_zoom(code === "Equal" || code === "NumpadAdd" ? zoom * 1.2 : zoom / 1.2);
       return;
     }
-    if (!on_board || over || game.status === Status.PAUSED) return;
+    if (over) {
+      if (code === "KeyR" && !event.repeat) {
+        event.preventDefault();
+        retry();
+      }
+      return;
+    }
+    if (game.status === Status.PAUSED || (on_button && code === "Space")) return;
 
     if (DRIVE_KEYS.has(code)) {
       event.preventDefault();
@@ -495,6 +544,13 @@
       event.preventDefault();
       shift(gear);
     }
+  }
+
+  // Closing the guide or a shell menu drops the focus to the page; the front window still owns the keys.
+  function on_window_keydown(event: KeyboardEvent) {
+    if (!win.is_focused || (document.activeElement && document.activeElement !== document.body)) return;
+    focus_board();
+    on_keydown(event);
   }
 
   function on_keyup(event: KeyboardEvent) {
@@ -532,35 +588,61 @@
   function hold_pedal(which: "gas" | "brake") {
     return {
       onpointerdown: (event: PointerEvent) => {
+        event.preventDefault();
         (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
         if (game.status === Status.READY) start();
         if (game.status !== Status.DRIVING) return;
         pedals[which].add(event.pointerId);
+        held[which] = true;
       },
-      onlostpointercapture: (event: PointerEvent) => pedals[which].delete(event.pointerId),
+      onlostpointercapture: (event: PointerEvent) => {
+        pedals[which].delete(event.pointerId);
+        held[which] = pedals[which].size > 0;
+      },
       oncontextmenu: (event: Event) => event.preventDefault(),
     };
   }
+
+  // A closed settings panel hands the keys back to the board, unless the click that closed it went to another control.
+  function on_settings_toggle(event: ToggleEvent) {
+    if (event.newState !== "closed") return;
+    const active = document.activeElement;
+    if (!active || active === document.body || settings_panel?.contains(active) || active.getAttribute("popovertarget") === settings_panel?.id) focus_board();
+  }
 </script>
 
-<svelte:window onkeyup={on_keyup} onblur={release_all} />
+<svelte:window onkeydown={on_window_keydown} onkeyup={on_keyup} onblur={release_all} />
+
+{#snippet star_row(count: number, reveal: boolean)}
+  <span class="inline-flex items-center gap-0.5" role="img" aria-label="{count} of 3 stars">
+    {#each [1, 2, 3] as n (n)}
+      <span class={cn("inline-grid", n <= count ? "text-primary" : "text-foreground/20", reveal && n <= count && "ts-star")} style:animation-delay={reveal ? `${n * 140}ms` : undefined}>
+        <StarIcon weight="fill" class="size-4" />
+      </span>
+    {/each}
+  </span>
+{/snippet}
+
+{#snippet hint(text: string, key: string)}
+  <span class="inline-flex items-center gap-1"><Kbd>{key}</Kbd>{text}</span>
+{/snippet}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={root} bind:clientWidth={root_width} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
+<div bind:this={root} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
   <Toolbar>
     <Segmented size="sm" class="hidden @xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
     <Select class="w-[5.75rem] @xl:hidden" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
     {#if mode === Mode.SCENARIO && !daily}
       <Select class="w-[7.5rem] min-w-0 @md:w-32" size="sm" aria-label="Kind of spot" options={PICK_OPTIONS} bind:value={() => pick, set_pick} />
     {:else if mode === Mode.LEVELS}
-      <Select class="w-[7.5rem] min-w-0 @md:w-36" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+      <Select class="w-36 min-w-0 @md:w-40" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
     {/if}
     {#if daily}<span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>{/if}
     <div class="flex-1"></div>
     <IconButton size="sm" label="Settings" popovertarget="ts-settings-{uid}" style="anchor-name: --ts-settings-{uid}">
       <SlidersIcon weight="bold" />
     </IconButton>
-    <IconButton size="sm" class="hidden @md:inline-flex" label={game.status === Status.DRIVING ? "Pause (Esc)" : "Resume"} disabled={!can_pause} onclick={toggle_pause}>
+    <IconButton size="sm" class="hidden @md:inline-flex" label={play_label} disabled={!can_pause} onclick={toggle_pause}>
       {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
     </IconButton>
     <IconButton size="sm" label="Retry this spot" onclick={retry}>
@@ -572,148 +654,216 @@
   </Toolbar>
 
   <div
+    bind:this={settings_panel}
     id="ts-settings-{uid}"
     popover="auto"
-    class="ts-popover m-0 w-64 rounded-xl bg-background-lighter p-3 text-foreground shadow-popover"
+    class="ts-popover m-0 w-68 rounded-xl bg-background-lighter p-3 text-foreground shadow-popover"
     style="position-anchor: --ts-settings-{uid}"
+    ontoggle={on_settings_toggle}
   >
     <div class="flex flex-col gap-3">
-      <label class="flex items-center justify-between gap-2 text-ui">
-        Sound
+      <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Feedback</p>
+      <label class="flex items-center justify-between gap-3 text-ui">
+        <span class="flex flex-col">Sound <span class="text-2xs text-foreground/65">Sensor beeps, gear clicks and results</span></span>
         <Switch bind:checked={() => sound_on, (value: boolean) => set_setting("sound", value)} />
       </label>
-      <label class="flex items-center justify-between gap-2 text-ui">
-        <span>Guide lines <span class="text-foreground/65">· where the corners go</span></span>
+      <label class="flex items-center justify-between gap-3 text-ui">
+        <span class="flex flex-col">Guide lines <span class="text-2xs text-foreground/65">Where the front corners will go</span></span>
         <Switch bind:checked={() => guides_on, (value: boolean) => set_setting("guides", value)} />
       </label>
-      <label class="flex items-center justify-between gap-2 text-ui">
-        <span>Creep <span class="text-foreground/65">· D and R roll without gas</span></span>
+      <p class="mt-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Driving</p>
+      <label class="flex items-center justify-between gap-3 text-ui">
+        <span class="flex flex-col">Creep <span class="text-2xs text-foreground/65">D and R roll without gas, like an automatic</span></span>
         <Switch bind:checked={() => creep_on, (value: boolean) => set_setting("creep", value)} />
       </label>
-      <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Keyboard wheel when let go</p>
-      <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="Keyboard wheel" options={WHEEL_OPTIONS} bind:value={() => wheel_mode, set_wheel_mode} />
+      <div class="flex flex-col gap-1.5 pointer-coarse:hidden">
+        <span class="flex flex-col text-ui">Keyboard wheel <span class="text-2xs text-foreground/65">When you let go of ← →</span></span>
+        <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="Keyboard wheel" options={WHEEL_OPTIONS} bind:value={() => wheel_mode, set_wheel_mode} />
+      </div>
     </div>
   </div>
 
-  <div class="flex min-h-0 flex-col gap-2 p-2 @md:gap-3 @md:p-3">
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <div
-      bind:this={board}
-      role="application"
-      aria-label="Tight Spot. Arrows steer and drive, E drive, R reverse, P park, Escape pauses."
-      tabindex="0"
-      class="relative min-h-0 flex-1 touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
-      onwheel={on_wheel}
-      onpointerdown={on_board_pointerdown}
-      onpointermove={on_board_pointermove}
-      onpointerup={on_board_pointerend}
-      onpointercancel={on_board_pointerend}
-    >
-      <canvas bind:this={canvas} class="block size-full"></canvas>
+  <div class="min-h-0 p-2 [container:ts-stage/size] @md:p-3">
+    <div class="ts-layout h-full">
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+      <div
+        bind:this={board}
+        role="application"
+        aria-label="Tight Spot. Arrows steer and drive, E drive, R reverse, P park, Escape pauses, Enter starts."
+        tabindex="0"
+        class="relative min-h-0 touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none [grid-area:board] focus-visible:ring-2 focus-visible:ring-cottontail"
+        onwheel={on_wheel}
+        onpointerdown={on_board_pointerdown}
+        onpointermove={on_board_pointermove}
+        onpointerup={on_board_pointerend}
+        onpointercancel={on_board_pointerend}
+      >
+        <canvas bind:this={canvas} class="block size-full"></canvas>
 
-      {#if game.status !== Status.READY}
-        <div class="pointer-events-none absolute top-2 left-2 flex items-center gap-2">
-          <!-- The toolbar's Pause is hidden when narrow, so phones pause from here. -->
-          <IconButton
-            size="sm"
-            class="pointer-events-auto bg-background/80 backdrop-blur-[2px] @md:hidden pointer-coarse:size-11"
-            label={game.status === Status.DRIVING ? "Pause" : "Resume"}
-            disabled={!can_pause}
-            onclick={toggle_pause}
-          >
-            {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
-          </IconButton>
-          <div class="pointer-events-auto flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 font-mono text-ui backdrop-blur-[2px]" role="group" aria-label="Gear">
-            {#each GEARS as gear (gear)}
-              <!-- Pressing keeps the focus on the board, so the arrow keys still drive after a click. -->
-              <button
-                type="button"
-                class={cn("grid w-5 place-items-center rounded-sm", game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/50 hover:bg-foreground/10 hover:text-foreground")}
-                aria-pressed={game.car.gear === gear}
-                onmousedown={(event) => event.preventDefault()}
-                onclick={() => shift(gear)}
-              >
-                {gear}
-              </button>
-            {/each}
+        {#if game.status !== Status.READY}
+          <div class="pointer-events-none absolute top-2 left-2 flex items-center gap-1.5">
+            <!-- The toolbar's Pause is hidden when narrow, so phones pause from here. -->
+            <IconButton
+              size="sm"
+              class="pointer-events-auto bg-background/85 backdrop-blur-[2px] @md:hidden pointer-coarse:size-10"
+              label={game.status === Status.DRIVING ? "Pause" : "Resume"}
+              disabled={!can_pause}
+              onclick={toggle_pause}
+            >
+              {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
+            </IconButton>
+            <div class="pointer-events-auto flex items-center gap-0.5 rounded-md bg-background/85 p-0.5 font-mono text-ui backdrop-blur-[2px]" role="group" aria-label="Gear">
+              {#each GEARS as gear (gear)}
+                <!-- Pressing keeps the focus on the board, so the arrow keys still drive after a click. -->
+                <button
+                  type="button"
+                  class={cn(
+                    "grid h-6 w-6 place-items-center rounded-sm transition-colors pointer-coarse:h-9 pointer-coarse:w-8",
+                    game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/60 hover:bg-foreground/10 hover:text-foreground"
+                  )}
+                  aria-label={GEAR_NAMES[gear]}
+                  title="{GEAR_NAMES[gear]} ({gear === Gear.DRIVE ? 'E' : gear === Gear.PARK ? 'P or Space' : gear})"
+                  aria-pressed={game.car.gear === gear}
+                  onmousedown={(event) => event.preventDefault()}
+                  onclick={() => shift(gear)}
+                >
+                  {gear}
+                </button>
+              {/each}
+            </div>
+            <div class="rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">
+              {speed} <span class="text-foreground/65">km/h</span>
+            </div>
           </div>
-          <div class="rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">{speed} km/h</div>
-        </div>
-      {/if}
-      {#if facing_reading !== null}
-        <div
-          class={cn(
-            "pointer-events-none absolute top-2 right-2 rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]",
-            facing_reading < 0.5 ? "text-error" : "text-warning"
-          )}
-          aria-hidden="true"
-        >
-          {game.car.gear === Gear.REVERSE ? "Rear" : "Front"} {facing_reading.toFixed(2)} m
-        </div>
-      {/if}
+        {/if}
+        {#if facing_reading !== null}
+          <div
+            class={cn(
+              "pointer-events-none absolute top-2 right-2 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]",
+              facing_reading < 0.5 ? "text-error" : "text-warning"
+            )}
+            aria-hidden="true"
+          >
+            {game.car.gear === Gear.REVERSE ? "Rear" : "Front"}
+            {facing_reading.toFixed(2)} m
+          </div>
+        {/if}
+        {#if judged && judged !== "inside"}
+          <p class="pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit animate-pop-in rounded-md bg-background/85 px-2 py-1 text-ui text-warning backdrop-blur-[2px]" aria-live="polite">
+            {VERDICTS[judged]}
+          </p>
+        {/if}
 
-      {#if game.status === Status.READY}
-        <BoardOverlay class={CARD} title={round_title(game.round)} detail={round_brief(game.round)}>
-          <p class="hidden basis-full text-ui text-foreground/65 pointer-fine:block">Arrows steer and drive · E drive, R reverse, P park</p>
-          <Button size="sm" variant="primary" onclick={start}>Start</Button>
-        </BoardOverlay>
-      {:else if game.status === Status.PAUSED}
-        <BoardOverlay title="Paused" detail="{time} · Moves {game.moves}">
-          <Button size="sm" variant="primary" onclick={start}>Resume</Button>
-        </BoardOverlay>
-      {:else if game.status === Status.PARKED}
-        <BoardOverlay
-          class={CARD}
-          title="Parked {'★'.repeat(earned)}{'☆'.repeat(3 - earned)}"
-          detail="{time} · Moves {game.moves}{new_best ? ' · New best' : best ? ` · Best ${best.moves} moves, ${format_time(best.ms, { tenths: true })}` : ''}"
-        >
-          <Button size="sm" variant="quiet" onclick={retry}>Again</Button>
-          {#if game.round.level !== undefined}
-            {#if has_next_level}<Button size="sm" variant="primary" onclick={next_round}>Next level</Button>{/if}
-          {:else}
-            <Button size="sm" variant="primary" onclick={new_spot}>New spot</Button>
-          {/if}
-        </BoardOverlay>
-      {:else if game.status === Status.CRASHED}
-        <BoardOverlay
-          class={CARD}
-          title="Touched {game.hit ? HIT_NAMES[game.hit.kind] : 'something'}"
-          detail="{time} · Moves {game.moves}"
-        >
-          <Button size="sm" variant="primary" onclick={retry}>Try again</Button>
-          {#if game.round.level === undefined && !game.round.daily}<Button size="sm" variant="quiet" onclick={new_spot}>New spot</Button>{/if}
-        </BoardOverlay>
-      {/if}
-    </div>
-
-    <div class="hidden shrink-0 items-end justify-between gap-3 pointer-coarse:flex" role="group" aria-label="Car controls">
-      <SteeringWheel class="w-[min(9.5rem,34cqw)]" value={wheel} onchange={set_wheel} oncentre={centre_wheel} />
-      <div class="flex flex-col gap-2">
-        <Button
-          size="lg"
-          variant={game.car.gear === Gear.REVERSE ? "primary" : "secondary"}
-          class="w-16 font-mono text-base"
-          aria-label={game.car.gear === Gear.REVERSE ? "In reverse, switch to drive" : "Switch to reverse"}
-          onclick={toggle_direction}
-        >
-          {game.car.gear === Gear.REVERSE ? "R" : game.car.gear === Gear.DRIVE ? "D" : "D/R"}
-        </Button>
-        <Button size="lg" variant={game.car.gear === Gear.PARK ? "primary" : "secondary"} class="w-16 font-mono text-base" aria-label="Park" onclick={() => shift(Gear.PARK)}>P</Button>
+        <!-- Cards sit at the bottom instead of covering the board, so the bay, the car and where it touched stay in sight. -->
+        {#if game.status === Status.READY}
+          <div bind:clientWidth={card_size.width} bind:clientHeight={card_size.height} class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
+            <div class="min-w-0 flex-1 basis-52">
+              <p class="flex items-center gap-2 text-base font-semibold">
+                {round_title(game.round)}
+                {#if level_best}{@render star_row(level_best, false)}{/if}
+              </p>
+              <p class="text-ui text-foreground/80">{round_brief(game.round)}</p>
+              <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
+                Par {moves_text(round_par)}{best ? ` · Best ${moves_text(best.moves)}, ${format_time(best.ms, { tenths: true })}` : ""}
+              </p>
+            </div>
+            <Button class="ml-auto" variant="primary" onclick={start}>Start</Button>
+            <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
+              {@render hint("gas", "↑")}{@render hint("brake", "↓")}{@render hint("steer", "← →")}{@render hint("drive", "E")}{@render hint("reverse", "R")}{@render hint("park", "P")}
+            </p>
+            <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">Hold Gas to roll, steer with the wheel, tap P once you're in the bay.</p>
+          </div>
+        {:else if game.status === Status.PAUSED}
+          <BoardOverlay title="Paused" detail="{time} · Moves {game.moves}">
+            <Button size="sm" variant="quiet" onclick={retry}>Restart</Button>
+            <Button size="sm" variant="primary" onclick={start}>Resume</Button>
+          </BoardOverlay>
+        {:else if game.status === Status.PARKED}
+          <div class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
+            <div class="min-w-0 flex-1 basis-52">
+              <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
+                Parked
+                {@render star_row(earned, true)}
+                {#if new_best}<Badge class="ts-pop" tone={first_park ? "neutral" : "primary"}>{first_park ? "First park" : "New best"}</Badge>{/if}
+              </p>
+              <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · {moves_text(game.moves)} · par {round_par}</p>
+              {#if !new_best && best}<p class="font-mono text-2xs text-foreground/65 tabular-nums">Best {moves_text(best.moves)}, {format_time(best.ms, { tenths: true })}</p>{/if}
+            </div>
+            <div class="ml-auto flex shrink-0 gap-2">
+              <Button variant="quiet" onclick={retry}>Again</Button>
+              {#if game.round.level === undefined}
+                <Button variant="primary" onclick={new_spot}>New spot</Button>
+              {:else if has_next_level}
+                <Button variant="primary" onclick={next_round}>Next level</Button>
+              {/if}
+            </div>
+            <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
+              {#if game.round.level === undefined || has_next_level}{@render hint(game.round.level === undefined ? "new spot" : "next level", "Enter")}{/if}
+              {@render hint("again", "R")}
+            </p>
+          </div>
+        {:else if game.status === Status.CRASHED}
+          <div class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
+            <div class="min-w-0 flex-1 basis-52">
+              <p class="text-base font-semibold">Touched {game.hit ? HIT_NAMES[game.hit.kind] : "something"}</p>
+              <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · {moves_text(game.moves)}</p>
+            </div>
+            <div class="ml-auto flex shrink-0 gap-2">
+              {#if game.round.level === undefined && !game.round.daily}<Button variant="quiet" onclick={new_spot}>New spot</Button>{/if}
+              <Button variant="primary" onclick={retry}>Try again</Button>
+            </div>
+            <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
+              {@render hint("or", "Enter")}{@render hint("tries again", "R")}
+            </p>
+          </div>
+        {/if}
       </div>
-      <div class="flex items-end gap-2">
-        <button type="button" class="ts-pedal h-20 w-14 rounded-lg bg-foreground/10 text-ui font-medium active:bg-foreground/20" aria-label="Brake" {...hold_pedal("brake")}>Brake</button>
-        <button type="button" class="ts-pedal h-28 w-14 rounded-lg bg-foreground/10 text-ui font-medium active:bg-primary/25" aria-label="Gas" {...hold_pedal("gas")}>Gas</button>
+
+      <div class="ts-wheel hidden touch-none place-items-center select-none pointer-coarse:grid">
+        <SteeringWheel class="ts-wheel-size" value={wheel} onchange={set_wheel} oncentre={centre_wheel} />
+      </div>
+      <div class="ts-gears hidden touch-none justify-center gap-1.5 select-none pointer-coarse:flex" role="group" aria-label="Gear">
+        {#each TOUCH_GEARS as gear (gear)}
+          <Button
+            size="lg"
+            variant={game.car.gear === gear ? "primary" : "secondary"}
+            class="ts-control h-11 w-14 px-0 font-mono text-base font-semibold"
+            aria-label={GEAR_NAMES[gear]}
+            aria-pressed={game.car.gear === gear}
+            onclick={() => shift(gear)}
+          >
+            {gear}
+          </Button>
+        {/each}
+      </div>
+      <div class="ts-pedals hidden touch-none items-end justify-end gap-2 select-none pointer-coarse:flex" role="group" aria-label="Pedals">
+        <button
+          type="button"
+          class={cn("ts-control ts-pedal ts-brake rounded-lg text-ui font-medium transition-colors", held.brake ? "bg-foreground/25 text-foreground" : "bg-foreground/10 text-foreground/80")}
+          aria-label="Brake"
+          {...hold_pedal("brake")}
+        >
+          Brake
+        </button>
+        <button
+          type="button"
+          class={cn("ts-control ts-pedal ts-gas rounded-lg text-ui font-medium transition-colors", held.gas ? "bg-primary/35 text-foreground" : "bg-foreground/10 text-foreground/80")}
+          aria-label="Gas"
+          {...hold_pedal("gas")}
+        >
+          Gas
+        </button>
       </div>
     </div>
   </div>
 
   <StatusBar>
+    <span>{round_title(game.round)}</span>
     <span class="tabular-nums">{time}</span>
     <span class="tabular-nums">Moves {game.moves}</span>
-    <span class="tabular-nums">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 2 ? " R" : wheel_degrees < -2 ? " L" : ""}</span>
-    {#if judged === "crooked"}<span class="text-warning">Not straight</span>{:else if judged === "backwards"}<span class="text-warning">Facing the wrong way</span>{:else if judged === "outside"}<span class="text-warning">Not in a bay</span>{/if}
-    {#if best}<span class="hidden tabular-nums @md:inline">Best {best.moves} · {format_time(best.ms, { tenths: true })}</span>{/if}
-    <span class="hidden @5xl:inline">Arrows steer and drive · E drive · R reverse · P park · C centres</span>
+    <span class="tabular-nums pointer-coarse:hidden">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 2 ? " R" : wheel_degrees < -2 ? " L" : ""}</span>
+    {#if best}<span class="hidden tabular-nums @lg:inline">Best {best.moves} · {format_time(best.ms, { tenths: true })}</span>{/if}
+    <span class="hidden @5xl:inline">Esc pauses · Enter starts · C centres the wheel · + − zoom</span>
   </StatusBar>
 </div>
 
@@ -724,9 +874,151 @@
     margin-block: 4px;
   }
 
+  .ts-layout {
+    display: grid;
+    gap: 0.5rem;
+    grid-template: "board" minmax(0, 1fr) / minmax(0, 1fr);
+  }
+
+  /* Phones held upright: the board on top, the wheel under the left thumb, the pedals under the right. */
+  @media (pointer: coarse) {
+    .ts-layout {
+      grid-template:
+        "board board board" minmax(0, 1fr)
+        "wheel gears pedals" auto / auto minmax(0, 1fr) auto;
+    }
+
+    .ts-gears {
+      grid-area: gears;
+      flex-direction: column;
+      align-items: center;
+      align-self: center;
+    }
+
+    /* Held sideways: the wheel and the pedals flank the board, so the board keeps the height. */
+    @container ts-stage (aspect-ratio > 1.25) {
+      .ts-layout {
+        grid-template:
+          "wheel board ." minmax(0, 1fr)
+          "wheel board gears" auto
+          "wheel board pedals" auto / auto minmax(0, 1fr) auto;
+      }
+
+      .ts-gears {
+        flex-direction: row;
+        align-self: end;
+      }
+
+      .ts-wheel {
+        align-self: end;
+      }
+
+      .ts-wheel :global(.ts-wheel-size) {
+        width: min(11rem, 62cqh);
+      }
+
+      .ts-brake {
+        height: min(6rem, 34cqh);
+      }
+
+      .ts-gas {
+        height: min(8.5rem, 46cqh);
+      }
+    }
+  }
+
+  .ts-wheel {
+    grid-area: wheel;
+  }
+
+  .ts-pedals {
+    grid-area: pedals;
+  }
+
+  .ts-wheel :global(.ts-wheel-size) {
+    width: min(10.5rem, 40cqw);
+  }
+
   .ts-pedal {
+    width: 4rem;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 0.6rem,
+      color-mix(in oklch, var(--foreground) 7%, transparent) 0.6rem 0.75rem
+    );
+    background-clip: padding-box;
+  }
+
+  .ts-brake {
+    height: 5.5rem;
+  }
+
+  .ts-gas {
+    height: 8rem;
+  }
+
+  :global(.ts-control) {
     touch-action: none;
     user-select: none;
     -webkit-touch-callout: none;
+  }
+
+  .ts-card {
+    position: absolute;
+    inset-inline: 0.5rem;
+    bottom: 0.5rem;
+    margin-inline: auto;
+    max-width: 30rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 1rem;
+    row-gap: 0.5rem;
+    padding: 0.75rem;
+    border-radius: var(--radius-xl);
+    background: color-mix(in oklch, var(--background) 92%, transparent);
+    box-shadow: var(--shadow-popover);
+    backdrop-filter: blur(2px);
+    animation: var(--animate-pop-in);
+  }
+
+  .ts-card-side {
+    inset-inline: 0.5rem auto;
+    width: min(17rem, 50%);
+    margin-inline: 0;
+  }
+
+  .ts-star {
+    animation: ts-star 380ms var(--ease-out) both;
+  }
+
+  :global(.ts-pop) {
+    animation: var(--animate-pop-in) 520ms both;
+  }
+
+  @keyframes ts-star {
+    from {
+      opacity: 0;
+      scale: 0.3;
+    }
+    60% {
+      opacity: 1;
+      scale: 1.25;
+    }
+    to {
+      scale: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ts-star,
+    :global(.ts-pop) {
+      animation-delay: 0ms !important;
+    }
+  }
+
+  :global(html[data-motion="off"]) .ts-star,
+  :global(html[data-motion="off"] .ts-pop) {
+    animation-delay: 0ms !important;
   }
 </style>
