@@ -128,14 +128,15 @@ describe("steering wheel", () => {
     }
   });
 
-  test("a held key keeps the fine rate for a short hold, then eases up to the boost", () => {
-    expect(steer_boost(0)).toBe(1);
-    expect(steer_boost(0.2)).toBe(1);
-    expect(steer_boost(0.4)).toBeGreaterThan(1);
-    expect(steer_boost(0.4)).toBeLessThan(STEER_BOOST);
-    expect(steer_boost(0.6)).toBeCloseTo(STEER_BOOST, 6);
-    expect(steer_boost(5)).toBeCloseTo(STEER_BOOST, 6);
-    for (let t = 0; t < 1; t += 0.01) expect(steer_boost(t + 0.01)).toBeGreaterThanOrEqual(steer_boost(t));
+  test("a held key winding back from the other side eases up to the boost; turning toward a side never does", () => {
+    expect(steer_boost(0, true)).toBe(1);
+    expect(steer_boost(0.2, true)).toBe(1);
+    expect(steer_boost(0.4, true)).toBeGreaterThan(1);
+    expect(steer_boost(0.4, true)).toBeLessThan(STEER_BOOST);
+    expect(steer_boost(0.6, true)).toBeCloseTo(STEER_BOOST, 6);
+    expect(steer_boost(5, true)).toBeCloseTo(STEER_BOOST, 6);
+    for (let t = 0; t < 1; t += 0.01) expect(steer_boost(t + 0.01, true)).toBeGreaterThanOrEqual(steer_boost(t, true));
+    expect(steer_boost(5, false)).toBe(1);
   });
 
   test("hands off, the caster centres the wheel at the steady rate, not the boosted one", () => {

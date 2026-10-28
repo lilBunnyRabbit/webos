@@ -28,7 +28,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 ## Touch
 
 - Drag the **steering wheel** round by its rim; it stays where you leave it. Tap the middle to centre it.
-- Rather tap? Set **Steering** to **Buttons** in settings and hold **◀** or **▶**; like the keys, they turn faster the longer you hold. Settings also choose whether the wheel centres itself when you let go.
+- Rather tap? Set **Steering** to **Buttons** in settings and hold **◀** or **▶**; like the keys, they wind the wheel back faster when you hold them against where it points. Settings also choose whether the wheel centres itself when you let go.
 - **Gas** drives forward and **Brake** backs up, like the arrow keys: against the way you're going it brakes, and pressing it again once the car stands switches to D or R. Brake in P reverses.
 - Tap **P**, **R**, **N** or **D** in the strip at the top to pick a gear; P parks.
 - Held sideways, the map fills the screen and the wheel and pedals sit over its sides; the time and moves move up next to the gears.

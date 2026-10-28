@@ -368,10 +368,10 @@
     if (turn !== 0) {
       hands = true;
       steering_by_keys = true;
-      // A tap turns at the fine rate; held on one way, the wheel speeds up. Letting go or flipping starts over.
+      // Held while the wheel still points the other way, it winds back faster; letting go or flipping starts over.
       steer_held = turn === steer_way ? steer_held + dt : dt;
       steer_way = turn;
-      const rate = (dt / spec.steer_time) * steer_boost(steer_held);
+      const rate = (dt / spec.steer_time) * steer_boost(steer_held, wheel * turn < 0);
       wheel = Math.max(-1, Math.min(1, wheel + Math.sign(turn - wheel) * Math.min(rate, Math.abs(turn - wheel))));
     } else {
       steer_way = 0;

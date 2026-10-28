@@ -205,10 +205,12 @@ const BOOST_AFTER = 0.25;
 const BOOST_RAMP = 0.3;
 
 /**
- * A held steering key's rate over the steady one, by how long it has been held in one direction: a tap or a short
- * hold keeps the fine rate, then it eases up to `STEER_BOOST` over about 0.3 s.
+ * A held steering key's rate over the steady one. Only winding the wheel back from the other side speeds up: held that
+ * way for more than a short while, it eases up to `STEER_BOOST` over about 0.3 s. Turning further toward a side, and
+ * any tap, keeps the fine rate.
  */
-export function steer_boost(held: number): number {
+export function steer_boost(held: number, against: boolean): number {
+  if (!against) return 1;
   const t = clamp((held - BOOST_AFTER) / BOOST_RAMP, 0, 1);
   return 1 + (STEER_BOOST - 1) * t * t * (3 - 2 * t);
 }
