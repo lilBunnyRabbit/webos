@@ -8,6 +8,7 @@
     Minus as MinusIcon,
     PictureInPicture as PictureInPictureIcon,
     Plus as PlusIcon,
+    Question as QuestionIcon,
     X as XIcon,
   } from "phosphor-svelte";
   import kernel, { type AppsService, type DialogsService, type ExtractService, RouteKind, type RouterService, type WindowsService, WindowFlag, type WindowId } from "$lib/core/api";
@@ -25,6 +26,7 @@
   const instance = $derived(windows.get(window_id)!);
   const shareable = $derived(router.link_for(window_id) !== null);
   const is_maximized = $derived(instance.flags.has(WindowFlag.MAXIMIZED));
+  const has_guide = $derived(instance.flags.has(WindowFlag.GUIDE));
   const extract = $derived(kernel.services.has("extract") ? kernel.service<ExtractService>("extract") : null);
 
   const ZOOM_STEP = 0.1;
@@ -89,6 +91,9 @@
       <ArrowCircleUpIcon weight="bold" /> Update
     </Button>
   {/if}
+  <IconButton data-window-button label="Guide (F1)" size="sm" pressed={has_guide} onclick={() => windows.toggle_guide(window_id)}>
+    <QuestionIcon weight="bold" />
+  </IconButton>
   {#if shareable}
     <IconButton data-window-button label="Copy link" size="sm" aria-haspopup="menu" onclick={(event: MouseEvent) => void share(event)}>
       <LinkIcon weight="bold" />

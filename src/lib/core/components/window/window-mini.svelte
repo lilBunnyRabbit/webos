@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { type DialogsService, type WindowId, type WindowsService } from "$lib/core/api";
+  import kernel, { type DialogsService, WindowFlag, type WindowId, type WindowsService } from "$lib/core/api";
   import WindowContent from "./window-content.svelte";
   import WindowSheets from "./window-sheets.svelte";
   import DialogsHost from "../dialogs/dialogs-host.svelte";
@@ -10,6 +10,7 @@
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const has_sheets = $derived(dialogs.for_window(window_id).length > 0);
+  const has_guide = $derived(windows.get(window_id)?.flags.has(WindowFlag.GUIDE) ?? false);
 
   let element = $state<HTMLElement | null>(null);
   const view = $derived(element?.ownerDocument.defaultView ?? null);
@@ -21,9 +22,14 @@
   onpointerdowncapture={() => windows.focus(window_id)}
   onfocusin={() => windows.focus(window_id)}
 >
-  <div class="contents" inert={has_sheets}>
+  <div class="contents" inert={has_sheets || has_guide}>
     <WindowContent {window_id} {zoom} />
   </div>
+  {#if has_guide}
+    {#await import("./window-guide.svelte") then { default: WindowGuide }}
+      <div class="contents" inert={has_sheets}><WindowGuide {window_id} /></div>
+    {/await}
+  {/if}
   <WindowSheets {window_id} />
 </div>
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, {
     UiOverlay,
+    WindowFlag,
     type DialogsService,
     type MobileWindowsService,
     type NotificationsService,
@@ -84,7 +85,16 @@
     <ToastArea from="top" class="absolute inset-x-0 top-0 z-20 items-center justify-start pt-[calc(env(safe-area-inset-top)+0.5rem)]" />
   </main>
 
-  <NavBar {running} {unread} {switcher} onback={() => ui.back()} onhome={home} onrecents={recents} />
+  <NavBar
+    {running}
+    {unread}
+    {switcher}
+    guide={focused && !switcher ? (windows.get(focused)?.flags.has(WindowFlag.GUIDE) ?? null) : null}
+    onback={() => ui.back()}
+    onhome={home}
+    onrecents={recents}
+    onguide={() => focused && windows.toggle_guide(focused)}
+  />
 </div>
 
 <DialogsHost anchored="sheet" />

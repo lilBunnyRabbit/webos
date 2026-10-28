@@ -5,6 +5,7 @@ import { ShellError, type ShellContribution, type Tagged } from "../shell/type";
 import { is_file_value } from "../files/shell";
 import { resolve_path } from "../files/path";
 import type { FilesService } from "../files/type";
+import { WindowFlag, type WindowsService } from "../windows/type";
 import { with_pin, without_pin } from "../settings/taskbar";
 import { TaskbarPosition, TaskbarSize, type SettingsService } from "../settings/type";
 import { author_names } from "./authors";
@@ -26,7 +27,12 @@ function app_value(manifest: AppManifest, meta: AppMeta): Tagged {
   };
 }
 
-export function apps_shell(apps: AppsService, files: () => FilesService, settings: () => SettingsService): ShellContribution {
+export function apps_shell(
+  apps: AppsService,
+  files: () => FilesService,
+  settings: () => SettingsService,
+  windows: () => WindowsService
+): ShellContribution {
   const require_app = (id: string) => {
     const manifest = apps.get(id);
     if (!manifest) throw new ShellError(`no app "${id}". Try app list`);
@@ -152,6 +158,19 @@ export function apps_shell(apps: AppsService, files: () => FilesService, setting
           const manifest = require_app(args.id);
           if (!apps.is_installed(args.id)) throw new ShellError(not_installed(manifest));
           apps.launch(args.id);
+        },
+      }),
+      define_command({
+        id: "app guide",
+        description: "Open an app with its guide shown",
+        args: z.object({ id: arg.app() }),
+        positional: ["id"],
+        run({ args }) {
+          const manifest = require_app(args.id);
+          if (!apps.is_installed(args.id)) throw new ShellError(not_installed(manifest));
+          const window_id = apps.launch(args.id);
+          const target = window_id ? windows().get(window_id) : null;
+          if (target && !target.flags.has(WindowFlag.GUIDE)) windows().toggle_guide(target.id);
         },
       }),
       define_command({

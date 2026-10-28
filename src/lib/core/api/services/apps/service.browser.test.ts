@@ -9,6 +9,7 @@ import { parse_settings, SETTINGS_PATH } from "../settings/persistence";
 import { SettingsService } from "../settings/service.svelte";
 import { serialize_seen, VERSION_STATE_PATH } from "../version/persistence";
 import { WindowsService } from "../windows/service.svelte";
+import { WindowFlag } from "../windows/type";
 import { CloseChoice } from "../windows/close-guard";
 import { BUILD_INFO } from "../version/build-info";
 import { serialize_slice } from "./catalogue";
@@ -805,6 +806,35 @@ describe("AppsService catalogue (ADR-077)", () => {
       const file = await kernel.service<FilesService>("files").get_file(INSTALLED_PATH);
       expect(parse_installed(await file!.text())).toEqual({ ids: ["example", "kernel"], system: false });
     });
+  });
+});
+
+describe("AppsService first open (ADR-085)", () => {
+  const guide_shown = (kernel: Kernel, id: string) => kernel.service<WindowsService>("windows").get(id)?.flags.has(WindowFlag.GUIDE);
+
+  async function boot_with_usage(used: string[]): Promise<Kernel> {
+    let usage = add_time({}, "notes", 60, new Date());
+    for (const id of used) usage = add_time(usage, id, 60, new Date());
+    await write(USAGE_PATH, serialize_usage(usage));
+    const kernel = await boot();
+    await vi.waitFor(() => expect(apps(kernel).usage("notes")).not.toBeNull());
+    return kernel;
+  }
+
+  test("an app with a guide, never used, opens with it shown", async () => {
+    const kernel = await boot_with_usage([]);
+    expect(guide_shown(kernel, apps(kernel).launch("example")!)).toBe(true);
+  });
+
+  test("props, or an app without a guide, keep it shut", async () => {
+    const kernel = await boot_with_usage([]);
+    expect(guide_shown(kernel, apps(kernel).launch("example", { count: 2 })!)).toBe(false);
+    expect(guide_shown(kernel, apps(kernel).launch("board")!)).toBe(false);
+  });
+
+  test("an app used before opens without it", async () => {
+    const kernel = await boot_with_usage(["example"]);
+    expect(guide_shown(kernel, apps(kernel).launch("example")!)).toBe(false);
   });
 });
 

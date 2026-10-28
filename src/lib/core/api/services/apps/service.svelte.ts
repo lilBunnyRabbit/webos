@@ -54,7 +54,7 @@ export class AppsService implements IAppsService {
   name = "AppsService";
   description = "App registry, launching and file associations";
   inspector = () => import("./inspector.svelte");
-  shell = () => apps_shell(this, () => this.files_service, () => this.settings_service);
+  shell = () => apps_shell(this, () => this.files_service, () => this.settings_service, () => this.windows_service);
 
   to_string(): string {
     return `AppsService: ${this.registry.size} apps known, ${this.code.size} loaded, ${[...this.list({ installed: true })].length} installed`;
@@ -736,9 +736,16 @@ export class AppsService implements IAppsService {
     const window_id = code
       ? this.windows_service.open(this.instantiate(code, this.validate_props(code, props)))
       : this.open_pending(manifest, props, (real) => this.validate_props(real, props));
+    if (this.first_open(manifest, props)) this.windows_service.toggle_guide(window_id);
     this.remember(id);
     track_launch(id, this.kernel.mode, this.kernel.platform);
     return window_id;
+  }
+
+  // Props mean the user came for something (a file, a link, a daily): the guide stays shut (ADR-085).
+  private first_open(manifest: AppManifest, props: unknown): boolean {
+    const empty = props === undefined || (typeof props === "object" && props !== null && Object.keys(props).length === 0);
+    return !!manifest.guide && empty && this.active_time.loaded && this.active_time.get(manifest.id) === null;
   }
 
   /**

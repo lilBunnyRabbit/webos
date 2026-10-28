@@ -70,6 +70,14 @@ export function windows_shell(windows: WindowsService): ShellContribution {
       run: async (context) => (await logic()).minimize(windows, context),
     }),
     define_command({
+      id: "win guide",
+      description: "Show or hide the app's guide in windows",
+      args: z.object({ ids }),
+      positional: ["ids"],
+      available: any_open,
+      run: async (context) => (await logic()).guide(windows, context),
+    }),
+    define_command({
       id: "win previous",
       description: "Switch to the previous window",
       available: () => windows.list().length > 1 || (focused() === null && any_open()),

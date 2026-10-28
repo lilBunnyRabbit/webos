@@ -30,6 +30,7 @@
   const is_focused = $derived(windows.is_focused(id));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const has_sheets = $derived(dialogs.for_window(id).length > 0);
+  const has_guide = $derived(instance.flags.has(WindowFlag.GUIDE));
   const extract = $derived(kernel.services.has("extract") ? kernel.service<ExtractService>("extract") : null);
   const is_out = $derived(extract?.current === id);
   const snap_position = $derived(instance.snap_zone ? WindowGeometryHandler.get_snap_position(instance.snap_zone) : null);
@@ -153,7 +154,7 @@
     >
       <!-- An open sheet makes the app behind it inert: no clicks, no focus, no screen reader. -->
       {#if !is_out}
-        <div class="contents" inert={has_sheets}>
+        <div class="contents" inert={has_sheets || has_guide}>
           <WindowContent window_id={id} {zoom}>
             <div class="flex flex-wrap gap-2 p-3 font-mono text-sm">
               <pre><span class="font-bold">bounds:</span> {JSON.stringify(instance.bounds, null, 2)}</pre>
@@ -161,6 +162,11 @@
             </div>
           </WindowContent>
         </div>
+        {#if has_guide}
+          {#await import("./window-guide.svelte") then { default: WindowGuide }}
+            <div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>
+          {/await}
+        {/if}
         <WindowSheets window_id={id} />
       {/if}
     </div>

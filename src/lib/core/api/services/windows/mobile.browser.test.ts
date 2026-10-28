@@ -153,4 +153,15 @@ describe("MobileWindowsService", () => {
     expect(asked).toEqual([c, a]);
     expect(windows.list()).toEqual([a]);
   });
+
+  test("the guide puts its app on screen, and hides again (ADR-085)", () => {
+    const windows = new MobileWindowsService();
+    const a = windows.open(app("a"));
+    windows.go_home();
+
+    expect(windows.toggle_guide(a)).toBe(true);
+    expect(windows.get_focused()).toBe(a);
+    expect(windows.toggle_guide(a)).toBe(false);
+    expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(false);
+  });
 });

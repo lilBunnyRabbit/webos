@@ -3,15 +3,16 @@
     LinkOutcome,
     Platform,
     RouteKind,
+    WindowFlag,
     type AppsService,
     type RouterService,
     type VersionService,
     type WindowsService,
   } from "$lib/core/api";
   import { UpdateStage } from "$lib/core/api/services/version/type";
-  import { button, Button, EmptyState } from "$lib/core/components/ui";
+  import { button, Button, EmptyState, IconButton } from "$lib/core/components/ui";
   import { untrack } from "svelte";
-  import { ArrowCircleUp as ArrowCircleUpIcon, ArrowClockwise as ArrowClockwiseIcon, ArrowSquareOut as ArrowSquareOutIcon, LinkBreak as LinkBreakIcon } from "phosphor-svelte";
+  import { ArrowCircleUp as ArrowCircleUpIcon, ArrowClockwise as ArrowClockwiseIcon, ArrowSquareOut as ArrowSquareOutIcon, LinkBreak as LinkBreakIcon, Question as QuestionIcon } from "phosphor-svelte";
   import { parse_hash, route_url } from "$lib/core/api/services/router/route";
   import LogoMark from "../brand/logo-mark.svelte";
   import ToastArea from "../notifications/toast-area.svelte";
@@ -56,6 +57,11 @@
         {#if instance?.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
       {/if}
     </div>
+    {#if current && instance}
+      <IconButton label="Guide" size="sm" class="pointer-coarse:size-11" pressed={instance.flags.has(WindowFlag.GUIDE)} onclick={() => windows.toggle_guide(current)}>
+        <QuestionIcon weight="bold" />
+      </IconButton>
+    {/if}
     <!-- A new tab, so this one keeps the app as it is now (ADR-047). -->
     <a href={os_link} target="_blank" rel="noopener" class={button({ variant: "primary", size: "sm", class: "shrink-0" })}>
       <LogoMark class="size-3.5" aria-hidden="true" />

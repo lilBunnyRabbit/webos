@@ -52,6 +52,7 @@ export default {
 - `id` must be unique; a clash silently replaces the other app.
 - Text the user reads but boot doesn't need (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): the catalogue carries it, so lists show it without loading the app (ADR-077). `bun run check` rejects those fields in `define_app` ([meta](manifest.md#meta-metats)).
 - Skip `associations` and `props` if the app doesn't open files. Without a `props` schema the app never receives props.
+- Anything a newcomer wouldn't guess (a game's rules, gestures, keys) goes in a `guide.md` beside `index.ts`, with `guide: () => import("./guide.md?raw")` (ADR-085). Short markdown-lite: `##` headings, `-` lists, bold, no HTML. The window's `?` button and F1 show it under the pitch, and it opens by itself the first time the app is launched with no props ([manifest](manifest.md)). Plots' is the reference.
 
 ## 3. Write the component
 

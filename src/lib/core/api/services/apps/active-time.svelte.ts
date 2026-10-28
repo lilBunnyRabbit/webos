@@ -32,6 +32,8 @@ export class ActiveTime {
   private saving: Promise<void> = Promise.resolve();
   private cleanups: (() => void)[] = [];
   private stopped = false;
+  // Until the file is read, `get()` can't tell an app never used from one not read yet.
+  public loaded = false;
 
   constructor(
     private readonly files: () => FilesService,
@@ -49,6 +51,7 @@ export class ActiveTime {
     if (this.stopped) return;
     this.writer.seed(text);
     this.usage = merge_usage(parse_usage(text), this.deltas);
+    this.loaded = true;
 
     const on_visibility = () => {
       this.visible = document.visibilityState === "visible";

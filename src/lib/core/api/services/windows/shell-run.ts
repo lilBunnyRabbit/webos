@@ -90,6 +90,13 @@ export async function minimize(windows: WindowsService, context: CommandContext<
   });
 }
 
+export async function guide(windows: WindowsService, context: CommandContext<{ ids: string[] }>) {
+  for (const id of await targets(windows, context.args.ids, context)) {
+    bring(windows, id);
+    windows.toggle_guide(id);
+  }
+}
+
 // From home nothing is focused, so the newest window is the one to bring back.
 export const previous = (windows: WindowsService) =>
   bring(windows, windows.get_focused() ? recent(windows)[1] : recent(windows)[0]);

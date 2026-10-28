@@ -234,6 +234,11 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * Lazy like `preview`: only the announcement and the App Store need them.
    */
   highlights?: () => Promise<{ default: AppHighlight[] }>;
+  /**
+   * How to use or play the app, as short markdown, `import("./guide.md?raw")` (ADR-085): the window's guide overlay
+   * shows it under the pitch, and opens by itself on the app's first launch with no props. Lazy, never loaded at boot.
+   */
+  guide?: () => Promise<{ default: string }>;
   /** A picture of the app for the announcement, `import("./preview.webp?url")`. Lazy, so it never weighs on boot. */
   preview?: () => Promise<{ default: string }>;
   /**

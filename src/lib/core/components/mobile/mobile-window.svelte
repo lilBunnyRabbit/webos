@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import kernel, { type DialogsService, type MobileWindowsService, type WindowId } from "$lib/core/api";
+  import kernel, { type DialogsService, type MobileWindowsService, WindowFlag, type WindowId } from "$lib/core/api";
   import { create_storage_handle } from "$lib/core/contexts/app";
   import { set_app_context } from "$lib/core/contexts/app/context";
   import { create_window_handle } from "$lib/core/contexts/app/window-handle";
@@ -14,6 +14,7 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const instance = $derived(windows.get(id)!);
   const has_sheets = $derived(dialogs.for_window(id).length > 0);
+  const has_guide = $derived(instance.flags.has(WindowFlag.GUIDE));
 
   // Same as the desktop window: set once, here, so the window's sheets get the context too.
   untrack(() => {
@@ -31,9 +32,14 @@
 <!-- No chrome: the app fills the screen below the device's own status bar. -->
 <div data-window-id={id} class="flex h-full w-full flex-col bg-background pt-[env(safe-area-inset-top)]">
   <div class="relative min-h-0 flex-1 overflow-hidden [container-type:size]">
-    <div class="contents" inert={has_sheets}>
+    <div class="contents" inert={has_sheets || has_guide}>
       <WindowContent window_id={id} zoom={1} />
     </div>
+    {#if has_guide}
+      {#await import("../window/window-guide.svelte") then { default: WindowGuide }}
+        <div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>
+      {/await}
+    {/if}
     <WindowSheets window_id={id} />
   </div>
 </div>

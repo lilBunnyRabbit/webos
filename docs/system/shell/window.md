@@ -1,13 +1,14 @@
 # Window
 
-Source: `src/lib/core/components/window/` · Services: [windows](../services/windows.md) · ADRs: [ADR-003](../../adrs/003-app-context.md) (app context), [ADR-014](../../adrs/014-window-enhancements.md) (accepted), [ADR-024](../../adrs/024-design-system.md) (chrome) · Design: [docs/design/shell.md](../../design/shell.md#windows)
+Source: `src/lib/core/components/window/` · Services: [windows](../services/windows.md) · ADRs: [ADR-003](../../adrs/003-app-context.md) (app context), [ADR-014](../../adrs/014-window-enhancements.md) (accepted), [ADR-024](../../adrs/024-design-system.md) (chrome), [ADR-085](../../adrs/085-app-guides.md) (guide) · Design: [docs/design/shell.md](../../design/shell.md#windows)
 
 | File | Role |
 |------|------|
 | `window.svelte` | The window frame: positioning, chrome classes, snap preview, titlebar strip (drag + double-click), resize handles |
-| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, **Update** (an app-only update waits for this app's windows, ADR-077 stage 3), Copy link, Pop out (desktop, where supported), min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
+| `window-titlebar.svelte` | Icon, title (`instance.title`, else the app name; tooltip "{title} — {app}"), a `primary` dot when dirty, zoom pill, **Update** (an app-only update waits for this app's windows, ADR-077 stage 3), Guide (ADR-085), Copy link, Pop out (desktop, where supported), min/max/close buttons. × calls the guarded `windows.close` (ADR-029) |
 | `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
+| `window-guide.svelte` | The app's guide over the content while `WindowFlag.GUIDE` is set (ADR-085). Lazy: each host imports it the first time a guide shows. Desktop, mobile, solo and popped-out windows all render it ([Guide](#guide)) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
 | `window-transition.svelte.ts` | `window_transition(ids, change)`: `view_transition()` that names unfocused windows for its duration; `transition_named(id)` |
 
@@ -95,6 +96,7 @@ Snap detection (`get_snap_zone`): the pointer is within 16px (`EDGE_THRESHOLD`) 
 | App icon (duotone) + title | `instance.title ?? manifest.name`, `text-ui font-medium`; with a title the tooltip is "{title} — {app}". A `primary` dot follows while the window is dirty. The group fades to 80% opacity when the window isn't focused. The icon is always the manifest's (no `set_icon`). |
 | Zoom − / % / + | Per-window CSS `zoom` on the content, from 0.5 to 2 in 0.1 steps (rounded to one decimal). − and + are `IconButton`s (Phosphor `Minus` / `Plus`) that disable at the limits. The % button resets to 1; its accessible name is "Reset zoom, now N%". A quiet pill that's invisible until the titlebar is hovered or something in it has focus, and always visible when zoom isn't 100%. The state is local to `window.svelte`, so it's lost on reload and not saved in the session. |
 | Update | A `sm` `pressed` `Button` with `ArrowCircleUp` and "Update", shown while `can_update(app_id)` (`components/apps/app-actions.ts`): a newer version of the app arrived without a reload, its windows still run the old one, and its files are saved here or the device is online. Calls `apps.restart(app_id)`: the new version loads first (if it can't, a toast and nothing closes), then every window of the app closes (guarded, dirty ones first) and reopens on it with the same props and frames ([apps](../services/apps.md#app-only-updates-stage-3)) |
+| Guide (F1) | Phosphor `Question`, `pressed` while the guide shows. `windows.toggle_guide(id)` ([Guide](#guide)). On every window: apps without a guide still have their pitch, description and highlights |
 | Copy link | Phosphor `Link`. Shown when `router.link_for(id)` isn't `null`, which is every open window: device paths are left out of the link, not the button. Opens a menu: Copy link (`router.copy_link(id)`) or Copy solo link (`router.copy_link(id, RouteKind.SOLO)`, the app alone, [solo](solo.md)); either copies the URL and toasts ([router](../services/router.md)). Not on mobile: there's no titlebar there. |
 | Pop out | Phosphor `PictureInPicture`. Shown when the [extract](../services/extract.md) service exists and `supported`. Disabled while dirty, labelled "Save first to pop out": the remount would drop unsaved work. Calls `extract.pop(id)`; the click is the user activation PiP needs |
 | Minimize | `windows.toggle_minimize(id)` |
@@ -119,6 +121,15 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 - `<svelte:boundary>` catches errors thrown while the app renders, in its effects and in its `$derived`: the window shows an error `EmptyState` ("{App} crashed", a line saying a restart keeps what it saved, the error and stack in **Details**) with **Restart app** (the boundary's `reset()`, which remounts the app: component state is lost, `persisted()` and `storage.window()` values survive) and **Close window**. The error is logged and posted as an `error` toast from the app's id, so a crash in a minimized window isn't silent. Errors in event handlers and un-awaited promises aren't caught by boundaries (Svelte rule); they still reach the console only.
 - The wrapper is `h-full w-full overflow-auto @container`. That container is what apps' `@sm:`/`@md:` queries resolve against ([CONVENTIONS](../../CONVENTIONS.md)).
 - With `WindowFlag.DEBUG` it also renders the debug snippet passed from `window.svelte`: `bounds` and `move` as JSON.
+
+## Guide
+
+ADR-085. While the window has `WindowFlag.GUIDE`, the host (`window.svelte`, `mobile-window.svelte`, `solo-window.svelte`, `window-mini.svelte`) `import()`s `window-guide.svelte` and renders it between the app and the sheets; the app is `inert` meanwhile, and the guide is `inert` under a sheet. The flag is set by the titlebar button, the mobile nav bar's and solo header's button, `win guide` (F1), `app guide <app>` and the first open ([apps](../services/apps.md#first-open)).
+
+- **Layout:** `absolute inset-0 z-20` on `bg-background`, a size container of its own. A centred column (`max-w-xl`) scrolls (`overscroll-contain`): a header with the app's duotone icon in a raised tile, the name in `text-lg` and "How to play" (games) or "How to use it" below; the pitch (problem in `foreground/65`, solution) in a `background-light` card; the guide's markdown through `MarkdownView` (`components/markdown`, `utils/markdown`: headings, `-` lists, paragraphs, bold, italic, code, links, never HTML) at `text-sm`; without a guide the description instead; then the highlights as the announcement shows them (icon chip, title, sentence; two columns from `@md`). A footer on `background-light` holds a primary **Got it**.
+- **Loading:** `apps.meta(id)`, `manifest.guide()` and `manifest.highlights()` in one `Promise.all`, so the overlay doesn't grow as parts land; each part that fails is left out. A spinner fades in after 300ms.
+- **Closing:** the × (top right, outside the scroll, 44px on touch), Got it, Escape (handled on the overlay and stopped there, so the app never sees it), and on mobile Back: the overlay registers a back handler while it's mounted. All call `toggle_guide`.
+- **Focus:** the overlay takes focus when it mounts, unless focus is already inside it.
 
 ## User interactions
 

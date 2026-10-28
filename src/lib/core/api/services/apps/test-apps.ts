@@ -17,6 +17,7 @@ export const EXAMPLE_APP = stand_in({
   id: "example",
   name: "Example",
   meta: async () => ({ default: { description: "Test app" } }),
+  guide: async () => ({ default: "## Use it\n\nCount things." }),
   category: AppCategory.DEVELOPER,
   props: z.object({ count: z.number() }),
   replaces: [{ app: "old-games", props: { mode: "count" } }],

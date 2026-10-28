@@ -15,6 +15,7 @@ export const DEFAULT_SHORTCUTS: CommandShortcut[] = [
   { id: "window.cycle", keys: "alt+shift+`", category: ShortcutCategory.WINDOW, command: "win cycle" },
   { id: "window.pop", keys: "alt+shift+p", category: ShortcutCategory.WINDOW, command: "win pop", label: "Pop window out" },
   { id: "window.reopen", keys: "alt+shift+t", category: ShortcutCategory.WINDOW, command: "win reopen" },
+  { id: "window.guide", keys: "f1", category: ShortcutCategory.WINDOW, command: "win guide", label: "Show or hide the app guide" },
   { id: "desktop.show", keys: "alt+shift+d", category: ShortcutCategory.WINDOW, command: "win desktop" },
   { id: "apps.launcher", keys: "mod+k", category: ShortcutCategory.APPS, command: "ui launcher", label: "Search apps and commands" },
   { id: "apps.terminal", keys: "alt+shift+enter", category: ShortcutCategory.APPS, command: "app launch terminal", label: "Open Terminal" },

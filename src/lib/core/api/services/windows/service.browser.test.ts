@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { AppInstance } from "../apps/type";
 import { WindowsService } from "./service.svelte";
 import { WindowFlag, type WindowId } from "./type";
+import { snapshot_window } from "../session/snapshot.svelte";
 
 function app(id: string): AppInstance {
   return {
@@ -66,5 +67,22 @@ describe("WindowsService.toggle_desktop", () => {
     windows.toggle_minimize(b);
     expect(windows.toggle_desktop()).toBe(false);
     expect(windows.showing_desktop).toBe(false);
+  });
+});
+
+describe("WindowsService.toggle_guide (ADR-085)", () => {
+  test("shows the guide and brings the window forward, then hides it; the session never keeps it", () => {
+    const windows = new WindowsService();
+    const a = windows.open(app("a"));
+    windows.open(app("b"));
+
+    expect(windows.toggle_guide(a)).toBe(true);
+    expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(true);
+    expect(windows.get_focused()).toBe(a);
+    expect(snapshot_window(windows.get(a)!).flags).toEqual([]);
+
+    expect(windows.toggle_guide(a)).toBe(false);
+    expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(false);
+    expect(windows.toggle_guide("missing")).toBe(false);
   });
 });

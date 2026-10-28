@@ -1,7 +1,8 @@
 <script lang="ts">
   import { parse_markdown, type Inline } from "$lib/core/utils/markdown";
+  import { cn } from "$lib/core/utils";
 
-  let { source }: { source: string } = $props();
+  let { source, class: class_name }: { source: string; class?: string } = $props();
 
   const blocks = $derived(parse_markdown(source));
 </script>
@@ -16,7 +17,7 @@
   {/each}
 {/snippet}
 
-<div class="grid gap-2 text-ui leading-relaxed break-words">
+<div class={cn("grid gap-2 text-ui leading-relaxed break-words", class_name)}>
   {#each blocks as block, index (index)}
     {#if block.kind === "heading"}
       <p class={block.level === 1 ? "text-sm font-semibold" : "font-semibold"}>{@render inlines(block.inlines)}</p>

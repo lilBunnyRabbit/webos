@@ -130,6 +130,13 @@ export interface WindowsService extends IService {
   back(id: WindowId): boolean;
 
   /**
+   * Shows or hides the app's guide over the window's content (ADR-085): the `guide` flag, never saved in the session.
+   * Showing it brings the window forward.
+   * @returns `true` if the guide is now shown, `false` if it's now hidden or the window didn't exist
+   */
+  toggle_guide(id: WindowId): boolean;
+
+  /**
    * Toggles the maximized state of a window.
    * @param id - The window ID to toggle
    * @returns `true` if the window is now maximized, `false` if it's now unmaximized or didn't exist
@@ -222,6 +229,8 @@ export const WindowFlag = {
   MINIMIZED: "minimized",
   MAXIMIZED: "maximized",
   DEBUG: "debug",
+  /** The app's guide covers the content (ADR-085). Transient: the session keeps only minimized and maximized. */
+  GUIDE: "guide",
 } as const;
 export type WindowFlag = (typeof WindowFlag)[keyof typeof WindowFlag];
 

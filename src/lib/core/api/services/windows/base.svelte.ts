@@ -1,4 +1,4 @@
-import type { WindowId, WindowInstance } from "./type";
+import { WindowFlag, type WindowId, type WindowInstance } from "./type";
 import { CloseGuard, type ClosePrompt, type DirtyOptions } from "./close-guard";
 
 export abstract class BaseWindowsService {
@@ -11,6 +11,16 @@ export abstract class BaseWindowsService {
   public page_hidden = $state(document.hidden);
 
   abstract get(id: WindowId): WindowInstance | null;
+  abstract focus(id: WindowId): boolean;
+
+  public toggle_guide(id: WindowId): boolean {
+    const instance = this.get(id);
+    if (!instance) return false;
+    instance.flags.toggle(WindowFlag.GUIDE);
+    const shown = instance.flags.has(WindowFlag.GUIDE);
+    if (shown) this.focus(id);
+    return shown;
+  }
 
   public add_back_handler(id: WindowId, handler: () => boolean): () => void {
     const handlers = this.back_handlers.get(id) ?? [];

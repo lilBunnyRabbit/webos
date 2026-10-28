@@ -1,6 +1,6 @@
 # WindowsService
 
-Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (placement, frames), [ADR-016](../../adrs/016-mobile-support.md), [ADR-023](../../adrs/023-session-persistence.md) (`restore`) · Source: `src/lib/core/api/services/windows/` · Inspector: `inspector.svelte` (ADR-020)
+Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (placement, frames), [ADR-016](../../adrs/016-mobile-support.md), [ADR-023](../../adrs/023-session-persistence.md) (`restore`), [ADR-085](../../adrs/085-app-guides.md) (`guide` flag) · Source: `src/lib/core/api/services/windows/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -17,7 +17,7 @@ The service doesn't know about app lifecycles. A window is just a record holding
 | `close-guard.ts` | `CloseGuard`: close prompt and per-window save for the dirty path |
 | `helper.ts` | `WindowsHelper.place` (where a new window opens), `clamp_bounds`, `keep_reachable`, `CASCADE_OFFSET`, `REACHABLE`. Tested in `helper.test.ts` |
 | `shell.ts`, `shell-run.ts` | The shell contribution and its lazy bodies, see [Shell](#shell) |
-| `inspector.svelte`, `mobile-inspector.svelte` | Kernel app inspectors for each implementation |
+| `inspector.svelte`, `mobile-inspector.svelte` | Kernel app inspectors for each implementation; the detailed table lists each window's flags, so a shown guide reads `guide` |
 
 ## Window model
 
@@ -38,7 +38,7 @@ interface WindowInstance {
 
 | Concept | Values | Notes |
 |---------|--------|-------|
-| `WindowFlag` | `minimized`, `maximized`, `debug` | `debug` makes the window render its debug children (bounds + drag state JSON). Only the `example` user app sets it. |
+| `WindowFlag` | `minimized`, `maximized`, `debug`, `guide` | `debug` makes the window render its debug children (bounds + drag state JSON). Only the `example` user app sets it. `guide` shows the app's guide over the content (ADR-085, [window](../shell/window.md#guide)); transient like `debug`: the session keeps only `minimized` and `maximized` (`SESSION_FLAGS`). |
 | `SnapZone` | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | Halves and quarters of the container. The geometry is CSS, computed in the shell (`WindowGeometryHandler.get_snap_position`). |
 | `WindowOptions` | `{ constraints?, flags?, snap_zone? }` | Comes from the manifest's `defaults` (ADR-001). That's the only way to influence a new window. |
 
@@ -87,6 +87,7 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | `back` | `(id) => boolean` | Runs the handlers newest first until one returns `true`. `UiService.back()` calls it on both platforms, after closing dialogs and sheets ([ui](ui.md)) |
 | `toggle_maximize` | `(id) => boolean` | Adding the flag also focuses. Removing it doesn't. Returns the new state (`false` for a missing id too). |
 | `toggle_minimize` | `(id) => boolean` | Removing the flag also focuses. Minimizing the focused window hands focus to the next one (see below). Returns the new state. |
+| `toggle_guide` | `(id) => boolean` | Toggles `WindowFlag.GUIDE` (ADR-085). Showing it also focuses (on mobile: puts the app on screen); it doesn't un-minimize, so `win guide` brings the window back first. Returns the new state (`false` for a missing id too). In `BaseWindowsService`, so both implementations share it. The titlebar and nav bar button, F1 (`win guide`), `app guide` and AppsService's first open call it |
 | `name`, `description`, `to_string()` | IService | `to_string()` lists `id: app name`. |
 
 Not on the interface: private `index: Record<WindowId, WindowInstance>` (`$state`), private `max_order: number` (`$state`), `reset_state()`.
@@ -179,7 +180,7 @@ ADR-014's 2026-10-12 revision records the code: remembered frames instead of pla
 
 ## Shell
 
-Contributes `win list|close|focus|minimize|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`, bodies, the completer and `open` in the lazy `windows/shell-run.ts`). Both implementations call the same `windows_shell(this)`; the shape decides (`is_desktop` / `is_mobile`), and on mobile `win minimize` and `win desktop` describe themselves as "Go home". `win close` takes `--all` (`-a`); `win close|minimize|maximize` take window ids or piped windows, the focused one by default; `win snap <zone|none> [id]` snaps, the same zone again unsnaps. See [shell](shell.md#contributions).
+Contributes `win list|close|focus|minimize|guide|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`, bodies, the completer and `open` in the lazy `windows/shell-run.ts`). Both implementations call the same `windows_shell(this)`; the shape decides (`is_desktop` / `is_mobile`), and on mobile `win minimize` and `win desktop` describe themselves as "Go home". `win close` takes `--all` (`-a`); `win close|minimize|maximize|guide` take window ids or piped windows, the focused one by default; `win guide` brings each window back (un-minimizes, focuses) and toggles its guide (ADR-085; F1 runs it, [shortcuts](shortcuts.md)); `win snap <zone|none> [id]` snaps, the same zone again unsnaps. See [shell](shell.md#contributions).
 
 ## Known gaps
 

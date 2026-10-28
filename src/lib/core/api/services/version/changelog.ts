@@ -14,6 +14,11 @@ export const CHANGELOG: Release[] = [
         apps: ["app-library"],
         text: "Star the apps you use most and they get their own Favourites section at the top of the start menu and the phone's app list, in the order you drag them into, with a Favourites filter in the App Store.",
       },
+      {
+        kind: NEW,
+        apps: ["plots"],
+        text: "Every window has a ? button (or F1) that shows what the app is for and how to use it, and Plots explains its rules the first time you open it.",
+      },
     ],
   },
   {

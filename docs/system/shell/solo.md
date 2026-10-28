@@ -8,7 +8,7 @@ The shell a `#/solo/{id}?{props}` link gets, on every platform: one app, full pa
 
 ```
 solo-shell.svelte        flex column, h-dvh, safe-area insets left/right
-├─ header                the window's app icon, title (or app name), unsaved dot; Open WebOS (primary link, new tab)
+├─ header                the window's app icon, title (or app name), unsaved dot; Guide; Open WebOS (primary link, new tab)
 ├─ main                  isolate
 │  ├─ solo-window.svelte the first window: app context, WindowContent at zoom 1, its sheets; no chrome
 │  ├─ EmptyState         closed: "{App} is closed" + Reopen · broken link: "This link can't open", or "This link needs a newer WebOS" + Update and reload
@@ -22,6 +22,7 @@ The header pads the top safe area. Touch makes it 52 px tall (`pointer-coarse:h-
 
 | Action | Result |
 |--------|--------|
+| Guide | A `sm` `IconButton` (Phosphor `Question`, 44px on touch) before Open WebOS while a window is open: `windows.toggle_guide(window)`, `pressed` while it shows. `solo-window.svelte` renders the guide like the desktop window ([window](window.md#guide), ADR-085). A link with no props to an app this browser never used opens with its guide shown ([apps](../services/apps.md#first-open)) |
 | Open WebOS | `<a target="_blank">` to `router.link_for(window)`, the same `#/app/` link Copy link gives. The solo tab stays as it is, so a half-filled form isn't lost. With no window: the link's app link, or the bare OS for a broken link |
 | Close the app (its own close, `windows.close`) | Empty state with Reopen, which launches the link's route again |
 | Launch another app, open a file | Opens nothing; toast with Open WebOS ([apps](../services/apps.md#solo-mode)) |

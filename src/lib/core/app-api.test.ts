@@ -329,6 +329,7 @@ const manifest_fields: Members<
   | "daily_rank"
   | "default_widget"
   | "defaults"
+  | "guide"
   | "highlights"
   | "icon"
   | "id"

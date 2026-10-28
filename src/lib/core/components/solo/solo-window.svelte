@@ -1,6 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import kernel, { type DialogsService, type WindowId, type WindowsService } from "$lib/core/api";
+  import kernel, { type DialogsService, WindowFlag, type WindowId, type WindowsService } from "$lib/core/api";
   import { create_storage_handle } from "$lib/core/contexts/app";
   import { set_app_context } from "$lib/core/contexts/app/context";
   import { create_window_handle } from "$lib/core/contexts/app/window-handle";
@@ -14,6 +14,7 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const instance = $derived(windows.get(id)!);
   const has_sheets = $derived(dialogs.for_window(id).length > 0);
+  const has_guide = $derived(instance.flags.has(WindowFlag.GUIDE));
 
   untrack(() => {
     const app_id = instance.app.id;
@@ -28,8 +29,13 @@
 </script>
 
 <div data-window-id={id} class="relative h-full w-full overflow-hidden bg-background [container-type:size]">
-  <div class="contents" inert={has_sheets}>
+  <div class="contents" inert={has_sheets || has_guide}>
     <WindowContent window_id={id} zoom={1} />
   </div>
+  {#if has_guide}
+    {#await import("../window/window-guide.svelte") then { default: WindowGuide }}
+      <div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>
+    {/await}
+  {/if}
   <WindowSheets window_id={id} />
 </div>

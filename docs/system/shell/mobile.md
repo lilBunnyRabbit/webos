@@ -14,7 +14,7 @@ mobile-shell.svelte        flex column, h-dvh, safe-area insets left/right, touc
 │  │  └─ letter-index.svelte  letter rail; the held-letter panel and the full app list (browse) over the home
 │  ├─ mobile-windows.svelte  every running window; the switcher when open
 │  └─ ToastArea           top, centred, below the safe area
-└─ nav-bar.svelte         back, home, running apps
+└─ nav-bar.svelte         back, home, running apps; the guide button while an app is on screen
 ```
 
 No WebOS status bar: the device shows its own. `index.html` sets `viewport-fit=cover` and `interactive-widget=resizes-content` (the layout shrinks above the soft keyboard, so fixed rows like the Terminal's key row stay visible), and the shell pads with `env(safe-area-inset-*)`: the home and each app pad the top, the nav bar the bottom.
@@ -40,6 +40,7 @@ Buttons, not gestures: every screen edge belongs to the device (iOS: left edge b
 | Back | `ui.back()` ([ui](../services/ui.md#back)): closes the full app list, edit mode or the switcher; dismisses the top system dialog or menu, then the app's top sheet, when dismissible (a required one swallows back); asks the on-screen app (`windows.back(id)`, its `on_back` handlers, newest first); sends the app home (it keeps running). Nothing on home. The device's back gesture runs the same chain through the history guard |
 | Home | Closes any layer and goes home |
 | Running apps | Opens the switcher, or closes it (or the notification view of it). A `primary` badge shows the count of running apps; a `primary` dot (ringed in the bar colour) on the other corner means unread notifications |
+| Guide | Only while an app is on screen and the switcher is shut: a 44px Phosphor `Question` at the bar's right end, absolutely placed so the three buttons above stay centred. `windows.toggle_guide(focused)` (ADR-085); filled and `pressed` while the guide shows. Mobile windows have no titlebar, so this stands in for the desktop's titlebar button ([window](window.md#guide)). Back closes the guide first |
 
 Escape also closes an open layer, unless a menu or system dialog is up (a modal `<dialog>`: its Escape closes only itself). Every change runs through `view_transition()` (`$lib/core/utils/view-transition.ts`, shared with the desktop window motion): `document.startViewTransition` + `flushSync`, skipped under `prefers-reduced-motion` or Motion off (`motion_reduced()`). A rejected `ready` (hidden tab, a newer transition) is swallowed. The full app list opens and closes without one: it fades on its own, and a release on the rail must measure the held letter in the same frame.
 
@@ -56,7 +57,7 @@ Escape also closes an open layer, unless a menu or system dialog is up (a modal 
 - "Close all" under the row; "No running apps" when empty.
 - Each card has `view-transition-name: window-{id}`, so opening and closing the switcher morphs between card and fullscreen.
 
-`mobile-window.svelte` is the window body: carries `data-window-id` like the desktop window (Activity Monitor observes it, dialogs anchor to it), sets the app context exactly like the desktop window, renders `WindowContent` (zoom 1, error boundary) and `WindowSheets`, pads the top safe area, and makes the app `inert` while a sheet is open. No titlebar.
+`mobile-window.svelte` is the window body: carries `data-window-id` like the desktop window (Activity Monitor observes it, dialogs anchor to it), sets the app context exactly like the desktop window, renders `WindowContent` (zoom 1, error boundary), the guide while `WindowFlag.GUIDE` is set ([window](window.md#guide)) and `WindowSheets`, pads the top safe area, and makes the app `inert` while a sheet or the guide is open. No titlebar: the guide button sits in the nav bar.
 
 ## Home
 

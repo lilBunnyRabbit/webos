@@ -63,6 +63,7 @@ Hints are counted; best times count only solves without hints.
 - **Rules feedback** follows the genre: a plot that breaks a rule (no clue, two clues, wrong area, wrong shape) gets `error` borders, a light `error` hatch and an `error` clue; the status line names the first problem. A clue whose plot is fine dims. Nothing says whether a legal plot is the right one except Hint.
 - **Shape glyphs** are drawn outlines with clear proportions (1:1, about 1.8:1 and 1:1.8), not phosphor icons: Phosphor's `Rectangle` is nearly square at clue size, so wide and square read alike. With a number the glyph is a badge in the top-right corner; alone it sits in the middle.
 - A fresh puzzle opens behind a Start overlay, and the timer runs from Start. New puzzle starts the next one right away.
+- **Guide** (`guide.md`, ADR-085): the goal, how to read a clue, drawing and removing plots (pointer and keyboard), Hint, undo and F2, the timer and the daily. The window's `?` button or F1 shows it; it opens by itself the first time Plots is launched with no props, so a daily from Game Hub skips it. Keep it in step with the controls above.
 
 ## Data
 
@@ -94,4 +95,5 @@ None beyond the repo's own: `zod`, `phosphor-svelte` (toolbar icons).
 - [Daily puzzles brainstorm, 2026-10-21](../brainstorm/2026-10-21_daily-puzzles.md): one app per puzzle, rabbit names (Patches → Plots), generated with one answer, region borders as a small kit helper.
 - [ADR-035](../adrs/035-app-platform-wave-2.md): `daily` prop, `track_play`, Game Hub.
 - [ADR-078](../adrs/078-achievements.md): achievements.
+- [ADR-085](../adrs/085-app-guides.md): the guide, Plots' the first one.
 - Built here, within the brainstorm's scope: a new plot replaces the plots it overlaps (LinkedIn's behaviour) instead of stacking; overlap shows as a preview while dragging, not as a lasting conflict. Clues are thinned until the deduction rules, not just the solver, still solve the puzzle.

@@ -49,6 +49,7 @@ src/lib/
         ├── meta.ts               # description, keywords, pitch, authors: `meta: () => import("./meta")` (the build copies it into the catalogue, ADR-049, ADR-077)
         ├── icon.svelte           # the app's own icon
         ├── highlights.ts         # App Store showcase slides, `highlights: () => import("./highlights")` (lazy)
+        ├── guide.md              # how to use or play it, short markdown: `guide: () => import("./guide.md?raw")` (lazy, ADR-085); the window's ? and the first open show it
         ├── package.json          # only when the app has its own packages (ADR-045)
         ├── commands.ts           # shell commands, `shell: () => import("./commands")` (lazy, ADR-034)
         ├── shell.ts              # their bodies, `import()`ed on first run

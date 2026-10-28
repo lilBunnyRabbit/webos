@@ -36,6 +36,7 @@ export interface CatalogueApp {
   widget_size?: { min: Size; max: Size; default: Size };
   default_widget?: boolean;
   highlights?: boolean;
+  guide?: boolean;
   preview?: boolean;
   shell?: boolean;
   badge?: boolean;
@@ -66,7 +67,7 @@ export type CatalogueHeader = Omit<Catalogue, "apps">;
 /** `<meta name="webos-core">` in `index.html`: the build writes the core hash there, the page reads its own from it. */
 export const CORE_META = "webos-core";
 
-export const LAZY_PARTS = ["shell", "widget", "highlights", "preview", "on_fire", "on_uninstall_data", "background"] as const;
+export const LAZY_PARTS = ["shell", "widget", "highlights", "guide", "preview", "on_fire", "on_uninstall_data", "background"] as const;
 export type LazyPart = (typeof LAZY_PARTS)[number];
 
 export function json_safe(value: unknown): unknown {
@@ -110,6 +111,7 @@ export function manifest_data(manifest: Record<string, unknown>, meta: Record<st
     widget_size: manifest.widget_size,
     default_widget: manifest.default_widget === true || undefined,
     highlights: has("highlights"),
+    guide: has("guide"),
     preview: has("preview"),
     shell: has("shell"),
     badge: has("badge"),
