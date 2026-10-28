@@ -27,6 +27,7 @@ export interface VehicleSpec {
   wheel_width: number;
   /** Kerb to kerb: the radius the outer front wheel draws at full lock. */
   turning_radius: number;
+  /** Centre to lock at a steady hold; the wheel itself can go `STEER_BOOST` times faster. */
   steer_time: number;
   creep_speed: number;
   creep_accel: number;
@@ -198,6 +199,20 @@ const PEDAL_RATE = 3;
 const RELEASE_RATE = 8;
 const STILL = 1e-4;
 
+/** How much faster than a steady hold the wheel turns at most: a hatchback goes centre to lock in about 0.7 s. */
+export const STEER_BOOST = 1.6;
+const BOOST_AFTER = 0.25;
+const BOOST_RAMP = 0.3;
+
+/**
+ * A held steering key's rate over the steady one, by how long it has been held in one direction: a tap or a short
+ * hold keeps the fine rate, then it eases up to `STEER_BOOST` over about 0.3 s.
+ */
+export function steer_boost(held: number): number {
+  const t = clamp((held - BOOST_AFTER) / BOOST_RAMP, 0, 1);
+  return 1 + (STEER_BOOST - 1) * t * t * (3 - 2 * t);
+}
+
 export function max_steer(spec: VehicleSpec): number {
   const outer = Math.sqrt(spec.turning_radius ** 2 - spec.wheelbase ** 2);
   return Math.atan(spec.wheelbase / (outer - spec.track / 2));
@@ -248,7 +263,7 @@ function steer_rate(car: Car, input: Input, limit: number, spec: VehicleSpec): n
   const rate = limit / spec.steer_time;
   // Hands off, the caster brings the wheel back only as the car rolls, and faster the faster it rolls.
   if (input.steer === null) return rate * clamp(Math.abs(car.speed) / 2, 0, 1);
-  return rate;
+  return rate * STEER_BOOST;
 }
 
 function acceleration(car: Car, spec: VehicleSpec): number {

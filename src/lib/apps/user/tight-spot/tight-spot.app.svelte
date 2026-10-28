@@ -61,7 +61,7 @@
   import { End, sensor } from "./sensors";
   import { Sounds } from "./sound";
   import SteeringWheel from "./steering-wheel.svelte";
-  import { body_centre, Gear, max_steer, rig_length, Vehicle, without_creep, type Input } from "./vehicle";
+  import { body_centre, Gear, max_steer, rig_length, steer_boost, Vehicle, without_creep, type Input } from "./vehicle";
   import { SCENARIOS, Scenario } from "./world";
 
   const STEP_MS = 1000 / 120;
@@ -149,6 +149,8 @@
   let pinch_start: { distance: number; zoom: number } | null = null;
   let hands = false;
   let steering_by_keys = false;
+  let steer_way = 0;
+  let steer_held = 0;
   let camera: Camera | null = null;
   let readings: Record<End, number | null> = { front: null, rear: null };
   const sounds = new Sounds();
@@ -279,21 +281,27 @@
     if (game.status === Status.READY && game.world.bays.length === 1) {
       // Before the start, frame the car and its bay together so the player sees the task.
       const bay = centroid(game.world.bays[0].shape);
-      // The start card covers the bottom of the board, or its left on a wide one; the framing keeps clear of it.
+      // The start card covers the bottom of the board, or its left on a wide one; the framing keeps clear of it, and
+      // of the pedals floating on the right of a phone held sideways.
       const covered_x = side_card ? Math.min(card_size.width + 16, size.width * 0.6) : 0;
       const covered_y = side_card ? 0 : Math.min(card_size.height + 8, size.height * 0.5);
-      const width = size.width - covered_x;
+      const covered_right = sideways() ? pedal_box.width + OVERLAY_GAP : 0;
+      const width = size.width - covered_x - covered_right;
       const height = size.height - covered_y;
       const across = Math.abs(bay.x - car.x) + 12;
       const along = Math.abs(bay.y - car.y) + 12;
       const short = Math.min(width, height);
       const fit = Math.min(1, (span * width) / short / across, (span * height) / short / along);
       const view = frame(bounds, { x: (bay.x + car.x) / 2, y: (bay.y + car.y) / 2 }, width, height, Math.max(0.25, fit) * zoom, NO_INSETS, span);
-      return { ...view, x: view.x - covered_x / 2 / view.scale, y: view.y + covered_y / 2 / view.scale };
+      return { ...view, x: view.x - (covered_x - covered_right) / 2 / view.scale, y: view.y + covered_y / 2 / view.scale };
     }
     const ahead = game.car.speed * 0.9;
     const focus = { x: car.x + Math.cos(game.car.heading) * ahead, y: car.y + Math.sin(game.car.heading) * ahead };
     return frame(bounds, focus, size.width, size.height, zoom, control_insets(), span);
+  }
+
+  function sideways(): boolean {
+    return !!steer_box.width && !!stage_rect && stage_rect.width > stage_rect.height * OVERLAY_ASPECT;
   }
 
   // Everything drawn over the board: the HUD always, the end card once a round is over, the touch controls sideways.
@@ -303,7 +311,7 @@
     const card_bottom = ended && !side_card ? Math.min(card_size.height + 16, size.height * 0.5) : 0;
     const card_left = ended && side_card ? Math.min(card_size.width + 16, size.width * 0.6) : 0;
     const insets = { top: hud_height + 8, right: 0, bottom: card_bottom, left: card_left };
-    if (!steer_box.width || !stage_rect || stage_rect.width <= stage_rect.height * OVERLAY_ASPECT) return insets;
+    if (!sideways()) return insets;
     return { ...insets, right: pedal_box.width + OVERLAY_GAP, left: Math.max(card_left, steer_box.width + OVERLAY_GAP) };
   }
 
@@ -324,6 +332,7 @@
         rear: game.car.gear === Gear.REVERSE ? readings.rear : null,
       },
       time: performance.now() / 1000,
+      insets: control_insets(),
     });
   }
 
@@ -334,11 +343,18 @@
     if (turn !== 0) {
       hands = true;
       steering_by_keys = true;
-      const rate = dt / spec.steer_time;
+      // A tap turns at the fine rate; held on one way, the wheel speeds up. Letting go or flipping starts over.
+      steer_held = turn === steer_way ? steer_held + dt : dt;
+      steer_way = turn;
+      const rate = (dt / spec.steer_time) * steer_boost(steer_held);
       wheel = Math.max(-1, Math.min(1, wheel + Math.sign(turn - wheel) * Math.min(rate, Math.abs(turn - wheel))));
-    } else if (steering_by_keys && wheel_mode === WheelMode.CENTRES) {
-      hands = false;
-      steering_by_keys = false;
+    } else {
+      steer_way = 0;
+      steer_held = 0;
+      if (steering_by_keys && wheel_mode === WheelMode.CENTRES) {
+        hands = false;
+        steering_by_keys = false;
+      }
     }
   }
 
@@ -697,8 +713,8 @@
 {/snippet}
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={root} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown}>
-  <Toolbar>
+<div bind:this={root} class="ts-root grid h-full grid-rows-[auto_1fr_auto] [container:ts-app/size]" onkeydown={on_keydown}>
+  <Toolbar class="ts-toolbar">
     <Segmented size="sm" class="hidden @xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
     <Select class="w-[5.75rem] @xl:hidden" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
     {#if mode === Mode.SCENARIO && !daily}
@@ -807,6 +823,10 @@
               {/each}
             </div>
             {@render speed_chip("pointer-coarse:hidden")}
+            <!-- A phone held sideways folds the status bar away for board height; its time and moves come up here. -->
+            <div class="ts-fold hidden rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">
+              {time} <span class="text-foreground/65">· {moves_text(game.moves)}</span>
+            </div>
             </div>
             <!-- On touch the bigger gear strip leaves no room beside it, so the speed stacks over the sensor readout. -->
             <div class="flex flex-col items-end gap-1.5">
@@ -947,7 +967,7 @@
     </div>
   </div>
 
-  <StatusBar>
+  <StatusBar class="ts-status">
     <span>{round_title(game.round)}</span>
     <span class="tabular-nums">{time}</span>
     <span class="tabular-nums">Moves {game.moves}</span>
@@ -1097,6 +1117,24 @@
 
       .ts-gas {
         height: min(8.5rem, 46cqh);
+      }
+    }
+  }
+
+  /* A phone held sideways: every pixel of height goes to the board, so the status bar folds into the HUD and the toolbar tightens. */
+  @media (pointer: coarse) {
+    @container ts-app (aspect-ratio > 1.25) and (height < 30rem) {
+      .ts-root :global(.ts-status) {
+        display: none;
+      }
+
+      .ts-root :global(.ts-toolbar) {
+        min-height: 0;
+        padding-block: 0.25rem;
+      }
+
+      .ts-fold {
+        display: block;
       }
     }
   }

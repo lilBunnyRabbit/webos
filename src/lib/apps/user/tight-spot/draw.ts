@@ -1,4 +1,5 @@
 import { resolve_token } from "$lib/core/utils";
+import type { Insets } from "./camera";
 import { against, dash_phase, darkest, lightest, tread, wound, type Tone } from "./draw-math";
 import { spec_of, Status, type GameState } from "./game";
 import type { Polygon, Pose, Vec } from "./geometry";
@@ -79,6 +80,7 @@ export function read_palette(probe: HTMLElement): Palette {
   const glow = lightest([of("foreground"), of("background-lightest"), of("cottontail")]);
   // Glass takes the plain light tone, not the accent a lamp may get, so a dark car's windows don't light up.
   const pale = lightest([of("foreground"), of("background-lightest")]);
+  const dark_ground = glow.l - of("background").l > 0.35;
   const paint = (colour: string): Paint => {
     const body = tone(colour);
     const over = against(body.l, ink, pale);
@@ -102,7 +104,7 @@ export function read_palette(probe: HTMLElement): Palette {
     pillar: solid("foreground", 62),
     shelf: mix("foreground", 30),
     water: solid("info", 34),
-    water_edge: mix("info", 75),
+    water_edge: solid("info", 85),
     cars: [
       token("var(--secondary)"),
       token("var(--tertiary)"),
@@ -116,7 +118,7 @@ export function read_palette(probe: HTMLElement): Palette {
     shadow: token(`color-mix(in oklch, ${ink.colour} 30%, transparent)`),
     glow: glow.colour,
     glow_clear: token(`color-mix(in oklch, ${glow.colour} 0%, transparent)`),
-    beams: glow.l - of("background").l > 0.35,
+    beams: dark_ground,
     tread: token(`color-mix(in oklch, ${glow.colour} 55%, transparent)`),
     brake: token("var(--error)"),
     brake_glow: mix("error", 35),
@@ -125,7 +127,8 @@ export function read_palette(probe: HTMLElement): Palette {
     free: mix("primary", 55),
     parked: token("var(--success)"),
     parked_fill: mix("success", 18),
-    guide: token("var(--cottontail)"),
+    // Cottontail is a light tint on most themes; on a light ground the dashed guides take some foreground to show.
+    guide: dark_ground ? token("var(--cottontail)") : token("color-mix(in oklch, var(--cottontail) 55%, var(--foreground))"),
     warning: token("var(--warning)"),
     error: token("var(--error)"),
   };
@@ -145,6 +148,8 @@ export interface Extras {
   guides: boolean;
   sensors: Record<End, number | null>;
   time: number;
+  /** What sits over the board's edges (the HUD, sideways touch controls), the same strips the camera keeps clear of. */
+  insets: Insets;
 }
 
 function trace(ctx: CanvasRenderingContext2D, shape: Polygon) {
@@ -717,7 +722,7 @@ function outlined(ctx: CanvasRenderingContext2D, shapes: Polygon[], fill_colour:
 
 function solids(ctx: CanvasRenderingContext2D, items: Solid[], scale: number, palette: Palette) {
   const of = (kind: SolidKind) => items.filter((solid) => solid.kind === kind).map((solid) => solid.shape);
-  outlined(ctx, of(SolidKind.WATER), palette.water, palette.water_edge, 2 / scale);
+  outlined(ctx, of(SolidKind.WATER), palette.water, palette.water_edge, Math.max(0.12, 3 / scale));
   outlined(ctx, of(SolidKind.KERB), palette.pavement, palette.kerb, 4 / scale);
   outlined(ctx, of(SolidKind.WALL), palette.wall, palette.wall_edge, 3 / scale);
   outlined(ctx, of(SolidKind.SHELF), palette.shelf, palette.wall_edge, 2 / scale);
@@ -774,33 +779,38 @@ function ground(ctx: CanvasRenderingContext2D, state: GameState, scale: number, 
   ctx.lineDashOffset = 0;
 }
 
-// The bay is often out of frame while the camera follows the car: a marker on the edge points the way.
+// The bay is often out of frame while the camera follows the car: a marker on the edge of the clear part points the way.
 const POINTER_MARGIN = 22;
-// The gear strip, speed and sensor chips sit along the top of the board; the marker stays below them.
-const POINTER_TOP = 44 + 16;
 
-function bay_pointer(ctx: CanvasRenderingContext2D, bay: Bay, view: View, palette: Palette) {
+function bay_pointer(ctx: CanvasRenderingContext2D, bay: Bay, view: View, insets: Insets, palette: Palette) {
   const centre = bay.shape.reduce(
     (sum, p) => ({ x: sum.x + p.x / bay.shape.length, y: sum.y + p.y / bay.shape.length }),
     { x: 0, y: 0 }
   );
-  const dx = (centre.x - view.x) * view.scale;
-  const dy = (centre.y - view.y) * view.scale;
-  const x = view.width / 2 + dx;
-  const y = view.height / 2 + dy;
-  if (x >= 0 && x <= view.width && y >= 0 && y <= view.height) return;
-  const right = view.width / 2 - POINTER_MARGIN;
-  const down = view.height / 2 - POINTER_MARGIN;
-  const up = Math.max(0, view.height / 2 - POINTER_TOP);
-  const t = Math.min(right / Math.max(1e-6, Math.abs(dx)), (dy < 0 ? up : down) / Math.max(1e-6, Math.abs(dy)));
+  const x = view.width / 2 + (centre.x - view.x) * view.scale;
+  const y = view.height / 2 + (centre.y - view.y) * view.scale;
+  const x0 = insets.left;
+  const x1 = view.width - insets.right;
+  const y0 = insets.top;
+  const y1 = view.height - insets.bottom;
+  // The HUD's chips leave most of the top band clear, so a bay seen there needs no marker; the sideways controls hide theirs.
+  if (x >= x0 && x <= x1 && y >= 0 && y <= y1) return;
+  // From the middle of the clear part, where the camera puts the car, out to its edge less a margin.
+  const ox = (x0 + x1) / 2;
+  const oy = (y0 + y1) / 2;
+  const dx = x - ox;
+  const dy = y - oy;
+  const right = Math.max(0, (x1 - x0) / 2 - POINTER_MARGIN);
+  const down = Math.max(0, (y1 - y0) / 2 - POINTER_MARGIN);
+  const t = Math.min(right / Math.max(1e-6, Math.abs(dx)), down / Math.max(1e-6, Math.abs(dy)));
   const angle = Math.atan2(dy, dx);
   ctx.setTransform(
     view.dpr,
     0,
     0,
     view.dpr,
-    view.dpr * (view.width / 2 + dx * t),
-    view.dpr * (view.height / 2 + dy * t)
+    view.dpr * (ox + dx * t),
+    view.dpr * (oy + dy * t)
   );
   ctx.rotate(angle);
   ctx.fillStyle = palette.target;
@@ -874,7 +884,7 @@ export function draw_scene(
 
   if (!open && world.bays.length === 1 && state.status === Status.DRIVING) {
     ctx.save();
-    bay_pointer(ctx, world.bays[0], view, palette);
+    bay_pointer(ctx, world.bays[0], view, extras.insets, palette);
     ctx.restore();
   }
 

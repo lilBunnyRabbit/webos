@@ -5,6 +5,38 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.82.1",
+    date: "2026-10-28",
+    title: "Room to park",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Tight Spot steering turns faster the longer you hold the key or button, while a tap still nudges the wheel finely.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Tight Spot's dead end, driveway, slipway, end bay and depot change more from one spot to the next: other gaps, parked cars, starting points and sides.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Tight Spot on a phone held sideways gives the map more height, with the time and moves up next to the gears.",
+      },
+      {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Tight Spot's end bay starts inside the car park with lighter walls, so the car and the bay are easy to see on a phone, and the depot bus has room to back up from the start.",
+      },
+      {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Tight Spot's arrow to an off-screen bay stays clear of the controls, and guide lines and water edges show up better on light themes.",
+      },
+    ],
+  },
+  {
     version: "3.82.0",
     date: "2026-10-28",
     title: "Bigger wheels",

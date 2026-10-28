@@ -17,7 +17,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 
 ## Keyboard
 
-- **← →** or **A D** turn the wheel. **↑** or **W** drives forward, **↓** or **S** backs up: against the way you're going it brakes, and pressing it again once the car stands switches to D or R.
+- **← →** or **A D** turn the wheel: a tap nudges it, and held a moment it turns faster. **↑** or **W** drives forward, **↓** or **S** backs up: against the way you're going it brakes, and pressing it again once the car stands switches to D or R.
 - **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel.
 - **+** and **-** zoom. **Escape** pauses and resumes.
 - **Enter** starts, resumes, and once the round is over takes the card's main button: a new spot, the next level, or another try after a touch. **R** tries the same spot again.
@@ -27,10 +27,10 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 ## Touch
 
 - Drag the **steering wheel** round by its rim; it stays where you leave it. Tap the middle to centre it.
-- Rather tap? Set **Steering** to **Buttons** in settings and hold **◀** or **▶**. Settings also choose whether the wheel centres itself when you let go.
+- Rather tap? Set **Steering** to **Buttons** in settings and hold **◀** or **▶**; like the keys, they turn faster the longer you hold. Settings also choose whether the wheel centres itself when you let go.
 - **Gas** drives forward and **Brake** backs up, like the arrow keys: against the way you're going it brakes, and pressing it again once the car stands switches to D or R. Brake in P reverses.
 - Tap **P**, **R**, **N** or **D** in the strip at the top to pick a gear; P parks.
-- Held sideways, the map fills the screen and the wheel and pedals sit over its sides.
+- Held sideways, the map fills the screen and the wheel and pedals sit over its sides; the time and moves move up next to the gears.
 - Pinch the map to zoom. **Back** pauses a round before it leaves the game.
 
 ## Judging

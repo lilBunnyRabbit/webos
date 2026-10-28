@@ -53,6 +53,12 @@ Decided in [the vehicles brainstorm](../brainstorm/2026-10-28_tight-spot-vehicle
 - **Trailer proof from the real start.** The forward-only search above wasn't a proof: it stopped anywhere within 1.5 m and 30° of the start with the trailer up to 0.1 rad bent, and reversing from the round's real start (trailer straight) amplifies any difference, so the replay only showed that a car starting at the path's end could park. The planner now drives both ways with a trailer and keeps the hitch angle (in 11° steps) in its closed set, and the test searches from the car exactly as the round places it until the game's own judging (`parked_in`) calls it parked, then drives the moves again from that start and asserts no contact, no jackknife and the verdict "inside". Every fixed level goes the same way, whatever its vehicle. The seed sweeps of the car kinds keep the cheaper search out of the bay to near the start, sound only without a trailer; going from the start there too took the planner test from about 70 s to 180 s. The search's weight on its heuristic went from 2.5 to 4 to keep the whole test about that long. The `replay` helper and the 0.1 rad goal are gone.
 - **Bus stop brief** says stop box, not lay-by.
 
+## Revision 2026-10-28 (polish)
+- **Steering ramp.** Held keys (and the touch ◀ ▶ buttons) turn the wheel at the steady rate for a tap or short hold, then ease up to 1.6×. The model's own cap is `STEER_BOOST` × the spec's steady rate, so the faster hold isn't clipped; hands-off caster centring stays at the steady rate.
+- **Seed variety.** The dead end, end bay, depot, driveway and slipway take more from the seed (gaps, parked cars, start offsets, mirroring); their levels keep kind, difficulty and seed but changed layout. The car kinds' builders are untouched, so car levels keep theirs.
+- **End bay** starts inside the lot, and its walls are thin lines on pavement instead of solid blocks. **Depot** starts the bus mid-yard.
+- **Phone held sideways** folds the status bar into the HUD and tightens the toolbar (CSS container query on the app root).
+
 ## Consequences
 - The first vehicle sim and polygon collision in the repo; they stay in the app until a second app needs them.
 - Grid roads look like city blocks with 90° junctions.

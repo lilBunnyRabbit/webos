@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { overlaps } from "./collision";
 import { collide, obstacles, SCENARIO_INFO } from "./game";
-import { create_car, Gear, VEHICLES, type VehicleSpec } from "./vehicle";
+import { centroid } from "./geometry";
+import { BUS, corners, create_car, Gear, VEHICLES, type VehicleSpec } from "./vehicle";
 import type { Scenario } from "./world";
 
 function specs(scenario: Scenario): VehicleSpec[] {
@@ -107,6 +108,41 @@ describe("scenario worlds", () => {
           }
         }
       }
+    }
+  });
+
+  test("the depot bus starts with room behind it to back up first", () => {
+    for (const difficulty of [0, 0.5, 1]) {
+      for (let seed = 1; seed <= 30; seed++) {
+        const start = scenario_world(seed, "depot", difficulty, BUS).start;
+        const rear = Math.min(...corners(start, BUS).map((p) => p.x));
+        expect(rear - 1.5, `${difficulty} ${seed}`).toBeGreaterThanOrEqual(4);
+      }
+    }
+  });
+
+  test("the end bay starts inside its lot, close enough to frame the car and the bay together", () => {
+    for (let seed = 1; seed <= 30; seed++) {
+      const world = scenario_world(seed, "end-bay", 0.5);
+      expect(world.start.y, `${seed}`).toBeLessThan(CHUNK - 1);
+      expect(world.start.y - centroid(world.bays[0].shape).y, `${seed}`).toBeLessThan(26);
+    }
+  });
+
+  test("seeds change the layout within one difficulty, mirrored both ways where the kind mirrors", () => {
+    const kinds = ["dead-end", "driveway", "slipway", "end-bay", "depot", "bus-stop"] as const;
+    for (const scenario of kinds) {
+      const spec = specs(scenario)[0];
+      const seen = new Set<string>();
+      const sides = new Set<boolean>();
+      for (let seed = 1; seed <= 16; seed++) {
+        const world = scenario_world(seed, scenario, 0.5, spec);
+        const bay = centroid(world.bays[0].shape);
+        seen.add(`${bay.x.toFixed(1)} ${bay.y.toFixed(1)} ${world.start.x.toFixed(1)} ${world.start.y.toFixed(1)}`);
+        sides.add(bay.x < 16);
+      }
+      expect(seen.size, scenario).toBeGreaterThanOrEqual(12);
+      if (scenario === "dead-end" || scenario === "driveway" || scenario === "slipway") expect(sides.size, scenario).toBe(2);
     }
   });
 

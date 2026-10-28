@@ -12,6 +12,8 @@ import {
   NO_INPUT,
   shift,
   step,
+  steer_boost,
+  STEER_BOOST,
   trailer_pose,
   turn_centre,
   VEHICLES,
@@ -107,12 +109,40 @@ describe("steering geometry", () => {
 });
 
 describe("steering wheel", () => {
-  test("turns at a limited rate: lock takes the configured time", () => {
+  test("turns at a limited rate: lock takes the steady time over the boost", () => {
     const parked = create_car(START);
-    const half = run(parked, { steer: 1, throttle: 0, brake: 0 }, HATCHBACK.steer_time / 2);
+    const fastest = HATCHBACK.steer_time / STEER_BOOST;
+    expect(fastest).toBeCloseTo(0.69, 2);
+    const half = run(parked, { steer: 1, throttle: 0, brake: 0 }, fastest / 2);
     expect(half.steer).toBeCloseTo(max_steer(HATCHBACK) / 2, 2);
-    const full = run(parked, { steer: 1, throttle: 0, brake: 0 }, HATCHBACK.steer_time + 0.05);
+    const full = run(parked, { steer: 1, throttle: 0, brake: 0 }, fastest + 0.05);
     expect(full.steer).toBeCloseTo(max_steer(HATCHBACK), 6);
+  });
+
+  test("a wheel target moved at the steady rate is followed without lag", () => {
+    let car = create_car(START);
+    const dt = 1 / 120;
+    for (let i = 1; i <= 60; i++) {
+      car = step(car, { steer: Math.min(1, (i * dt) / HATCHBACK.steer_time), throttle: 0, brake: 0 }, dt);
+      expect(car.steer).toBeCloseTo(Math.min(1, (i * dt) / HATCHBACK.steer_time) * max_steer(HATCHBACK), 6);
+    }
+  });
+
+  test("a held key keeps the fine rate for a short hold, then eases up to the boost", () => {
+    expect(steer_boost(0)).toBe(1);
+    expect(steer_boost(0.2)).toBe(1);
+    expect(steer_boost(0.4)).toBeGreaterThan(1);
+    expect(steer_boost(0.4)).toBeLessThan(STEER_BOOST);
+    expect(steer_boost(0.6)).toBeCloseTo(STEER_BOOST, 6);
+    expect(steer_boost(5)).toBeCloseTo(STEER_BOOST, 6);
+    for (let t = 0; t < 1; t += 0.01) expect(steer_boost(t + 0.01)).toBeGreaterThanOrEqual(steer_boost(t));
+  });
+
+  test("hands off, the caster centres the wheel at the steady rate, not the boosted one", () => {
+    const locked = at_full_lock(Gear.DRIVE);
+    const rolling = { ...locked, speed: 2.5 };
+    const after = step(rolling, NO_INPUT, 0.1);
+    expect(locked.steer - after.steer).toBeCloseTo((max_steer(HATCHBACK) / HATCHBACK.steer_time) * 0.1, 6);
   });
 
   test("let go, it stays put at a standstill and self-centres while rolling", () => {

@@ -430,28 +430,34 @@ function dead_end(d: number, rng: Rng, fit: Fit): Layout {
   b.ground(SurfaceKind.ASPHALT, rect(lo, EDGE, hi, SIZE));
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
   b.perimeter(SolidKind.KERB);
-  const notch = d < 0.5;
-  const notch_depth = 5.5;
-  const notch_width = 3.2;
-  if (notch) {
-    b.ground(SurfaceKind.ASPHALT, rect(hi, EDGE, hi + notch_depth, EDGE + notch_width));
-    b.block(SolidKind.KERB, hi + notch_depth, EDGE, SIZE - EDGE, EDGE + notch_width);
-    b.block(SolidKind.KERB, hi, EDGE + notch_width, SIZE - EDGE, SIZE - EDGE);
+  if (d < 0.5) {
+    // A notch to swing the nose into, near the far end but not always at it.
+    const top = EDGE + between(rng, 0, 3);
+    const bottom = top + between(rng, 3, 3.6);
+    const depth = between(rng, 4.8, 6);
+    b.ground(SurfaceKind.ASPHALT, rect(hi, top, hi + depth, bottom));
+    b.block(SolidKind.KERB, hi, EDGE, SIZE - EDGE, top);
+    b.block(SolidKind.KERB, hi + depth, top, SIZE - EDGE, bottom);
+    b.block(SolidKind.KERB, hi, bottom, SIZE - EDGE, SIZE - EDGE);
   } else b.block(SolidKind.KERB, hi, EDGE, SIZE - EDGE, SIZE - EDGE);
   b.block(SolidKind.KERB, EDGE, EDGE, lo, SIZE - EDGE);
   b.block(SolidKind.KERB, GATE_LO, SIZE - EDGE - 0.01, lo, SIZE);
   b.block(SolidKind.KERB, hi, SIZE - EDGE - 0.01, GATE_HI, SIZE);
-  if (d > 0.4) b.car(lo + 0.15 + 0.9, between(rng, 9, 12), NORTH, 4.4);
+  const deeper = between(rng, 0, 2.5);
+  if (d > 0.4) {
+    const kerbside = chance(rng, 0.5) ? lo + 1.05 : hi - 1.05;
+    b.car(kerbside, between(rng, 9, 13.5) - deeper, chance(rng, 0.7) ? NORTH : SOUTH, 4.4);
+  }
   // Bollards across the mouth, behind the car: the turn has to happen in the street, not out on the road.
   const mouth = SIZE - EDGE - 0.6;
   for (let x = lo + 0.15; x < hi; x += 1.3)
     b.block(SolidKind.PILLAR, x, mouth - 0.15, Math.min(hi, x + 0.3), mouth + 0.15);
-  b.start = { x: hi - 1.6, y: mouth - 1.6, heading: NORTH };
+  b.start = { x: hi - 1.6, y: mouth - 1.6 - between(rng, 0, 2.5), heading: NORTH };
   const box_x = lo + 0.25;
-  const box = rect(box_x, 21 - fit.longer, box_x + 2.7 + fit.wider, 27.4);
+  const box = rect(box_x, 21 - fit.longer - deeper, box_x + 2.7 + fit.wider, 27.4 - deeper);
   for (let i = 0; i < 4; i++) b.line(box[i], box[(i + 1) % 4], MarkKind.DASH);
   b.bay(box, SOUTH, false);
-  return b;
+  return chance(rng, 0.5) ? mirror(b) : b;
 }
 
 function mirror(layout: Layout): Layout {
@@ -546,20 +552,21 @@ function depot(d: number, rng: Rng, fit: Fit): Layout {
     b.bus(centre, EDGE + 0.3 + rng() * 0.4 + BUS_LENGTH / 2, chance(rng, 0.8) ? SOUTH : NORTH);
   });
   if (d > 0.55) b.bus(between(rng, 20, SIZE - EDGE - BUS_LENGTH / 2 - 0.4), SIZE - EDGE - 0.45 - BUS_WIDTH / 2, 0);
-  b.start = { x: EDGE + 4.8, y: front + lerp(6.8, 6.2, d), heading: 0 };
+  // Room behind the bus as well as ahead of it, so backing up first doesn't meet the west wall.
+  b.start = { x: between(rng, 10.5, 13.5), y: front + lerp(6.8, 6.2, d) + between(rng, 0, 0.6), heading: 0 };
   return b;
 }
 
 function driveway(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const street = lerp(8, 6.6, d);
-  const north = 14;
+  const street = lerp(8, 6.6, d) + between(rng, 0, 0.8);
+  const north = 14 + between(rng, -1.5, 1.5);
   const south = north + street;
   const inner = lerp(3.9, 3.1, d);
   const post = lerp(0.12, 0.3, d);
-  const long = fit.length + lerp(1.6, 0.9, d);
+  const long = fit.length + lerp(1.6, 0.9, d) + between(rng, 0, 0.5);
   const wall = 0.3;
-  const c = between(rng, 9, 13);
+  const c = between(rng, 8.5, 13.5);
   const x0 = c - inner / 2;
   const x1 = c + inner / 2;
   const end = north - long;
@@ -579,18 +586,22 @@ function driveway(d: number, rng: Rng, fit: Fit): Layout {
   b.block(SolidKind.KERB, GATE_HI, south, SIZE - EDGE, SIZE - EDGE);
   b.line({ x: EDGE, y: (north + south) / 2 }, { x: SIZE - EDGE, y: (north + south) / 2 }, MarkKind.DASH);
   if (d > 0.45) b.car(c - between(rng, 3, 5.5), south - 1.05, 0, 4.6);
-  b.start = { x: c + 7.4, y: south - street / 4, heading: 0 };
+  const start = c + 7.4 + between(rng, -0.6, 1.2);
+  // A car on the near kerb up the street, past where the rig waits.
+  const ahead = start + between(rng, 6.5, 9);
+  if (d > 0.25 && chance(rng, 0.6) && ahead + 2.6 < SIZE - EDGE) b.car(ahead, north + 1.05, 0, 4.6);
+  b.start = { x: start, y: south - street / 4, heading: 0 };
   b.bay(rect(x0, end, x1, north), SOUTH, false);
   return chance(rng, 0.5) ? mirror(b) : b;
 }
 
 function slipway(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const quay = 15;
+  const quay = 15 + between(rng, -1, 1.5);
   const ramp = lerp(3.6, 2.7, d);
   const toe = quay - 6.5;
   const bay_end = toe + fit.length + lerp(1.4, 0.7, d);
-  const c = between(rng, 9, 14);
+  const c = between(rng, 8.5, 14);
   const x0 = c - ramp / 2;
   const x1 = c + ramp / 2;
   b.ground(SurfaceKind.ASPHALT, rect(EDGE, quay, SIZE - EDGE, SIZE - EDGE));
@@ -605,10 +616,13 @@ function slipway(d: number, rng: Rng, fit: Fit): Layout {
   b.block(SolidKind.POST, x0 - out - post, quay, x0 - out, quay + post);
   b.block(SolidKind.POST, x1 + out, quay, x1 + out + post, quay + post);
   if (d > 0.5) b.car(between(rng, 18, 26), SIZE - EDGE - 1.25, 0, 4.6);
+  // Someone parked nose to the water beside the ramp, on the side away from where the rig waits.
+  const beside = x0 - out - post - between(rng, 1.6, 2.6);
+  if (d > 0.3 && chance(rng, 0.5) && beside > EDGE + 1.4) b.car(beside, quay + 0.4 + 2.4, NORTH, 4.6);
   for (const x of [x0, x1]) b.line({ x, y: quay }, { x, y: bay_end }, MarkKind.DASH);
   b.line({ x: x0, y: bay_end }, { x: x1, y: bay_end }, MarkKind.DASH);
   b.bay(rect(x0, toe, x1, bay_end), SOUTH, false);
-  b.start = { x: c + 7, y: quay + 4.2, heading: 0 };
+  b.start = { x: c + 7 + between(rng, -0.5, 1.2), y: quay + between(rng, 3.8, 4.8), heading: 0 };
   return chance(rng, 0.5) ? mirror(b) : b;
 }
 
@@ -621,18 +635,26 @@ function end_bay(d: number, rng: Rng, fit: Fit): Layout {
   const depth = fit.depth;
   const lo = 16 - aisle / 2;
   const hi = 16 + aisle / 2;
-  const count = 5;
+  const count = 4 + Math.floor(rng() * 3);
   const end = EDGE + count * width;
-  b.ground(SurfaceKind.FLOOR, rect(lo - depth, EDGE, hi + depth, end));
-  b.ground(SurfaceKind.FLOOR, rect(lo, end, hi, SIZE - EDGE));
-  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
-  b.perimeter(SolidKind.WALL);
-  b.block(SolidKind.WALL, EDGE, EDGE, lo - depth, SIZE - EDGE);
-  b.block(SolidKind.WALL, hi + depth, EDGE, SIZE - EDGE, SIZE - EDGE);
-  b.block(SolidKind.WALL, lo - depth, end, lo, SIZE - EDGE);
-  b.block(SolidKind.WALL, hi, end, hi + depth, SIZE - EDGE);
-  b.block(SolidKind.WALL, GATE_LO, SIZE - EDGE - 0.01, lo, SIZE);
-  b.block(SolidKind.WALL, hi, SIZE - EDGE - 0.01, GATE_HI, SIZE);
+  const left = lo - depth;
+  const right = hi + depth;
+  const wall = 0.3;
+  // Thin walls on pavement, like the garage and the driveway: solid blocks behind the bays read heavy on a phone.
+  b.ground(SurfaceKind.PAVEMENT, rect(0, 0, SIZE, SIZE));
+  b.ground(SurfaceKind.FLOOR, rect(left, EDGE, right, end));
+  b.ground(SurfaceKind.FLOOR, rect(lo, end, hi, SIZE));
+  b.block(SolidKind.WALL, left - wall, EDGE - wall, right + wall, EDGE);
+  b.block(SolidKind.WALL, left - wall, EDGE, left, end + wall);
+  b.block(SolidKind.WALL, right, EDGE, right + wall, end + wall);
+  b.block(SolidKind.WALL, left, end, lo, end + wall);
+  b.block(SolidKind.WALL, hi, end, right, end + wall);
+  b.block(SolidKind.WALL, lo - wall, end + wall, lo, SIZE);
+  b.block(SolidKind.WALL, hi, end + wall, hi + wall, SIZE);
+  b.block(SolidKind.WALL, GATE_LO, SIZE - wall, lo - wall, SIZE);
+  b.block(SolidKind.WALL, hi + wall, SIZE - wall, GATE_HI, SIZE);
+  // The car waits inside, a few metres short of the rows, so the start frames it and the corner bay together.
+  b.start = { x: 16 + between(rng, -0.3, 0.5), y: end + fit.length + between(rng, 2, 4.5), heading: NORTH };
 
   const target_side = chance(rng, 0.5) ? -1 : 1;
   // Nose in on a roomy aisle; the tighter it gets, the likelier the bay wants the car backed in.
