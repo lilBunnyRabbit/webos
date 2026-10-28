@@ -28,6 +28,9 @@ Forklift warehouse, pick and drop: rear-wheel steering (steer at the rear axle),
 4. The hub yard (with the playground and its vehicle garage) and the menu.
 5. The forklift game.
 
+### Pace after the forklift (decided)
+Owner: "lets test with forklift first - then we know all the gotchas then we can be quick". The forklift is the only new game until it ships and its gotchas with the game contract are written down. After that, two or three games run in parallel, one agent each in `games/{id}/`: each game's core changes land first, one at a time, and each game gets its own grill before its agent starts.
+
 ## Key takeaways
 - One app holds every driving game; the shared core needs no kit while the hub is its only user.
 - Keeping the id keeps every player's data.
