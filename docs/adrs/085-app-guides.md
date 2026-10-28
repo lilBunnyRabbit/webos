@@ -27,6 +27,9 @@ Users open an app and don't know what it is or how to play it ([brainstorm](../b
 - **Keys:** while a window's guide shows, its window-scoped shortcuts are skipped; global ones (F1) still run.
 - **Loading** happens once per open, keyed on the app id, so a version poll re-adopting the catalogue doesn't reload it. A guide chunk that fails to import turns the flag off and notifies, so the app isn't left inert.
 
+## Revision 2026-10-28 (writing pass)
+Every app gets a guide, but one popping up on the first launch of an app that explains itself (Clock, Calculator) is a popup to dismiss. A manifest boolean `guide_on_launch` (default `true`) turns the first-open overlay off; the ? button, F1 and `app guide` still open it. The catalogue copies it like `restore`, so a stub knows it without loading the code. Rejected: a line in `guide.md` (first launch would load the guide only to learn not to show it), an object form of `guide` (a union every reader handles).
+
 ## Consequences
 - `define_app` gains a field (app API, stable like the rest).
 - A writing pass is needed for guides beyond Plots.

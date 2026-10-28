@@ -244,7 +244,7 @@ Every app's time in front, for the App Store's "Used 3 h" / "Played 3 h", Librar
 
 ADR-085. `launch()` opens the window, then calls `windows.toggle_guide(window)` when all of these hold (`first_open`):
 
-- the manifest (real or stub) has a `guide`;
+- the manifest (real or stub) has a `guide`, and `guide_on_launch` isn't `false` (the catalogue carries the flag, so a stub knows it before the code loads);
 - the props after replaced-id resolution are `undefined` or an empty object: a file (`{ path }`), a deep link with data, a daily, shell props all skip it;
 - `usage(id)` is `null`: no entry in `usage.json`, so the app was never in front. There's no separate seen-list: apps used before this shipped count as opened;
 - `usage.json` has been read (`ActiveTime.loaded`), so a launch in the moment before the read never mistakes a used app for a new one.

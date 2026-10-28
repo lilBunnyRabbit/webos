@@ -877,6 +877,12 @@ describe("AppsService first open (ADR-085)", () => {
     expect(guide_shown(kernel, apps(kernel).launch("board")!)).toBe(false);
   });
 
+  test("an app that turns it off opens without it", async () => {
+    const kernel = await boot_with_usage([]);
+    Object.assign(apps(kernel).get("example")!, { guide_on_launch: false });
+    expect(guide_shown(kernel, apps(kernel).launch("example")!)).toBe(false);
+  });
+
   test("an app used before opens without it", async () => {
     const kernel = await boot_with_usage(["example"]);
     expect(guide_shown(kernel, apps(kernel).launch("example")!)).toBe(false);

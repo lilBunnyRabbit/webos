@@ -37,6 +37,7 @@ export interface CatalogueApp {
   default_widget?: boolean;
   highlights?: boolean;
   guide?: boolean;
+  guide_on_launch?: boolean;
   preview?: boolean;
   shell?: boolean;
   badge?: boolean;
@@ -112,6 +113,7 @@ export function manifest_data(manifest: Record<string, unknown>, meta: Record<st
     default_widget: manifest.default_widget === true || undefined,
     highlights: has("highlights"),
     guide: has("guide"),
+    guide_on_launch: manifest.guide_on_launch === false ? false : undefined,
     preview: has("preview"),
     shell: has("shell"),
     badge: has("badge"),

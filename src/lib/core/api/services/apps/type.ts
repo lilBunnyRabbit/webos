@@ -239,6 +239,8 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
    * shows it under the pitch, and opens by itself on the app's first launch with no props. Lazy, never loaded at boot.
    */
   guide?: () => Promise<{ default: string }>;
+  /** `false` keeps the guide shut on the first launch, for apps that explain themselves; the ? button still opens it. */
+  guide_on_launch?: boolean;
   /** A picture of the app for the announcement, `import("./preview.webp?url")`. Lazy, so it never weighs on boot. */
   preview?: () => Promise<{ default: string }>;
   /**

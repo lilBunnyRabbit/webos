@@ -465,6 +465,7 @@ export class AppsService implements IAppsService {
       associations: entry.associations,
       tools: entry.tools,
       restore: entry.restore,
+      guide_on_launch: entry.guide_on_launch,
       daily_rank: entry.daily_rank as AppManifest["daily_rank"],
       replaces: entry.replaces,
       widget_size: entry.widget_size,
@@ -796,7 +797,7 @@ export class AppsService implements IAppsService {
   // Props mean the user came for something (a file, a link, a daily): the guide stays shut (ADR-085).
   private first_open(manifest: AppManifest, props: unknown): boolean {
     const empty = props === undefined || (typeof props === "object" && props !== null && Object.keys(props).length === 0);
-    return !!manifest.guide && empty && this.active_time.loaded && this.active_time.get(manifest.id) === null;
+    return !!manifest.guide && manifest.guide_on_launch !== false && empty && this.active_time.loaded && this.active_time.get(manifest.id) === null;
   }
 
   /**

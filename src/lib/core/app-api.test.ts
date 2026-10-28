@@ -338,6 +338,7 @@ const manifest_fields: Members<
   | "default_widget"
   | "defaults"
   | "guide"
+  | "guide_on_launch"
   | "highlights"
   | "icon"
   | "id"
