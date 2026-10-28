@@ -232,6 +232,10 @@ export const WheelMode = { CENTRES: "centres", STAYS: "stays" } as const;
 export type WheelMode = (typeof WheelMode)[keyof typeof WheelMode];
 export const wheel_schema = z.enum([WheelMode.CENTRES, WheelMode.STAYS]);
 
+export const SteeringMode = { WHEEL: "wheel", BUTTONS: "buttons" } as const;
+export type SteeringMode = (typeof SteeringMode)[keyof typeof SteeringMode];
+export const steering_schema = z.enum([SteeringMode.WHEEL, SteeringMode.BUTTONS]);
+
 export const HIT_NAMES: Record<SolidKind, string> = {
   car: "a parked car",
   wall: "a wall",

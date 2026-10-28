@@ -9,12 +9,14 @@
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     Pause as PauseIcon,
     Play as PlayIcon,
+    CaretLeft as CaretLeftIcon,
+    CaretRight as CaretRightIcon,
     SlidersHorizontal as SlidersIcon,
     Star as StarIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { ease, frame, ZOOM_MAX, ZOOM_MIN, type Camera } from "./camera";
+  import { ease, frame, NO_INSETS, ZOOM_MAX, ZOOM_MIN, type Camera, type Insets } from "./camera";
   import { draw_scene, read_palette, type Palette } from "./draw";
   import {
     advance,
@@ -41,6 +43,8 @@
     set_status,
     stars,
     Status,
+    steering_schema,
+    SteeringMode,
     unlocked,
     verdict,
     wheel_schema,
@@ -71,6 +75,14 @@
     { value: WheelMode.CENTRES, label: "Centres" },
     { value: WheelMode.STAYS, label: "Stays" },
   ];
+  const STEERING_OPTIONS = [
+    { value: SteeringMode.WHEEL, label: "Wheel" },
+    { value: SteeringMode.BUTTONS, label: "Buttons" },
+  ];
+  // Must equal the `aspect-ratio > 1.25` container query below: past it the touch controls cover the board's sides.
+  const OVERLAY_ASPECT = 1.25;
+  const OVERLAY_GAP = 20;
+  type Hold = "gas" | "brake" | "left" | "right";
   const GEAR_KEYS: Record<string, Gear> = {
     KeyE: Gear.DRIVE,
     KeyR: Gear.REVERSE,
@@ -85,7 +97,6 @@
   const STANDING = 0.05;
   const DRIVE_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyA", "KeyD", "KeyW", "KeyS"]);
   const GEARS: Gear[] = [Gear.PARK, Gear.REVERSE, Gear.NEUTRAL, Gear.DRIVE];
-  const TOUCH_GEARS: Gear[] = [Gear.PARK, Gear.REVERSE, Gear.DRIVE];
   const GEAR_NAMES: Record<Gear, string> = { P: "Park", R: "Reverse", N: "Neutral", D: "Drive" };
   const VERDICTS = { crooked: "Not straight in the bay", backwards: "Facing the wrong way", outside: "Not inside a bay" } as const;
 
@@ -109,6 +120,7 @@
   let guides_on = $state(storage.get("guides", z.boolean()) ?? true);
   let creep_on = $state(storage.get("creep", z.boolean()) ?? false);
   let wheel_mode = $state<WheelMode>(storage.get("wheel", wheel_schema) ?? WheelMode.CENTRES);
+  let steering_mode = $state<SteeringMode>(storage.get("steering", steering_schema) ?? SteeringMode.WHEEL);
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let new_best = $state(false);
@@ -123,11 +135,14 @@
   let card_size = $state({ width: 0, height: 0 });
   let first_park = $state(false);
   let settings_panel: HTMLDivElement | undefined = $state();
-  let held = $state({ gas: false, brake: false });
+  let held = $state({ gas: false, brake: false, left: false, right: false });
+  let steer_box = $state({ width: 0, height: 0 });
+  let pedal_box = $state({ width: 0, height: 0 });
+  let hud_height = $state(0);
 
   // Read every physics step, never rendered, so holding a key doesn't re-run effects.
   const keys = new Set<string>();
-  const pedals = { gas: new Set<number>(), brake: new Set<number>() };
+  const holds: Record<Hold, Set<number>> = { gas: new Set(), brake: new Set(), left: new Set(), right: new Set() };
   const pinch = new Map<number, { x: number; y: number }>();
   let pinch_start: { distance: number; zoom: number } | null = null;
   let hands = false;
@@ -248,7 +263,7 @@
 
   // While driving the frame loop draws; this covers everything else (menus, a resize, a new theme).
   $effect(() => {
-    void [game, palette, size, zoom, guides_on, card_size.width, card_size.height, side_card];
+    void [game, palette, size, zoom, guides_on, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -273,7 +288,12 @@
     }
     const ahead = game.car.speed * 0.9;
     const focus = { x: car.x + Math.cos(game.car.heading) * ahead, y: car.y + Math.sin(game.car.heading) * ahead };
-    return frame(bounds, focus, size.width, size.height, zoom);
+    return frame(bounds, focus, size.width, size.height, zoom, control_insets());
+  }
+
+  function control_insets(): Insets {
+    if (!steer_box.width || size.width <= size.height * OVERLAY_ASPECT) return NO_INSETS;
+    return { top: hud_height + 8, right: pedal_box.width + OVERLAY_GAP, bottom: 0, left: steer_box.width + OVERLAY_GAP };
   }
 
   function render(dt: number) {
@@ -297,7 +317,9 @@
   }
 
   function step_wheel(dt: number) {
-    const turn = (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
+    const right = keys.has("ArrowRight") || keys.has("KeyD") || holds.right.size > 0;
+    const left = keys.has("ArrowLeft") || keys.has("KeyA") || holds.left.size > 0;
+    const turn = (right ? 1 : 0) - (left ? 1 : 0);
     if (turn !== 0) {
       hands = true;
       steering_by_keys = true;
@@ -310,12 +332,12 @@
   }
 
   function input(): Input {
-    // The arrows mean a direction: toward the gear's way is gas, against it the brake.
-    const forward = FORWARD_KEYS.some((code) => keys.has(code));
-    const back = BACK_KEYS.some((code) => keys.has(code));
+    // The arrows and the pedals mean a direction (Gas forward, Brake back): toward the gear's way is gas, against it the brake.
+    const forward = FORWARD_KEYS.some((code) => keys.has(code)) || holds.gas.size > 0;
+    const back = BACK_KEYS.some((code) => keys.has(code)) || holds.brake.size > 0;
     const reversing = game.car.gear === Gear.REVERSE;
-    const gas = (reversing ? back : forward) || pedals.gas.size > 0;
-    const brake = (reversing ? forward : back) || pedals.brake.size > 0;
+    const gas = reversing ? back : forward;
+    const brake = reversing ? forward : back;
     return { steer: hands ? wheel : null, throttle: gas ? 1 : 0, brake: brake ? 1 : 0 };
   }
 
@@ -377,9 +399,8 @@
 
   function release_all() {
     keys.clear();
-    pedals.gas.clear();
-    pedals.brake.clear();
-    held = { gas: false, brake: false };
+    for (const pointers of Object.values(holds)) pointers.clear();
+    held = { gas: false, brake: false, left: false, right: false };
     sounds.quiet();
   }
 
@@ -472,6 +493,11 @@
     storage.set("wheel", value);
   }
 
+  function set_steering_mode(value: SteeringMode) {
+    steering_mode = value;
+    storage.set("steering", value);
+  }
+
   function shift(gear: Gear) {
     if (game.status === Status.READY) start();
     if (game.status !== Status.DRIVING) return;
@@ -482,10 +508,13 @@
     if (next.status === Status.PARKED) parked(next);
   }
 
-  // Holding an arrow against the gear only brakes; pressing it again once the car stands shifts that way.
-  function choose_direction(code: string) {
-    const want = FORWARD_KEYS.includes(code) ? Gear.DRIVE : BACK_KEYS.includes(code) ? Gear.REVERSE : null;
+  // Holding an arrow or a pedal against the gear only brakes; pressing it again once the car stands shifts that way.
+  function choose_direction(want: Gear | null) {
     if (want && Math.abs(game.car.speed) < STANDING) shift(want);
+  }
+
+  function key_direction(code: string): Gear | null {
+    return FORWARD_KEYS.includes(code) ? Gear.DRIVE : BACK_KEYS.includes(code) ? Gear.REVERSE : null;
   }
 
   function toggle_direction() {
@@ -547,7 +576,7 @@
       event.preventDefault();
       keys.add(code);
       if (game.status === Status.READY && !event.repeat) start();
-      if (!event.repeat) choose_direction(code);
+      if (!event.repeat) choose_direction(key_direction(code));
       return;
     }
     if (code === "KeyC") {
@@ -601,19 +630,22 @@
     if (pinch.size < 2) pinch_start = null;
   }
 
-  function hold_pedal(which: "gas" | "brake") {
+  function hold(which: Hold) {
     return {
       onpointerdown: (event: PointerEvent) => {
         event.preventDefault();
         (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
         if (game.status === Status.READY) start();
         if (game.status !== Status.DRIVING) return;
-        pedals[which].add(event.pointerId);
+        const fresh = holds[which].size === 0;
+        holds[which].add(event.pointerId);
         held[which] = true;
+        if (fresh && which === "gas") choose_direction(Gear.DRIVE);
+        else if (fresh && which === "brake") choose_direction(Gear.REVERSE);
       },
       onlostpointercapture: (event: PointerEvent) => {
-        pedals[which].delete(event.pointerId);
-        held[which] = pedals[which].size > 0;
+        holds[which].delete(event.pointerId);
+        held[which] = holds[which].size > 0;
       },
       oncontextmenu: (event: Event) => event.preventDefault(),
     };
@@ -637,6 +669,12 @@
       </span>
     {/each}
   </span>
+{/snippet}
+
+{#snippet speed_chip(class_name: string)}
+  <div class={cn("rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", class_name)} aria-hidden="true">
+    {speed} <span class="text-foreground/65">km/h</span>
+  </div>
 {/snippet}
 
 {#snippet hint(text: string, key: string)}
@@ -692,14 +730,19 @@
         <span class="flex flex-col">Creep <span class="text-2xs text-foreground/65">D and R roll without gas, like an automatic</span></span>
         <Switch bind:checked={() => creep_on, (value: boolean) => set_setting("creep", value)} />
       </label>
-      <div class="flex flex-col gap-1.5 pointer-coarse:hidden">
-        <span class="flex flex-col text-ui">Keyboard wheel <span class="text-2xs text-foreground/65">When you let go of ← →</span></span>
-        <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="Keyboard wheel" options={WHEEL_OPTIONS} bind:value={() => wheel_mode, set_wheel_mode} />
+      <div class="hidden flex-col gap-1.5 pointer-coarse:flex">
+        <span class="flex flex-col text-ui">Steering <span class="text-2xs text-foreground/65">Drag a wheel, or hold ◀ ▶ buttons</span></span>
+        <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="Steering" options={STEERING_OPTIONS} bind:value={() => steering_mode, set_steering_mode} />
+      </div>
+      <div class={cn("flex flex-col gap-1.5", steering_mode !== SteeringMode.BUTTONS && "pointer-coarse:hidden")}>
+        <span class="flex flex-col text-ui pointer-coarse:hidden">Keyboard wheel <span class="text-2xs text-foreground/65">When you let go of ← →</span></span>
+        <span class="hidden flex-col text-ui pointer-coarse:flex">Steering buttons <span class="text-2xs text-foreground/65">When you let go of ◀ ▶</span></span>
+        <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="Wheel when let go" options={WHEEL_OPTIONS} bind:value={() => wheel_mode, set_wheel_mode} />
       </div>
     </div>
   </div>
 
-  <div class="min-h-0 p-2 [container:ts-stage/size] @md:p-3">
+  <div class="ts-stage min-h-0 p-2 [container:ts-stage/size] @md:p-3">
     <div class="ts-layout h-full">
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
@@ -707,7 +750,7 @@
         role="application"
         aria-label="Tight Spot. Arrows steer and drive, E drive, R reverse, P park, Escape pauses, Enter starts."
         tabindex="0"
-        class="relative min-h-0 touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none [grid-area:board] focus-visible:ring-2 focus-visible:ring-cottontail"
+        class="ts-board relative min-h-0 touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none [grid-area:board] focus-visible:ring-2 focus-visible:ring-cottontail"
         onwheel={on_wheel}
         onpointerdown={on_board_pointerdown}
         onpointermove={on_board_pointermove}
@@ -717,11 +760,12 @@
         <canvas bind:this={canvas} class="block size-full"></canvas>
 
         {#if game.status !== Status.READY}
-          <div class="pointer-events-none absolute top-2 left-2 flex items-center gap-1.5">
+          <div bind:clientHeight={hud_height} class="pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between gap-1.5">
+            <div class="flex items-center gap-1.5">
             <!-- The toolbar's Pause is hidden when narrow, so phones pause from here. -->
             <IconButton
               size="sm"
-              class="pointer-events-auto bg-background/85 backdrop-blur-[2px] @md:hidden pointer-coarse:size-10"
+              class="pointer-events-auto bg-background/85 backdrop-blur-[2px] @md:hidden pointer-coarse:size-11"
               label={game.status === Status.DRIVING ? "Pause" : "Resume"}
               disabled={!can_pause}
               onclick={toggle_pause}
@@ -734,7 +778,7 @@
                 <button
                   type="button"
                   class={cn(
-                    "grid h-6 w-6 place-items-center rounded-sm transition-colors pointer-coarse:h-9 pointer-coarse:w-8",
+                    "grid h-6 w-6 place-items-center rounded-sm transition-colors pointer-coarse:size-11 pointer-coarse:text-base",
                     game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/60 hover:bg-foreground/10 hover:text-foreground"
                   )}
                   aria-label={GEAR_NAMES[gear]}
@@ -747,21 +791,24 @@
                 </button>
               {/each}
             </div>
-            <div class="rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">
-              {speed} <span class="text-foreground/65">km/h</span>
+            {@render speed_chip("pointer-coarse:hidden")}
             </div>
-          </div>
-        {/if}
-        {#if facing_reading !== null}
-          <div
-            class={cn(
-              "pointer-events-none absolute top-2 right-2 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]",
-              facing_reading < 0.5 ? "text-error" : "text-warning"
-            )}
-            aria-hidden="true"
-          >
-            {game.car.gear === Gear.REVERSE ? "Rear" : "Front"}
-            {facing_reading.toFixed(2)} m
+            <!-- On touch the bigger gear strip leaves no room beside it, so the speed stacks over the sensor readout. -->
+            <div class="flex flex-col items-end gap-1.5">
+              {@render speed_chip("hidden pointer-coarse:block")}
+              {#if facing_reading !== null}
+                <div
+                  class={cn(
+                    "rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]",
+                    facing_reading < 0.5 ? "text-error" : "text-warning"
+                  )}
+                  aria-hidden="true"
+                >
+                  {game.car.gear === Gear.REVERSE ? "Rear" : "Front"}
+                  {facing_reading.toFixed(2)} m
+                </div>
+              {/if}
+            </div>
           </div>
         {/if}
         {#if judged && judged !== "inside"}
@@ -787,7 +834,7 @@
             <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
               {@render hint("forward", "↑")}{@render hint("back", "↓")}{@render hint("steer", "← →")}{@render hint("drive", "E")}{@render hint("reverse", "R")}{@render hint("park", "P")}
             </p>
-            <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">Hold Gas to roll, steer with the wheel, tap P once you're in the bay.</p>
+            <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">Hold Gas to go forward and Brake to back up, steer, tap P at the top once you're in the bay.</p>
           </div>
         {:else if game.status === Status.PAUSED}
           <BoardOverlay title="Paused" detail="{time} · Moves {game.moves}">
@@ -835,37 +882,48 @@
         {/if}
       </div>
 
-      <div class="ts-wheel hidden touch-none place-items-center select-none pointer-coarse:grid">
-        <SteeringWheel class="ts-wheel-size" value={wheel} onchange={set_wheel} oncentre={centre_wheel} />
+      <div
+        bind:clientWidth={steer_box.width}
+        bind:clientHeight={steer_box.height}
+        class={cn("ts-wheel hidden touch-none place-items-center select-none pointer-coarse:grid", !driving && "ts-idle")}
+      >
+        {#if steering_mode === SteeringMode.BUTTONS}
+          <div class="flex gap-2" role="group" aria-label="Steering">
+            {#each [{ side: "left", label: "Steer left" }, { side: "right", label: "Steer right" }] as const as button (button.side)}
+              <button
+                type="button"
+                class={cn("ts-control ts-pad ts-steer grid place-items-center rounded-lg transition-colors", held[button.side] ? "ts-pad-held" : "text-foreground/80")}
+                aria-label={button.label}
+                {...hold(button.side)}
+              >
+                {#if button.side === "left"}<CaretLeftIcon weight="bold" class="size-7" />{:else}<CaretRightIcon weight="bold" class="size-7" />{/if}
+              </button>
+            {/each}
+          </div>
+        {:else}
+          <SteeringWheel class="ts-wheel-size ts-wheel-face" value={wheel} onchange={set_wheel} oncentre={centre_wheel} />
+        {/if}
       </div>
-      <div class="ts-gears hidden touch-none justify-center gap-1.5 select-none pointer-coarse:flex" role="group" aria-label="Gear">
-        {#each TOUCH_GEARS as gear (gear)}
-          <Button
-            size="lg"
-            variant={game.car.gear === gear ? "primary" : "secondary"}
-            class="ts-control h-11 w-14 px-0 font-mono text-base font-semibold"
-            aria-label={GEAR_NAMES[gear]}
-            aria-pressed={game.car.gear === gear}
-            onclick={() => shift(gear)}
-          >
-            {gear}
-          </Button>
-        {/each}
-      </div>
-      <div class="ts-pedals hidden touch-none items-end justify-end gap-2 select-none pointer-coarse:flex" role="group" aria-label="Pedals">
+      <div
+        bind:clientWidth={pedal_box.width}
+        bind:clientHeight={pedal_box.height}
+        class={cn("ts-pedals hidden touch-none items-end justify-end gap-2 select-none pointer-coarse:flex", game.status === Status.PAUSED && "ts-idle")}
+        role="group"
+        aria-label="Pedals"
+      >
         <button
           type="button"
-          class={cn("ts-control ts-pedal ts-brake rounded-lg text-ui font-medium transition-colors", held.brake ? "bg-foreground/25 text-foreground" : "bg-foreground/10 text-foreground/80")}
+          class={cn("ts-control ts-pad ts-pedal ts-brake rounded-lg text-ui font-medium transition-colors", held.brake ? "ts-pad-held" : "text-foreground/80")}
           aria-label="Brake"
-          {...hold_pedal("brake")}
+          {...hold("brake")}
         >
           Brake
         </button>
         <button
           type="button"
-          class={cn("ts-control ts-pedal ts-gas rounded-lg text-ui font-medium transition-colors", held.gas ? "bg-primary/35 text-foreground" : "bg-foreground/10 text-foreground/80")}
+          class={cn("ts-control ts-pad ts-pedal ts-gas rounded-lg text-ui font-medium transition-colors", held.gas ? "ts-pad-held ts-pad-gas" : "text-foreground/80")}
           aria-label="Gas"
-          {...hold_pedal("gas")}
+          {...hold("gas")}
         >
           Gas
         </button>
@@ -898,39 +956,75 @@
 
   /* Phones held upright: the board on top, the wheel under the left thumb, the pedals under the right. */
   @media (pointer: coarse) {
+    .ts-stage {
+      padding: 0;
+    }
+
     .ts-layout {
+      padding: 0.5rem;
       grid-template:
         "board board board" minmax(0, 1fr)
-        "wheel gears pedals" auto / auto minmax(0, 1fr) auto;
+        "wheel . pedals" auto / auto minmax(0, 1fr) auto;
     }
 
-    .ts-gears {
-      grid-area: gears;
-      flex-direction: column;
-      align-items: center;
-      align-self: center;
-    }
-
-    /* Held sideways: the wheel and the pedals flank the board, so the board keeps the height. */
+    /* Held sideways the board takes the whole stage and the controls float over its sides at thumb height. */
     @container ts-stage (aspect-ratio > 1.25) {
       .ts-layout {
-        grid-template:
-          "wheel board ." minmax(0, 1fr)
-          "wheel board gears" auto
-          "wheel board pedals" auto / auto minmax(0, 1fr) auto;
+        position: relative;
+        padding: 0;
+        grid-template: "board" minmax(0, 1fr) / minmax(0, 1fr);
       }
 
-      .ts-gears {
-        flex-direction: row;
-        align-self: end;
+      .ts-board {
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .ts-wheel,
+      .ts-pedals {
+        grid-area: auto;
+        position: absolute;
+        z-index: 1;
+        bottom: 0.75rem;
       }
 
       .ts-wheel {
-        align-self: end;
+        left: 0.75rem;
+      }
+
+      .ts-pedals {
+        right: 0.75rem;
+      }
+
+      .ts-idle {
+        visibility: hidden;
       }
 
       .ts-wheel :global(.ts-wheel-size) {
         width: min(11rem, 62cqh);
+      }
+
+      .ts-wheel :global(.ts-wheel-face) {
+        background: color-mix(in oklch, var(--background) 45%, transparent);
+        backdrop-filter: blur(2px);
+      }
+
+      .ts-pad {
+        background-color: color-mix(in oklch, var(--background) 65%, transparent);
+        box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground) 18%, transparent);
+        backdrop-filter: blur(2px);
+      }
+
+      .ts-pad.ts-pad-held {
+        background-color: color-mix(in oklch, var(--foreground) 30%, var(--background));
+      }
+
+      .ts-pad.ts-pad-gas {
+        background-color: color-mix(in oklch, var(--primary) 45%, var(--background));
+      }
+
+      .ts-steer {
+        height: min(5rem, 34cqh);
       }
 
       .ts-brake {
@@ -953,6 +1047,24 @@
 
   .ts-wheel :global(.ts-wheel-size) {
     width: min(10.5rem, 40cqw);
+  }
+
+  .ts-pad {
+    background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+  }
+
+  .ts-pad-held {
+    color: var(--foreground);
+    background-color: color-mix(in oklch, var(--foreground) 25%, transparent);
+  }
+
+  .ts-pad-gas {
+    background-color: color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+
+  .ts-steer {
+    width: 4.5rem;
+    height: 5rem;
   }
 
   .ts-pedal {
