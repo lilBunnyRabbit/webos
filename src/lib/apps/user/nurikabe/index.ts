@@ -29,5 +29,6 @@ export default define_app({
     { id: "solves-25", title: "Cartographer", text: "Solve 25 puzzles.", goal: 25 },
     { id: "quick", title: "Low tide", text: "Solve a 7×7 puzzle in under a minute without a hint.", secret: true },
   ],
+  guide: () => import("./guide.md?raw"),
   component: () => import("./nurikabe.app.svelte"),
 });

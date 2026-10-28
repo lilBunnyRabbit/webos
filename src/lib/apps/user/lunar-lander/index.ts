@@ -23,5 +23,6 @@ export default define_app({
     { id: "soft-touch", title: "Feather", text: "Touch down soft, level and dead centre.", secret: true },
   ],
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./lunar-lander.app.svelte"),
 });

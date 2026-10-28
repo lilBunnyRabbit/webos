@@ -30,5 +30,6 @@ export default define_app({
     { id: "wins-25", title: "Sweeper", text: "Win 25 games.", goal: 25 },
     { id: "bare-hands", title: "Bare hands", text: "Win on Intermediate or Expert without placing a flag.", secret: true },
   ],
+  guide: () => import("./guide.md?raw"),
   component: () => import("./minesweeper.app.svelte"),
 });

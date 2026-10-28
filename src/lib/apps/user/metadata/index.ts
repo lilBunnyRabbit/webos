@@ -14,5 +14,7 @@ export default define_app({
   defaults: { constraints: { width: { min: 320 }, height: { min: 320 } } },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   component: () => import("./metadata.app.svelte"),
 });

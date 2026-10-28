@@ -13,5 +13,7 @@ export default define_app({
   props: FILE_PROPS,
   defaults: { constraints: { width: { min: 360 }, height: { min: 360 } } },
   shell: () => import("./commands"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   component: () => import("./image-editor.app.svelte"),
 });

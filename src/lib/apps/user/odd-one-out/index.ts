@@ -21,5 +21,6 @@ export default define_app({
     { id: "flawless", title: "Flawless", text: "Spot 15 or more in one run without a miss.", secret: true },
   ],
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./odd-one-out.app.svelte"),
 });

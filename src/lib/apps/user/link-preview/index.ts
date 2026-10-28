@@ -13,5 +13,7 @@ export default define_app({
   props: z.object({ path: z.string().optional(), url: z.string().optional() }),
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   component: () => import("./link-preview.app.svelte"),
 });

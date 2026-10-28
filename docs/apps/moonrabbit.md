@@ -145,7 +145,7 @@ What stays visible: how many entries and photos there are, their sizes and file 
 | Scheduler | `moonrabbit:reminder` in `/var/lib/scheduler/jobs.json` | The reminder |
 | Desktop | `/home/Desktop/{label}.widget` | The widget, when placed (no journal data in it) |
 
-No props, no window state. Shell: `journal lock` (`commands.ts`). The widget (`widget_size` 3×2 to 5×3) works on the desktop and the phone home.
+No props, no window state. Shell: `journal lock` (`commands.ts`). User guide: `guide.md` (the ? button, shown on first launch). The widget (`widget_size` 3×2 to 5×3) works on the desktop and the phone home.
 
 ## Dependencies & licences
 

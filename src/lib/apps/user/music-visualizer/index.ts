@@ -18,5 +18,7 @@ export default define_app({
       height: { min: 300 },
     },
   },
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   component: () => import("./music-visualizer.app.svelte"),
 });

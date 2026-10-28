@@ -60,6 +60,7 @@ Hints are counted; best times count only solves without hints.
 - Rabbits that share a row, column or meadow, or touch, get an `error` ring. A row, column or meadow with no rabbit and every cell crossed (auto-crosses count) is hatched in `error`.
 - Meadows are told apart three ways: thick borders from `region_edges` (`$kit/games`), a theme-token tint (info, warning, secondary, success, cottontail, tertiary, accent, primary, foreground, then error only for the tenth meadow so it isn't mistaken for a mistake on smaller boards), and a pattern per meadow (dots, stripes at four angles, grid, crosshatch, large dots, checker), so colour alone never carries the rule.
 - A fresh puzzle opens behind a Start overlay, and the timer runs from Start. New puzzle starts the next one right away.
+- **Guide** (`guide.md`): the goal, marking cells (pointer, drag and keyboard), auto-cross, rule feedback, Hint, undo and F2, the timer and the daily. The window's `?` button or F1 shows it; it opens by itself the first time Hutches is launched with no props. Keep it in step with the controls above.
 
 ## Data
 

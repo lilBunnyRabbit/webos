@@ -38,5 +38,6 @@ export default define_app({
     { id: "solves-25", title: "Gallery", text: "Solve 25 puzzles.", goal: 25 },
     { id: "masterpiece", title: "Masterpiece", text: "Solve a 20×20 colour puzzle without a hint.", secret: true },
   ],
+  guide: () => import("./guide.md?raw"),
   component: () => import("./nonogram.app.svelte"),
 });

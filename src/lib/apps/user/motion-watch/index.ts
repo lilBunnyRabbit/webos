@@ -9,6 +9,7 @@ export default define_app({
   category: AppCategory.MEDIA,
   meta: () => import("./meta"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 320 }, height: { min: 420 } } },
   achievements: [
     { id: "first-clip", title: "Caught on camera", text: "Catch something moving on a clip." },

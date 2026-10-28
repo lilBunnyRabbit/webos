@@ -63,6 +63,7 @@ Hints are counted; best times count only solves without them.
 - Press on the path (dot 1 at first) or a cell next to its head and drag; drag back over the path to retract; press a cell on the path to cut back to it. A press elsewhere starts nothing. The board is `touch-none`, so drawing never scrolls the page, and the stroke ends on `lostpointercapture`. One stroke is one undo step.
 - Keys on the board (`role="application"`): arrows step the head (toward the previous cell steps back), Backspace steps back, H hint, Mod+Z / Mod+Shift+Z undo and redo, F2 new puzzle.
 - A refused step says why in the status line ("Reach 3 before 5", "A wall is in the way", "The path ends at 9: back up and fill the rest first").
+- **Guide** (`guide.md`): the goal, drawing and stepping back (pointer and keyboard), Hint, undo and F2, the timer and the daily. The window's `?` button or F1 shows it; it opens by itself the first time Hop is launched with no props. Keep it in step with the controls above.
 - The path is a thick round `primary` polyline in an SVG over the cells; cells on it get a `primary/14` tint; dots are `foreground` discs with `background` numbers, ringed in `primary` while the head sits on one; walls are `foreground` bars.
 
 ## Data

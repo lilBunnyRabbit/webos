@@ -9,6 +9,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   tools: ["image/*"],
   props: z.object({ path: z.string().optional() }),
   defaults: {

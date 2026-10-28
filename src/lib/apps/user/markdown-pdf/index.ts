@@ -9,6 +9,8 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   tools: [".md", ".markdown", "text/markdown"],
   props: MARKDOWN_PDF_PROPS,
   defaults: { constraints: { width: { min: 340 }, height: { min: 320 } } },

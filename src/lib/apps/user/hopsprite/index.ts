@@ -13,6 +13,7 @@ export default define_app({
   tools: ["image/png", "image/gif", ".png", ".gif"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 360 }, height: { min: 420 } } },
   achievements: [
     { id: "first-save", title: "Sprite on file", text: "Save a sprite." },

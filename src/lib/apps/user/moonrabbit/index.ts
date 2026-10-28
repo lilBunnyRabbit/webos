@@ -13,5 +13,6 @@ export default define_app({
   on_uninstall_data: () => import("./uninstall"),
   widget: () => import("./widget.svelte"),
   widget_size: { min: { w: 3, h: 2 }, max: { w: 5, h: 3 }, default: { w: 3, h: 2 } },
+  guide: () => import("./guide.md?raw"),
   component: () => import("./moonrabbit.app.svelte"),
 });

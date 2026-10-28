@@ -1,0 +1,4 @@
+- Open a song with **Open audio…**, drop or paste one, or open an audio file from your files. It plays right away.
+- **Use microphone** draws what the microphone hears instead, and pauses the song.
+- Space plays and pauses. Double-click the picture, or press the full screen button, to fill the screen.
+- **Smoothing** sets how slowly the picture reacts. **Sensitivity** sets how much quiet sound moves it. Both, the volume and the style are remembered.

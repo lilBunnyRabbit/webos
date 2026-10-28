@@ -29,5 +29,7 @@ export default define_app({
   ],
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   component: () => import("./kanban.app.svelte"),
 });
