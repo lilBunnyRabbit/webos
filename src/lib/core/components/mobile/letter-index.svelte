@@ -2,6 +2,8 @@
   import kernel, { search_apps, UiOverlay, type AppId, type AppListing, type AppsService, type UiService, type WindowsService } from "$lib/core/api";
   import { group_by_letter, LETTERS } from "$lib/core/api/services/apps/letters";
   import { clamp, cn } from "$lib/core/utils";
+  import type { Position } from "$lib/core/utils/type";
+  import { HOLD_MS } from "$lib/core/utils/long-press";
   import { motion_ms } from "$lib/core/utils/motion";
   import { MagnifyingGlass as MagnifyingGlassIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
   import { fade } from "svelte/transition";
@@ -10,6 +12,8 @@
   import { app_menu } from "../apps/app-actions";
   import { SentenceSearch } from "../apps/sentence-search.svelte";
   import { Button, IconButton, Input } from "../ui";
+  import { autoscroll_step, clamp_offset, drop_index, shift_of, type Slot } from "./home-drag";
+  import { home_gesture } from "./home-gesture";
 
   let { onlaunch }: { onlaunch: (id: AppId) => void } = $props();
 
@@ -19,6 +23,7 @@
 
   /** Past this far left of the rail the finger stops picking letters and starts picking apps. */
   const PICK_ZONE = 32;
+  const DRAG_SLOP = 8;
 
   const installed = $derived(apps.listings({ installed: true }));
   const by_letter = $derived(group_by_letter(installed));
@@ -36,6 +41,26 @@
   // No AI row: phones have no on-device model.
   const sentence = new SentenceSearch<AppListing>({ apps: () => apps.listings(), query: () => query, shown: () => [...matches, ...gettable] });
   const best = $derived(matches[0] ?? gettable[0] ?? sentence.related[0]);
+
+  const favourites = $derived(apps.favourites.flatMap((id) => apps.get(id) ?? []));
+
+  /** Hold a favourite and move to reorder it; hold and let go for its menu. Lives only while a finger is down. */
+  interface Drag {
+    id: AppId;
+    from: number;
+    start: Position;
+    point: Position;
+    moving: boolean;
+    /** In list coordinates, measured once the row first moves; transforms don't touch `offsetTop`. */
+    origin: number;
+    slots: Slot[];
+    stride: number;
+    offset: number;
+    to: number;
+  }
+  let drag = $state<Drag | null>(null);
+  let favourites_list: HTMLElement | null = $state(null);
+  let frame = 0;
 
   /** Lives only while a finger is down, so it stays here rather than in `ui`. */
   interface Scrub {
@@ -86,6 +111,7 @@
 
   function leave() {
     query = "";
+    favourite_cancel();
     const back = opener;
     opener = null;
     if (!windows.get_focused() && back?.isConnected) back.focus({ preventScroll: true });
@@ -169,6 +195,72 @@
     panel.focus({ preventScroll: true });
   }
 
+  function favourite_pick(id: AppId, point: Position) {
+    const from = favourites.findIndex((manifest) => manifest.id === id);
+    if (from === -1) return;
+    navigator.vibrate?.(8);
+    drag = { id, from, start: point, point, moving: false, origin: 0, slots: [], stride: 0, offset: 0, to: from };
+  }
+
+  function favourite_follow() {
+    if (!drag?.moving || !favourites_list) return;
+    const y = drag.point.y - favourites_list.getBoundingClientRect().top;
+    drag.offset = clamp_offset(drag.slots, drag.from, y - drag.origin);
+    const to = drop_index(drag.slots, drag.from, drag.offset);
+    if (to !== drag.to) navigator.vibrate?.(4);
+    drag.to = to;
+  }
+
+  function favourite_move(point: Position) {
+    if (!drag || !favourites_list) return;
+    drag.point = point;
+    if (!drag.moving) {
+      if (Math.hypot(point.x - drag.start.x, point.y - drag.start.y) <= DRAG_SLOP) return;
+      const rows = Array.from(favourites_list.querySelectorAll<HTMLElement>(":scope > [data-home-name]"));
+      drag.slots = rows.map((row) => ({ top: row.offsetTop, height: row.offsetHeight }));
+      drag.stride = drag.slots[drag.from].height + (parseFloat(getComputedStyle(favourites_list).rowGap) || 0);
+      drag.origin = drag.start.y - favourites_list.getBoundingClientRect().top;
+      drag.moving = true;
+      frame = requestAnimationFrame(favourite_autoscroll);
+    }
+    favourite_follow();
+  }
+
+  function favourite_autoscroll() {
+    if (!drag?.moving || !panel) return;
+    const rect = panel.getBoundingClientRect();
+    const step = autoscroll_step(drag.point.y, rect.top, rect.bottom);
+    if (step !== 0) {
+      panel.scrollTop += step;
+      favourite_follow();
+    }
+    frame = requestAnimationFrame(favourite_autoscroll);
+  }
+
+  function favourite_drop(point: Position) {
+    const finished = drag;
+    drag = null;
+    cancelAnimationFrame(frame);
+    if (!finished) return;
+    if (finished.moving) {
+      if (finished.to !== finished.from) apps.move_favourite(finished.id, finished.to);
+      return;
+    }
+    const manifest = apps.get(finished.id);
+    if (manifest) void app_menu(manifest, point, { on_launch: close });
+  }
+
+  function favourite_cancel() {
+    drag = null;
+    cancelAnimationFrame(frame);
+  }
+
+  function favourite_translate(index: number): string | undefined {
+    if (!drag?.moving) return undefined;
+    const y = index === drag.from ? drag.offset : shift_of(index, drag.from, drag.to, drag.stride);
+    return y === 0 ? undefined : `0 ${y}px`;
+  }
+
   function follow() {
     if (scrub || !panel) return;
     // The held letter sat at the top of the content box, so browsing reads the current letter off the same line.
@@ -248,6 +340,42 @@
           <IconButton label="App Store" size="lg" class="size-11 shrink-0 [&_svg]:size-6" onclick={() => launch("app-library")}><SquaresFourIcon weight="duotone" /></IconButton>
         </div>
       </header>
+    {/if}
+    {#if !scrub && !filtering && favourites.length > 0}
+      <section class="pb-5" aria-labelledby="letter-index-favourites" in:fade={{ duration: motion_ms(150) }}>
+        <p id="letter-index-favourites" class="px-2 pb-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Favourites</p>
+        <ul
+          bind:this={favourites_list}
+          class="relative flex flex-col gap-0.5"
+          {@attach home_gesture({
+            hold_ms: () => HOLD_MS,
+            mouse_drags: () => true,
+            on_pick: favourite_pick,
+            on_move: favourite_move,
+            on_drop: favourite_drop,
+            on_cancel: favourite_cancel,
+            on_menu: (id, point) => {
+              const manifest = apps.get(id);
+              if (manifest) void app_menu(manifest, point, { on_launch: close });
+            },
+          })}
+        >
+          {#each favourites as manifest, index (manifest.id)}
+            {@const lifted = drag?.id === manifest.id}
+            <li
+              data-home-name={manifest.id}
+              class={cn("relative", drag?.moving && !lifted && "transition-[translate] duration-200 ease-out", lifted && "z-10")}
+              style:translate={favourite_translate(index)}
+            >
+              <AppRow
+                {manifest}
+                onclick={() => launch(manifest.id)}
+                class={cn("transition-[background-color,scale,box-shadow]", lifted && "scale-[1.02] bg-background-light/90 shadow-popover")}
+              />
+            </li>
+          {/each}
+        </ul>
+      </section>
     {/if}
     {#each scrub ? [scrub.letter] : sections as section (section)}
       <section data-scrub-letter={section} class="pb-5" aria-label={section} in:fade={{ duration: scrub ? 0 : motion_ms(150) }}>

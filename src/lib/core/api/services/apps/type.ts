@@ -94,6 +94,15 @@ export interface AppsService extends IService {
   readonly recent: AppId[];
   clear_recent(): void;
   /**
+   * Apps the user marked as favourites, in their order (added at the end, moved by drag), installed ones only (ADR-083).
+   * Reactive. Saved in `/var/lib/apps/favourites.json`; uninstalling drops the app. Always empty in solo mode.
+   */
+  readonly favourites: AppId[];
+  /** Adding takes installed apps only. */
+  favourite(id: AppId, on: boolean): void;
+  /** `index` counts `favourites` without `id`. */
+  move_favourite(id: AppId, index: number): void;
+  /**
    * Time the app was in front (a window of it focused, the page visible), when it last was and on how many days.
    * `null` before its first use. Reactive. Saved in `/var/lib/apps/usage.json`, never sent anywhere.
    */

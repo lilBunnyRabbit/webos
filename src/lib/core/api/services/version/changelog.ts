@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.78.0",
+    date: "2026-10-28",
+    title: "Your favourite apps",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["app-library"],
+        text: "Star the apps you use most and they get their own Favourites section at the top of the start menu and the phone's app list, in the order you drag them into, with a Favourites filter in the App Store.",
+      },
+    ],
+  },
+  {
     version: "3.77.1",
     date: "2026-10-28",
     title: "No more endless loading",

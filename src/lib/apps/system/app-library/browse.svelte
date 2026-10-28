@@ -11,6 +11,7 @@
     MagnifyingGlass as MagnifyingGlassIcon,
     Sparkle as SparkleIcon,
     SquaresFour as SquaresFourIcon,
+    Star as StarIcon,
     Sticker as StickerIcon,
     TerminalWindow as TerminalWindowIcon,
     Trophy as TrophyIcon,
@@ -35,6 +36,7 @@
   let { title, category = $bindable(), sections, filters = $bindable(), sort = $bindable(), view = $bindable(), fresh, updated, onselect }: Props = $props();
 
   const FILTERS = [
+    { id: LibraryFilter.FAVOURITES, label: "Favourites", icon: StarIcon },
     { id: LibraryFilter.WIDGET, label: "Has widget", icon: StickerIcon },
     { id: LibraryFilter.FILES, label: "Opens files", icon: FilesIcon },
     { id: LibraryFilter.COMMANDS, label: "Has commands", icon: TerminalWindowIcon },

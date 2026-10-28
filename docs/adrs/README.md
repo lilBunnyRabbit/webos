@@ -116,6 +116,7 @@ What are the implications of this decision?
 | [080](./080-doc-scan.md) | Doc Scan | 2026-10-27 | Implemented |
 | [081](./081-background-apps.md) | Background apps | 2026-10-27 | Implemented |
 | [082](./082-motion-watch.md) | Motion Watch | 2026-10-27 | Implemented |
+| [083](./083-favourite-apps.md) | Favourite Apps | 2026-10-28 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

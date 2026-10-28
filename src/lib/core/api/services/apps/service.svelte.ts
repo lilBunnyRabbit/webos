@@ -38,6 +38,7 @@ import { LAZY_PARTS, manifest_data, parse_catalogue_text, type Catalogue, type C
 import { catalogue_source, type CatalogueSource } from "./source";
 import { current_ids, current_list, current_target, resolve_replaced } from "./replaces";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
+import { FAVOURITES_PATH, moved_favourite, parse_favourites, serialize_favourites, with_favourite, without_favourite } from "./favourites";
 import { without_pin } from "../settings/taskbar";
 import { is_core_app } from "./helpers";
 import { track_launch } from "$lib/core/utils/analytics";
@@ -101,6 +102,10 @@ export class AppsService implements IAppsService {
   /** As saved: can hold apps no catalogue knows any more, which `recent` leaves out. */
   private recent_ids: AppId[] = $state.raw([]);
   private readonly recent_listed: AppId[] = $derived(this.recent_ids.filter((id) => this.is_recent_candidate(id)));
+  private favourites_writer = new LatestWriter(() => this.files_service, FAVOURITES_PATH, "favourite apps");
+  /** As saved: can hold apps this tab doesn't count as installed yet (the catalogue is still coming), which `favourites` leaves out. */
+  private favourite_ids: AppId[] = $state.raw([]);
+  private readonly favourites_listed: AppId[] = $derived(this.favourite_ids.filter((id) => this.is_installed(id)));
   private readonly all_listings: AppListing[] = $derived(
     [...this.registry.values()].map((manifest) => {
       const entry = this.entries.get(manifest.id);
@@ -121,6 +126,7 @@ export class AppsService implements IAppsService {
     await this.boot_catalogue();
     await this.init_installed();
     await this.load_recent();
+    await this.load_favourites();
     this.map_replaced_settings();
 
     const on_online = () => {
@@ -570,6 +576,32 @@ export class AppsService implements IAppsService {
     this.recent_writer.write(serialize_recent(this.recent_ids));
   }
 
+  public get favourites(): AppId[] {
+    return this.favourites_listed;
+  }
+
+  public favourite(id: AppId, on: boolean): void {
+    if (on && !this.is_installed(id)) return;
+    this.save_favourites(on ? with_favourite(this.favourite_ids, id) : without_favourite(this.favourite_ids, id));
+  }
+
+  public move_favourite(id: AppId, index: number): void {
+    this.save_favourites(moved_favourite(this.favourite_ids, this.favourites_listed, id, index));
+  }
+
+  protected async load_favourites(): Promise<void> {
+    const text = await this.read(FAVOURITES_PATH);
+    this.favourites_writer.seed(text);
+    const known = (id: AppId) => !this.complete || this.registry.has(id);
+    this.favourite_ids = current_list(this.registry.values(), parse_favourites(text), known);
+  }
+
+  protected save_favourites(ids: AppId[]): void {
+    if (ids.join() === this.favourite_ids.join()) return;
+    this.favourite_ids = ids;
+    this.favourites_writer.write(serialize_favourites(ids));
+  }
+
   private is_recent_candidate(id: AppId): boolean {
     // Opening isn't installing (ADR-077), so an app opened without installing counts too; the core apps are always listed.
     return this.registry.has(id) && !is_core_app(id);
@@ -631,6 +663,7 @@ export class AppsService implements IAppsService {
     this.provisional.delete(id);
     this.save_installed();
     if (this.settings_service.taskbar.pinned.includes(id)) this.settings_service.taskbar.pinned = without_pin(this.settings_service.taskbar.pinned, id);
+    this.save_favourites(without_favourite(this.favourite_ids, id));
     if (!options.data) return;
 
     const prefix = `app.${id}.`;

@@ -14,6 +14,7 @@ import { BUILD_INFO } from "../version/build-info";
 import { serialize_slice } from "./catalogue";
 import { CATALOGUE_PATH, INSTALLED_PATH, parse_installed, serialize_installed } from "./installed";
 import { parse_recent, RECENT_PATH, serialize_recent } from "./recent";
+import { FAVOURITES_PATH, parse_favourites, serialize_favourites } from "./favourites";
 import { add_time, parse_usage, serialize_usage, USAGE_PATH } from "./active-time";
 import { AppsService as AppsServiceClass } from "./service.svelte";
 import { DEV_CORE, type CatalogueSource } from "./source";
@@ -237,6 +238,53 @@ describe("AppsService usage stats", () => {
     (globalThis as { gtag?: unknown }).gtag = gtag;
     apps(kernel).launch("settings", { section: "about" });
     expect(gtag).toHaveBeenCalledExactlyOnceWith("event", "app_open", { app_id: "settings", mode: "desktop", platform: kernel.platform });
+  });
+});
+
+describe("AppsService favourite apps", () => {
+  async function favourites_on_disk(kernel: Kernel): Promise<string[]> {
+    const file = await kernel.service<FilesService>("files").get_file(FAVOURITES_PATH);
+    return parse_favourites(file ? await file.text() : null);
+  }
+
+  test("favourites keep the order they're added and moved in, and save it", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes", "game"]));
+    const kernel = await boot();
+    apps(kernel).favourite("board", true);
+    apps(kernel).favourite("settings", true);
+    apps(kernel).favourite("notes", true);
+    apps(kernel).favourite("board", true);
+    expect(apps(kernel).favourites).toEqual(["board", "settings", "notes"]);
+
+    apps(kernel).move_favourite("notes", 0);
+    expect(apps(kernel).favourites).toEqual(["notes", "board", "settings"]);
+    apps(kernel).favourite("board", false);
+    expect(apps(kernel).favourites).toEqual(["notes", "settings"]);
+    await vi.waitFor(async () => expect(await favourites_on_disk(kernel)).toEqual(["notes", "settings"]));
+  });
+
+  test("only installed apps are listed or added; uninstalling drops one from the file", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes"]));
+    await write(FAVOURITES_PATH, serialize_favourites(["game", "notes", "board"]));
+    const kernel = await boot();
+    expect(apps(kernel).favourites).toEqual(["notes", "board"]);
+
+    apps(kernel).favourite("example", true);
+    expect(apps(kernel).favourites).toEqual(["notes", "board"]);
+
+    await apps(kernel).uninstall("notes");
+    expect(apps(kernel).favourites).toEqual(["board"]);
+    await vi.waitFor(async () => expect(await favourites_on_disk(kernel)).toEqual(["game", "board"]));
+
+    apps(kernel).install("game");
+    expect(apps(kernel).favourites).toEqual(["game", "board"]);
+  });
+
+  test("an invalid file reads as no favourites", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["board"]));
+    await write(FAVOURITES_PATH, "{ not json");
+    const kernel = await boot();
+    expect(apps(kernel).favourites).toEqual([]);
   });
 });
 

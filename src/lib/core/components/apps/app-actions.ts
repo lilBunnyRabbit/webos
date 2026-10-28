@@ -16,6 +16,7 @@ import {
   Broom as BroomIcon,
   DownloadSimple as DownloadSimpleIcon,
   PushPin as PushPinIcon,
+  Star as StarIcon,
   Trash as TrashIcon,
 } from "phosphor-svelte";
 
@@ -25,6 +26,19 @@ const dialogs = () => kernel.service<DialogsService>("dialogs");
 export const CLEAR_RECENT_ITEM = { id: "clear-recent", label: "Clear recent", icon: BroomIcon };
 export const OPEN_ITEM = { id: "open", label: "Open", icon: ArrowSquareOutIcon };
 export const INSTALL_ITEM = { id: "install", label: "Install", icon: DownloadSimpleIcon };
+export const FAVOURITE_ITEM = { id: "favourite", label: "Add to favourites", icon: StarIcon };
+export const UNFAVOURITE_ITEM = { id: "unfavourite", label: "Remove from favourites", icon: StarIcon };
+
+export function favourite_item(id: AppId): typeof FAVOURITE_ITEM {
+  return apps().favourites.includes(id) ? UNFAVOURITE_ITEM : FAVOURITE_ITEM;
+}
+
+/** Runs a menu choice that was a favourite item; `false` for any other choice. */
+export function apply_favourite(choice: string | null, id: AppId): boolean {
+  if (choice !== FAVOURITE_ITEM.id && choice !== UNFAVOURITE_ITEM.id) return false;
+  apps().favourite(id, choice === FAVOURITE_ITEM.id);
+  return true;
+}
 
 /** Restart app needs the new version's files: on the device already, or a connection to fetch them. Reactive. */
 export function can_update(id: AppId): boolean {
@@ -73,7 +87,7 @@ export interface AppMenuOptions {
   on_launch?: () => void;
 }
 
-/** The long-press menu of an app on the phone: add to home screen, uninstall; Open and Install when not installed. */
+/** The long-press menu of an app on the phone: add to home screen, favourite, uninstall; Open and Install when not installed. */
 export async function app_menu(
   manifest: AppManifest,
   anchor: Position,
@@ -85,6 +99,7 @@ export async function app_menu(
     apps().is_installed(manifest.id)
       ? [
           { id: "pin", label: "Add to home screen", icon: PushPinIcon, disabled: pinned },
+          favourite_item(manifest.id),
           ...(recent ? [{ separator: true } as const, CLEAR_RECENT_ITEM] : []),
           ...(is_core_app(manifest.id)
             ? []
@@ -93,6 +108,7 @@ export async function app_menu(
       : [OPEN_ITEM, INSTALL_ITEM],
     { anchor }
   );
+  if (apply_favourite(choice, manifest.id)) return;
   if (choice === "pin") {
     desktop.pin(manifest.id).catch((reason) =>
       kernel.service<NotificationsService>("notifications").notify(manifest.id, {

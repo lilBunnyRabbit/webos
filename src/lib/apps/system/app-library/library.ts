@@ -14,6 +14,7 @@ export const LIBRARY_CATEGORIES: { id: LibraryCategory; label: string }[] = [
 ];
 
 export const LibraryFilter = {
+  FAVOURITES: "favourites",
   WIDGET: "widget",
   FILES: "files",
   COMMANDS: "commands",
@@ -52,6 +53,7 @@ export interface LibraryQuery {
   used: ReadonlySet<AppId>;
   /** Installed apps, system ones included (ADR-040). */
   installed: ReadonlySet<AppId>;
+  favourites?: ReadonlySet<AppId>;
   /** The sentence search's apps beyond the matches, best first. */
   related?: readonly AppListing[];
   suggested?: readonly AppListing[];
@@ -61,8 +63,14 @@ export function category_of(manifest: AppListing): Exclude<LibraryCategory, "all
   return manifest.system ? LibraryCategory.SYSTEM : manifest.category;
 }
 
-export function has_filter(manifest: AppListing, filter: LibraryFilter, { used, installed }: Pick<LibraryQuery, "used" | "installed">): boolean {
+export function has_filter(
+  manifest: AppListing,
+  filter: LibraryFilter,
+  { used, installed, favourites }: Pick<LibraryQuery, "used" | "installed" | "favourites">
+): boolean {
   switch (filter) {
+    case LibraryFilter.FAVOURITES:
+      return favourites?.has(manifest.id) ?? false;
     case LibraryFilter.WIDGET:
       return manifest.widget !== undefined;
     case LibraryFilter.FILES:
@@ -80,7 +88,7 @@ type Order = (a: AppListing, b: AppListing) => number;
 
 const by_name: Order = (a, b) => a.name.localeCompare(b.name);
 
-function filtered(list: readonly AppListing[], { filters, ...context }: Pick<LibraryQuery, "filters" | "used" | "installed">): AppListing[] {
+function filtered(list: readonly AppListing[], { filters, ...context }: Pick<LibraryQuery, "filters" | "used" | "installed" | "favourites">): AppListing[] {
   return list.filter((manifest) => filters.every((filter) => has_filter(manifest, filter, context)));
 }
 

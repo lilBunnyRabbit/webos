@@ -10,7 +10,8 @@
 
   interface Props extends HTMLButtonAttributes {
     manifest: AppManifest;
-    on_menu: (point: Position) => void;
+    /** Opens on a long press. Without it the row has none, for a list that runs its own hold (the drawer's favourites). */
+    on_menu?: (point: Position) => void;
     /** The label sits on the wallpaper, so a photo wallpaper gives it a backing. */
     wallpaper?: boolean;
   }
@@ -21,7 +22,7 @@
 <button
   type="button"
   {...rest}
-  {@attach long_press({ on_menu })}
+  {@attach on_menu && long_press({ on_menu })}
   class={cn("flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left transition-colors duration-150 active:bg-foreground/8", class_name)}
 >
   <span class="relative grid size-11 shrink-0 place-items-center rounded-xl bg-background-light text-foreground shadow-raised ring-1 ring-foreground/10">

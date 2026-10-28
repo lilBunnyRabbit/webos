@@ -22,10 +22,14 @@ export class SoloAppsService extends AppsService {
     return [];
   }
 
-  // A shared link's app isn't one the person opened in their own WebOS: the list stays empty and nothing is saved.
+  // A shared link's app isn't one the person opened in their own WebOS: recent and favourites stay empty, nothing is saved.
   protected override async load_recent(): Promise<void> {}
 
   protected override remember(): void {}
+
+  protected override async load_favourites(): Promise<void> {}
+
+  protected override save_favourites(): void {}
 
   override launch(id: AppId, props?: unknown): WindowId | null {
     const current = this.solo_windows.list()[0];

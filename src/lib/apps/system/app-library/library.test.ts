@@ -49,6 +49,9 @@ describe("has_filter", () => {
     expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.FILES, context)).map((m) => m.id)).toEqual(["text-editor", "diff"]);
     expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.COMMANDS, context)).map((m) => m.id)).toEqual(["quick-notes"]);
     expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.USED, context)).map((m) => m.id)).toEqual(["snake"]);
+    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.FAVOURITES, context)).map((m) => m.id)).toEqual([]);
+    const favourites = new Set(["snake"]);
+    expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.FAVOURITES, { ...context, favourites })).map((m) => m.id)).toEqual(["snake"]);
     expect(APPS.filter((manifest) => has_filter(manifest, LibraryFilter.NOT_INSTALLED, context)).map((m) => m.id)).toEqual(["diff"]);
   });
 

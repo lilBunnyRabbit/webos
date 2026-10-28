@@ -37,6 +37,7 @@
     PushPinSimple as PushPinSimpleIcon,
     PushPinSimpleSlash as PushPinSimpleSlashIcon,
     Sparkle as SparkleIcon,
+    Star as StarIcon,
     Sticker as StickerIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
@@ -75,6 +76,7 @@
   const solo = kernel.mode === Mode.SOLO;
   const installed = $derived(apps.is_installed(manifest.id));
   const on_taskbar = $derived(settings.taskbar.pinned.includes(manifest.id));
+  const favourite = $derived(apps.favourites.includes(manifest.id));
   const story = $derived(app_story(manifest));
   const history = $derived(app_history(version.changelog, manifest.id));
   const released = $derived(release_of(version.changelog, manifest.version));
@@ -157,6 +159,16 @@
         <AppByline {manifest} />
         <StoreButton {manifest} size="md" labelled primary class="mt-2 flex-wrap" />
       </div>
+      {#if installed && !solo}
+        <IconButton
+          label={favourite ? "Remove from favourites" : "Add to favourites"}
+          pressed={favourite}
+          class="shrink-0"
+          onclick={() => apps.favourite(manifest.id, !favourite)}
+        >
+          <StarIcon weight={favourite ? "fill" : "bold"} class={cn(favourite && "text-primary")} />
+        </IconButton>
+      {/if}
     </div>
 
     {#if !solo}

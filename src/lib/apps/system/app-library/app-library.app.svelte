@@ -94,6 +94,7 @@
   const manifests = $derived(apps.listings());
   const installed_list = $derived(apps.listings({ installed: true }));
   const installed = $derived(new Set(installed_list.map((manifest) => manifest.id)));
+  const favourites = $derived(new Set(apps.favourites));
   const selected = $derived(selected_id.value ? (manifests.find((manifest) => manifest.id === selected_id.value) ?? null) : null);
 
   // No usage log for the filter; an open window, a recently closed one or a remembered window frame is what the OS already knows.
@@ -127,7 +128,16 @@
   );
   const counts = $derived(category_counts(manifests, { query: "", filters: [], used, installed }));
   const sections = $derived(
-    library_sections(manifests, { query: "", filters: filters.value, used, installed, category: category.value, sort: sort.value, changelog: version.changelog })
+    library_sections(manifests, {
+      query: "",
+      filters: filters.value,
+      used,
+      installed,
+      favourites,
+      category: category.value,
+      sort: sort.value,
+      changelog: version.changelog,
+    })
   );
 
   // Waits for the notes and the catalogue: cards arriving in front would leave the carousel snapped to a later one.

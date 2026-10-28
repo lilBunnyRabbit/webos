@@ -22,6 +22,7 @@ The app registry. Holds every app the catalogue names (ADR-077): boot knows only
 | `catalogue.ts` | `CatalogueApp`, `Catalogue`, `CatalogueData`, `LAZY_PARTS`, `manifest_data()`, `json_safe()`, `parse_catalogue()`, `parse_catalogue_text()`, `serialize_slice()`. Plain data and functions, no `$lib` imports: `tooling/vite-plugin-catalogue.ts` imports it, so the build, the dev server and tests describe an app with the same function |
 | `source.ts`, `glob-source.ts` | `CatalogueSource` and its two implementations: `bundle_source()` (the built site) and `glob_source(manifests)` (dev server and tests, its own module so the dev build stamp it reads never reaches a build); `catalogue_source()` picks one by `import.meta.env.DEV` ([below](#catalogue-sources)) |
 | `recent.ts` | `RECENT_PATH`, `RECENT_LIMIT` (16), `parse_recent()` (tolerant: a broken file is `[]`, non-string and repeated entries drop out), `serialize_recent()`, `with_recent(ids, id)` (moves `id` to the front, capped) |
+| `favourites.ts` | `FAVOURITES_PATH`, `parse_favourites()` (tolerant like `parse_recent`, no cap), `serialize_favourites()`, `with_favourite(ids, id)` (appends once), `without_favourite()`, `moved_favourite(ids, shown, id, index)` (`index` counts the shown list; saved ids that aren't shown keep their neighbours). Unit tests in `favourites.test.ts` (ADR-083) |
 | `usage.ts` | `used_apps(manifests, signals)`: the apps past use points to, for the one-time tidy |
 | `active-time.ts` | `USAGE_PATH`, `AppUsage`, `parse_usage()` (tolerant: a broken file is `{}`), `serialize_usage()`, `add_time(usage, id, seconds, now)` (adds a stretch, stamps `last`, counts a new local day once), `format_usage()` ("under a minute", "25 min", "1.5 h", "12 h") (the App Store's goals became AchievementsService's built-in achievements, ADR-078). Unit tests in `active-time.test.ts` |
 | `active-time.svelte.ts` | `ActiveTime`, the tracker ([below](#active-time)) |
@@ -41,7 +42,7 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `list(filter?)` | `(filter?: { installed?: boolean; all?: boolean }): IterableIterator<[AppId, AppManifest]>` | Iterator over `registry`, insertion order. `installed: true` only installed apps (the start menu, the mobile home and app list, `app list`), `false` only the others (search's Not installed group). `all: true` also starts `catalogue()` (in a microtask, since it's read inside `$derived`) when not every app is known; the reactive list grows when it lands (Docs' home map and app atlas) |
 | `is_installed(id)` | `(id: AppId): boolean` | The core apps (`CORE_APPS`) always; other system apps like user apps; unknown ids never. Reactive |
 | `install(ids)` | `(ids: AppId \| AppId[]): AppId[]` | Adds the ones not installed yet, saves, returns them. No toast |
-| `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for core and unknown apps. Unpins it from the taskbar's quick launch (ADR-042). `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`, except `achievements.json` when there is one (the folder stays with only that file, its `progress` emptied under the achievements lock since the running totals went with the data, ADR-078), then awaits the manifest's `on_uninstall_data` if it has one (a throw is logged and toasted "Some of {App}'s data is left"; the uninstall stands). Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
+| `uninstall(id, options?)` | `(id: AppId, options?: { data?: boolean }): Promise<void>` | Throws for core and unknown apps. Unpins it from the taskbar's quick launch (ADR-042) and drops it from the favourites (ADR-083). `data` also deletes `app.{id}.*` localStorage and `/var/lib/apps/{id}/`, except `achievements.json` when there is one (the folder stays with only that file, its `progress` emptied under the achievements lock since the running totals went with the data, ADR-078), then awaits the manifest's `on_uninstall_data` if it has one (a throw is logged and toasted "Some of {App}'s data is left"; the uninstall stands). Windows and desktop entries are the caller's: `uninstall_app()` in `components/apps/app-actions.ts` asks (`uninstall-dialog.svelte`, with the "Also delete its saved data" checkbox), closes the app's windows through the guarded close (a kept dirty window cancels), removes its desktop shortcuts and widgets, then calls this and toasts |
 | `get(id)` | `(id: AppId): AppManifest \| undefined` | The manifest, or the stub while its code hasn't loaded. `undefined` for an app the device doesn't know yet: call `catalogue()` first where that matters |
 | `catalogue()` | `(): Promise<boolean>` | Fetches the full catalogue once and registers every app in it. `true` when this build's catalogue is known; `false` offline with no copy, or with another build's copy, whose apps are listed but can't open. A later call tries again. [Catalogue](#catalogue-adr-077) |
 | `load(id)` | `(id: AppId): Promise<AppManifest \| undefined>` | The manifest with its code (one import per app, shared). Rejects when the chunk can't load or the entry is another build's |
@@ -61,6 +62,9 @@ Manifest fields are documented in [apps/manifest.md](../apps/manifest.md). The f
 | `listings(filter?)` | `(filter?: AppsFilter): AppListing[]` | Every known app (or the installed / not installed ones, like `list`), its manifest or stub merged with its entry's text, `daily` and `achievement_count` (ADR-078). Reactive. [App text](#app-text) |
 | `recent` | `readonly AppId[]` (getter) | Apps `launch()` opened lately, newest first, each once, at most 16, except the four core apps (always listed). Installed or not: opening isn't installing (ADR-077), and the boot slice keeps their entries so they stay listed after a reload. Reactive. [Recent apps](#recent-apps) |
 | `clear_recent()` | `(): void` | Empties the list and saves it |
+| `favourites` | `readonly AppId[]` (getter) | The user's favourite apps in their order, installed ones only. Reactive. [Favourite apps](#favourite-apps-adr-083) |
+| `favourite(id, on)` | `(id: AppId, on: boolean): void` | Adds an installed app at the end (an app not installed is ignored), or removes it; saves when the list changed |
+| `move_favourite(id, index)` | `(id: AppId, index: number): void` | Moves a favourite to `index` of `favourites` counted without it, and saves |
 | `usage(id)` | `(id): AppUsage \| null` | `{ seconds, last, days }`: time the app was in front, when it last was (ISO) and on how many local days. `null` before its first use. Reactive. [Active time](#active-time) |
 
 `OpenOptions` is `{ anchor?: Position }`: the viewport point the "Open with" dropdown anchors to.
@@ -112,6 +116,7 @@ Who reads and writes them: `open()` (below), DesktopService (lists, writes on pi
 - `installed`, a private `SvelteSet` of installed app ids other than the core apps (which are never stored), filled by `init()`. `provisional`, a private `SvelteSet`: optional system apps an offline boot counts as installed until the move to core apps can run, never saved.
 - `restarted`, a private `Set` of the window ids `restart()` closed (`restarting()`).
 - `recent_ids`, a private `$state.raw` `AppId[]`: the recent list as saved, newest first; `recent_listed`, a private `$derived` of it keeping any registered app but the core ones (installed or not, since opening isn't installing), is what `recent` returns.
+- `favourite_ids`, a private `$state.raw` `AppId[]`: the favourites as saved, in order; `favourites_listed`, a private `$derived` keeping the installed ones, is what `favourites` returns.
 - `active_time`, a private `ActiveTime` holding the usage record (`$state.raw`), read by `usage()` ([Active time](#active-time)).
 - `all_listings`, a private `$derived` over `registry` and `entries`: each manifest or stub merged with its entry's text and `daily`. `listings()` returns it, filtered when asked.
 
@@ -124,7 +129,7 @@ The constructor only wires `$derived` references to its five dependencies. `dest
 3. Missing, but the version state exists (a device from before installed apps) → `catalogue()` (skipped offline), then a one-time tidy: install only the apps `used_apps()` finds, and toast "Tidied N apps you never opened" with **Undo** (install everything) and **App Store**. Signals: window frames and saved windows in `session.json`, desktop `.desktop` / `.widget` targets, `app.{id}.*` localStorage keys, folders in `/var/lib/apps/`, app commands in the shell history (any pipe stage, `sudo` stripped), matched against ids from `command_apps()`, which loads every app's `commands.ts` for this one pass, and `settings.file_defaults`. Nothing records use after this; there is no rolling tidy.
 4. Steps 2 and 3 save the list.
 
-Before any of that, `init()` reads the catalogue ([below](#catalogue-adr-077)). After it, `load_recent()` reads the recent list ([below](#recent-apps)), replaced ids in pins and file defaults are mapped (full catalogue only), an `online` listener retries a wanted catalogue and failed installed apps' code, and `on_idle` starts loading every installed app's manifest.
+Before any of that, `init()` reads the catalogue ([below](#catalogue-adr-077)). After it, `load_recent()` reads the recent list ([below](#recent-apps)), `load_favourites()` the favourites ([below](#favourite-apps-adr-083)), replaced ids in pins and file defaults are mapped (full catalogue only), an `online` listener retries a wanted catalogue and failed installed apps' code, and `on_idle` starts loading every installed app's manifest.
 
 ## Lifecycle
 
@@ -138,7 +143,9 @@ Constructed by the kernel after its dependencies. Nothing registers in the const
 
 `/var/lib/apps/usage.json`: `{ "version": 1, "apps": { [id]: { "seconds", "last", "days" } } }`, ids sorted, minified, through a `LatestWriter`; each write re-reads the file and adds this tab's time onto it ([Active time](#active-time)). Missing or invalid reads as empty; an entry without `days` counts one. Backed up with `/var/lib`, never sent anywhere.
 
-`/var/lib/apps/recent.json`: `{ "version": 1, "ids": AppId[] }`, newest first, at most 16, written through its own `LatestWriter` when a launch changes the list and on `clear_recent()`. Missing or invalid reads as empty. Missing or invalid means "not decided yet" (see `init()`). Backed up with `/var/lib` (ADR-037). `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
+`/var/lib/apps/recent.json`: `{ "version": 1, "ids": AppId[] }`, newest first, at most 16, written through its own `LatestWriter` when a launch changes the list and on `clear_recent()`. Missing or invalid reads as empty. Missing or invalid means "not decided yet" (see `init()`). Backed up with `/var/lib` (ADR-037).
+
+`/var/lib/apps/favourites.json` (ADR-083): `{ "version": 1, "ids": AppId[] }`, in the user's order, written through its own `LatestWriter` on every change. Missing or invalid reads as empty. Backed up with `/var/lib`. `open()` writes remembered defaults into `settings.file_defaults`, which SettingsService persists in `/etc/settings.json` ([settings.md](settings.md), [persistence.md](../persistence.md)).
 
 ## Behaviour & invariants
 
@@ -162,7 +169,7 @@ A manifest's `replaces: { app, props? }[]` names ids it took over. An id that is
 - `launch(id, props)` and the `.desktop` / `.widget` paths of `open()` (a shortcut to the old id still opens);
 - RouterService for `#/app/` and `#/solo/` links, before it validates props ([router](router.md)); the solo shell's header names the app that opened, not the link's id;
 - `init()` for the installed list and StoreService's one-time migration of the old offline picks (`current_ids`: the old id becomes every replacing app).
-- Single launch targets resolve to the app a bare launch opens (`current_list`, `current_target`): `load_recent()` for the recent list, and `init()` for the taskbar pins and the `file_defaults` values in settings. Pins and defaults are rewritten in settings only when one changed, so settings saves the new shape; the recent list saves it with the next launch.
+- Single launch targets resolve to the app a bare launch opens (`current_list`, `current_target`): `load_recent()` for the recent list, `load_favourites()` for the favourites, and `init()` for the taskbar pins and the `file_defaults` values in settings. Pins and defaults are rewritten in settings only when one changed, so settings saves the new shape; the recent list saves it with the next launch.
 - SessionService for saved windows (by props) and frames, and the desktop folder for `.desktop` shortcuts and `.widget` files on the desktop and the mobile home ([session](session.md), [desktop](desktop.md)). Shortcut and widget files aren't rewritten.
 
 Not mapped: scheduler jobs (`/var/lib/scheduler/jobs.json`, none of the replaced apps schedules any), an app's data folder `/var/lib/apps/{id}` and its `app.{id}.*` localStorage. Old data stays behind on purpose: Color Games' slider space, practice level and saved daily attempt don't carry over (owner, 2026-10-25).
@@ -212,6 +219,16 @@ The Recent row in the start menu, the Recent rows on the mobile home, and `app r
 - **Clearing.** `clear_recent()` (the tile menu's "Clear recent", `app recent --clear`) empties and saves.
 - **Inspector.** A Recent count; detailed mode adds the list, newest first, and the file path.
 
+### Favourite apps (ADR-083)
+
+A "my apps" place the user orders ([brainstorm](../../brainstorm/2026-10-28_favourite-apps.md)): the Favourites section of the start menu and the mobile app list, and the App Store's Favourites filter and star.
+
+- **Adding and removing.** `favourite(id, true)` appends an installed app once; `favourite(id, false)` removes it. Core apps can be favourites.
+- **Order.** The order they're added in, changed by `move_favourite()` (drag in the start menu and the mobile app list, Alt+arrow keys on a start menu tile). `moved_favourite()` places the app among the shown ones; a saved id that isn't shown keeps its neighbours.
+- **Installed only.** `favourites` keeps the saved ids that are installed (`is_installed`, so an offline boot's provisional system apps count). Uninstalling drops the id from the file, as it does from the taskbar pins; an id the device knows but doesn't count as installed yet stays in the file and shows once it is.
+- **Reading.** `load_favourites()` runs after `load_recent()`: it parses the file and maps a [replaced](#replaced-app-ids-adr-071) id to the app a bare launch opens (full catalogue only). Nothing is written until the list changes.
+- **Inspector.** A Favourites count; detailed mode adds the list in order and the file path.
+
 ### Active time
 
 Every app's time in front, for the App Store's "Used 3 h" / "Played 3 h", Library's recent-use sort and the goals on an app's page ([brainstorm](../../brainstorm/2026-10-27_app-store-design.md)). `ActiveTime` (`active-time.svelte.ts`) is a private field of the service; `init()` starts it without awaiting it, and `destroy()` stops it.
@@ -233,7 +250,7 @@ Every app's time in front, for the App Store's "Used 3 h" / "Played 3 h", Librar
 
 ### Solo mode
 
-`SoloAppsService` (`apps/solo.svelte.ts`, ADR-047) is registered under `apps` for a `#/solo/` link. `install()` returns `[]`, so nothing joins the person's start menu. `load_recent()` and `remember()` are no-ops, so `recent` stays empty and `recent.json` is neither read nor written. `launch()` opens the first window normally; once a window exists, every later launch (and so every `open(path)`) opens nothing, focuses the solo window, returns its id and toasts "Open WebOS to use other apps" with an Open WebOS action that opens the window's app link in a new tab.
+`SoloAppsService` (`apps/solo.svelte.ts`, ADR-047) is registered under `apps` for a `#/solo/` link. `install()` returns `[]`, so nothing joins the person's start menu. `load_recent()` and `remember()` are no-ops, so `recent` stays empty and `recent.json` is neither read nor written. `load_favourites()` and `save_favourites()` are no-ops too: `favourites` stays empty, `favourite()` and `move_favourite()` change nothing, and `favourites.json` is neither read nor written. `launch()` opens the first window normally; once a window exists, every later launch (and so every `open(path)`) opens nothing, focuses the solo window, returns its id and toasts "Open WebOS to use other apps" with an Open WebOS action that opens the window's app link in a new tab.
 
 ### `create_instance(id, props?)`
 
