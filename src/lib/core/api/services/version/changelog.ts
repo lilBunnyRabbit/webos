@@ -13,6 +13,11 @@ export const CHANGELOG: Release[] = [
         kind: FIXED,
         text: "Right-clicking an app in the start menu no longer closes the start menu, so adding a favourite or pinning an app leaves it open.",
       },
+      {
+        kind: FIXED,
+        apps: ["four-walls"],
+        text: "Four Walls: a full row along a wall now clears right into the corners.",
+      },
     ],
   },
   {

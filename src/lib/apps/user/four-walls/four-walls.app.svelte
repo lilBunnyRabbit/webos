@@ -546,7 +546,7 @@
       <Section title="How it plays">
         <ul class="flex flex-col gap-1.5 px-4 py-2.5 text-ui text-foreground/80">
           <li>The diagonals split the board into four walls' zones.</li>
-          <li>A row of a zone that runs along its wall clears, and the zone slides toward its wall.</li>
+          <li>A full row along a wall clears, corner to corner, and that wall's zone slides toward it.</li>
           <li>The arrow beside each piece in Next is the wall it falls to.</li>
           <li>The middle four cells never clear.</li>
           <li>The game ends when a new piece has no room in the middle.</li>

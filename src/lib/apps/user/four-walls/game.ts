@@ -128,34 +128,42 @@ export function arrow_for(direction: Direction, local: Point): Direction {
 
 export interface Zones {
   zone_of: readonly Direction[];
+  /** Lines to fill, wall outward: every cell `depth` from the wall between the diagonals, both diagonal cells included. */
   rows: Record<Direction, readonly (readonly number[])[]>;
+  /** The cells each zone moves when it collapses, by depth: its line less the diagonal cell the next zone owns. */
+  owned: Record<Direction, readonly (readonly number[])[]>;
 }
 
 const zones_cache = new Map<number, Zones>();
 
-// Each zone is the one below the centre (cells with x in [depth + 1, size - 1 - depth] on row size - 1 - depth), turned
-// into its wall's frame. So the diagonal cells go round like a pinwheel: bottom-right to the bottom wall, bottom-left
-// to the left, top-left to the top, top-right to the right, and every zone line has an odd length. The one-cell inner
-// lines (the middle 2 × 2, where every piece enters) are left out of `rows`: they never clear and never move.
+// Ownership splits the diagonals like a pinwheel: bottom-right to the bottom wall, bottom-left to the left, top-left
+// to the top, top-right to the right. A line still runs corner to corner, so each diagonal cell sits in two lines and
+// clears with either; ownership only decides which zone moves it on a collapse. The two-cell inner lines (the middle
+// 2 × 2, where every piece enters) are left out: they never clear and never move.
 export function zones(size: number): Zones {
   const cached = zones_cache.get(size);
   if (cached) return cached;
   const zone_of: Direction[] = Array<Direction>(size * size);
   const rows = {} as Record<Direction, number[][]>;
+  const owned = {} as Record<Direction, number[][]>;
   for (const zone of CYCLE) {
     rows[zone] = [];
+    owned[zone] = [];
     for (let depth = 0; depth < size / 2; depth++) {
       const line: number[] = [];
-      for (let x = depth + 1; x <= size - 1 - depth; x++) {
+      for (let x = depth; x <= size - 1 - depth; x++) {
         const cell = to_board(size, zone, x, size - 1 - depth);
-        const index = cell.y * size + cell.x;
-        zone_of[index] = zone;
-        line.push(index);
+        line.push(cell.y * size + cell.x);
       }
-      if (line.length > 1) rows[zone].push(line);
+      const mine = line.slice(1);
+      for (const index of mine) zone_of[index] = zone;
+      if (line.length > 2) {
+        rows[zone].push(line);
+        owned[zone].push(mine);
+      }
     }
   }
-  const result = { zone_of, rows };
+  const result = { zone_of, rows, owned };
   zones_cache.set(size, result);
   return result;
 }
@@ -332,12 +340,14 @@ export function full_lines(board: readonly Cell[], size: number): ZoneLine[] {
 }
 
 export function collapse(board: readonly Cell[], size: number, lines: readonly ZoneLine[]): Cell[] {
-  const { rows } = zones(size);
-  const next = [...board];
+  const { rows, owned } = zones(size);
+  const cleared = [...board];
+  for (const line of lines) for (const index of rows[line.zone][line.depth]) cleared[index] = null;
+  const next = [...cleared];
   for (const zone of CYCLE) {
     const gone = new Set(lines.filter((line) => line.zone === zone).map((line) => line.depth));
     if (gone.size === 0) continue;
-    const zone_rows = rows[zone];
+    const zone_rows = owned[zone];
     const kept = zone_rows.map((_, depth) => depth).filter((depth) => !gone.has(depth));
     zone_rows.forEach((line, depth) => {
       const source = kept[depth];
@@ -346,7 +356,7 @@ export function collapse(board: readonly Cell[], size: number, lines: readonly Z
       const offset = source === undefined ? 0 : source - depth;
       line.forEach((index, i) => {
         const j = i - offset;
-        next[index] = from && j >= 0 && j < from.length ? board[from[j]] : null;
+        next[index] = from && j >= 0 && j < from.length ? cleared[from[j]] : null;
       });
     });
   }

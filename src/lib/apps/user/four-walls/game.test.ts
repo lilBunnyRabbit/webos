@@ -53,14 +53,15 @@ function game(size = SIZE, mode: Mode = Mode.CYCLE): GameState {
 }
 
 describe("zones", () => {
-  test.each([8, 12, 14, 16])("split a %i board into four zones whose lines shrink by two toward the centre", (size) => {
-    const { zone_of, rows } = zones(size);
+  test.each([8, 12, 14, 16])("split a %i board into four zones whose lines run corner to corner", (size) => {
+    const { zone_of, rows, owned } = zones(size);
     const seen = new Set<number>();
     for (const zone of CYCLE) {
       expect(rows[zone].map((line) => line.length)).toEqual(
-        Array.from({ length: size / 2 - 1 }, (_, depth) => size - 1 - depth * 2)
+        Array.from({ length: size / 2 - 1 }, (_, depth) => size - depth * 2)
       );
-      for (const line of rows[zone]) for (const index of line) seen.add(index);
+      rows[zone].forEach((line, depth) => expect(owned[zone][depth]).toEqual(line.slice(1)));
+      for (const line of owned[zone]) for (const index of line) seen.add(index);
     }
     const half = size / 2;
     const centre = [half - 1, half].flatMap((y) => [half - 1, half].map((x) => y * size + x));
@@ -163,17 +164,82 @@ describe("play", () => {
   });
 
   test("a full zone line clears and the zone collapses toward its wall", () => {
-    const { rows } = zones(SIZE);
+    const { rows, owned } = zones(SIZE);
     const board: Cell[] = Array<Cell>(SIZE * SIZE).fill(null);
     for (const index of rows.down[0]) board[index] = Piece.Z;
-    board[rows.down[1][0]] = Piece.T;
+    board[owned.down[1][0]] = Piece.T;
     board[rows.left[0][0]] = Piece.L;
     const lines = full_lines(board, SIZE);
     expect(lines).toEqual([{ zone: Direction.DOWN, depth: 0 }]);
     const next = collapse(board, SIZE, lines);
-    expect(next[rows.down[0][1]]).toBe(Piece.T);
-    expect(next[rows.down[1][0]]).toBeNull();
+    expect(next[owned.down[0][1]]).toBe(Piece.T);
+    expect(next[owned.down[1][0]]).toBeNull();
     expect(next[rows.left[0][0]]).toBe(Piece.L);
+    expect(next.filter(Boolean)).toHaveLength(2);
+  });
+
+  test("a full bottom row clears right into both corners", () => {
+    const board: Cell[] = Array<Cell>(SIZE * SIZE).fill(null);
+    for (let x = 0; x < SIZE; x++) board[(SIZE - 1) * SIZE + x] = Piece.Z;
+    board[(SIZE - 2) * SIZE] = Piece.L;
+    const lines = full_lines(board, SIZE);
+    expect(lines).toEqual([{ zone: Direction.DOWN, depth: 0 }]);
+    const next = collapse(board, SIZE, lines);
+    for (let x = 0; x < SIZE; x++) expect(next[(SIZE - 1) * SIZE + x]).toBeNull();
+    expect(next[(SIZE - 2) * SIZE]).toBe(Piece.L);
+    expect(next.filter(Boolean)).toHaveLength(1);
+  });
+
+  test("a corner cell sits in both its walls' lines and clears with either", () => {
+    const { rows } = zones(SIZE);
+    const corner = (SIZE - 1) * SIZE;
+    expect(rows.down[0]).toContain(corner);
+    expect(rows.left[0]).toContain(corner);
+    const board: Cell[] = Array<Cell>(SIZE * SIZE).fill(null);
+    for (const index of rows.left[0]) board[index] = Piece.I;
+    board[(SIZE - 1) * SIZE + 1] = Piece.T;
+    const lines = full_lines(board, SIZE);
+    expect(lines).toEqual([{ zone: Direction.LEFT, depth: 0 }]);
+    const next = collapse(board, SIZE, lines);
+    expect(next[corner]).toBeNull();
+    expect(next[(SIZE - 1) * SIZE + 1]).toBe(Piece.T);
+  });
+
+  test("after a corner clear the zone above falls onto its wall and each diagonal cell moves with its owner", () => {
+    const { rows } = zones(SIZE);
+    const board: Cell[] = Array<Cell>(SIZE * SIZE).fill(null);
+    for (const index of rows.down[0]) board[index] = Piece.Z;
+    const at = (x: number, y: number) => y * SIZE + x;
+    const row = SIZE - 2;
+    board[at(2, row)] = Piece.T;
+    board[at(SIZE - 2, row)] = Piece.J;
+    board[at(1, row)] = Piece.O;
+    board[at(0, row)] = Piece.L;
+    const next = collapse(board, SIZE, full_lines(board, SIZE));
+    expect(next[at(2, SIZE - 1)]).toBe(Piece.T);
+    expect(next[at(SIZE - 2, SIZE - 1)]).toBe(Piece.J);
+    expect(next[at(2, row)]).toBeNull();
+    expect(next[at(SIZE - 2, row)]).toBeNull();
+    expect(next[at(1, row)]).toBe(Piece.O);
+    expect(next[at(0, row)]).toBe(Piece.L);
+    expect(next[at(0, SIZE - 1)]).toBeNull();
+    expect(next.filter(Boolean)).toHaveLength(4);
+  });
+
+  test("lines in two zones that share a corner clear together", () => {
+    const { rows } = zones(SIZE);
+    const board: Cell[] = Array<Cell>(SIZE * SIZE).fill(null);
+    for (const index of [...rows.down[0], ...rows.left[0]]) board[index] = Piece.S;
+    board[(SIZE - 2) * SIZE + 3] = Piece.T;
+    board[3 * SIZE + 1] = Piece.L;
+    const lines = full_lines(board, SIZE);
+    expect(lines).toEqual([
+      { zone: Direction.DOWN, depth: 0 },
+      { zone: Direction.LEFT, depth: 0 },
+    ]);
+    const next = collapse(board, SIZE, lines);
+    expect(next[(SIZE - 1) * SIZE + 3]).toBe(Piece.T);
+    expect(next[3 * SIZE]).toBe(Piece.L);
     expect(next.filter(Boolean)).toHaveLength(2);
   });
 

@@ -8,14 +8,17 @@ Code: `src/lib/apps/user/four-walls/`. `game.ts` is the whole rule set as pure f
 
 `BOARD_SIZE` is 14 (see [Board size](#board-size)). The two diagonals cut the square into four triangular zones, one per wall; a zone's floor is its wall.
 
-With an even size the diagonals run through cells, so every diagonal cell is given to one zone. They go round like a pinwheel: the bottom-right half of the diagonals belongs to the bottom wall, bottom-left to the left, top-left to the top, top-right to the right. That keeps the four zones identical under a quarter turn:
+With an even size the diagonals run through cells. A line runs corner to corner: line `d` is every cell `d` from the wall between the two diagonals, both diagonal cells included, so a full row along the bottom wall is the whole bottom row. Each diagonal cell is therefore in two lines (the bottom-left corner is in the bottom wall's line 0 and the left wall's line 0) and clears with either.
+
+Who *moves* a diagonal cell on a collapse is a separate question, answered by ownership. Ownership goes round like a pinwheel: the bottom-right half of the diagonals belongs to the bottom wall, bottom-left to the left, top-left to the top, top-right to the right. That keeps the four zones identical under a quarter turn and partitions the board exactly:
 
 - a zone has `size / 2` lines, parallel to its wall;
-- line `d` (depth `d` from the wall) holds `size - 1 - 2d` cells: 13, 11, … 3, 1 on a 14 board;
-- the zones partition the board exactly;
-- the one-cell inner lines (the middle 2 × 2) don't count as lines (see [Spawn and game over](#spawn-and-game-over)), so `rows` holds `size / 2 - 1` lines per zone.
+- line `d` holds `size - 2d` cells: 14, 12, … 4, 2 on a 14 board; the zone owns all but its first cell (`size - 1 - 2d`);
+- the two-cell inner lines (the middle 2 × 2) don't count as lines (see [Spawn and game over](#spawn-and-game-over)), so `rows` holds `size / 2 - 1` lines per zone.
 
-`zones(size)` builds the bottom zone in the bottom wall's frame (row `size - 1 - d`, columns `d + 1` to `size - 1 - d`) and turns it into each wall's frame with `to_board`, so the other three can't drift from it. It returns `zone_of` (cell → wall) and `rows` (wall → lines as board indices, wall first), cached per size.
+`zones(size)` builds the bottom zone in the bottom wall's frame (row `size - 1 - d`, columns `d` to `size - 1 - d`; the zone owns `d + 1` onward) and turns it into each wall's frame with `to_board`, so the other three can't drift from it. It returns `zone_of` (cell → owning wall), `rows` (wall → lines as board indices, wall first) and `owned` (the same lines less the first cell, the one the neighbouring zone owns), cached per size.
+
+Until 2026-10-28 a line was only the owned cells, so a full-looking bottom row left its bottom-left corner behind (it belonged to the left wall's line). The owner read that as a bug; lines now run corner to corner.
 
 ## Frames
 
@@ -25,11 +28,11 @@ Each piece moves in its own frame: the board turned so its wall is at the bottom
 
 A piece enters in rotation 0 of its frame inside the centre 4 × 2 lying across its way: columns `size/2 - 2 … size/2 + 1`, rows `size/2 - 1 … size/2` of the frame (`spawn_point`; I sits on the back row, O in the middle two columns). The game ends only when the cells it enters on are taken (blocked spawn, as decided).
 
-The middle 2 × 2 is the four zones' one-cell inner lines. Those never count as lines: `zones` leaves them out of `rows`, so they never clear and never move in a collapse. Counted, a piece stuck at the centre would clear up to four "lines" for free (a headless run tripled lines per game this way) and the secret achievement would come for nothing. A piece that locks on the middle stays there, and since every spawn crosses the middle, the next blocked spawn usually ends the game soon after. So a line is 3 to `size - 1` cells.
+The middle 2 × 2 is the four zones' two-cell inner lines. Those never count as lines: `zones` leaves them out of `rows` and `owned`, so they never clear and never move in a collapse. Counted, a piece stuck at the centre would clear up to four "lines" for free (a headless run tripled lines per game this way) and the secret achievement would come for nothing. A piece that locks on the middle stays there, and since every spawn crosses the middle, the next blocked spawn usually ends the game soon after. So a line is 4 to `size` cells.
 
 ## Lines and collapse
 
-After a lock, `full_lines` checks every line of every zone; a piece can complete lines in two zones at once (a corner). Every full line flashes for `CLEAR_MS`, then `collapse` takes them out zone by zone: each remaining line moves toward the wall by the number of cleared lines below it, keeping its cells' position along the wall (an inner line is shorter by two per step and centred on the same axis, so it lands one cell in from each end of the longer line). The innermost lines empty. Cells of other zones never move.
+After a lock, `full_lines` checks every line of every zone; a piece can complete lines in two zones at once (a corner), and two such lines can share their corner cell. Every full line flashes for `CLEAR_MS`, then `collapse` empties every cell of every full line (shared corners included) and moves the zones that cleared, reading from that emptied board: each remaining owned line moves toward the wall by the number of cleared lines below it, keeping its cells' position along the wall (an inner line is shorter by two per step and centred on the same axis, so it lands one cell in from each end of the longer line). Only owned cells move, so a diagonal cell moves with its owner: after a bottom clear the bottom-left corner stays empty unless the left zone collapses too, and the left-owned diagonal cells above it stay put. The innermost lines empty. Cells of zones that cleared nothing never move.
 
 ## Directions
 
@@ -70,6 +73,8 @@ Tried 12, 14 and 16 headless (a greedy one-piece bot on the pure rules, tuned by
 | 16 | 57 | 7.3 | 0.13 | 17 px |
 
 12 is cramped: the zones are six lines deep with two taken by the spawn, games end in about 30 pieces. 16 lasts longest but its 15-cell lines clear rarely, so a game is long stretches without a clear, and the cells get small on a phone. 14 sits between: a few more lines per piece than 16, a third more room than 12. Measured 2026-10-28 on the build's rules; unmeasured with real players.
+
+The table predates corner-to-corner lines. With them (same bot, 40 games per mode at 14) a game lasts about 39 pieces and clears 2.4 to 2.7 lines, against 7 to 7.8 before: every line needs one more cell, and a corner left by a clear only refills from the neighbouring wall. The size was not re-tuned.
 
 Layout: in a wide box Hold and Next stand beside the board; in a tall one (phones, narrow windows, `@container (orientation: portrait)`) they sit in a row above it with two Next pieces, so the board takes the full width (about 26 px cells on a 390 px phone instead of 18). The ready screen is a `BoardOverlay` naming the mode.
 
