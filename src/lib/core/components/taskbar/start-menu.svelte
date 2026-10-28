@@ -8,8 +8,9 @@
 
   const ui = $derived(kernel.service<UiService>("ui"));
 
-  // The popover keeps its own open state (light dismiss, Esc); `ui` mirrors it both ways so a shortcut can open it (ADR-028).
+  // The popover keeps its own open state; `ui` mirrors it both ways so a shortcut can open it (ADR-028).
   let popover: HTMLElement | null = $state(null);
+  let toggle: HTMLButtonElement | null = $state(null);
   let open = $state(false);
   const wanted = $derived(ui.overlay === UiOverlay.LAUNCHER);
 
@@ -17,6 +18,29 @@
     if (!popover) return;
     if (wanted && !open) popover.showPopover();
     else if (!wanted && open) popover.hidePopover();
+  });
+
+  // A manual popover, because a modal dialog (a tile's right-click menu) closes every auto popover when it opens. So the
+  // light dismiss is ours: Esc or a press outside closes it, except while a dialog is open (that press or Esc is the
+  // dialog's) and on the Start button (its own toggle).
+  $effect(() => {
+    if (!open || !popover) return;
+    const panel = popover;
+    const dialog_open = () => document.querySelector("dialog[open]") !== null;
+    const press = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (dialog_open() || panel.contains(target) || toggle?.contains(target)) return;
+      panel.hidePopover();
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !event.defaultPrevented && !dialog_open()) panel.hidePopover();
+    };
+    document.addEventListener("pointerdown", press, true);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("pointerdown", press, true);
+      document.removeEventListener("keydown", key);
+    };
   });
 
   // The panel opens away from the screen edge the taskbar sits on, flush with the dock's start edge, 8px off the dock
@@ -32,6 +56,7 @@
 </script>
 
 <button
+  bind:this={toggle}
   aria-label="Start"
   title="Start"
   popovertarget="start-menu-popover"
@@ -47,7 +72,7 @@
 <div
   bind:this={popover}
   id="start-menu-popover"
-  popover
+  popover="manual"
   class={cn("start-menu m-0 overflow-hidden rounded-2xl bg-background-lighter p-0 text-foreground shadow-popover", placement.gap)}
   style:position-area={placement.area}
   ontoggle={(event) => {
