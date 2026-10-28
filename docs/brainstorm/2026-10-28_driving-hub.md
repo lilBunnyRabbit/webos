@@ -16,13 +16,16 @@ Tight Spot becomes the hub, same id `tight-spot`, so storage, bests, stars, achi
 Layout: `core/` (vehicle, collision, camera, draw, controls, loop, sensors, sound, planner), `games/parking/` (lots, kinds, levels, cards), `games/forklift/`, `hub/` (the yard).
 ### Picking a game (decided)
 Drive in plus a quick menu: a small hub yard where each game is a building or zone you drive into, and a menu that jumps straight to a game (phones, deep links, the daily). Rejected: drive-in only (slow every time), menu only.
+### Playground (decided)
+Owner: "in the hub we can then also have playground for users to test ALL cars we offer". The yard doubles as the playground: free driving with no goal, and a garage pad in the yard that swaps to any vehicle the app has (every car, bus, trailer rig, later the forklift), with cones and ramps to try them on. Being the playground, the yard is also where a new vehicle gets shown first.
+
 ### First new game (decided)
 Forklift warehouse, pick and drop: rear-wheel steering (steer at the rear axle), forks out front; drive the forks into a pallet's slots square on (fully in, within 5°), Lift picks it, the carried pallet joins the body for collision, Lower drops it; a pallet counts when it's inside its target and straight. A job is a set of pallets. Rack heights are out (top-down). Rejected: rack levels with a height gauge (more UI).
 ### Order (decided)
 1. Precision and the vehicle picker land and push with the polish.
 2. The new rigs (boat trailer, caravan and camping pitch, articulated bus, coach, double-decker).
 3. Refactor Tight Spot into `core/` and `games/parking/`, no behaviour change.
-4. The hub yard and the menu.
+4. The hub yard (with the playground and its vehicle garage) and the menu.
 5. The forklift game.
 
 ## Key takeaways

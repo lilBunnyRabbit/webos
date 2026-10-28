@@ -9,6 +9,7 @@ Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicl
 - Tight Spot becomes a hub for driving games and keeps its id `tight-spot`, so storage, bests, achievements, the daily and links carry over.
 - The app splits into `core/` (shared driving code), `games/{id}/` (one folder per game, parking first) and `hub/` (the yard).
 - A game is picked by driving into its building in a small hub yard, or from a menu that jumps straight to it.
+- The yard is also a playground: free driving with a garage pad that swaps to any vehicle the app has.
 - The shared core stays inside the app. It moves to `$kit` only when another app needs it.
 - First new game: a forklift warehouse with rear-wheel steering, picking and dropping pallets, judged like parking per pallet.
 - The restructure is a refactor with no behaviour change, after the current Tight Spot work lands.
