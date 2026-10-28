@@ -38,7 +38,7 @@ import { LAZY_PARTS, manifest_data, parse_catalogue_text, type Catalogue, type C
 import { catalogue_source, type CatalogueSource } from "./source";
 import { current_ids, current_list, current_target, resolve_replaced } from "./replaces";
 import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./recent";
-import { FAVOURITES_PATH, moved_favourite, parse_favourites, serialize_favourites, with_favourite, without_favourite } from "./favourites";
+import { FAVOURITES_LOCK, FAVOURITES_PATH, moved_favourite, parse_favourites, serialize_favourites, with_favourite, without_favourite } from "./favourites";
 import { without_pin } from "../settings/taskbar";
 import { is_core_app } from "./helpers";
 import { track_launch } from "$lib/core/utils/analytics";
@@ -103,6 +103,7 @@ export class AppsService implements IAppsService {
   private recent_ids: AppId[] = $state.raw([]);
   private readonly recent_listed: AppId[] = $derived(this.recent_ids.filter((id) => this.is_recent_candidate(id)));
   private favourites_writer = new LatestWriter(() => this.files_service, FAVOURITES_PATH, "favourite apps");
+  private favourite_changes = 0;
   /** As saved: can hold apps this tab doesn't count as installed yet (the catalogue is still coming), which `favourites` leaves out. */
   private favourite_ids: AppId[] = $state.raw([]);
   private readonly favourites_listed: AppId[] = $derived(this.favourite_ids.filter((id) => this.is_installed(id)));
@@ -135,6 +136,12 @@ export class AppsService implements IAppsService {
     };
     window.addEventListener("online", on_online);
     this.cleanups.push(() => window.removeEventListener("online", on_online));
+    // Another tab's favourites: read again when this one comes back.
+    const on_visibility = () => {
+      if (document.visibilityState === "visible") void this.load_favourites();
+    };
+    document.addEventListener("visibilitychange", on_visibility);
+    this.cleanups.push(() => document.removeEventListener("visibilitychange", on_visibility));
     // An installed id the slice doesn't name (a crash between two writes): the full catalogue brings its entry back.
     if ([...this.installed].some((id) => !this.entries.has(id))) void this.catalogue();
     this.cleanups.push(on_idle(() => this.preload_installed()));
@@ -543,13 +550,29 @@ export class AppsService implements IAppsService {
     this.writer.write(serialize_installed(this.installed, this.migrated));
   }
 
-  /** Once the full catalogue is here, an installed id it doesn't name is gone, or became the apps replacing it (ADR-071). */
+  /**
+   * Once the full catalogue is here, an installed id it doesn't name is gone, or became the apps replacing it (ADR-071).
+   * Favourites, recents, pins and file defaults loaded from the slice map the same way.
+   */
   private drop_unknown(): void {
+    this.map_replaced_settings();
+    void this.change_favourites((ids) => ids);
+    const recent = this.current_apps(this.recent_ids);
+    if (recent.join() !== this.recent_ids.join()) {
+      this.recent_ids = recent;
+      this.recent_writer.write(serialize_recent(recent));
+    }
     const ids = current_ids(this.registry.values(), this.installed, (id) => this.registry.has(id));
     if (ids.length === this.installed.size && ids.every((id) => this.installed.has(id))) return;
     this.installed.clear();
     for (const id of ids) this.installed.add(id);
     this.save_installed();
+  }
+
+  /** Saved launch targets as they open today; only the full catalogue tells a replaced id from one the slice doesn't name. */
+  private current_apps(ids: Iterable<AppId>): AppId[] {
+    const known = (id: AppId) => !this.complete || this.registry.has(id);
+    return current_list(this.registry.values(), ids, known);
   }
 
   public get recent(): AppId[] {
@@ -565,9 +588,7 @@ export class AppsService implements IAppsService {
   protected async load_recent(): Promise<void> {
     const text = await this.read(RECENT_PATH);
     this.recent_writer.seed(text);
-    const known = (id: AppId) => !this.complete || this.registry.has(id);
-    const ids = current_list(this.registry.values(), parse_recent(text), known);
-    this.recent_ids = ids.filter((id) => !is_core_app(id));
+    this.recent_ids = this.current_apps(parse_recent(text)).filter((id) => !is_core_app(id));
   }
 
   protected remember(id: AppId): void {
@@ -582,24 +603,54 @@ export class AppsService implements IAppsService {
 
   public favourite(id: AppId, on: boolean): void {
     if (on && !this.is_installed(id)) return;
-    this.save_favourites(on ? with_favourite(this.favourite_ids, id) : without_favourite(this.favourite_ids, id));
+    void this.change_favourites((ids) => (on ? with_favourite(ids, id) : without_favourite(ids, id)));
   }
 
   public move_favourite(id: AppId, index: number): void {
-    this.save_favourites(moved_favourite(this.favourite_ids, this.favourites_listed, id, index));
+    void this.change_favourites((ids) => moved_favourite(ids, ids.filter((other) => this.is_installed(other)), id, index));
   }
 
+  /** At boot and when the tab comes back: another tab may have changed the file. A change of this tab's still on its way wins. */
   protected async load_favourites(): Promise<void> {
-    const text = await this.read(FAVOURITES_PATH);
-    this.favourites_writer.seed(text);
-    const known = (id: AppId) => !this.complete || this.registry.has(id);
-    this.favourite_ids = current_list(this.registry.values(), parse_favourites(text), known);
+    try {
+      await navigator.locks.request(FAVOURITES_LOCK, async () => {
+        const ids = this.current_apps(parse_favourites(await this.read(FAVOURITES_PATH)));
+        if (this.favourite_changes === 0) this.set_favourites(ids);
+      });
+    } catch (error) {
+      console.warn("[AppsService] Couldn't read favourite apps", error);
+    }
   }
 
-  protected save_favourites(ids: AppId[]): void {
-    if (ids.join() === this.favourite_ids.join()) return;
-    this.favourite_ids = ids;
-    this.favourites_writer.write(serialize_favourites(ids));
+  /**
+   * Shows the change at once, then applies it again to what the file holds now, under one lock for every tab, so two
+   * tabs' changes both land. The last change to finish shows the file's list.
+   */
+  protected async change_favourites(change: (ids: AppId[]) => AppId[]): Promise<void> {
+    this.set_favourites(change(this.current_apps(this.favourite_ids)));
+    this.favourite_changes += 1;
+    try {
+      const ids = await navigator.locks.request(FAVOURITES_LOCK, async () => {
+        const text = await this.read(FAVOURITES_PATH);
+        const saved = parse_favourites(text);
+        const next = change(this.current_apps(saved));
+        if (next.join() === saved.join()) return next;
+        // Another tab may have written since this one did: compare with the disk, not with this writer's last text.
+        this.favourites_writer.seed(text);
+        this.favourites_writer.write(serialize_favourites(next));
+        await this.favourites_writer.idle();
+        return next;
+      });
+      if (this.favourite_changes === 1) this.set_favourites(ids);
+    } catch (error) {
+      console.warn("[AppsService] Couldn't save favourite apps", error);
+    } finally {
+      this.favourite_changes -= 1;
+    }
+  }
+
+  private set_favourites(ids: AppId[]): void {
+    if (ids.join() !== this.favourite_ids.join()) this.favourite_ids = ids;
   }
 
   private is_recent_candidate(id: AppId): boolean {
@@ -663,7 +714,7 @@ export class AppsService implements IAppsService {
     this.provisional.delete(id);
     this.save_installed();
     if (this.settings_service.taskbar.pinned.includes(id)) this.settings_service.taskbar.pinned = without_pin(this.settings_service.taskbar.pinned, id);
-    this.save_favourites(without_favourite(this.favourite_ids, id));
+    void this.change_favourites((ids) => without_favourite(ids, id));
     if (!options.data) return;
 
     const prefix = `app.${id}.`;

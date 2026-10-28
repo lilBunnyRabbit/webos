@@ -29,7 +29,7 @@ export class SoloAppsService extends AppsService {
 
   protected override async load_favourites(): Promise<void> {}
 
-  protected override save_favourites(): void {}
+  protected override async change_favourites(): Promise<void> {}
 
   override launch(id: AppId, props?: unknown): WindowId | null {
     const current = this.solo_windows.list()[0];

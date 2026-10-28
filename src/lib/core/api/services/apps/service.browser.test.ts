@@ -281,6 +281,27 @@ describe("AppsService favourite apps", () => {
     expect(apps(kernel).favourites).toEqual(["game", "board"]);
   });
 
+  test("two tabs' changes both land: each change applies to what the file holds now", async () => {
+    await write(INSTALLED_PATH, serialize_installed(["board", "notes", "game"]));
+    const first = await boot();
+    const shutdown_first = shutdown;
+    const second = await boot();
+    try {
+      apps(first).favourite("board", true);
+      apps(second).favourite("notes", true);
+      apps(first).favourite("game", true);
+      await vi.waitFor(async () => expect(await favourites_on_disk(first)).toEqual(["board", "notes", "game"]));
+      apps(second).move_favourite("game", 0);
+      await vi.waitFor(async () => expect(await favourites_on_disk(first)).toEqual(["game", "board", "notes"]));
+      expect(apps(second).favourites).toEqual(["game", "board", "notes"]);
+
+      document.dispatchEvent(new Event("visibilitychange"));
+      await vi.waitFor(() => expect(apps(first).favourites).toEqual(["game", "board", "notes"]));
+    } finally {
+      await shutdown_first();
+    }
+  });
+
   test("an invalid file reads as no favourites", async () => {
     await write(INSTALLED_PATH, serialize_installed(["board"]));
     await write(FAVOURITES_PATH, "{ not json");
@@ -776,6 +797,30 @@ describe("AppsService catalogue (ADR-077)", () => {
     const kernel = await boot_with(service);
     await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual(["example", "game"]));
     expect(gate.fetches).toBe(1);
+  });
+
+  test("favourites, recents and pins loaded from the slice name a replaced id's app once the full catalogue is here (ADR-071)", async () => {
+    const { service, gate } = await sourced();
+    gate.open();
+    await write(VERSION_STATE_PATH, serialize_seen("1.0.0"));
+    await write(INSTALLED_PATH, serialize_installed(["example", "old-games"]));
+    await write(FAVOURITES_PATH, serialize_favourites(["old-games", "example", "game"]));
+    await write(RECENT_PATH, serialize_recent(["old-games", "example"]));
+    await write(SETTINGS_PATH, JSON.stringify({ version: 1, taskbar: { pinned: ["old-games", "example"] } }));
+    await write_slice(DEV_CORE, [...(await system_ids()), "example"]);
+    const kernel = await boot_with(service);
+    await vi.waitFor(async () => {
+      const file = await kernel.service<FilesService>("files").get_file(FAVOURITES_PATH);
+      expect(parse_favourites(file ? await file.text() : null)).toEqual(["game", "example"]);
+    });
+    expect(gate.fetches).toBe(1);
+    expect(apps(kernel).favourites).toEqual(["game", "example"]);
+    expect(apps(kernel).recent).toEqual(["game", "example"]);
+    expect(kernel.service<SettingsService>("settings").taskbar.pinned).toEqual(["game", "example"]);
+    await vi.waitFor(async () => {
+      const file = await kernel.service<FilesService>("files").get_file(RECENT_PATH);
+      expect(parse_recent(file ? await file.text() : null)).toEqual(["game", "example"]);
+    });
   });
 
   test("a newer catalogue that drops an app forgets it, unless it still runs here", async () => {

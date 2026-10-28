@@ -4,6 +4,8 @@ import { with_pin } from "../settings/taskbar";
 import type { AppId } from "./type";
 
 export const FAVOURITES_PATH = `${PATHS.var_lib}/apps/favourites.json`;
+/** Every tab reads and writes the file under it, so one tab's change never overwrites another's. */
+export const FAVOURITES_LOCK = "webos.apps.favourites";
 const FAVOURITES_VERSION = 1;
 
 const favourites_schema = z.object({
