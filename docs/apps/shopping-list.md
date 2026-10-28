@@ -238,8 +238,6 @@ History is keyed by the item's text in lower case: `{ count, last }` (`data.ts:4
 | Widgets | `/home/Desktop/{list name}.widget` | `{ app: "shopping-list", props: { list }, w, h }`, written by `pin_widget` (desktop service) |
 | Models and runtime | Bundled assets, `webos-wasm` cache | Not in OPFS, not in backups |
 
-No shell commands (owner: nothing for now).
-
 ## Dependencies & licences
 
 | Dependency | Licence | Scope |
