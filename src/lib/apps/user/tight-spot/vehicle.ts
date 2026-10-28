@@ -1,7 +1,21 @@
-import { clamp, type Pose, type Vec } from "./geometry";
+import { clamp, wrap_angle, type Pose, type Vec } from "./geometry";
 
 export const Gear = { PARK: "P", REVERSE: "R", NEUTRAL: "N", DRIVE: "D" } as const;
 export type Gear = (typeof Gear)[keyof typeof Gear];
+
+export interface TrailerSpec {
+  /** Rear axle to the tow ball. */
+  hitch: number;
+  /** Tow ball to the trailer's axle, the point the trailer turns about. */
+  axle: number;
+  /** Tow ball to the front of the box. */
+  drawbar: number;
+  box_length: number;
+  width: number;
+  track: number;
+  wheel_diameter: number;
+  wheel_width: number;
+}
 
 export interface VehicleSpec {
   length: number;
@@ -22,6 +36,7 @@ export interface VehicleSpec {
   brake: number;
   rolling: number;
   park_speed: number;
+  trailer?: TrailerSpec;
 }
 
 export const HATCHBACK: VehicleSpec = {
@@ -44,8 +59,109 @@ export const HATCHBACK: VehicleSpec = {
   park_speed: 0.3,
 };
 
-/** The same car without an automatic's creep: it moves only on the gas, which is easier to place in a tight spot. */
-export const NO_CREEP: VehicleSpec = { ...HATCHBACK, creep_accel: 0 };
+export const VAN: VehicleSpec = {
+  length: 5.9,
+  width: 2.0,
+  wheelbase: 3.7,
+  rear_overhang: 1.2,
+  track: 1.72,
+  wheel_diameter: 0.7,
+  wheel_width: 0.22,
+  turning_radius: 6.6,
+  steer_time: 1.2,
+  creep_speed: 1.6,
+  creep_accel: 1.0,
+  max_forward: 8,
+  max_reverse: 2.6,
+  accel: 2,
+  brake: 6,
+  rolling: 0.3,
+  park_speed: 0.3,
+};
+
+export const PICKUP: VehicleSpec = {
+  length: 5.3,
+  width: 1.9,
+  wheelbase: 3.2,
+  rear_overhang: 1.2,
+  track: 1.62,
+  wheel_diameter: 0.76,
+  wheel_width: 0.26,
+  turning_radius: 6.3,
+  steer_time: 1.15,
+  creep_speed: 1.7,
+  creep_accel: 1.1,
+  max_forward: 8.4,
+  max_reverse: 2.7,
+  accel: 2.2,
+  brake: 6.3,
+  rolling: 0.3,
+  park_speed: 0.3,
+};
+
+export const BUS: VehicleSpec = {
+  length: 12,
+  width: 2.55,
+  wheelbase: 5.9,
+  rear_overhang: 3.6,
+  track: 2.1,
+  wheel_diameter: 1,
+  wheel_width: 0.3,
+  turning_radius: 11,
+  steer_time: 1.6,
+  creep_speed: 1.4,
+  creep_accel: 0.8,
+  max_forward: 7,
+  max_reverse: 2.2,
+  accel: 1.4,
+  brake: 5,
+  rolling: 0.3,
+  park_speed: 0.25,
+};
+
+export const BOX_TRAILER: TrailerSpec = {
+  hitch: 1.0,
+  axle: 2.45,
+  drawbar: 1.1,
+  box_length: 2.5,
+  width: 1.6,
+  track: 1.45,
+  wheel_diameter: 0.52,
+  wheel_width: 0.16,
+};
+
+export const HATCH_TRAILER: VehicleSpec = {
+  ...HATCHBACK,
+  max_forward: 6.5,
+  max_reverse: 2.2,
+  accel: 1.9,
+  trailer: BOX_TRAILER,
+};
+
+export const Vehicle = { HATCH: "hatch", VAN: "van", PICKUP: "pickup", BUS: "bus", TOWING: "towing" } as const;
+export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
+
+export const VEHICLES: Record<Vehicle, VehicleSpec> = {
+  hatch: HATCHBACK,
+  van: VAN,
+  pickup: PICKUP,
+  bus: BUS,
+  towing: HATCH_TRAILER,
+};
+
+const coasting = new WeakMap<VehicleSpec, VehicleSpec>();
+
+/** Without an automatic's creep the vehicle moves only on the gas, which is easier to place in a tight spot. */
+export function without_creep(spec: VehicleSpec): VehicleSpec {
+  let found = coasting.get(spec);
+  if (!found) {
+    found = { ...spec, creep_accel: 0 };
+    coasting.set(spec, found);
+  }
+  return found;
+}
+
+export const JACKKNIFE_ANGLE = (70 * Math.PI) / 180;
 
 /** The rear axle's centre is the pose: that's the point a car without tyre slip turns about. */
 export interface Car extends Pose {
@@ -56,7 +172,16 @@ export interface Car extends Pose {
   brake: number;
   /** Metres each wheel has rolled, signed (negative in reverse), in `wheels()` order: front left, front right, rear left, rear right. */
   roll: Rolls;
+  trailer?: Trailer;
 }
+
+export interface Trailer {
+  /** From its axle toward the tow ball. */
+  heading: number;
+  roll: [number, number];
+}
+
+export type Placement = Pick<Car, "x" | "y" | "heading" | "trailer">;
 
 export type Rolls = [number, number, number, number];
 
@@ -78,8 +203,19 @@ export function max_steer(spec: VehicleSpec): number {
   return Math.atan(spec.wheelbase / (outer - spec.track / 2));
 }
 
-export function create_car(pose: Pose, gear: Gear = Gear.PARK): Car {
-  return { x: pose.x, y: pose.y, heading: pose.heading, speed: 0, steer: 0, gear, throttle: 0, brake: 0, roll: [0, 0, 0, 0] };
+export function create_car(pose: Pose, gear: Gear = Gear.PARK, spec: VehicleSpec = HATCHBACK): Car {
+  const car: Car = {
+    x: pose.x,
+    y: pose.y,
+    heading: pose.heading,
+    speed: 0,
+    steer: 0,
+    gear,
+    throttle: 0,
+    brake: 0,
+    roll: [0, 0, 0, 0],
+  };
+  return spec.trailer ? { ...car, trailer: { heading: pose.heading, roll: [0, 0] } } : car;
 }
 
 export function gear_direction(gear: Gear): -1 | 0 | 1 {
@@ -132,13 +268,19 @@ function resistance(car: Car, spec: VehicleSpec): number {
 
 /**
  * One fixed step of the kinematic Ackermann (bicycle) model: no tyre slip, so the rear axle only moves along the
- * heading and the car turns about a point on the rear axle line. The arc is integrated exactly for the step.
+ * heading and the car turns about a point on the rear axle line. The arc is integrated exactly for the step; a
+ * trailer follows it about the tow ball.
  */
 export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HATCHBACK): Car {
   if (!(dt > 0)) return car;
   const limit = max_steer(spec);
   const steer = approach(car.steer, steer_target(car, input, limit), steer_rate(car, input, limit, spec), dt);
-  const next: Car = { ...car, steer, throttle: pedal(car.throttle, input.throttle, dt), brake: pedal(car.brake, input.brake, dt) };
+  const next: Car = {
+    ...car,
+    steer,
+    throttle: pedal(car.throttle, input.throttle, dt),
+    brake: pedal(car.brake, input.brake, dt),
+  };
 
   const driven = car.speed + acceleration(next, spec) * dt;
   const resist = resistance(next, spec) * dt;
@@ -146,7 +288,106 @@ export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HAT
   const distance = ((car.speed + speed) / 2) * dt;
 
   const curvature = Math.tan(steer) / spec.wheelbase;
-  return { ...next, ...arc(car, curvature, distance), speed, roll: roll(car.roll, curvature, distance, spec) };
+  const moved: Car = {
+    ...next,
+    ...arc(car, curvature, distance),
+    speed,
+    roll: roll(car.roll, curvature, distance, spec),
+  };
+  if (!spec.trailer || !car.trailer) return moved;
+  return { ...moved, trailer: tow(car, car.trailer, curvature, distance, spec.trailer) };
+}
+
+const TOW_STEP = 0.025;
+
+/**
+ * The trailer behind a car that drives `distance` along an arc of `curvature` from `pose`. With ψ = θ − φ the hitch
+ * angle, h the ball behind the rear axle and Lt the ball to the trailer's axle, per metre the car covers:
+ * dφ/ds = (sin ψ − h·κ·cos ψ) / Lt, and the trailer's axle covers cos ψ + h·κ·sin ψ. The car's heading along the arc
+ * is exact, so RK4 in steps of at most 2.5 cm stays far inside the tolerances that matter, even reversing, which
+ * amplifies every error.
+ */
+export function tow(pose: Pose, trailer: Trailer, curvature: number, distance: number, spec: TrailerSpec): Trailer {
+  if (distance === 0) return trailer;
+  const slope = (s: number, phi: number): [number, number] => {
+    const psi = pose.heading + curvature * s - phi;
+    const sin = Math.sin(psi);
+    const cos = Math.cos(psi);
+    return [(sin - spec.hitch * curvature * cos) / spec.axle, cos + spec.hitch * curvature * sin];
+  };
+  const pieces = Math.max(1, Math.ceil(Math.abs(distance) / TOW_STEP));
+  const ds = distance / pieces;
+  let phi = trailer.heading;
+  let along = 0;
+  for (let i = 0; i < pieces; i++) {
+    const s = i * ds;
+    const k1 = slope(s, phi);
+    const k2 = slope(s + ds / 2, phi + (ds / 2) * k1[0]);
+    const k3 = slope(s + ds / 2, phi + (ds / 2) * k2[0]);
+    const k4 = slope(s + ds, phi + ds * k3[0]);
+    phi += (ds / 6) * (k1[0] + 2 * k2[0] + 2 * k3[0] + k4[0]);
+    along += (ds / 6) * (k1[1] + 2 * k2[1] + 2 * k3[1] + k4[1]);
+  }
+  // The left wheel (−y) sits outside a right turn: it covers the axle's distance plus half a track times the turn.
+  const turned = phi - trailer.heading;
+  const half = spec.track / 2;
+  return { heading: phi, roll: [trailer.roll[0] + along + half * turned, trailer.roll[1] + along - half * turned] };
+}
+
+export function hitch_angle(car: Placement): number {
+  return car.trailer ? wrap_angle(car.heading - car.trailer.heading) : 0;
+}
+
+export function jackknifed(car: Placement): boolean {
+  return Math.abs(hitch_angle(car)) > JACKKNIFE_ANGLE;
+}
+
+export function hitch_point(pose: Pose, spec: TrailerSpec): Vec {
+  return to_world(pose, { x: -spec.hitch, y: 0 });
+}
+
+export function trailer_pose(car: Placement, spec: TrailerSpec): Pose {
+  const ball = hitch_point(car, spec);
+  const heading = car.trailer?.heading ?? car.heading;
+  return { x: ball.x - Math.cos(heading) * spec.axle, y: ball.y - Math.sin(heading) * spec.axle, heading };
+}
+
+export function trailer_local(spec: TrailerSpec): Vec[] {
+  const front = spec.axle - spec.drawbar;
+  const rear = front - spec.box_length;
+  const half = spec.width / 2;
+  return [
+    { x: front, y: -half },
+    { x: front, y: half },
+    { x: rear, y: half },
+    { x: rear, y: -half },
+  ];
+}
+
+export function trailer_corners(car: Placement, spec: TrailerSpec): Vec[] {
+  const pose = trailer_pose(car, spec);
+  return trailer_local(spec).map((point) => to_world(pose, point));
+}
+
+export function trailer_wheels(car: Placement, spec: TrailerSpec): Vec[] {
+  const pose = trailer_pose(car, spec);
+  return [to_world(pose, { x: 0, y: -spec.track / 2 }), to_world(pose, { x: 0, y: spec.track / 2 })];
+}
+
+export function bodies(car: Placement, spec: VehicleSpec = HATCHBACK): Vec[][] {
+  const body = corners(car, spec);
+  return spec.trailer ? [body, trailer_corners(car, spec.trailer)] : [body];
+}
+
+export function rig_extent(spec: VehicleSpec): { front: number; rear: number } {
+  const front = spec.length - spec.rear_overhang;
+  const t = spec.trailer;
+  return { front, rear: t ? -(t.hitch + t.drawbar + t.box_length) : -spec.rear_overhang };
+}
+
+export function rig_length(spec: VehicleSpec): number {
+  const { front, rear } = rig_extent(spec);
+  return front - rear;
 }
 
 /**
@@ -187,8 +428,13 @@ export function corners(pose: Pose, spec: VehicleSpec = HATCHBACK): Vec[] {
 }
 
 export function pose_from_centre(centre: Pose, spec: VehicleSpec = HATCHBACK): Pose {
-  const back = spec.length / 2 - spec.rear_overhang;
-  return { x: centre.x - Math.cos(centre.heading) * back, y: centre.y - Math.sin(centre.heading) * back, heading: centre.heading };
+  const { front, rear } = rig_extent(spec);
+  const back = (front + rear) / 2;
+  return {
+    x: centre.x - Math.cos(centre.heading) * back,
+    y: centre.y - Math.sin(centre.heading) * back,
+    heading: centre.heading,
+  };
 }
 
 export function body_centre(pose: Pose, spec: VehicleSpec = HATCHBACK): Vec {
@@ -230,9 +476,32 @@ export function sweep(car: Car, distance: number, samples: number, spec: Vehicle
   return paths;
 }
 
+// Reversing, the trailer's tail leads: its corners show the trailer folding away well before it does.
+export function trailer_sweep(car: Car, distance: number, samples: number, vehicle: VehicleSpec): Vec[][] {
+  const spec = vehicle.trailer!;
+  const curvature = Math.tan(car.steer) / vehicle.wheelbase;
+  const local = trailer_local(spec).slice(2);
+  const paths: Vec[][] = local.map(() => []);
+  let pose: Pose = car;
+  let trailer: Trailer = car.trailer ?? { heading: car.heading, roll: [0, 0] };
+  for (let i = 0; i <= samples; i++) {
+    const placed = trailer_pose({ ...pose, trailer }, spec);
+    local.forEach((point, k) => paths[k].push(to_world(placed, point)));
+    if (Math.abs(wrap_angle(pose.heading - trailer.heading)) > JACKKNIFE_ANGLE) break;
+    const ds = distance / samples;
+    trailer = tow(pose, trailer, curvature, ds, spec);
+    pose = arc(pose, curvature, ds);
+  }
+  return paths;
+}
+
 export function arc(pose: Pose, curvature: number, distance: number): Pose {
   if (Math.abs(curvature * distance) < 1e-9) {
-    return { x: pose.x + Math.cos(pose.heading) * distance, y: pose.y + Math.sin(pose.heading) * distance, heading: pose.heading };
+    return {
+      x: pose.x + Math.cos(pose.heading) * distance,
+      y: pose.y + Math.sin(pose.heading) * distance,
+      heading: pose.heading,
+    };
   }
   const heading = pose.heading + curvature * distance;
   return {

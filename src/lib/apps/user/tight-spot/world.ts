@@ -1,7 +1,19 @@
 import { create_rng, type Rng } from "$lib/core/utils/random";
 import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "./geometry";
-import { ChunkKind, MarkKind, Scenario, SolidKind, SurfaceKind, type Bay, type Layout, type Mark, type Solid, type Surface } from "./kinds";
+import {
+  ChunkKind,
+  MarkKind,
+  Scenario,
+  SolidKind,
+  SurfaceKind,
+  type Bay,
+  type Layout,
+  type Mark,
+  type Solid,
+  type Surface,
+} from "./kinds";
 import { build_lot } from "./lots";
+import { HATCHBACK, type VehicleSpec } from "./vehicle";
 
 export * from "./kinds";
 
@@ -35,6 +47,7 @@ export interface LotCell {
   /** Many free bays, every one of them a target, instead of one marked bay. */
   open: boolean;
   entry: Side;
+  spec: VehicleSpec;
 }
 
 export type Cell = { kind: typeof ChunkKind.ROAD } | LotCell;
@@ -84,7 +97,12 @@ function turn_point(point: Vec, q: number): Vec {
   return { x: x + MID, y: y + MID };
 }
 
-function place(layout: Layout, q: number, ox: number, oy: number): Pick<Chunk, "surfaces" | "solids" | "marks" | "bays" | "start"> {
+function place(
+  layout: Layout,
+  q: number,
+  ox: number,
+  oy: number
+): Pick<Chunk, "surfaces" | "solids" | "marks" | "bays" | "start"> {
   const at = (point: Vec) => {
     const turned = turn_point(point, q);
     return { x: turned.x + ox, y: turned.y + oy };
@@ -96,7 +114,9 @@ function place(layout: Layout, q: number, ox: number, oy: number): Pick<Chunk, "
     solids: layout.solids.map((solid) => ({
       ...solid,
       shape: shape(solid.shape),
-      ...(solid.car ? { car: { ...solid.car, pose: { ...at(solid.car.pose), heading: solid.car.pose.heading + angle } } } : {}),
+      ...(solid.car
+        ? { car: { ...solid.car, pose: { ...at(solid.car.pose), heading: solid.car.pose.heading + angle } } }
+        : {}),
     })),
     marks: layout.marks.map((mark) => ({ ...mark, a: at(mark.a), b: at(mark.b) })),
     bays: layout.bays.map((bay) => ({ ...bay, shape: shape(bay.shape), heading: bay.heading + angle })),
@@ -114,7 +134,8 @@ function road_layout(open: Exits): Layout {
   const surfaces: Surface[] = [{ kind: SurfaceKind.ASPHALT, shape: rect(lo, lo, hi, hi) }];
   const solids: Solid[] = [];
   const marks: Mark[] = [];
-  const kerb = (x0: number, y0: number, x1: number, y1: number) => solids.push({ kind: SolidKind.KERB, shape: rect(x0, y0, x1, y1) });
+  const kerb = (x0: number, y0: number, x1: number, y1: number) =>
+    solids.push({ kind: SolidKind.KERB, shape: rect(x0, y0, x1, y1) });
   kerb(0, 0, lo, lo);
   kerb(hi, 0, CHUNK, lo);
   kerb(0, hi, lo, CHUNK);
@@ -130,8 +151,12 @@ function road_layout(open: Exits): Layout {
     if (arms[side]) {
       surfaces.push({ kind: SurfaceKind.ASPHALT, shape: rect(x0, y0, x1, y1) });
       const vertical = side === Side.NORTH || side === Side.SOUTH;
-      const from = vertical ? { x: MID, y: side === Side.NORTH ? 0 : hi + 1 } : { x: side === Side.WEST ? 0 : hi + 1, y: MID };
-      const to = vertical ? { x: MID, y: side === Side.NORTH ? lo - 1 : CHUNK } : { x: side === Side.WEST ? lo - 1 : CHUNK, y: MID };
+      const from = vertical
+        ? { x: MID, y: side === Side.NORTH ? 0 : hi + 1 }
+        : { x: side === Side.WEST ? 0 : hi + 1, y: MID };
+      const to = vertical
+        ? { x: MID, y: side === Side.NORTH ? lo - 1 : CHUNK }
+        : { x: side === Side.WEST ? lo - 1 : CHUNK, y: MID };
       marks.push({ kind: MarkKind.DASH, a: from, b: to });
     } else kerb(x0, y0, x1, y1);
   }
@@ -158,7 +183,9 @@ export function chunk(seed: number, cx: number, cy: number, plan: Plan): Chunk |
   const ox = cx * CHUNK;
   const oy = cy * CHUNK;
   const layout =
-    cell.kind === ChunkKind.ROAD ? road_layout(open) : build_lot(cell.scenario, cell.difficulty, cell.open, chunk_rng(seed, cx, cy));
+    cell.kind === ChunkKind.ROAD
+      ? road_layout(open)
+      : build_lot(cell.scenario, cell.difficulty, cell.open, chunk_rng(seed, cx, cy), cell.spec);
   const placed = place(layout, cell.kind === ChunkKind.LOT ? quarters(cell.entry) : 0, ox, oy);
   for (const side of SIDES) {
     if (plan(cx + STEP[side].x, cy + STEP[side].y)) continue;
@@ -190,14 +217,27 @@ export function assemble(seed: number, cells: readonly Vec[], plan: Plan, start:
   };
 }
 
-export function scenario_world(seed: number, scenario: Scenario, difficulty: number): World {
+export function scenario_world(
+  seed: number,
+  scenario: Scenario,
+  difficulty: number,
+  spec: VehicleSpec = HATCHBACK
+): World {
   const plan: Plan = (cx, cy) => {
     if (cx !== 0) return null;
-    if (cy === 0) return { kind: ChunkKind.LOT, scenario, difficulty, open: false, entry: Side.SOUTH };
+    if (cy === 0) return { kind: ChunkKind.LOT, scenario, difficulty, open: false, entry: Side.SOUTH, spec };
     if (cy === 1) return { kind: ChunkKind.ROAD };
     return null;
   };
-  const world = assemble(seed, [{ x: 0, y: 0 }, { x: 0, y: 1 }], plan, { x: MID + 2, y: CHUNK + 26, heading: -Math.PI / 2 });
+  const world = assemble(
+    seed,
+    [
+      { x: 0, y: 0 },
+      { x: 0, y: 1 },
+    ],
+    plan,
+    { x: MID + 2, y: CHUNK + 26, heading: -Math.PI / 2 }
+  );
   const own = world.chunks[0].start;
   return own ? { ...world, start: own } : world;
 }
@@ -210,7 +250,14 @@ export function open_plan(seed: number): Plan {
     if (cx === 0 || cy === 0) return { kind: ChunkKind.ROAD };
     const h = hash(seed, cx, cy, 7);
     const entry: Side = h % 2 === 0 ? (cy < 0 ? Side.SOUTH : Side.NORTH) : cx < 0 ? Side.EAST : Side.WEST;
-    return { kind: ChunkKind.LOT, scenario: OPEN_LOTS[(h >>> 1) % OPEN_LOTS.length], difficulty: 0.3, open: true, entry };
+    return {
+      kind: ChunkKind.LOT,
+      scenario: OPEN_LOTS[(h >>> 1) % OPEN_LOTS.length],
+      difficulty: 0.3,
+      open: true,
+      entry,
+      spec: HATCHBACK,
+    };
   };
 }
 

@@ -1,6 +1,6 @@
 import { bounds_of, bounds_overlap, type Pose, type Vec } from "./geometry";
 import type { Obstacles } from "./game";
-import { corners, HATCHBACK, type VehicleSpec } from "./vehicle";
+import { corners, HATCHBACK, trailer_corners, trailer_pose, type Placement, type VehicleSpec } from "./vehicle";
 
 export const SENSOR_RANGE = 1.6;
 const SIDE_REACH = 0.05;
@@ -37,12 +37,31 @@ function clip(a: Vec, b: Vec, lo: number, hi: number, key: "x" | "y"): [number, 
   return t0 <= t1 ? [t0, t1] : null;
 }
 
-// Like ultrasonic parking sensors: only the strip the car would sweep driving straight that way counts.
-export function sensor(pose: Pose, near: Obstacles, end: End, spec: VehicleSpec = HATCHBACK): number | null {
-  const sign = end === End.FRONT ? 1 : -1;
+export interface SensorFrame {
+  pose: Pose;
+  /** From `pose` along its axis to the bumper, forward for the front and backward for the rear. */
+  bumper: number;
+  width: number;
+  body: Vec[];
+}
+
+/** Towing, the rear sensors are the trailer's: its tail is what reverses into things. */
+export function sensor_frame(car: Placement, end: End, spec: VehicleSpec = HATCHBACK): SensorFrame {
+  const t = spec.trailer;
+  if (end === End.REAR && t) {
+    const pose = trailer_pose(car, t);
+    return { pose, bumper: t.drawbar + t.box_length - t.axle, width: t.width, body: trailer_corners(car, t) };
+  }
   const bumper = end === End.FRONT ? spec.length - spec.rear_overhang : spec.rear_overhang;
-  const band = spec.width / 2 + SIDE_REACH;
-  const reach = bounds_of(corners(pose, spec));
+  return { pose: car, bumper, width: spec.width, body: corners(car, spec) };
+}
+
+// Like ultrasonic parking sensors: only the strip the car would sweep driving straight that way counts.
+export function sensor(car: Placement, near: Obstacles, end: End, spec: VehicleSpec = HATCHBACK): number | null {
+  const sign = end === End.FRONT ? 1 : -1;
+  const { pose, bumper, width, body } = sensor_frame(car, end, spec);
+  const band = width / 2 + SIDE_REACH;
+  const reach = bounds_of(body);
   let best = Infinity;
   for (let i = 0; i < near.solids.length; i++) {
     if (!bounds_overlap(reach, near.bounds[i], SENSOR_RANGE)) continue;

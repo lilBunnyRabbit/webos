@@ -4,7 +4,7 @@ Id `tight-spot` · Source: `src/lib/apps/user/tight-spot/` · [ADR-086](../adrs/
 
 ## What it does
 
-A top-down parking game. The car steers like a real one at parking speed: it turns about its rear axle, the front swings wide, the turning circle comes from the wheelbase and the steering lock. Spots are generated from a seed: parallel at a kerb, nose in, reverse in, angled, a garage up to the wall, bays between pillars, a narrow aisle, a tight garage door and a dead-end turnaround. Modes: a random spot of a picked kind (or any) with a seeded daily, a 27-level ladder, and a 3 × 3 open lot where any free bay counts.
+A top-down parking game. The car steers like a real one at parking speed: it turns about its rear axle, the front swings wide, the turning circle comes from the wheelbase and the steering lock. Five vehicles: a hatchback, a van, a pickup, a city bus and the hatchback towing a box trailer. Spots are generated from a seed: parallel at a kerb, nose in, reverse in, angled, a garage up to the wall, bays between pillars, a narrow aisle, a tight garage door, a dead-end turnaround, the end bay of a full dead-end aisle, a bus stop, a bus depot, a driveway and a slipway (the last two with the trailer). Modes: a random spot of a picked kind (or any) with a seeded daily, a 42-level ladder, and a 3 × 3 open lot where any free bay counts.
 
 Three layers, each replaceable on its own (the brainstorm's later steps):
 
@@ -35,7 +35,38 @@ The front wheels are drawn at their Ackermann angles (`wheels()`): the inner one
 
 Each wheel's rolled distance is in `car.roll` (metres, signed, in `wheels()` order), for the tread drawing. `roll()` adds the step's distance times the wheel's own radius over the rear axle centre's: a wheel at `(x, y)` from the rear axle's centre turns on `|κ| · hypot(x, 1/κ − y)` of it, which is `hypot(x·κ, 1 − y·κ)` and 1 driving straight. On lock the outer front wheel rolls the most and the inner rear the least; standing still nothing rolls, whatever the wheel does.
 
-Tests (`vehicle.test.ts`) pin the geometry: the outer front wheel's circle is 5.3 m, the rear axle stays on its 3.84 m circle for 2000 steps, it only ever moves along the heading, the outer front corner swings outside the rear wheels' path, reversing on lock retraces the same circle, plus the steering rate, creep, brake hold, P refusal and determinism.
+### Vehicles
+
+Every model function takes a `VehicleSpec`; `VEHICLES` maps the `Vehicle` ids to them:
+
+| Vehicle | Length × width | Wheelbase | Rear overhang | Turn (kerb to kerb) | Wheel lock time |
+|---------|----------------|-----------|---------------|---------------------|-----------------|
+| `hatch` (`HATCHBACK`) | 4.3 × 1.8 m | 2.6 m | 0.8 m | 5.3 m | 1.1 s |
+| `van` | 5.9 × 2.0 m | 3.7 m | 1.2 m | 6.6 m | 1.2 s |
+| `pickup` | 5.3 × 1.9 m | 3.2 m | 1.2 m | 6.3 m | 1.15 s |
+| `bus` | 12 × 2.55 m | 5.9 m | 3.6 m | 11 m | 1.6 s |
+| `towing` (`HATCH_TRAILER`) | the hatchback + a 2.5 m box trailer, 8.1 m nose to tail | 2.6 m | 0.8 m | 5.3 m | 1.1 s |
+
+The bigger ones are slower to pull away and top out lower; the towing hatchback is held to 6.5 m/s forward, 2.2 back. `without_creep(spec)` is the Creep-off variant of any spec (cached per spec, so it's the same object every step).
+
+A kind declares its vehicles (`SCENARIO_INFO[kind].vehicles`); `vehicle_for(kind, seed)` picks one from the round's seed and `Round.vehicle` carries it, so the world, the car and the drawing all follow from the round. The nine car kinds and the end bay allow the hatchback, van and pickup; the bus stop and the depot the bus; the driveway and the slipway the trailer. The open lot is always the hatchback. Bests stay per kind, whatever the vehicle.
+
+### The trailer
+
+`BOX_TRAILER`: the ball 1.0 m behind the rear axle (h), the trailer's axle 2.45 m behind the ball (Lt), a 1.1 m drawbar to a 2.5 × 1.6 m box, a 1.45 m track. `Car.trailer` is optional: its `heading` φ (from its axle toward the ball) and its two wheels' `roll`; `create_car` puts it straight behind.
+
+`step()` stays the one entry: after the car's arc it calls `tow()`, which integrates the standard one-trailer kinematics about the ball. With θ the car's heading, ψ = θ − φ the hitch angle and κ = tan δ / L the car's curvature, per metre s the car covers
+
+```
+dφ/ds = (sin ψ − h·κ·cos ψ) / Lt            (φ' = v/Lt·sin(θ−φ) − h·v·tanδ/(L·Lt)·cos(θ−φ))
+dA/ds = cos ψ + h·κ·sin ψ                    (the distance the trailer's axle covers)
+```
+
+θ along the arc is exact (θ₀ + κs), so RK4 in pieces of at most 2.5 cm stays far inside the planner test's tolerance even reversing, which amplifies every error. Forward, ψ decays over about Lt of travel; reversing, it grows at the same rate, so the trailer has to be steered the other way and caught early. The wheels roll the axle's distance plus or minus half a track times the turn. A step of no time changes nothing, trailer included.
+
+A hitch angle past 70° (`JACKKNIFE_ANGLE`, `jackknifed()`) ends the round like a contact: `hit.kind = "jackknife"`, the ring at the ball, and the card says "Jackknifed the trailer".
+
+Tests (`vehicle.test.ts`) pin the geometry: the outer front wheel's circle is 5.3 m, the rear axle stays on its 3.84 m circle for 2000 steps, it only ever moves along the heading, the outer front corner swings outside the rear wheels' path, reversing on lock retraces the same circle, plus the steering rate, creep, brake hold, P refusal and determinism; every vehicle's lock gives its own turning radius; towing forward straightens the trailer, reversing grows the hitch angle until it jackknifes, the trailer's axle never slides sideways, its wheels roll the right distances, and towing is deterministic.
 
 ### Drawing
 
@@ -46,13 +77,16 @@ Tests (`vehicle.test.ts`) pin the geometry: the outer front wheel's circle is 5.
 - **Tyres.** Drawn over the body, slightly wider than real and nudged out, so the front pair's Ackermann angles read. Tread stripes every 11 cm come from `tread(roll, pitch, length)`: seen from above it's the top of the tyre, which moves the way the car does, so stripes run forward in D and back in R. From 1.2 m/s they fade, gone by 3 m/s, the way a spinning wheel blurs; left on, they strobe at 60 Hz and read as the car shaking.
 - **Shadows.** Every car casts its body shape offset by a fixed world vector (the sun doesn't turn with the car), in `ink` at 30 %.
 - **Clean lines.** Pieces of one kind (each ground surface, kerbs, walls, shelves, pillars) go in one path, every piece wound the same way (`wound()`), so abutting pieces fill without anti-aliasing seams and a translucent stroke never doubles where two meet. Outlines are stroked before the fill (the fill hides the inner half and every shared edge) with round joins, so corners don't spike. Bay lines and stop lines are one stroke per kind; road centre dashes are phased by where each segment starts along its line (`dash_phase()`), so the pattern runs on across chunks. Mark widths have a floor of 1.25 CSS px when zoomed out. The world transform is not snapped to whole device pixels: snapping made the moving car jitter a pixel against the camera.
+- **Vehicles.** One body per style (`car_body`): the hatchback's cabin; the van, nearly all roof behind a short bonnet, with door seams; the pickup's cab and open bed inside its rails; the bus, a long roof with an air-conditioning pod, a windscreen across the front, window strips down both flanks broken by two doors on the kerb (right) side, and an engine grille at the back. Parked buses in the depot use the same style. Lamps and tyres take each spec's size.
+- **Trailer.** Drawn under the car: its shadow, two treaded tyres from `trailer.roll`, the A-frame drawbar in `ink` to the ball, a box in the player's paint with its floor inside the side boards, and the tail, brake and reverse lamps (the car's own tail lamps stay dim when towing). Reversing with the guide lines on, the dashed lines follow the trailer's two rear corners (`trailer_sweep`: the car's arc at the current wheel with `tow()` behind it, stopped at a jackknife), so they show the trailer folding away before it does. The reverse lamps' glow comes off the trailer's tail.
+- **Water** is a solid drawn in `info` mixed into the background, edged in `info`.
 - **Markers.** Target bay: pulsing outline and fill with an arrow (two heads when either way counts); parked: the bay in `success`, thicker; crash: rings at the contact point. The off-screen bay pointer stays 22 px inside the edges and below the 44 px band of chips along the top of the board.
 
 The canvas backing store follows `devicePixelContentBoxSize`. Under Playwright's (and DevTools') device-scale emulation that box reports CSS pixels, so the canvas renders at 1× there; a real high-DPI screen or `--force-device-scale-factor` gives the full resolution.
 
 ### Collision
 
-`collision.ts`, hand-written. `overlaps` is the separating-axis test for two convex polygons: they're apart if some edge normal of either one splits their projections. Touching counts as apart, so a car whose side lies on a wall's face isn't a crash. Every solid is convex (a rectangle or a rotated rectangle), so nothing is decomposed. `game.ts` keeps each world's solids with their bounding boxes (`obstacles`, cached per world) and runs SAT only on boxes that meet the car's.
+`collision.ts`, hand-written. Every body is tested: the car and, towing, the trailer's box (`bodies()`); the drawbar isn't a body. `overlaps` is the separating-axis test for two convex polygons: they're apart if some edge normal of either one splits their projections. Touching counts as apart, so a car whose side lies on a wall's face isn't a crash. Every solid is convex (a rectangle or a rotated rectangle), so nothing is decomposed. `game.ts` keeps each world's solids with their bounding boxes (`obstacles`, cached per world) and runs SAT only on boxes that meet the car's.
 
 `contact_point` is where the red ring goes: the average of the corners of each shape inside the other and the edge crossings.
 
@@ -88,24 +122,32 @@ The infinite world is another plan over the same `chunk()`.
 | Narrow aisle | A north-south aisle with bays on both sides; either way round | aisle 6 → 4.9 m, bay 2.6 → 2.35 m |
 | Garage door | A walled alley with a garage off one side (mirrored at random) | alley 6 → 4.6 m, door 2.9 → 2.3 m |
 | Dead end | A street closed at the far end; the car starts in it with bollards behind, so it has to turn round there; the box near the mouth faces out | street 7 → 5.4 m; a turning notch below 0.5; a parked car past 0.4 |
+| End bay | From the owner's sketch: a north-south dead-end aisle about a bay deep between two rows of five bays, walls behind and at the end, a walled way in from the gate; every bay is taken but the last of one row in the corner by the end wall, nose in or reverse in (reverse in likelier the tighter) | aisle 5.7 → 4.9 m, bay 2.65 → 2.4 m |
+| Bus stop | The street runs north to a dead end with a stop box in the kerbside lane, a parked car ahead of it, a sign post and a shelter on the kerb; the bus comes up from the road | lane 3.3 → 3.1 m, box bus + 8 → 6.2 m, a car across the street past 0.4 |
+| Depot | A walled yard, gate shut, a row of bus lanes along the north wall filled with parked buses (mostly nose out); the bus starts in the yard facing east and backs into its lane, nose out | lane 3.8 → 3.25 m, more lanes taken; a bus along the south wall past 0.55 |
+| Driveway | A street across the lot, a driveway off its north side between walls with gate posts at its mouth; the rig starts on the street just past it, so one reverse can get in (mirrored at random) | street 8 → 6.6 m, driveway 3.9 → 3.1 m, posts stand 0.12 → 0.3 m into the gap, rig + 1.6 → 0.9 m long; a car on the far kerb past 0.45 |
+| Slipway | Water across the north of the lot, a concrete ramp into it, posts at its mouth on the quay; the rig starts on the quay past the ramp; the bay runs from the ramp's toe up onto the quay (mirrored at random) | ramp 3.6 → 2.7 m, posts move in from 0.5 m to flush; a parked car on the quay past 0.5 |
 
+Every builder sizes to the round's vehicle through a `Fit`: the rig's length (the trailer counted in), how much longer and wider it is than the hatchback, its turning circle over the hatchback's, and a bay depth of its length plus 70 cm. Bay widths and gaps grow by the extra width and length, aisles and streets by the turning-circle ratio; for the hatchback every builder gives back the layout it always had.
 Parked cars never overlap each other, a wall or the target, and keep clear of pillars (their centre is clamped between the bay's lines less the pillar).
 
 ### Every spot can be reached
 
 `planner.ts` is a hybrid A*: nodes keep exact poses, the closed set is a grid of 0.25 m, 5° and direction. Moves are 0.6 m arcs at five steering angles up to full lock, forwards and backwards; a move that runs into something stops short at the last clear 0.15 m, the way a driver creeps up to a bumper. Cost is distance (reverse × 1.3) plus 2.5 per change of direction, heuristic the straight distance plus 3 m per radian of heading error, weighted 2.5.
 
-`planner.test.ts` plans from a parked pose in the bay (`parked_poses`: offsets inside the bay that count as parked and keep 5 cm clear) out to the start, with the car inflated by 5 cm. The model has no slip, so the same path driven backwards gets in. It covers every kind at difficulty 0, 0.5 and 1 over 8 seeds, all 27 levels, and every free bay of two open lots through their lot's gate (plus the start to each gate). About 11 s in Node on the owner's machine. The search found the parallel spot at 2.15 m of lane boxed in (the rear swings toward the kerb while pulling out), which set the 2.3 m lane.
+`planner.test.ts` plans from a parked pose in the bay (`parked_poses`: offsets inside the bay that count as parked and keep 5 cm clear) out to the start, with the car inflated by 5 cm. The model has no slip, so the same path driven backwards gets in. It covers every kind with each of its vehicles at difficulty 0, 0.5 and 1 over 8 seeds, all 42 levels, and every free bay of two open lots through their lot's gate (plus the start to each gate). It tries the three most central parked poses each way round, since the coarse closed set can miss from one pose and not the next. About 50 s in Node on the owner's machine.
+
+Towing, the search drives forward only (`plan` sees `spec.trailer`): towing forward is stable, so the trailer's angle rides along in each node, outside the closed-set grid, and every move checks both bodies and the jackknife. The goal also wants the trailer within 0.1 rad of straight, since a round starts with it straight. The trailer kinds have their own start just past the ramp or gate, so the forward path out is one reverse in. Then the test drives the path backwards for real from where it ended (`replay`, every move reversed in 15 cm pieces with `tow()` behind), the unstable direction, and asserts it never touches anything or jackknifes and lands with the car and the trailer's axle within 5 cm and 1° of the parked pose, parked. The search found the parallel spot at 2.15 m of lane boxed in (the rear swings toward the kerb while pulling out), which set the 2.3 m lane.
 
 ### Judging
 
-`game.ts`. Any contact ends the round (`advance` returns `crashed` with the contact point and what was hit). Shifting into P checks `bay_for`: parked when every body corner is inside the bay polygon and the heading is within 5° of the bay's (or of its reverse when `either`). P anywhere else just stops the car, and a line at the bottom of the board says "Not inside a bay", "Not straight in the bay" or "Facing the wrong way" (within 5° of the reverse of a bay that isn't `either`) (`verdict`), but only once the car has been in gear, since a round starts in P.
+`game.ts`. Any contact ends the round (`advance` returns `crashed` with the contact point and what was hit). Towing, a hitch angle past 70° ends it too. Shifting into P checks `bay_for`: parked when every corner of every body (the car, and the trailer's box) is inside the bay polygon and the car's heading, and the trailer's, are within 5° of the bay's (or of its reverse when `either`). P anywhere else just stops the car, and a line at the bottom of the board says "Not inside a bay", "Not straight in the bay" or "Facing the wrong way" (within 5° of the reverse of a bay that isn't `either`) (`verdict`), but only once the car has been in gear, since a round starts in P.
 
-Moves are changes between D and R, the first gear and N or P not counted. Stars: at or under the kind's par is three, two more is two, else one (pars: parallel 2, nose in 0, reverse 1, angled 0, garage 0, pillars 1, narrow 2, door 2, dead end 2; open lot 1). Time is the sim's own clock (`ms`), so pauses and a hidden window don't count.
+Moves are changes between D and R, the first gear and N or P not counted. Stars: at or under the kind's par is three, two more is two, else one (pars: parallel 2, nose in 0, reverse 1, angled 0, garage 0, pillars 1, narrow 2, door 2, dead end 2, end bay 2, bus stop 1, depot 1, driveway 2, slipway 2; open lot 1). Time is the sim's own clock (`ms`), so pauses and a hidden window don't count.
 
 ### Sensors
 
-`sensors.ts`: for the bumper the gear drives toward, each solid's edges are taken into the car's frame, clipped to the strip the car would sweep driving straight (half a width plus 5 cm each side) and to 1.6 m ahead; the nearest point is the reading. `sound.ts` beeps a 1750 Hz tone, quicker the closer (`beep_period`), steady under 30 cm, from an `AudioContext` made on first use. The readout in the corner and the arcs at the bumper go from warning to error under 50 cm. The same `Sounds` plays the other cues, all behind the Sound setting: a quiet tick on a gear change, a falling thunk on a touch, two rising notes when parked and a third for a new best.
+`sensors.ts`: for the bumper the gear drives toward, each solid's edges are taken into the car's frame, clipped to the strip the car would sweep driving straight (half a width plus 5 cm each side) and to 1.6 m ahead; the nearest point is the reading. Towing, the rear sensor is the trailer's (`sensor_frame`): its frame, its width and its tail 1.15 m behind its axle, and the arcs are drawn there. `sound.ts` beeps a 1750 Hz tone, quicker the closer (`beep_period`), steady under 30 cm, from an `AudioContext` made on first use. The readout in the corner and the arcs at the bumper go from warning to error under 50 cm. The same `Sounds` plays the other cues, all behind the Sound setting: a quiet tick on a gear change, a falling thunk on a touch, two rising notes when parked and a third for a new best.
 
 ### Controls
 
@@ -115,14 +157,14 @@ Touch (`pointer: coarse`): steering is a wheel you drag round by the rim (`steer
 
 Upright, the controls sit in a row under the board: steering left, pedals right. When the stage is wider than 1.25 × its height (a phone held sideways) a container query lets the board fill the whole stage and floats the steering over its left edge and the pedals over its right, near the bottom where the thumbs rest, on translucent backgrounds mixed from the theme's background and foreground. The steering hides while a round card is up (the card sits on the left there), the pedals while paused. Back (`window.on_back`) closes the settings, then pauses a running round, then leaves.
 
-The camera follows the car with a little look-ahead, framed in the part of the board left clear by the top chips (always), the end card once a round is over (bottom, or left on a wide board) and the sideways touch controls (`frame` takes insets: the focus sits in the middle of the clear part and the world's edge may slide under a covered strip, so the car never ends up under a thumb at the edge of the map); before the start it frames the car and its bay together, clear of the start card; an arrow on the edge points to an off-screen bay. The toolbar's Play button starts, pauses and resumes; below `@md` it moves onto the board's top-left corner, next to the gear strip and speed, which only show once a round has started.
+The camera follows the car with a little look-ahead, framed in the part of the board left clear by the top chips (always), the end card once a round is over (bottom, or left on a wide board) and the sideways touch controls (`frame` takes insets: the focus sits in the middle of the clear part and the world's edge may slide under a covered strip, so the car never ends up under a thumb at the edge of the map). At zoom 1 it shows 26 m across the board's shorter side for the hatchback and more for a longer rig (`view_span`: 26 m × the rig's length over 4.3 m, capped at 1.6×), so a bus fills about the share of the screen a hatchback does without bay lines shrinking to hairlines on a phone. Before the start it frames the car and its bay together, clear of the start card; an arrow on the edge points to an off-screen bay. The toolbar's Play button starts, pauses and resumes; below `@md` it moves onto the board's top-left corner, next to the gear strip and speed, which only show once a round has started.
 
-Round cards sit at the bottom of a tall board and on the left, centred, of a board wider than 1.2 × its height (a desktop window, a phone held sideways; `side_card`) so the bay, the car and the contact ring stay visible. The start card has the kind's brief, its par and the best result, and the keys on a fine pointer; the parked card reveals its stars one by one and marks a first park or a new best; the crashed card names what was touched. Pause covers the board (`BoardOverlay`) with Restart and Resume. The status bar carries the round's name, time, moves, wheel angle (fine pointer) and best.
+Round cards sit at the bottom of a tall board and on the left, centred, of a board wider than 1.2 × its height (a desktop window, a phone held sideways; `side_card`) so the bay, the car and the contact ring stay visible. The start card has the kind's brief, the vehicle as a badge, its par and the best result, and the keys on a fine pointer; the parked card reveals its stars one by one and marks a first park or a new best; the crashed card names what was touched, or says the trailer jackknifed. Pause covers the board (`BoardOverlay`) with Restart and Resume. The status bar carries the round's name, time, moves, wheel angle (fine pointer) and best.
 
 ## Data
 
 - `app.tight-spot.best`: best `{ moves, ms }` per kind and `open`, fewer moves first, then time.
-- `app.tight-spot.levels`: stars per parked level; the next level after the highest parked one is open.
+- `app.tight-spot.levels`: stars per parked level; the next level after the highest parked one is open. The ladder grew from 27 to 42 levels (three laps of the nine car kinds, then bus stop, end bay, driveway, depot and slipway); car levels kept their kind, difficulty and seed, so levels 1–9 kept their numbers and old 10–27 moved to 15–23 and 29–37, which left their stored stars on other levels.
 - `app.tight-spot.kinds`: kinds parked, for the achievement.
 - `app.tight-spot.mode`, `.pick`, `.level`, `.sound`, `.guides`, `.creep`, `.wheel`, `.steering`: last choices and settings.
 - Props: `daily` (`YYYY-MM-DD`), which Game Hub passes; the day's seed picks the kind and difficulty, and the result goes to `plays.json` with moves as the score (`SCORE_ASC`).
@@ -137,7 +179,9 @@ None.
 - Playtested from Playwright on the owner's dev server, desktop and a 390 × 844 touch emulation; not on a real phone or with a real wheel feel review.
 - The planner proves a path with 5 cm of clearance, not that a person finds it easy; difficulty ranges are tuned by eye.
 - The open lot is fixed at 3 × 3 and only uses three kinds of lot.
+- A best per kind mixes vehicles of different difficulty (the spot decides the vehicle).
+- The bus stop has no tapered lay-by: a 32 m lot has no room for one with cars at both ends.
 
 ## Decisions
 
-[ADR-086](../adrs/086-tight-spot.md) and its [brainstorm](../brainstorm/2026-10-28_tight-spot.md).
+[ADR-086](../adrs/086-tight-spot.md) and its [brainstorm](../brainstorm/2026-10-28_tight-spot.md), and the [vehicles brainstorm](../brainstorm/2026-10-28_tight-spot-vehicles.md).

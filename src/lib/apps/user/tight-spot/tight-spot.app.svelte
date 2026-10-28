@@ -16,7 +16,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { ease, frame, NO_INSETS, ZOOM_MAX, ZOOM_MIN, type Camera, type Insets } from "./camera";
+  import { ease, frame, NO_INSETS, view_span, ZOOM_MAX, ZOOM_MIN, type Camera, type Insets } from "./camera";
   import { draw_scene, read_palette, type Palette } from "./draw";
   import {
     advance,
@@ -24,8 +24,8 @@
     better,
     bests_schema,
     change_gear,
+    crash_title,
     create_game,
-    HIT_NAMES,
     LEVEL_COUNT,
     level_round,
     levels_schema,
@@ -41,12 +41,14 @@
     SCENARIO_INFO,
     scenario_round,
     set_status,
+    spec_of,
     stars,
     Status,
     steering_schema,
     SteeringMode,
     unlocked,
     verdict,
+    VEHICLE_NAMES,
     wheel_schema,
     WheelMode,
     type Bests,
@@ -59,12 +61,11 @@
   import { End, sensor } from "./sensors";
   import { Sounds } from "./sound";
   import SteeringWheel from "./steering-wheel.svelte";
-  import { body_centre, Gear, HATCHBACK, max_steer, NO_CREEP, type Input } from "./vehicle";
+  import { body_centre, Gear, max_steer, rig_length, Vehicle, without_creep, type Input } from "./vehicle";
   import { SCENARIOS, Scenario } from "./world";
 
   const STEP_MS = 1000 / 120;
   const MAX_FRAME_MS = 100;
-  const LOCK = max_steer(HATCHBACK);
   const MODE_LABELS: Record<Mode, string> = { scenario: "Spots", levels: "Levels", open: "Open lot" };
   const MODE_OPTIONS = (Object.keys(MODE_LABELS) as Mode[]).map((value) => ({ value, label: MODE_LABELS[value] }));
   const PICK_OPTIONS: { value: ScenarioPick; label: string }[] = [
@@ -152,6 +153,9 @@
   let readings: Record<End, number | null> = { front: null, rear: null };
   const sounds = new Sounds();
 
+  const spec = $derived(spec_of(game.round));
+  const lock = $derived(max_steer(spec));
+  const span = $derived(view_span(rig_length(spec)));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
   const over = $derived(game.status === Status.PARKED || game.status === Status.CRASHED);
@@ -165,14 +169,14 @@
     Array.from({ length: max_level }, (_, i) => {
       const round = level_round(i + 1);
       const got = level_stars.value[i + 1] ?? 0;
-      return { value: String(i + 1), label: `${i + 1} · ${SCENARIO_INFO[round.scenario!].name}${got ? ` ${"★".repeat(got)}` : ""}` };
+      return { value: String(i + 1), label: `${i + 1} · ${SCENARIO_INFO[round.scenario!].name}${round.vehicle === Vehicle.HATCH ? "" : ` · ${VEHICLE_NAMES[round.vehicle]}`}${got ? ` ${"★".repeat(got)}` : ""}` };
     })
   );
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNT);
   // A wide board (a desktop window, a phone held sideways) takes cards on its left, centred: a strip at the bottom read as detached there.
   const side_card = $derived(size.height > 0 && size.width > size.height * 1.2);
   const speed = $derived(Math.round(Math.abs(game.car.speed) * 3.6));
-  const wheel_degrees = $derived(Math.round((game.car.steer / LOCK) * 450));
+  const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
   const time = $derived(format_time(game.ms, { tenths: true }));
   // Only once the car has been in gear: the round starts in P, and a verdict before driving reads as a scolding.
   const judged = $derived(game.status === Status.DRIVING && game.car.gear === Gear.PARK && game.last_drive !== null ? verdict(game) : null);
@@ -271,7 +275,7 @@
 
   function target_camera(): Camera {
     const bounds = game.world.bounds;
-    const car = body_centre(game.car);
+    const car = body_centre(game.car, spec);
     if (game.status === Status.READY && game.world.bays.length === 1) {
       // Before the start, frame the car and its bay together so the player sees the task.
       const bay = centroid(game.world.bays[0].shape);
@@ -283,13 +287,13 @@
       const across = Math.abs(bay.x - car.x) + 12;
       const along = Math.abs(bay.y - car.y) + 12;
       const short = Math.min(width, height);
-      const fit = Math.min(1, (26 * width) / short / across, (26 * height) / short / along);
-      const view = frame(bounds, { x: (bay.x + car.x) / 2, y: (bay.y + car.y) / 2 }, width, height, Math.max(0.25, fit) * zoom);
+      const fit = Math.min(1, (span * width) / short / across, (span * height) / short / along);
+      const view = frame(bounds, { x: (bay.x + car.x) / 2, y: (bay.y + car.y) / 2 }, width, height, Math.max(0.25, fit) * zoom, NO_INSETS, span);
       return { ...view, x: view.x - covered_x / 2 / view.scale, y: view.y + covered_y / 2 / view.scale };
     }
     const ahead = game.car.speed * 0.9;
     const focus = { x: car.x + Math.cos(game.car.heading) * ahead, y: car.y + Math.sin(game.car.heading) * ahead };
-    return frame(bounds, focus, size.width, size.height, zoom, control_insets());
+    return frame(bounds, focus, size.width, size.height, zoom, control_insets(), span);
   }
 
   // Everything drawn over the board: the HUD always, the end card once a round is over, the touch controls sideways.
@@ -330,7 +334,7 @@
     if (turn !== 0) {
       hands = true;
       steering_by_keys = true;
-      const rate = dt / HATCHBACK.steer_time;
+      const rate = dt / spec.steer_time;
       wheel = Math.max(-1, Math.min(1, wheel + Math.sign(turn - wheel) * Math.min(rate, Math.abs(turn - wheel))));
     } else if (steering_by_keys && wheel_mode === WheelMode.CENTRES) {
       hands = false;
@@ -352,11 +356,11 @@
     let next = game;
     for (let i = 0; i < steps && next.status === Status.DRIVING; i++) {
       step_wheel(dt);
-      next = advance(next, input(), dt, creep_on ? HATCHBACK : NO_CREEP);
+      next = advance(next, input(), dt, creep_on ? spec : without_creep(spec));
     }
-    if (!hands) wheel = next.car.steer / LOCK;
+    if (!hands) wheel = next.car.steer / lock;
     const near = obstacles(next.world);
-    readings = { front: sensor(next.car, near, End.FRONT), rear: sensor(next.car, near, End.REAR) };
+    readings = { front: sensor(next.car, near, End.FRONT, spec), rear: sensor(next.car, near, End.REAR, spec) };
     if (sound_on && next.status === Status.DRIVING) {
       const reading = next.car.gear === Gear.DRIVE ? readings.front : next.car.gear === Gear.REVERSE ? readings.rear : null;
       sounds.sensor(reading);
@@ -832,8 +836,9 @@
         {#if game.status === Status.READY}
           <div bind:clientWidth={card_size.width} bind:clientHeight={card_size.height} class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
             <div class="min-w-0 flex-1 basis-52">
-              <p class="flex items-center gap-2 text-base font-semibold">
+              <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
                 {round_title(game.round)}
+                <Badge tone={game.round.vehicle === Vehicle.HATCH ? "neutral" : "primary"}>{VEHICLE_NAMES[game.round.vehicle]}</Badge>
                 {#if level_best}{@render star_row(level_best, false)}{/if}
               </p>
               <p class="text-ui text-foreground/80">{round_brief(game.round)}</p>
@@ -879,7 +884,7 @@
         {:else if game.status === Status.CRASHED}
           <div bind:clientWidth={card_size.width} bind:clientHeight={card_size.height} class={cn("ts-card", side_card && "ts-card-side")} aria-live="polite">
             <div class="min-w-0 flex-1 basis-52">
-              <p class="text-base font-semibold">Touched {game.hit ? HIT_NAMES[game.hit.kind] : "something"}</p>
+              <p class="text-base font-semibold">{crash_title(game.hit)}</p>
               <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · {moves_text(game.moves)}</p>
             </div>
             <div class="ml-auto flex shrink-0 gap-2">

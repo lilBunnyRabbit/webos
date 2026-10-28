@@ -9,6 +9,12 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - In **D** or **R** the car moves only while you press the gas, and rolls to a stop when you let go. Turn on **Creep** in settings to have it roll on its own, like a real automatic.
 - The dashed lines show where the leading corners will go at the current wheel angle.
 
+## Vehicles
+
+- Each spot hands you a vehicle, named on the start card: the hatchback, a van or a pickup in car spots, a city bus at the bus stop and the depot, a car with a box trailer at the slipway and the driveway. Bigger ones need wider swings, and the bays and gaps grow to fit them.
+- The **bus** has a 12 m body and a long tail behind the rear wheels: when it turns, the tail swings out the other way.
+- The **trailer** pivots on the tow ball. Towing forward it follows and straightens. Reversing it goes the opposite way to the wheel: steer left to send it right, and catch it early. Past about 70° it jackknifes and the round ends. The guide lines follow the trailer's tail while you reverse, and the rear sensors read from it.
+
 ## Keyboard
 
 - **← →** or **A D** turn the wheel. **↑** or **W** drives forward, **↓** or **S** backs up: against the way you're going it brakes, and pressing it again once the car stands switches to D or R.
@@ -29,14 +35,15 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 
 ## Judging
 
-- Touching a car, wall, kerb or pillar ends the round, like a driving test. The red ring shows where.
-- It counts as parked when the whole car is inside the bay lines, within 5° of the bay, stopped and in **P**.
+- Touching a car, wall, kerb, pillar, post or the water ends the round, like a driving test. The red ring shows where.
+- It counts as parked when the whole car (and its trailer) is inside the bay lines, within 5° of the bay, stopped and in **P**.
 - **Moves** are changes between D and R. Stars come from moves: at the spot's par or under is three, up to two more is two. The start card shows the par.
 - In **P** outside a bay the line at the bottom says what's off: not inside a bay, not straight, or facing the wrong way.
 - Parking sensors watch the bumper you're driving towards: the beeps quicken as it closes in on something and go steady under 30 cm. The garage is where you'll lean on them.
+- The **end bay** sits in the corner of a full, narrow aisle with no room past it: get in with a few short moves, back and forth. Par allows two.
 
 ## Modes
 
 - **Spots:** a random spot of the kind you pick, or any. The daily is the same spot for everyone, and Game Hub keeps your results.
-- **Levels:** 27 spots, each lap of the nine kinds tighter and busier. Park one to open the next.
+- **Levels:** 42 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot and the slipway. Park one to open the next.
 - **Open lot:** a block of streets and car parks; park in any free bay.

@@ -26,8 +26,8 @@ export default define_app({
   achievements: [
     { id: "first-park", title: "Parked", text: "Park the car in a bay." },
     { id: "kerbside", title: "Kerbside", text: "Parallel park between two cars." },
-    { id: "every-spot", title: "Every kind of spot", text: "Park in each of the nine kinds of spot.", goal: 9 },
-    { id: "licensed", title: "Licensed", text: "Park every level.", goal: 27 },
+    { id: "every-spot", title: "Every kind of spot", text: "Park in each of the fourteen kinds of spot.", goal: 14 },
+    { id: "licensed", title: "Licensed", text: "Park every level.", goal: 42 },
     { id: "open-lot", title: "Any free bay", text: "Find a spot in the open lot." },
     { id: "daily", title: "Daily spot", text: "Park the daily spot." },
     { id: "one-sweep", title: "One sweep", text: "Parallel park with a single reverse.", secret: true },

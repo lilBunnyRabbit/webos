@@ -1,4 +1,5 @@
 import type { Polygon, Pose, Vec } from "./geometry";
+import type { Vehicle } from "./vehicle";
 
 export const Scenario = {
   PARALLEL: "parallel",
@@ -10,17 +11,30 @@ export const Scenario = {
   NARROW: "narrow",
   DOOR: "door",
   DEAD_END: "dead-end",
+  END_BAY: "end-bay",
+  BUS_STOP: "bus-stop",
+  DEPOT: "depot",
+  DRIVEWAY: "driveway",
+  SLIPWAY: "slipway",
 } as const;
 export type Scenario = (typeof Scenario)[keyof typeof Scenario];
 export const SCENARIOS: readonly Scenario[] = Object.values(Scenario);
 
-export const SolidKind = { CAR: "car", WALL: "wall", PILLAR: "pillar", KERB: "kerb", SHELF: "shelf" } as const;
+export const SolidKind = {
+  CAR: "car",
+  WALL: "wall",
+  PILLAR: "pillar",
+  KERB: "kerb",
+  SHELF: "shelf",
+  WATER: "water",
+  POST: "post",
+} as const;
 export type SolidKind = (typeof SolidKind)[keyof typeof SolidKind];
 
 export interface Solid {
   kind: SolidKind;
   shape: Polygon;
-  car?: { pose: Pose; length: number; width: number; paint: number };
+  car?: { pose: Pose; length: number; width: number; paint: number; vehicle?: Vehicle };
 }
 
 export interface Bay {

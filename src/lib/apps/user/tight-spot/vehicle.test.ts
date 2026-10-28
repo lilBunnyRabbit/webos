@@ -5,13 +5,18 @@ import {
   create_car,
   Gear,
   HATCHBACK,
+  HATCH_TRAILER,
+  hitch_angle,
+  jackknifed,
   max_steer,
-  NO_CREEP,
   NO_INPUT,
   shift,
   step,
+  trailer_pose,
   turn_centre,
+  VEHICLES,
   wheels,
+  without_creep,
   type Car,
   type Input,
   type VehicleSpec,
@@ -141,11 +146,16 @@ describe("gears and pedals", () => {
   });
 
   test("without creep the car only moves on the gas and rolls to a stop", () => {
-    const idle = run({ ...create_car(START), gear: Gear.DRIVE }, NO_INPUT, 3, NO_CREEP);
+    const idle = run({ ...create_car(START), gear: Gear.DRIVE }, NO_INPUT, 3, without_creep(HATCHBACK));
     expect(idle.x).toBe(START.x);
-    const pushed = run({ ...create_car(START), gear: Gear.DRIVE }, { steer: null, throttle: 1, brake: 0 }, 1, NO_CREEP);
+    const pushed = run(
+      { ...create_car(START), gear: Gear.DRIVE },
+      { steer: null, throttle: 1, brake: 0 },
+      1,
+      without_creep(HATCHBACK)
+    );
     expect(pushed.speed).toBeGreaterThan(1);
-    const rolled = run(pushed, NO_INPUT, 10, NO_CREEP);
+    const rolled = run(pushed, NO_INPUT, 10, without_creep(HATCHBACK));
     expect(rolled.speed).toBe(0);
   });
 
@@ -205,5 +215,88 @@ describe("wheel roll", () => {
   test("standing still rolls nothing, even while the wheel turns", () => {
     const parked = run(create_car(START), { steer: 1, throttle: 0, brake: 0 }, 2);
     expect(parked.roll).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe("every vehicle", () => {
+  test("full lock gives its kerb-to-kerb turning radius at the outer front wheel", () => {
+    for (const spec of Object.values(VEHICLES)) {
+      const car = run(
+        { ...create_car(START, Gear.DRIVE, spec) },
+        { steer: 1, throttle: 0, brake: 1 },
+        spec.steer_time + 0.2,
+        spec
+      );
+      expect(car.steer).toBeCloseTo(max_steer(spec), 6);
+      expect(distance(wheels(car, spec)[0].at, turn_centre(car, spec)!)).toBeCloseTo(spec.turning_radius, 2);
+    }
+  });
+});
+
+describe("trailer", () => {
+  const spec = HATCH_TRAILER;
+  const DEG = Math.PI / 180;
+
+  function towing(hitch: number, gear: Gear): Car {
+    const car = create_car(START, gear, spec);
+    return { ...car, trailer: { ...car.trailer!, heading: -hitch } };
+  }
+
+  test("starts straight behind the car", () => {
+    const car = create_car(START, Gear.PARK, spec);
+    expect(car.trailer?.heading).toBe(START.heading);
+    expect(hitch_angle(car)).toBe(0);
+  });
+
+  test("towing forwards straightens it", () => {
+    const car = run(towing(30 * DEG, Gear.DRIVE), { steer: 0, throttle: 0.5, brake: 0 }, 6, spec);
+    expect(car.x).toBeGreaterThan(8);
+    expect(Math.abs(hitch_angle(car))).toBeLessThan(2 * DEG);
+  });
+
+  test("reversing amplifies the hitch angle, and past 70° it has jackknifed", () => {
+    const start = towing(5 * DEG, Gear.REVERSE);
+    let car = start;
+    let previous = Math.abs(hitch_angle(car));
+    for (let i = 0; i < 120 * 4; i++) {
+      car = step(car, { steer: 0, throttle: 0.5, brake: 0 }, DT, spec);
+      expect(Math.abs(hitch_angle(car))).toBeGreaterThanOrEqual(previous - 1e-12);
+      previous = Math.abs(hitch_angle(car));
+    }
+    expect(Math.abs(hitch_angle(car))).toBeGreaterThan(10 * DEG);
+    for (let i = 0; i < 120 * 20 && !jackknifed(car); i++)
+      car = step(car, { steer: 0, throttle: 0.5, brake: 0 }, DT, spec);
+    expect(jackknifed(car)).toBe(true);
+  });
+
+  test("the trailer's axle never slides sideways", () => {
+    let car = run(towing(0, Gear.DRIVE), { steer: 0.8, throttle: 0.5, brake: 0 }, 1, spec);
+    for (let i = 0; i < 300; i++) {
+      const next = step(car, { steer: Math.sin(i / 30), throttle: 0.5, brake: 0 }, DT, spec);
+      const a = trailer_pose(car, spec.trailer!);
+      const b = trailer_pose(next, spec.trailer!);
+      const moved = Math.hypot(b.x - a.x, b.y - a.y);
+      const sideways = Math.abs(
+        -(b.x - a.x) * Math.sin((a.heading + b.heading) / 2) + (b.y - a.y) * Math.cos((a.heading + b.heading) / 2)
+      );
+      expect(sideways).toBeLessThan(moved * 1e-3 + 1e-9);
+      car = next;
+    }
+  });
+
+  test("its wheels roll the distance straight on, the outer one more round a turn", () => {
+    const straight = run(towing(0, Gear.DRIVE), { steer: 0, throttle: 0.6, brake: 0 }, 2, spec);
+    for (const rolled of straight.trailer!.roll) expect(rolled).toBeCloseTo(straight.x, 6);
+    const turning = run(towing(0, Gear.DRIVE), { steer: 1, throttle: 0.4, brake: 0 }, 6, spec);
+    const [left, right] = turning.trailer!.roll;
+    expect(left).toBeGreaterThan(right);
+  });
+
+  test("is deterministic, and a step of no time changes nothing", () => {
+    const input = { steer: -0.6, throttle: 0.5, brake: 0 };
+    const a = run(towing(10 * DEG, Gear.REVERSE), input, 2, spec);
+    const b = run(towing(10 * DEG, Gear.REVERSE), input, 2, spec);
+    expect(a).toEqual(b);
+    expect(step(a, input, 0, spec)).toBe(a);
   });
 });

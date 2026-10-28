@@ -26,12 +26,31 @@ function clamp_axis(centre: number, half: number, lo: number, hi: number): numbe
   return Math.min(hi - half, Math.max(lo + half, centre));
 }
 
+const HATCH_LENGTH = 4.3;
+const MAX_STRETCH = 1.6;
+
 /**
- * About 26 m across the shorter side at zoom 1, kept inside the world so the edge of the map never shows empty.
- * With insets the focus sits in the middle of the uncovered part, and the world's edge may slide under the covered strip.
+ * Metres across the shorter side at zoom 1: 26 for the hatchback, more for longer rigs so a bus fills about the share
+ * of the screen a hatchback does, but capped, or bay lines and kerbs would shrink to hairlines on a phone.
  */
-export function frame(bounds: Bounds, focus: Vec, width: number, height: number, zoom: number, insets: Insets = NO_INSETS): Camera {
-  const scale = Math.max(1, Math.min(width, height)) / (SPAN / zoom);
+export function view_span(length: number): number {
+  return SPAN * Math.min(MAX_STRETCH, Math.max(1, length / HATCH_LENGTH));
+}
+
+/**
+ * Kept inside the world so the edge of the map never shows empty. With insets the focus sits in the middle of the
+ * uncovered part, and the world's edge may slide under the covered strip.
+ */
+export function frame(
+  bounds: Bounds,
+  focus: Vec,
+  width: number,
+  height: number,
+  zoom: number,
+  insets: Insets = NO_INSETS,
+  span = SPAN
+): Camera {
+  const scale = Math.max(1, Math.min(width, height)) / (span / zoom);
   const shift_x = (insets.left - insets.right) / 2 / scale;
   const shift_y = (insets.top - insets.bottom) / 2 / scale;
   return {

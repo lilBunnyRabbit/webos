@@ -4,7 +4,9 @@ import {
   ANY,
   better,
   change_gear,
+  crash_title,
   create_game,
+  JACKKNIFE,
   level_round,
   LEVEL_COUNT,
   Mode,
@@ -12,7 +14,9 @@ import {
   open_round,
   parked_in,
   scenario_round,
+  SCENARIO_INFO,
   set_status,
+  spec_of,
   stars,
   Status,
   unlocked,
@@ -20,8 +24,9 @@ import {
   type GameState,
 } from "./game";
 import { parked_poses } from "./planner";
-import { beep_period, End, sensor, SENSOR_RANGE } from "./sensors";
-import { corners, create_car, Gear, NO_INPUT } from "./vehicle";
+import { bounds_of } from "./geometry";
+import { beep_period, End, sensor, sensor_frame, SENSOR_RANGE } from "./sensors";
+import { corners, create_car, Gear, NO_INPUT, Vehicle } from "./vehicle";
 import { SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;
@@ -170,5 +175,51 @@ describe("sensors", () => {
   test("beeps faster the closer, steady at the end", () => {
     expect(beep_period(0.2)).toBe(0);
     expect(beep_period(0.5)).toBeLessThan(beep_period(1.2));
+  });
+
+  test("towing, the rear reading comes from the trailer's tail", () => {
+    const state = driving(scenario_round(Scenario.DRIVEWAY, 5));
+    const spec = spec_of(state.round);
+    const tail = 0.6;
+    const back = sensor_frame(state.car, End.REAR, spec);
+    const wall = { x: back.pose.x - Math.cos(back.pose.heading) * (back.bumper + tail), y: back.pose.y - Math.sin(back.pose.heading) * (back.bumper + tail) };
+    const across = { x: -Math.sin(back.pose.heading) * 3, y: Math.cos(back.pose.heading) * 3 };
+    const thin = { x: -Math.cos(back.pose.heading) * 0.2, y: -Math.sin(back.pose.heading) * 0.2 };
+    const shape = [
+      { x: wall.x - across.x, y: wall.y - across.y },
+      { x: wall.x + across.x, y: wall.y + across.y },
+      { x: wall.x + across.x + thin.x, y: wall.y + across.y + thin.y },
+      { x: wall.x - across.x + thin.x, y: wall.y - across.y + thin.y },
+    ];
+    const near = { solids: [{ kind: SolidKind.WALL, shape }], bounds: [bounds_of(shape)] };
+    expect(sensor(state.car, near, End.REAR, spec)).toBeCloseTo(tail, 6);
+  });
+});
+
+describe("vehicles", () => {
+  test("each kind's seed picks one of its vehicles; the open lot is always the hatchback", () => {
+    for (const scenario of SCENARIOS) {
+      const seen = new Set(Array.from({ length: 40 }, (_, seed) => scenario_round(scenario, seed).vehicle));
+      expect([...seen].sort()).toEqual([...SCENARIO_INFO[scenario].vehicles].sort());
+    }
+    expect(open_round(9).vehicle).toBe(Vehicle.HATCH);
+  });
+
+  test("a trailer folded past 70° ends the round at the coupling", () => {
+    const state = driving(scenario_round(Scenario.SLIPWAY, 3));
+    const car = { ...state.car, gear: Gear.REVERSE, trailer: { heading: state.car.heading - 1.3, roll: [0, 0] as [number, number] } };
+    const next = advance({ ...state, car }, NO_INPUT, DT);
+    expect(next.status).toBe(Status.CRASHED);
+    expect(next.hit?.kind).toBe(JACKKNIFE);
+    expect(crash_title(next.hit)).toBe("Jackknifed the trailer");
+  });
+
+  test("parked with a trailer needs the trailer lined up too", () => {
+    const state = driving(scenario_round(Scenario.DRIVEWAY, 8));
+    const spec = spec_of(state.round);
+    const bay = state.world.bays[0];
+    const pose = parked_poses(bay, obstacles(state.world), 0.05, spec)[0];
+    expect(parked_in(pose, bay, spec)).toBe(true);
+    expect(parked_in({ ...pose, trailer: { heading: pose.heading + 0.15, roll: [0, 0] } }, bay, spec)).toBe(false);
   });
 });

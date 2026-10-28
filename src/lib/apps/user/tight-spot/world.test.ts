@@ -1,7 +1,24 @@
 import { describe, expect, test } from "vitest";
 import { overlaps } from "./collision";
-import { collide, obstacles } from "./game";
-import { CHUNK, chunk, ChunkKind, exits, open_plan, open_world, SCENARIOS, scenario_world, SIDES, SolidKind } from "./world";
+import { collide, obstacles, SCENARIO_INFO } from "./game";
+import { create_car, Gear, VEHICLES, type VehicleSpec } from "./vehicle";
+import type { Scenario } from "./world";
+
+function specs(scenario: Scenario): VehicleSpec[] {
+  return SCENARIO_INFO[scenario].vehicles.map((vehicle) => VEHICLES[vehicle]);
+}
+import {
+  CHUNK,
+  chunk,
+  ChunkKind,
+  exits,
+  open_plan,
+  open_world,
+  SCENARIOS,
+  scenario_world,
+  SIDES,
+  SolidKind,
+} from "./world";
 
 describe("chunk", () => {
   test("is pure: the same seed and cell give the same chunk", () => {
@@ -49,11 +66,16 @@ describe("scenario worlds", () => {
     for (const scenario of SCENARIOS) {
       for (const difficulty of [0, 0.5, 1]) {
         for (let seed = 1; seed <= 20; seed++) {
-          const world = scenario_world(seed, scenario, difficulty);
-          const label = `${scenario} ${difficulty} ${seed}`;
-          expect(world.chunks.map((each) => each.kind), label).toEqual([ChunkKind.LOT, ChunkKind.ROAD]);
-          expect(world.bays, label).toHaveLength(1);
-          expect(collide(world.start, obstacles(world)), label).toBeNull();
+          for (const spec of specs(scenario)) {
+            const world = scenario_world(seed, scenario, difficulty, spec);
+            const label = `${scenario} ${difficulty} ${seed}`;
+            expect(
+              world.chunks.map((each) => each.kind),
+              label
+            ).toEqual([ChunkKind.LOT, ChunkKind.ROAD]);
+            expect(world.bays, label).toHaveLength(1);
+            expect(collide(create_car(world.start, Gear.PARK, spec), obstacles(world), spec), label).toBeNull();
+          }
         }
       }
     }
@@ -62,9 +84,11 @@ describe("scenario worlds", () => {
   test("no parked car sits in the target bay", () => {
     for (const scenario of SCENARIOS) {
       for (let seed = 1; seed <= 20; seed++) {
-        const world = scenario_world(seed, scenario, 1);
-        const cars = world.solids.filter((solid) => solid.kind === SolidKind.CAR);
-        for (const car of cars) expect(overlaps(car.shape, world.bays[0].shape), `${scenario} ${seed}`).toBe(false);
+        for (const spec of specs(scenario)) {
+          const world = scenario_world(seed, scenario, 1, spec);
+          const cars = world.solids.filter((solid) => solid.kind === SolidKind.CAR);
+          for (const car of cars) expect(overlaps(car.shape, world.bays[0].shape), `${scenario} ${seed}`).toBe(false);
+        }
       }
     }
   });
@@ -72,12 +96,14 @@ describe("scenario worlds", () => {
   test("parked cars never overlap each other or a wall", () => {
     for (const scenario of SCENARIOS) {
       for (let seed = 1; seed <= 10; seed++) {
-        const world = scenario_world(seed, scenario, 1);
-        const cars = world.solids.filter((solid) => solid.kind === SolidKind.CAR);
-        for (const car of cars) {
-          for (const other of world.solids) {
-            if (other === car || other.kind === SolidKind.KERB) continue;
-            expect(overlaps(car.shape, other.shape), `${scenario} ${seed} ${other.kind}`).toBe(false);
+        for (const spec of specs(scenario)) {
+          const world = scenario_world(seed, scenario, 1, spec);
+          const cars = world.solids.filter((solid) => solid.kind === SolidKind.CAR);
+          for (const car of cars) {
+            for (const other of world.solids) {
+              if (other === car || other.kind === SolidKind.KERB) continue;
+              expect(overlaps(car.shape, other.shape), `${scenario} ${seed} ${other.kind}`).toBe(false);
+            }
           }
         }
       }

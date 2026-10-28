@@ -1,16 +1,27 @@
 import type { Rng } from "$lib/core/utils/random";
 import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "./geometry";
-import { HATCHBACK } from "./vehicle";
-import { MarkKind, Scenario, SolidKind, SurfaceKind, type Bay, type Layout, type Mark, type Solid, type Surface } from "./kinds";
+import { BUS, HATCHBACK, rig_length, Vehicle, type VehicleSpec } from "./vehicle";
+import {
+  MarkKind,
+  Scenario,
+  SolidKind,
+  SurfaceKind,
+  type Bay,
+  type Layout,
+  type Mark,
+  type Solid,
+  type Surface,
+} from "./kinds";
 
 const SIZE = 32;
 const EDGE = 1.5;
 const GATE_LO = 12;
 const GATE_HI = 20;
-const DEPTH = 5;
 const NORTH = -Math.PI / 2;
 const SOUTH = Math.PI / 2;
 const PAINTS = 5;
+const BUS_LENGTH = BUS.length;
+const BUS_WIDTH = BUS.width;
 
 class Builder implements Layout {
   surfaces: Surface[] = [];
@@ -46,8 +57,19 @@ class Builder implements Layout {
     const width = 1.72 + this.rng() * 0.13;
     const pose = { x, y, heading };
     const paint = Math.floor(this.rng() * PAINTS);
-    this.solids.push({ kind: SolidKind.CAR, shape: oriented_box(x, y, heading, length, width), car: { pose, length, width, paint } });
+    this.solids.push({
+      kind: SolidKind.CAR,
+      shape: oriented_box(x, y, heading, length, width),
+      car: { pose, length, width, paint },
+    });
     return { length, width };
+  }
+
+  bus(x: number, y: number, heading: number) {
+    const pose = { x, y, heading };
+    const paint = Math.floor(this.rng() * PAINTS);
+    const car = { pose, length: BUS_LENGTH, width: BUS_WIDTH, paint, vehicle: Vehicle.BUS };
+    this.solids.push({ kind: SolidKind.CAR, shape: oriented_box(x, y, heading, BUS_LENGTH, BUS_WIDTH), car });
   }
 
   perimeter(kind: SolidKind) {
@@ -67,9 +89,9 @@ function between(rng: Rng, lo: number, hi: number): number {
   return lo + rng() * (hi - lo);
 }
 
-function parallel(d: number, rng: Rng): Layout {
+function parallel(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const lane = lerp(2.5, 2.3, d);
+  const lane = lerp(2.5, 2.3, d) + fit.wider;
   const kerb = GATE_HI + lane;
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, EDGE, kerb, SIZE));
   b.block(SolidKind.KERB, 0, 0, GATE_LO, SIZE);
@@ -78,12 +100,12 @@ function parallel(d: number, rng: Rng): Layout {
   b.line({ x: 16, y: EDGE + 0.5 }, { x: 16, y: SIZE }, MarkKind.DASH);
   b.line({ x: GATE_HI, y: EDGE }, { x: GATE_HI, y: SIZE });
 
-  const gap = HATCHBACK.length + lerp(2.4, 1.3, d);
+  const gap = fit.length + lerp(2.4, 1.3, d) * fit.turn;
   const centre = between(rng, 10.5, 22);
   const top = centre - gap / 2;
   const bottom = centre + gap / 2;
   const side_x = (width: number) => kerb - 0.18 - rng() * 0.12 - width / 2;
-  for (let cursor = top; ; ) {
+  for (let cursor = top; ;) {
     const length = 3.9 + rng() * 0.9;
     if (cursor - length < EDGE + 0.3) break;
     const width = 1.72 + rng() * 0.13;
@@ -91,7 +113,7 @@ function parallel(d: number, rng: Rng): Layout {
     b.line({ x: GATE_HI, y: cursor - length - 0.1 }, { x: kerb, y: cursor - length - 0.1 });
     cursor -= length + between(rng, 0.6, 1.6);
   }
-  for (let cursor = bottom; ; ) {
+  for (let cursor = bottom; ;) {
     const length = 3.9 + rng() * 0.9;
     if (cursor + length > SIZE - 0.3) break;
     const width = 1.72 + rng() * 0.13;
@@ -108,7 +130,11 @@ function parallel(d: number, rng: Rng): Layout {
 function place_car(b: Builder, x: number, y: number, heading: number, length: number, width: number, rng: Rng) {
   const paint = Math.floor(rng() * PAINTS);
   const pose = { x, y, heading };
-  b.solids.push({ kind: SolidKind.CAR, shape: oriented_box(x, y, heading, length, width), car: { pose, length, width, paint } });
+  b.solids.push({
+    kind: SolidKind.CAR,
+    shape: oriented_box(x, y, heading, length, width),
+    car: { pose, length, width, paint },
+  });
 }
 
 interface Row {
@@ -118,7 +144,14 @@ interface Row {
   back: number;
 }
 
-function row(from: number, to: number, width: number, front: number, back: number, align: "centre" | "start" | "end"): Row {
+function row(
+  from: number,
+  to: number,
+  width: number,
+  front: number,
+  back: number,
+  align: "centre" | "start" | "end"
+): Row {
   const count = Math.floor((to - from) / width + 1e-9);
   const spare = to - from - count * width;
   const start = align === "centre" ? from + spare / 2 : align === "start" ? from : from + spare;
@@ -135,14 +168,16 @@ function draw_row(b: Builder, r: Row) {
 const RowsKind = { FORWARD: "forward", REVERSE: "reverse", PILLARS: "pillars" } as const;
 type RowsKind = (typeof RowsKind)[keyof typeof RowsKind];
 
-function rows(d: number, rng: Rng, open: boolean, kind: RowsKind): Layout {
+function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fit): Layout {
   const b = new Builder(rng);
   const indoor = kind === RowsKind.PILLARS;
-  const aisle = kind === RowsKind.FORWARD ? lerp(7, 5.8, d) : kind === RowsKind.REVERSE ? lerp(6.6, 5.4, d) : lerp(6.8, 5.8, d);
-  const width = lerp(2.7, 2.35, d);
-  const north_front = EDGE + DEPTH;
+  const aisle =
+    (kind === RowsKind.FORWARD ? lerp(7, 5.8, d) : kind === RowsKind.REVERSE ? lerp(6.6, 5.4, d) : lerp(6.8, 5.8, d)) *
+    fit.turn;
+  const width = lerp(2.7, 2.35, d) + fit.wider;
+  const north_front = EDGE + fit.depth;
   const south_front = north_front + aisle;
-  const south_back = south_front + DEPTH;
+  const south_back = south_front + fit.depth;
   const wall = indoor ? SolidKind.WALL : SolidKind.KERB;
 
   b.ground(indoor ? SurfaceKind.FLOOR : SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, south_back));
@@ -159,10 +194,13 @@ function rows(d: number, rng: Rng, open: boolean, kind: RowsKind): Layout {
 
   const pillar = lerp(0.45, 0.75, d);
   const pillar_every = 3;
-  const has_pillar = (r: Row, boundary: number) => indoor && boundary > 0 && boundary < r.xs.length && boundary % pillar_every === 0;
+  const has_pillar = (r: Row, boundary: number) =>
+    indoor && boundary > 0 && boundary < r.xs.length && boundary % pillar_every === 0;
   const target = 1 + Math.floor(rng() * (north.xs.length - 2));
   // Indoors the target always has a pillar at one front corner, the spot that makes this scenario.
-  const target_index = indoor ? Math.max(pillar_every, Math.round(target / pillar_every) * pillar_every) - (chance(rng, 0.5) ? 1 : 0) : target;
+  const target_index = indoor
+    ? Math.max(pillar_every, Math.round(target / pillar_every) * pillar_every) - (chance(rng, 0.5) ? 1 : 0)
+    : target;
   const fill = open ? 0.45 : lerp(0.65, 1, d);
   const slop = indoor ? 0.04 : lerp(0.1, 0.24, d);
 
@@ -204,16 +242,16 @@ function rows(d: number, rng: Rng, open: boolean, kind: RowsKind): Layout {
   return b;
 }
 
-function angled(d: number, rng: Rng, open: boolean): Layout {
+function angled(d: number, rng: Rng, open: boolean, fit: Fit): Layout {
   const b = new Builder(rng);
   const angle = Math.PI / 3;
-  const width = lerp(2.7, 2.4, d);
+  const width = lerp(2.7, 2.4, d) + fit.wider;
   const pitch = width / Math.sin(angle);
   // Slanted ends cut the corners of a rectangle, so an angled bay is drawn longer than a square one to hold a car.
-  const length = 6;
+  const length = 6 + fit.longer;
   const run = length * Math.cos(angle);
   const rise = length * Math.sin(angle);
-  const aisle = lerp(5.2, 4.2, d);
+  const aisle = lerp(5.2, 4.2, d) * fit.turn;
   const north_front = EDGE + rise;
   const south_front = north_front + aisle;
   const south_back = south_front + rise;
@@ -253,7 +291,15 @@ function angled(d: number, rng: Rng, open: boolean): Layout {
       const car_width = 1.72 + rng() * 0.13;
       const centre = { x: (shape[0].x + shape[1].x + shape[2].x + shape[3].x) / 4, y: (front + back) / 2 };
       const along = 0.2 + rng() * 0.3;
-      place_car(b, centre.x + Math.cos(heading) * along, centre.y + Math.sin(heading) * along, heading, length, car_width, rng);
+      place_car(
+        b,
+        centre.x + Math.cos(heading) * along,
+        centre.y + Math.sin(heading) * along,
+        heading,
+        length,
+        car_width,
+        rng
+      );
     });
   };
   make_row(EDGE, SIZE - EDGE, north_front, EDGE, -angle, true);
@@ -262,10 +308,10 @@ function angled(d: number, rng: Rng, open: boolean): Layout {
   return b;
 }
 
-function garage(d: number, rng: Rng): Layout {
+function garage(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const width = lerp(3.3, 2.55, d);
-  const depth = 6.2;
+  const width = lerp(3.3, 2.55, d) + fit.wider;
+  const depth = 6.2 + fit.longer;
   const back = EDGE + 0.5;
   const door = back + depth;
   const centre = between(rng, 7, 25);
@@ -292,20 +338,20 @@ function garage(d: number, rng: Rng): Layout {
     if (x > EDGE + 1.2 && x < SIZE - EDGE - 1.2) b.car(x, door + 3.2, NORTH, 4.8);
   }
   const slack = lerp(0.8, 0.35, d);
-  const stop = back + HATCHBACK.length + slack;
+  const stop = back + fit.length + slack;
   b.line({ x: x0, y: stop }, { x: x1, y: stop }, MarkKind.STOP);
   b.bay(rect(x0, back, x1, stop), NORTH, true);
   return b;
 }
 
-function door(d: number, rng: Rng): Layout {
+function door(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const aisle = lerp(6, 4.6, d);
+  const aisle = lerp(6, 4.6, d) * fit.turn;
   const lo = 16 - aisle / 2;
   const hi = 16 + aisle / 2;
-  const opening = lerp(2.9, 2.3, d);
+  const opening = lerp(2.9, 2.3, d) + fit.wider;
   const wall = 0.25;
-  const depth = 6.2;
+  const depth = 6.2 + fit.longer;
   const inner = opening + 0.8;
   const at = between(rng, 7, 19);
   const i0 = at - inner / 2;
@@ -329,21 +375,22 @@ function door(d: number, rng: Rng): Layout {
   return chance(rng, 0.5) ? mirror(b) : b;
 }
 
-function narrow(d: number, rng: Rng): Layout {
+function narrow(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const aisle = lerp(6, 4.9, d);
-  const width = lerp(2.6, 2.35, d);
+  const aisle = lerp(6, 4.9, d) * fit.turn;
+  const width = lerp(2.6, 2.35, d) + fit.wider;
+  const depth = fit.depth;
   const lo = 16 - aisle / 2;
   const hi = 16 + aisle / 2;
   const end = SIZE - EDGE - 2;
-  b.ground(SurfaceKind.ASPHALT, rect(lo - DEPTH, EDGE, hi + DEPTH, end));
+  b.ground(SurfaceKind.ASPHALT, rect(lo - depth, EDGE, hi + depth, end));
   b.ground(SurfaceKind.ASPHALT, rect(lo, end, hi, SIZE));
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
   b.perimeter(SolidKind.KERB);
-  b.block(SolidKind.WALL, EDGE, EDGE, lo - DEPTH, SIZE - EDGE);
-  b.block(SolidKind.WALL, hi + DEPTH, EDGE, SIZE - EDGE, SIZE - EDGE);
-  b.block(SolidKind.KERB, lo - DEPTH, end, lo, SIZE - EDGE);
-  b.block(SolidKind.KERB, hi, end, hi + DEPTH, SIZE - EDGE);
+  b.block(SolidKind.WALL, EDGE, EDGE, lo - depth, SIZE - EDGE);
+  b.block(SolidKind.WALL, hi + depth, EDGE, SIZE - EDGE, SIZE - EDGE);
+  b.block(SolidKind.KERB, lo - depth, end, lo, SIZE - EDGE);
+  b.block(SolidKind.KERB, hi, end, hi + depth, SIZE - EDGE);
   b.block(SolidKind.KERB, GATE_LO, SIZE - EDGE - 0.01, lo, SIZE);
   b.block(SolidKind.KERB, hi, SIZE - EDGE - 0.01, GATE_HI, SIZE);
 
@@ -354,7 +401,7 @@ function narrow(d: number, rng: Rng): Layout {
   const fill = lerp(0.85, 1, d);
   for (const side of [-1, 1]) {
     const front = side < 0 ? lo : hi;
-    const back = front + side * DEPTH;
+    const back = front + side * depth;
     const inward = side < 0 ? Math.PI : 0;
     for (let i = 0; i <= count; i++) b.line({ x: front, y: EDGE + i * width }, { x: back, y: EDGE + i * width });
     ys.forEach((y, i) => {
@@ -375,9 +422,9 @@ function narrow(d: number, rng: Rng): Layout {
   return b;
 }
 
-function dead_end(d: number, rng: Rng): Layout {
+function dead_end(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const street = lerp(7, 5.4, d);
+  const street = lerp(7, 5.4, d) * fit.turn;
   const lo = 16 - street / 2;
   const hi = 16 + street / 2;
   b.ground(SurfaceKind.ASPHALT, rect(lo, EDGE, hi, SIZE));
@@ -397,10 +444,11 @@ function dead_end(d: number, rng: Rng): Layout {
   if (d > 0.4) b.car(lo + 0.15 + 0.9, between(rng, 9, 12), NORTH, 4.4);
   // Bollards across the mouth, behind the car: the turn has to happen in the street, not out on the road.
   const mouth = SIZE - EDGE - 0.6;
-  for (let x = lo + 0.15; x < hi; x += 1.3) b.block(SolidKind.PILLAR, x, mouth - 0.15, Math.min(hi, x + 0.3), mouth + 0.15);
+  for (let x = lo + 0.15; x < hi; x += 1.3)
+    b.block(SolidKind.PILLAR, x, mouth - 0.15, Math.min(hi, x + 0.3), mouth + 0.15);
   b.start = { x: hi - 1.6, y: mouth - 1.6, heading: NORTH };
   const box_x = lo + 0.25;
-  const box = rect(box_x, 21, box_x + 2.7, 27.4);
+  const box = rect(box_x, 21 - fit.longer, box_x + 2.7 + fit.wider, 27.4);
   for (let i = 0; i < 4; i++) b.line(box[i], box[(i + 1) % 4], MarkKind.DASH);
   b.bay(box, SOUTH, false);
   return b;
@@ -422,26 +470,233 @@ function mirror(layout: Layout): Layout {
   };
 }
 
+/** What a layout sizes to the round's vehicle; the hatchback gives back the layouts it always had. */
+interface Fit {
+  length: number;
+  longer: number;
+  wider: number;
+  turn: number;
+  depth: number;
+}
+
+function fit_for(spec: VehicleSpec): Fit {
+  const length = rig_length(spec);
+  return {
+    length,
+    longer: length - HATCHBACK.length,
+    wider: spec.width - HATCHBACK.width,
+    turn: spec.turning_radius / HATCHBACK.turning_radius,
+    depth: length + 0.7,
+  };
+}
+
+function bus_stop(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const lane = lerp(3.3, 3.1, d);
+  const kerb = GATE_HI + lane;
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, EDGE, kerb, SIZE));
+  b.block(SolidKind.KERB, 0, 0, GATE_LO, SIZE);
+  b.block(SolidKind.KERB, kerb, 0, SIZE, SIZE);
+  b.block(SolidKind.KERB, GATE_LO, 0, kerb, EDGE);
+  b.line({ x: 16, y: EDGE + 0.5 }, { x: 16, y: SIZE }, MarkKind.DASH);
+  b.line({ x: GATE_HI, y: EDGE }, { x: GATE_HI, y: SIZE });
+
+  // The bus comes up from the road, so the stop runs to the lot's edge; the parked cars are ahead of it and across.
+  const ahead = 4 + rng() * 0.6;
+  place_car(b, kerb - 0.2 - rng() * 0.1 - 0.9, EDGE + 0.3 + ahead / 2, NORTH, ahead, 1.8, rng);
+  const stop = fit.length + lerp(8, 6.2, d);
+  const top = EDGE + 0.3 + ahead + 0.4 + rng() * (SIZE - EDGE - 0.1 - (EDGE + 0.7 + ahead) - stop);
+  const bottom = top + stop;
+  if (d > 0.4) {
+    const across = 4 + rng() * 0.6;
+    place_car(b, GATE_LO + 0.25 + 0.9, between(rng, top - 2, top + 3), SOUTH, across, 1.8, rng);
+  }
+  for (const y of [top, bottom]) b.line({ x: GATE_HI, y }, { x: kerb, y });
+  b.line({ x: kerb - 0.25, y: top }, { x: kerb - 0.25, y: bottom }, MarkKind.DASH);
+  // The stop's sign and shelter sit right on the kerb, where the tail swings as the bus straightens.
+  b.solid(SolidKind.POST, rect(kerb, top + 1.2, kerb + 0.22, top + 1.42));
+  b.block(SolidKind.WALL, kerb + 0.5, top + 3, kerb + 1.7, top + 8);
+  b.bay(rect(GATE_HI, top + 0.1, kerb, bottom - 0.1), NORTH, false);
+  return b;
+}
+
+function depot(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const width = lerp(3.8, 3.25, d);
+  const front = EDGE + fit.depth + 0.5;
+  b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
+  b.perimeter(SolidKind.WALL);
+  // The yard gate is shut: the bus turns in the yard, not out on the road.
+  b.block(SolidKind.WALL, GATE_LO, SIZE - EDGE, GATE_HI, SIZE - EDGE + 0.3);
+
+  const lanes = row(EDGE, SIZE - EDGE, width, front, EDGE, "centre");
+  draw_row(b, lanes);
+  const target = 3 + Math.floor(rng() * (lanes.xs.length - 4));
+  const fill = lerp(0.65, 1, d);
+  lanes.xs.forEach((x, i) => {
+    const shape = rect(x, EDGE, x + width, front);
+    if (i === target) {
+      b.bay(shape, SOUTH, false);
+      return;
+    }
+    if (!chance(rng, fill)) return;
+    const room = (width - BUS_WIDTH) / 2 - 0.08;
+    const centre = x + width / 2 + Math.max(-room, Math.min(room, (rng() * 2 - 1) * lerp(0.1, 0.25, d)));
+    b.bus(centre, EDGE + 0.3 + rng() * 0.4 + BUS_LENGTH / 2, chance(rng, 0.8) ? SOUTH : NORTH);
+  });
+  if (d > 0.55) b.bus(between(rng, 20, SIZE - EDGE - BUS_LENGTH / 2 - 0.4), SIZE - EDGE - 0.45 - BUS_WIDTH / 2, 0);
+  b.start = { x: EDGE + 4.8, y: front + lerp(6.8, 6.2, d), heading: 0 };
+  return b;
+}
+
+function driveway(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const street = lerp(8, 6.6, d);
+  const north = 14;
+  const south = north + street;
+  const inner = lerp(3.9, 3.1, d);
+  const post = lerp(0.12, 0.3, d);
+  const long = fit.length + lerp(1.6, 0.9, d);
+  const wall = 0.3;
+  const c = between(rng, 9, 13);
+  const x0 = c - inner / 2;
+  const x1 = c + inner / 2;
+  const end = north - long;
+  b.ground(SurfaceKind.ASPHALT, rect(EDGE, north, SIZE - EDGE, south));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, south, GATE_HI, SIZE));
+  b.ground(SurfaceKind.FLOOR, rect(x0, end, x1, north));
+  b.perimeter(SolidKind.KERB);
+  b.block(SolidKind.KERB, EDGE, EDGE, x0 - wall, north);
+  b.block(SolidKind.KERB, x1 + wall, EDGE, SIZE - EDGE, north);
+  b.block(SolidKind.KERB, x0 - wall, EDGE, x1 + wall, end - wall);
+  b.block(SolidKind.WALL, x0 - wall, end - wall, x0, north);
+  b.block(SolidKind.WALL, x1, end - wall, x1 + wall, north);
+  b.block(SolidKind.WALL, x0, end - wall, x1, end);
+  b.block(SolidKind.POST, x0 - wall, north - 0.45, x0 + post, north);
+  b.block(SolidKind.POST, x1 - post, north - 0.45, x1 + wall, north);
+  b.block(SolidKind.KERB, EDGE, south, GATE_LO, SIZE - EDGE);
+  b.block(SolidKind.KERB, GATE_HI, south, SIZE - EDGE, SIZE - EDGE);
+  b.line({ x: EDGE, y: (north + south) / 2 }, { x: SIZE - EDGE, y: (north + south) / 2 }, MarkKind.DASH);
+  if (d > 0.45) b.car(c - between(rng, 3, 5.5), south - 1.05, 0, 4.6);
+  b.start = { x: c + 7.4, y: south - street / 4, heading: 0 };
+  b.bay(rect(x0, end, x1, north), SOUTH, false);
+  return chance(rng, 0.5) ? mirror(b) : b;
+}
+
+function slipway(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const quay = 15;
+  const ramp = lerp(3.6, 2.7, d);
+  const toe = quay - 6.5;
+  const bay_end = toe + fit.length + lerp(1.4, 0.7, d);
+  const c = between(rng, 9, 14);
+  const x0 = c - ramp / 2;
+  const x1 = c + ramp / 2;
+  b.ground(SurfaceKind.ASPHALT, rect(EDGE, quay, SIZE - EDGE, SIZE - EDGE));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
+  b.ground(SurfaceKind.FLOOR, rect(x0, toe, x1, quay));
+  b.perimeter(SolidKind.KERB);
+  b.block(SolidKind.WATER, EDGE, EDGE, SIZE - EDGE, toe);
+  b.block(SolidKind.WATER, EDGE, toe, x0, quay);
+  b.block(SolidKind.WATER, x1, toe, SIZE - EDGE, quay);
+  const post = 0.35;
+  const out = lerp(0.5, 0, d);
+  b.block(SolidKind.POST, x0 - out - post, quay, x0 - out, quay + post);
+  b.block(SolidKind.POST, x1 + out, quay, x1 + out + post, quay + post);
+  if (d > 0.5) b.car(between(rng, 18, 26), SIZE - EDGE - 1.25, 0, 4.6);
+  for (const x of [x0, x1]) b.line({ x, y: quay }, { x, y: bay_end }, MarkKind.DASH);
+  b.line({ x: x0, y: bay_end }, { x: x1, y: bay_end }, MarkKind.DASH);
+  b.bay(rect(x0, toe, x1, bay_end), SOUTH, false);
+  b.start = { x: c + 7, y: quay + 4.2, heading: 0 };
+  return chance(rng, 0.5) ? mirror(b) : b;
+}
+
+// The owner's sketch: a dead-end aisle about a bay deep, every bay taken but the last one in the corner by the end
+// wall, and the one opposite taken too, so there's no room to swing wide.
+function end_bay(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const aisle = lerp(5.7, 4.9, d) * fit.turn;
+  const width = lerp(2.65, 2.4, d) + fit.wider;
+  const depth = fit.depth;
+  const lo = 16 - aisle / 2;
+  const hi = 16 + aisle / 2;
+  const count = 5;
+  const end = EDGE + count * width;
+  b.ground(SurfaceKind.FLOOR, rect(lo - depth, EDGE, hi + depth, end));
+  b.ground(SurfaceKind.FLOOR, rect(lo, end, hi, SIZE - EDGE));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
+  b.perimeter(SolidKind.WALL);
+  b.block(SolidKind.WALL, EDGE, EDGE, lo - depth, SIZE - EDGE);
+  b.block(SolidKind.WALL, hi + depth, EDGE, SIZE - EDGE, SIZE - EDGE);
+  b.block(SolidKind.WALL, lo - depth, end, lo, SIZE - EDGE);
+  b.block(SolidKind.WALL, hi, end, hi + depth, SIZE - EDGE);
+  b.block(SolidKind.WALL, GATE_LO, SIZE - EDGE - 0.01, lo, SIZE);
+  b.block(SolidKind.WALL, hi, SIZE - EDGE - 0.01, GATE_HI, SIZE);
+
+  const target_side = chance(rng, 0.5) ? -1 : 1;
+  // Nose in on a roomy aisle; the tighter it gets, the likelier the bay wants the car backed in.
+  const reverse = chance(rng, lerp(0.2, 0.8, d));
+  for (const side of [-1, 1]) {
+    const front = side < 0 ? lo : hi;
+    const back = front + side * depth;
+    const inward = side < 0 ? Math.PI : 0;
+    for (let i = 0; i <= count; i++) b.line({ x: front, y: EDGE + i * width }, { x: back, y: EDGE + i * width });
+    for (let i = 0; i < count; i++) {
+      const y = EDGE + i * width;
+      const shape = rect(Math.min(front, back), y, Math.max(front, back), y + width);
+      if (side === target_side && i === 0) {
+        b.bay(shape, reverse ? inward + Math.PI : inward, false);
+        continue;
+      }
+      const length = 3.9 + rng() * 0.9;
+      const car_width = 1.72 + rng() * 0.13;
+      const room = (width - car_width) / 2 - 0.05;
+      const offset = Math.max(-room, Math.min(room, (rng() * 2 - 1) * lerp(0.08, 0.2, d)));
+      const x = back - side * (0.3 + rng() * 0.25 + length / 2);
+      place_car(b, x, y + width / 2 + offset, chance(rng, 0.5) ? inward : inward + Math.PI, length, car_width, rng);
+    }
+  }
+  return b;
+}
+
 /** A lot laid out in its own frame: 32 m square, the way in through the south edge between x 12 and 20. */
-export function build_lot(scenario: Scenario, difficulty: number, open: boolean, rng: Rng): Layout {
+export function build_lot(
+  scenario: Scenario,
+  difficulty: number,
+  open: boolean,
+  rng: Rng,
+  spec: VehicleSpec = HATCHBACK
+): Layout {
+  const fit = fit_for(spec);
   switch (scenario) {
     case Scenario.PARALLEL:
-      return parallel(difficulty, rng);
+      return parallel(difficulty, rng, fit);
     case Scenario.FORWARD:
-      return rows(difficulty, rng, open, RowsKind.FORWARD);
+      return rows(difficulty, rng, open, RowsKind.FORWARD, fit);
     case Scenario.REVERSE:
-      return rows(difficulty, rng, open, RowsKind.REVERSE);
+      return rows(difficulty, rng, open, RowsKind.REVERSE, fit);
     case Scenario.PILLARS:
-      return rows(difficulty, rng, open, RowsKind.PILLARS);
+      return rows(difficulty, rng, open, RowsKind.PILLARS, fit);
     case Scenario.ANGLED:
-      return angled(difficulty, rng, open);
+      return angled(difficulty, rng, open, fit);
     case Scenario.GARAGE:
-      return garage(difficulty, rng);
+      return garage(difficulty, rng, fit);
     case Scenario.DOOR:
-      return door(difficulty, rng);
+      return door(difficulty, rng, fit);
     case Scenario.NARROW:
-      return narrow(difficulty, rng);
+      return narrow(difficulty, rng, fit);
     case Scenario.DEAD_END:
-      return dead_end(difficulty, rng);
+      return dead_end(difficulty, rng, fit);
+    case Scenario.BUS_STOP:
+      return bus_stop(difficulty, rng, fit);
+    case Scenario.DEPOT:
+      return depot(difficulty, rng, fit);
+    case Scenario.DRIVEWAY:
+      return driveway(difficulty, rng, fit);
+    case Scenario.SLIPWAY:
+      return slipway(difficulty, rng, fit);
+    case Scenario.END_BAY:
+      return end_bay(difficulty, rng, fit);
   }
 }
