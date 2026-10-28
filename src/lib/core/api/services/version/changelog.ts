@@ -13,6 +13,11 @@ export const CHANGELOG: Release[] = [
         kind: IMPROVED,
         text: "An app's guide now opens as a card over the app instead of covering the whole window; tap outside it to close it.",
       },
+      {
+        kind: FIXED,
+        apps: ["quick-notes"],
+        text: "Quick Notes: on a phone the button that removes a todo is now visible.",
+      },
     ],
   },
   {

@@ -288,7 +288,7 @@
                 <li class="group flex min-h-8 items-center gap-2.5 rounded-md px-2 hover:bg-foreground/6">
                   <Checkbox checked={todo.done} aria-label={todo.text} onchange={() => update_todo(set_todo(todo_text, todo.n, !todo.done))} />
                   <span class={cn("min-w-0 flex-1 text-ui", todo.done && "text-foreground/45 line-through")}>{todo.text}</span>
-                  <IconButton label="Remove" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100" onclick={() => update_todo(remove_todo(todo_text, todo.n))}>
+                  <IconButton label="Remove" size="sm" class="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100" onclick={() => update_todo(remove_todo(todo_text, todo.n))}>
                     <X />
                   </IconButton>
                 </li>

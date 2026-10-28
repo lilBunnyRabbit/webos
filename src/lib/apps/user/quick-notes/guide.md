@@ -12,7 +12,7 @@
 
 ## Todos
 
-The **Todo** tab is one checklist. Type a todo and press Enter, tick it off when it's done.
+The **Todo** tab is one checklist. Type a todo and press Enter, tick it off when it's done. The × at the end of a row removes it.
 
 ## Stickies
 
