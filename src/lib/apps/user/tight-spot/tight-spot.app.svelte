@@ -54,7 +54,7 @@
   import { End, sensor } from "./sensors";
   import { Sounds } from "./sound";
   import SteeringWheel from "./steering-wheel.svelte";
-  import { body_centre, Gear, HATCHBACK, max_steer, type Input } from "./vehicle";
+  import { body_centre, Gear, HATCHBACK, max_steer, NO_CREEP, type Input } from "./vehicle";
   import { SCENARIOS, Scenario } from "./world";
 
   const STEP_MS = 1000 / 120;
@@ -101,6 +101,7 @@
   let level = $state(Math.min(untrack(() => unlocked(level_stars.value)), storage.get("level", z.number().int().min(1)) ?? 1));
   let sound_on = $state(storage.get("sound", z.boolean()) ?? true);
   let guides_on = $state(storage.get("guides", z.boolean()) ?? true);
+  let creep_on = $state(storage.get("creep", z.boolean()) ?? false);
   let wheel_mode = $state<WheelMode>(storage.get("wheel", wheel_schema) ?? WheelMode.CENTRES);
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
@@ -286,7 +287,7 @@
     let next = game;
     for (let i = 0; i < steps && next.status === Status.DRIVING; i++) {
       step_wheel(DT);
-      next = advance(next, input(), DT);
+      next = advance(next, input(), DT, creep_on ? HATCHBACK : NO_CREEP);
     }
     if (!hands) wheel = next.car.steer / LOCK;
     const near = obstacles(next.world);
@@ -407,9 +408,10 @@
     load(make_round());
   }
 
-  function set_setting(name: "sound" | "guides", value: boolean) {
+  function set_setting(name: "sound" | "guides" | "creep", value: boolean) {
     if (name === "sound") sound_on = value;
-    else guides_on = value;
+    else if (name === "guides") guides_on = value;
+    else creep_on = value;
     storage.set(name, value);
     if (!value && name === "sound") sounds.quiet();
   }
@@ -584,6 +586,10 @@
         <span>Guide lines <span class="text-foreground/65">· where the corners go</span></span>
         <Switch bind:checked={() => guides_on, (value: boolean) => set_setting("guides", value)} />
       </label>
+      <label class="flex items-center justify-between gap-2 text-ui">
+        <span>Creep <span class="text-foreground/65">· D and R roll without gas</span></span>
+        <Switch bind:checked={() => creep_on, (value: boolean) => set_setting("creep", value)} />
+      </label>
       <p class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Keyboard wheel when let go</p>
       <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="Keyboard wheel" options={WHEEL_OPTIONS} bind:value={() => wheel_mode, set_wheel_mode} />
     </div>
@@ -617,9 +623,18 @@
           >
             {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
           </IconButton>
-          <div class="flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 font-mono text-ui backdrop-blur-[2px]" aria-hidden="true">
+          <div class="pointer-events-auto flex items-center gap-0.5 rounded-md bg-background/80 px-1 py-0.5 font-mono text-ui backdrop-blur-[2px]" role="group" aria-label="Gear">
             {#each GEARS as gear (gear)}
-              <span class={cn("grid w-5 place-items-center rounded-sm", game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/50")}>{gear}</span>
+              <!-- Pressing keeps the focus on the board, so the arrow keys still drive after a click. -->
+              <button
+                type="button"
+                class={cn("grid w-5 place-items-center rounded-sm", game.car.gear === gear ? "bg-primary font-semibold text-background" : "text-foreground/50 hover:bg-foreground/10 hover:text-foreground")}
+                aria-pressed={game.car.gear === gear}
+                onmousedown={(event) => event.preventDefault()}
+                onclick={() => shift(gear)}
+              >
+                {gear}
+              </button>
             {/each}
           </div>
           <div class="rounded-md bg-background/80 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">{speed} km/h</div>

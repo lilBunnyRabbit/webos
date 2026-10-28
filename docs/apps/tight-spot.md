@@ -28,7 +28,7 @@ The hatchback (`HATCHBACK`): 4.3 m long, 1.8 m wide, 2.6 m wheelbase, 0.8 m rear
 
 1. The wheel moves toward the wanted angle at `max_steer / steer_time` (1.1 s centre to lock), at a standstill too. With `steer: null` (hands off) the target is straight ahead and the rate scales with speed up to 2 m/s, so the wheel self-centres only while rolling, like caster.
 2. Pedals ramp (3/s down, 8/s up) so a key press isn't an on/off jump.
-3. In D or R the car creeps: acceleration `creep_accel · (1 − v/creep_speed)`, or the throttle's `accel · throttle · (1 − v/top)`, whichever is larger; rolling resistance and the brake take speed off without crossing zero. P holds the car still; N coasts. `shift` refuses P above 0.3 m/s.
+3. In D or R the car creeps: acceleration `creep_accel · (1 − v/creep_speed)`, or the throttle's `accel · throttle · (1 − v/top)`, whichever is larger. The creep is off by default: the app passes `NO_CREEP` (`creep_accel` 0) to `advance` unless the Creep setting (`app.tight-spot.creep`) is on, so the car moves only on the gas; rolling resistance and the brake take speed off without crossing zero. P holds the car still; N coasts. `shift` refuses P above 0.3 m/s.
 4. The pose moves along the exact arc for the step's distance (`arc()`), curvature `tan(δ) / L`, so the rear axle never slides sideways and a full-lock circle closes on itself.
 
 The front wheels are drawn at their Ackermann angles (`wheels()`): the inner one at `atan(L / (1/κ − track/2))`, the outer at `atan(L / (1/κ + track/2))`. The dashed guide lines are `sweep()`: the two leading corners' paths for 5 m at the current wheel angle.
@@ -101,7 +101,7 @@ Keyboard: arrows or WASD turn the wheel at its own rate and work the pedals; E, 
 - `app.tight-spot.best`: best `{ moves, ms }` per kind and `open`, fewer moves first, then time.
 - `app.tight-spot.levels`: stars per parked level; the next level after the highest parked one is open.
 - `app.tight-spot.kinds`: kinds parked, for the achievement.
-- `app.tight-spot.mode`, `.pick`, `.level`, `.sound`, `.guides`, `.wheel`: last choices and settings.
+- `app.tight-spot.mode`, `.pick`, `.level`, `.sound`, `.guides`, `.creep`, `.wheel`: last choices and settings.
 - Props: `daily` (`YYYY-MM-DD`), which Game Hub passes; the day's seed picks the kind and difficulty, and the result goes to `plays.json` with moves as the score (`SCORE_ASC`).
 
 ## Dependencies & licences

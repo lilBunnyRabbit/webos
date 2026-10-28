@@ -131,9 +131,9 @@ export function verdict(state: GameState): "inside" | "crooked" | "backwards" | 
   return "outside";
 }
 
-export function advance(state: GameState, input: Input, dt: number): GameState {
+export function advance(state: GameState, input: Input, dt: number, spec: VehicleSpec = HATCHBACK): GameState {
   if (state.status !== Status.DRIVING) return state;
-  const car = step(state.car, input, dt);
+  const car = step(state.car, input, dt, spec);
   const hit = collide(car, obstacles(state.world));
   const ms = state.ms + dt * 1000;
   if (hit) return { ...state, car: { ...car, speed: 0 }, ms, status: Status.CRASHED, contact: hit.at, hit: hit.solid };

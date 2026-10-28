@@ -108,32 +108,32 @@ interface Body {
 
 function car_body(ctx: CanvasRenderingContext2D, body: Body, palette: Palette) {
   const { length: l, width: w } = body;
+  const half = w / 2;
   ctx.fillStyle = body.colour;
   ctx.beginPath();
-  ctx.roundRect(-l / 2, -w / 2, l, w, [0.55, 0.55, 0.35, 0.35].map((r) => Math.min(r, w / 2)));
+  // Clockwise from the rear left: a rounder nose, a squarer tail, the same on both sides.
+  ctx.roundRect(-l / 2, -half, l, w, [0.35, 0.55, 0.55, 0.35].map((r) => Math.min(r, half)));
   ctx.fill();
+  const roof_back = -l * 0.2;
+  const roof_front = l * 0.1;
+  const roof = half - 0.22;
   ctx.fillStyle = palette.shade;
   ctx.beginPath();
-  ctx.roundRect(-l * 0.22, -w / 2 + 0.16, l * 0.36, w - 0.32, 0.18);
+  ctx.roundRect(roof_back, -roof, roof_front - roof_back, roof * 2, 0.14);
   ctx.fill();
+  // The glass runs from the roof's edge out to a wider base, the way a cabin tapers seen from above.
+  const pane = (from: number, to: number, base: number) => {
+    ctx.beginPath();
+    ctx.moveTo(from, -roof);
+    ctx.lineTo(to, -base);
+    ctx.lineTo(to, base);
+    ctx.lineTo(from, roof);
+    ctx.closePath();
+    ctx.fill();
+  };
   ctx.fillStyle = palette.glass;
-  ctx.beginPath();
-  const screen = l * 0.14;
-  const front = l * 0.17;
-  ctx.moveTo(front, -w / 2 + 0.2);
-  ctx.lineTo(front + screen, -w / 2 + 0.32);
-  ctx.lineTo(front + screen, w / 2 - 0.32);
-  ctx.lineTo(front, w / 2 - 0.2);
-  ctx.closePath();
-  ctx.fill();
-  ctx.beginPath();
-  const back = -l * 0.27;
-  ctx.moveTo(back, -w / 2 + 0.22);
-  ctx.lineTo(back - l * 0.09, -w / 2 + 0.3);
-  ctx.lineTo(back - l * 0.09, w / 2 - 0.3);
-  ctx.lineTo(back, w / 2 - 0.22);
-  ctx.closePath();
-  ctx.fill();
+  pane(roof_front, l * 0.24, half - 0.14);
+  pane(roof_back, -l * 0.3, half - 0.16);
 }
 
 function parked_car(ctx: CanvasRenderingContext2D, solid: Solid, palette: Palette) {
@@ -144,6 +144,9 @@ function parked_car(ctx: CanvasRenderingContext2D, solid: Solid, palette: Palett
   car_body(ctx, { length: car.length, width: car.width, colour: palette.cars[car.paint % palette.cars.length] }, palette);
   ctx.restore();
 }
+
+// Tyres are drawn over the body so the player sees where the front pair points; nudged out so they sit on its edge.
+const TYRE_SHOW = 0.09;
 
 function player(ctx: CanvasRenderingContext2D, car: Car, braking: boolean, palette: Palette) {
   const centre = body_centre(car);
@@ -179,10 +182,11 @@ function player(ctx: CanvasRenderingContext2D, car: Car, braking: boolean, palet
   ctx.restore();
 
   ctx.fillStyle = palette.tyre;
-  for (const wheel of wheels(car)) {
+  for (const [i, wheel] of wheels(car).entries()) {
     ctx.save();
     ctx.translate(wheel.at.x, wheel.at.y);
     ctx.rotate(car.heading + wheel.angle);
+    ctx.translate(0, (i % 2 ? 1 : -1) * TYRE_SHOW);
     ctx.beginPath();
     ctx.roundRect(-spec.wheel_diameter / 2, -spec.wheel_width / 2, spec.wheel_diameter, spec.wheel_width, 0.06);
     ctx.fill();

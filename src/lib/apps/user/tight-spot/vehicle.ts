@@ -44,6 +44,9 @@ export const HATCHBACK: VehicleSpec = {
   park_speed: 0.3,
 };
 
+/** The same car without an automatic's creep: it moves only on the gas, which is easier to place in a tight spot. */
+export const NO_CREEP: VehicleSpec = { ...HATCHBACK, creep_accel: 0 };
+
 /** The rear axle's centre is the pose: that's the point a car without tyre slip turns about. */
 export interface Car extends Pose {
   speed: number;

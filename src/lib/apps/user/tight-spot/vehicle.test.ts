@@ -6,6 +6,7 @@ import {
   Gear,
   HATCHBACK,
   max_steer,
+  NO_CREEP,
   NO_INPUT,
   shift,
   step,
@@ -13,14 +14,15 @@ import {
   wheels,
   type Car,
   type Input,
+  type VehicleSpec,
 } from "./vehicle";
 
 const DT = 1 / 120;
 const START = { x: 0, y: 0, heading: 0 };
 
-function run(car: Car, input: Input, seconds: number): Car {
+function run(car: Car, input: Input, seconds: number, spec: VehicleSpec = HATCHBACK): Car {
   let next = car;
-  for (let i = 0; i < Math.round(seconds / DT); i++) next = step(next, input, DT);
+  for (let i = 0; i < Math.round(seconds / DT); i++) next = step(next, input, DT, spec);
   return next;
 }
 
@@ -129,6 +131,15 @@ describe("gears and pedals", () => {
     const car = run({ ...create_car(START), gear: Gear.REVERSE }, NO_INPUT, 4);
     expect(car.speed).toBeLessThan(0);
     expect(car.x).toBeLessThan(0);
+  });
+
+  test("without creep the car only moves on the gas and rolls to a stop", () => {
+    const idle = run({ ...create_car(START), gear: Gear.DRIVE }, NO_INPUT, 3, NO_CREEP);
+    expect(idle.x).toBe(START.x);
+    const pushed = run({ ...create_car(START), gear: Gear.DRIVE }, { steer: null, throttle: 1, brake: 0 }, 1, NO_CREEP);
+    expect(pushed.speed).toBeGreaterThan(1);
+    const rolled = run(pushed, NO_INPUT, 10, NO_CREEP);
+    expect(rolled.speed).toBe(0);
   });
 
   test("the brake holds the car against the creep", () => {
