@@ -188,6 +188,7 @@ App commands come in through AppsService and carry `app: <id>`. The registry add
 | nonogram | `nonogram new [--size] [--colour]`, `nonogram daily [day]`, `nonogram edit [path]`, `nonogram check <path>` | opens; `text` verdict |
 | minesweeper | `minesweeper daily [day]` | opens the daily board |
 | blocks | `blocks daily [day]` | opens the daily sprint |
+| four-walls | `four-walls daily [day]` | opens the daily game |
 | nurikabe | `nurikabe daily [day]` | opens the daily puzzle |
 | sokoban | `sokoban daily [day]` | opens the daily level |
 | letterer | `letterer daily [day]` | opens the daily word |
