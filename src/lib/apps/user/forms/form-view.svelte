@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MarkdownView from "$lib/apps/user/kanban/markdown-view.svelte";
+  import MarkdownView from "$lib/core/components/markdown/markdown-view.svelte";
   import { Checkbox, Input, Textarea } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import type { Snippet } from "svelte";

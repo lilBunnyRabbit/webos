@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { parse_inline } from "$lib/apps/user/kanban/markdown";
+  import { parse_inline } from "$lib/core/utils/markdown";
 
   let { text }: { text: string } = $props();
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { parse_markdown, type Inline } from "./markdown";
+  import { parse_markdown, type Inline } from "$lib/core/utils/markdown";
 
   let { source }: { source: string } = $props();
 

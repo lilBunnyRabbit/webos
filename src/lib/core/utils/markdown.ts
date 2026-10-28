@@ -29,7 +29,7 @@ export function parse_inline(text: string): Inline[] {
   return out;
 }
 
-/** Markdown-lite for card notes: headings, `-`/`*` lists and paragraphs; never HTML, so nothing is injected. */
+/** Markdown-lite (Kanban card notes, Forms, app guides): headings, `-`/`*` lists and paragraphs; never HTML, so nothing is injected. */
 export function parse_markdown(source: string): Block[] {
   const blocks: Block[] = [];
   for (const line of source.replace(/\r\n?/g, "\n").split("\n")) {

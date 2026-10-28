@@ -25,7 +25,7 @@
     type Label,
   } from "./data";
   import { TextDraft } from "./draft.svelte";
-  import MarkdownView from "./markdown-view.svelte";
+  import MarkdownView from "$lib/core/components/markdown/markdown-view.svelte";
   import { describe_due, DUE_TONE, LABEL_CHIP, LABEL_COLOR_NAMES, LABEL_DOT } from "./view";
 
   interface Props {

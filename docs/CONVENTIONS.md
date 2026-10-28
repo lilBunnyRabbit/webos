@@ -33,7 +33,7 @@ src/lib/
 │   ├── compat/                   # browser support list, UA parsing, the warning screen boot.ts shows (ADR-067)
 │   ├── contexts/app/             # get_app_context(): WindowHandle, StorageHandle (ADR-003)
 │   ├── components/{feature}/     # OS UI: window, desktop, taskbar, files; ui (the UI kit)
-│   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types, zip, worker (`spawn`, `serve`; background jobs use it)
+│   └── utils/                    # cn, ov, format_bytes, Flags, Order, geometry types, zip, markdown (markdown-lite parser, no HTML), worker (`spawn`, `serve`; background jobs use it)
 ├── kit/                          # $kit, the app kit (ADR-048): helpers only apps use
 │   ├── components/code/          # shared CodeMirror setup, CodeView
 │   ├── components/swipe-compare/ # SwipeCompare: wipe divider, zoom, pan, pinch
