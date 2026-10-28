@@ -45,6 +45,7 @@ The test covers names, not signatures or behaviour. Those are still on you.
 | `$kit/games/daily` | `DailyRank`, `DailyRanks`, `better_daily`, `DailyResult`, `daily_key`, `split_daily_key`, `daily_rank_for` | Stable path (1.20; the per-mode names 3.1), same reason as `games/time`: manifests set `daily_rank` |
 | `$kit/games/direction` | Kernel-free direction helpers of the kit | Stable path, same reason as `games/time` |
 | `$kit/games/grid` | Kernel-free grid helpers of the kit: `grid_key_move`, the stroke helpers, `across_cells`, `down_cells` | Stable path, same reason as `games/time`: puzzle logic with edge clues imports it |
+| `$kit/games/tetromino` | Kernel-free falling-block pieces: `Piece`, `PIECES`, `Rotation`, `Point`, `SHAPES`, `kicks`, `fill_queue`, `PIECE_TOKENS` | Stable path (3.77), same reason as `games/time`: Blocks' `game.ts` imports it |
 | `$lib/core/utils` and the utility modules in [Utilities](#utilities) | The names listed there | |
 | `$kit/utils/image` | The names in [App kit](#app-kit-kit) | |
 
@@ -182,7 +183,7 @@ Not in the kit, internal: everything else under `$lib/core/components/` (`files`
 
 | Module | Stable | Internal (used by) |
 |--------|--------|--------------------|
-| `$kit/games`, `games/time`, `games/daily`, `games/direction`, `games/grid` | All of it, see [Games kit](#games-kit) | |
+| `$kit/games`, `games/time`, `games/daily`, `games/direction`, `games/grid`, `games/path`, `games/tetromino` | All of it, see [Games kit](#games-kit) | |
 | `$kit/utils/paste` | `paste_files({ win, accept, multiple, onfiles, ontext })` (3.73) | |
 | `$kit/utils/image` | `load_image`, `load_image_at`, `image_files`, `has_files`, `paint`, `save_image`, `extension_for`, `FORMAT_OPTIONS`, `ImageFormat`, `SourceImage` | `canvas_to_blob`, `write_image`, `read_pixels`, `format_of`, `has_quality` |
 | `$kit/utils/picture` | | A picture as a downscaled WebP data URL for documents that keep pictures inline: `picture_data_url(blob, { max_side, quality })` (long edge 1200 px and quality 0.8 by default, never upscaled, decoded through `<img>` so SVG works), `fit_size`, `encode_webp`, `blob_to_data_url` (Proposals) |
@@ -242,6 +243,7 @@ Internal: Format Lab, Media Preview, Image Tools, Hopsprite, Video Tools and Ico
 | Edge clues | `across_cells`, `down_cells`: the two cells an edge between neighbours joins, across edges indexed `row * (width - 1) + col`, down edges `row * width + col` (Futoshiki's signs, Sun & Moon's `=` and `×`) |
 | Regions | `region_edges(regions, width)` → per cell the `Edge` bits (`TOP`, `RIGHT`, `BOTTOM`, `LEFT`) of sides that face another region or the board's edge, where a thick border goes (Hutches, Plots; 3.42) |
 | Drawn paths | `path_step(path, cell, can_step)`: a cell on the path cuts back to it, a new one joins when `can_step(head, cell, path)` allows; the same array back when nothing changed. `grid_walk(width, from, to, rows_first?)` fills the cells a fast drag skipped, `path_walk` applies `path_step` along them up to the first refusal, `orthogonal(width, a, b)`, `PathRule`. Kernel-free in `$kit/games/path` (Hop; 3.44) |
+| Falling blocks | `Piece`, `PIECES`, `Rotation`, `Point`; `SHAPES[piece][rotation]`: the four cells inside the SRS box (4×4 for I, 2×2 for O, 3×3 for the rest), y down; `kicks(piece, from, to)`: the SRS wall kick offsets for a turn, y up as published, so a board with rows growing down flips y; `fill_queue(queue, rng, min)`: whole shuffled 7-bags appended until the queue holds `min`; `PIECE_TOKENS`: the theme token each piece is drawn in. Kernel-free in `$kit/games/tetromino` (Blocks; 3.77) |
 
 `/var/lib/games/plays.json` (version 1) is stable as a format: Game Hub and every tracked game share it. A daily entry is `{ ms, score? }`; `score` was added in 1.20 and is optional, so older files stay valid. `PlayTracker.daily(day, ms, score?, mode?)` keeps the better result by the manifest's `daily_rank`. A day's keys are app ids, or `{app_id}/{mode}` for one mode of a game with a per-mode `daily_rank` (3.1, ADR-050); `daily_key(app_id, mode?)` builds one and `split_daily_key` takes one apart, so a reader that looks up a manifest by key splits first.
 
@@ -282,5 +284,5 @@ Users' data sits in these, so moving one is a major even when no code signature 
 
 - The pin test checks names. A signature change (a parameter made required, a return type changed) passes it; review catches those.
 - `create_storage_handle(app_id, state)` is stable because two apps need storage outside a window, but its `state` parameter only matters to the window frame. A cleaner out-of-window entry point would be an additive change.
-- Two kinds of bundled file still import the games kit through `$kit/games/time`, `games/direction`, `games/grid` or `games/path`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Sun & Moon, Hop, Word Search, Snake and 2048, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Owner, 2026-10-15: both paths are stable for 1.0 rather than splitting the kit.
+- Two kinds of bundled file still import the games kit through `$kit/games/time`, `games/direction`, `games/grid`, `games/path` or `games/tetromino`: the Solitaire and Game Hub manifests, and the kernel-free logic files (`game.ts` of Minesweeper, Sudoku, Kakuro, Nurikabe, Futoshiki, Sun & Moon, Hop, Word Search, Snake, 2048 and Blocks, and Pomodoro's `pomodoro.ts`). The barrel re-exports `track_play` and `use_plays`, which reach the kernel through `json_file`. From a manifest that puts the games kit in the boot chunk; from a file a Node test loads, it evaluates the kernel and every manifest in Node, and `define_app` isn't initialized yet. Every other app file imports the barrels. Owner, 2026-10-15: both paths are stable for 1.0 rather than splitting the kit.
 - The `$lib/core/api` barrel exports much more than this page promises (theme presets, widget and shortcut file parsers, association ranking, launcher search, `Kernel`, `detect_platform`). Listing isn't promising.

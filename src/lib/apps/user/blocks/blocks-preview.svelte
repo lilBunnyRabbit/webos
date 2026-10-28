@@ -1,7 +1,6 @@
 <script lang="ts">
   import { cn } from "$lib/core/utils";
-  import { PIECE_TOKENS } from "./draw";
-  import { SHAPES, type Piece } from "./game";
+  import { PIECE_TOKENS, SHAPES, type Piece } from "$kit/games";
 
   let { piece, dim = false }: { piece: Piece | null; dim?: boolean } = $props();
 

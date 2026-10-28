@@ -118,8 +118,12 @@ const GAMES = [
   "Direction",
   "EMPTY_PLAYS",
   "Edge",
+  "PIECES",
+  "PIECE_TOKENS",
   "PLAYS_PATH",
+  "Piece",
   "PlaysSchema",
+  "SHAPES",
   "Stopwatch",
   "across_cells",
   "better_daily",
@@ -127,10 +131,12 @@ const GAMES = [
   "daily_rank_for",
   "daily_seed",
   "down_cells",
+  "fill_queue",
   "format_time",
   "grid_key_move",
   "grid_walk",
   "key_direction",
+  "kicks",
   "orthogonal",
   "parse_day",
   "region_edges",
@@ -149,6 +155,7 @@ const GAMES_DAILY = ["DailyRank", "better_daily", "daily_key", "daily_rank_for",
 const GAMES_DIRECTION = ["Direction", "key_direction", "swipe_direction"];
 const GAMES_GRID = ["across_cells", "down_cells", "grid_key_move", "stroke_axis", "stroke_cells", "stroke_end"];
 const GAMES_PATH = ["grid_walk", "orthogonal", "path_step", "path_walk"];
+const GAMES_TETROMINO = ["PIECES", "PIECE_TOKENS", "Piece", "SHAPES", "fill_queue", "kicks"];
 const IMAGE = [
   "FORMAT_OPTIONS",
   "ImageFormat",
@@ -235,6 +242,7 @@ const STABLE: [string, () => Promise<object>, string[]][] = [
   ["$kit/games/direction", () => import("$kit/games/direction"), GAMES_DIRECTION],
   ["$kit/games/grid", () => import("$kit/games/grid"), GAMES_GRID],
   ["$kit/games/path", () => import("$kit/games/path"), GAMES_PATH],
+  ["$kit/games/tetromino", () => import("$kit/games/tetromino"), GAMES_TETROMINO],
   ["$kit/utils/image", () => import("$kit/utils/image"), IMAGE],
   [
     "$lib/core/utils",

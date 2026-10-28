@@ -1,7 +1,9 @@
-import { shuffle, type Rng } from "$lib/core/utils/random";
+import type { Rng } from "$lib/core/utils/random";
+import { fill_queue, kicks, Piece, SHAPES, type Point, type Rotation } from "$kit/games/tetromino";
 import { z } from "zod";
 
 export type { Rng };
+export { fill_queue, kicks, Piece, PIECES, SHAPES, type Point, type Rotation } from "$kit/games/tetromino";
 
 export const WIDTH = 10;
 export const HEIGHT = 20;
@@ -19,10 +21,6 @@ export const MAX_LEVEL = 20;
 export const DAS_MS = 160;
 export const ARR_MS = 45;
 
-export const Piece = { I: "i", O: "o", T: "t", S: "s", Z: "z", J: "j", L: "l" } as const;
-export type Piece = (typeof Piece)[keyof typeof Piece];
-export const PIECES: readonly Piece[] = Object.values(Piece);
-
 export const Mode = { MARATHON: "marathon", SPRINT: "sprint" } as const;
 export type Mode = (typeof Mode)[keyof typeof Mode];
 export const MODES: readonly Mode[] = Object.values(Mode);
@@ -30,13 +28,7 @@ export const MODES: readonly Mode[] = Object.values(Mode);
 export const Status = { READY: "ready", PLAYING: "playing", PAUSED: "paused", OVER: "over", WON: "won" } as const;
 export type Status = (typeof Status)[keyof typeof Status];
 
-export type Rotation = 0 | 1 | 2 | 3;
 export type Cell = Piece | null;
-
-export interface Point {
-  x: number;
-  y: number;
-}
 
 export interface Active {
   piece: Piece;
@@ -70,77 +62,6 @@ export interface GameState {
   status: Status;
 }
 
-const BASE: Record<Piece, readonly string[]> = {
-  i: ["....", "####", "....", "...."],
-  o: ["##", "##"],
-  t: [".#.", "###", "..."],
-  s: [".##", "##.", "..."],
-  z: ["##.", ".##", "..."],
-  j: ["#..", "###", "..."],
-  l: ["..#", "###", "..."],
-};
-
-function rotations(piece: Piece): Point[][] {
-  const rows = BASE[piece];
-  const size = rows.length;
-  const states: Point[][] = [rows.flatMap((row, y) => [...row].flatMap((char, x) => (char === "#" ? [{ x, y }] : [])))];
-  for (let i = 1; i < 4; i++) states.push(states[i - 1].map(({ x, y }) => ({ x: size - 1 - y, y: x })));
-  return states;
-}
-
-export const SHAPES: Record<Piece, readonly (readonly Point[])[]> = {
-  i: rotations(Piece.I),
-  o: rotations(Piece.O),
-  t: rotations(Piece.T),
-  s: rotations(Piece.S),
-  z: rotations(Piece.Z),
-  j: rotations(Piece.J),
-  l: rotations(Piece.L),
-};
-
-type Kick = readonly [number, number];
-
-const parse_kicks = (table: Record<string, string>): Record<string, readonly Kick[]> =>
-  Object.fromEntries(
-    Object.entries(table).map(([turn, list]) => [
-      turn,
-      list.split(" ").map((pair): Kick => {
-        const [x, y] = pair.split(",").map(Number);
-        return [x, y];
-      }),
-    ])
-  );
-
-// SRS tables as published, with y pointing up; `rotate` flips y for the board, whose rows grow downwards.
-const JLSTZ_KICKS = parse_kicks({
-  "0>1": "0,0 -1,0 -1,1 0,-2 -1,-2",
-  "1>0": "0,0 1,0 1,-1 0,2 1,2",
-  "1>2": "0,0 1,0 1,-1 0,2 1,2",
-  "2>1": "0,0 -1,0 -1,1 0,-2 -1,-2",
-  "2>3": "0,0 1,0 1,1 0,-2 1,-2",
-  "3>2": "0,0 -1,0 -1,-1 0,2 -1,2",
-  "3>0": "0,0 -1,0 -1,-1 0,2 -1,2",
-  "0>3": "0,0 1,0 1,1 0,-2 1,-2",
-});
-
-const I_KICKS = parse_kicks({
-  "0>1": "0,0 -2,0 1,0 -2,-1 1,2",
-  "1>0": "0,0 2,0 -1,0 2,1 -1,-2",
-  "1>2": "0,0 -1,0 2,0 -1,2 2,-1",
-  "2>1": "0,0 1,0 -2,0 1,-2 -2,1",
-  "2>3": "0,0 2,0 -1,0 2,1 -1,-2",
-  "3>2": "0,0 -2,0 1,0 -2,-1 1,2",
-  "3>0": "0,0 1,0 -2,0 1,-2 -2,1",
-  "0>3": "0,0 -1,0 2,0 -1,2 2,-1",
-});
-
-const NO_KICKS: readonly Kick[] = [[0, 0]];
-
-export function kicks(piece: Piece, from: Rotation, to: Rotation): readonly Kick[] {
-  if (piece === Piece.O) return NO_KICKS;
-  return (piece === Piece.I ? I_KICKS : JLSTZ_KICKS)[`${from}>${to}`] ?? NO_KICKS;
-}
-
 export const empty_board = (): Cell[] => Array<Cell>(ROWS * WIDTH).fill(null);
 
 export function piece_cells(active: Pick<Active, "piece" | "rotation" | "x" | "y">): Point[] {
@@ -165,13 +86,6 @@ export function drop_distance(board: readonly Cell[], active: Active): number {
   let distance = 0;
   while (fits(board, active.piece, active.rotation, active.x, active.y + distance + 1)) distance++;
   return distance;
-}
-
-/** Appends whole shuffled bags, so every run of seven pieces holds each piece once. */
-export function fill_queue(queue: readonly Piece[], rng: Rng, min = NEXT_COUNT + 1): Piece[] {
-  const next = [...queue];
-  while (next.length < min) next.push(...shuffle([...PIECES], rng));
-  return next;
 }
 
 export function gravity_ms(level: number): number {
@@ -201,7 +115,7 @@ function enter(state: GameState, piece: Piece): GameState {
 
 function spawn(state: GameState, rng: Rng): GameState {
   const [piece, ...rest] = state.queue;
-  return enter({ ...state, queue: fill_queue(rest, rng) }, piece);
+  return enter({ ...state, queue: fill_queue(rest, rng, NEXT_COUNT + 1) }, piece);
 }
 
 export interface GameOptions {
@@ -217,7 +131,7 @@ export function create_game(rng: Rng, { mode = Mode.MARATHON, start_level = 1 }:
     active: null,
     hold: null,
     can_hold: true,
-    queue: fill_queue([], rng),
+    queue: fill_queue([], rng, NEXT_COUNT + 1),
     clearing: null,
     score: 0,
     lines: 0,

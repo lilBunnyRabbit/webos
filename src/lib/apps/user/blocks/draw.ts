@@ -1,4 +1,5 @@
 import { resolve_token } from "$lib/core/utils";
+import { PIECE_TOKENS } from "$kit/games/tetromino";
 import {
   BUFFER,
   CLEAR_MS,
@@ -10,16 +11,6 @@ import {
   type GameState,
   type Piece,
 } from "./game";
-
-export const PIECE_TOKENS: Record<Piece, string> = {
-  i: "info",
-  o: "warning",
-  t: "primary",
-  s: "success",
-  z: "error",
-  j: "secondary",
-  l: "accent",
-};
 
 export interface Palette {
   board: string;
