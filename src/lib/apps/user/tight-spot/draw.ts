@@ -511,10 +511,8 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = palette.void;
   ctx.fillRect(0, 0, width * dpr, height * dpr);
-  // Whole device pixels: a camera easing by fractions of a pixel would make every thin line shimmer as it moves.
-  const tx = Math.round(dpr * (width / 2 - view.x * scale));
-  const ty = Math.round(dpr * (height / 2 - view.y * scale));
-  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, tx, ty);
+  // Not snapped to whole pixels: the car moves continuously, so a snapped camera makes it jitter a pixel against the world.
+  ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (width / 2 - view.x * scale), dpr * (height / 2 - view.y * scale));
 
   const world = state.world;
   ground(ctx, state, scale, palette);
