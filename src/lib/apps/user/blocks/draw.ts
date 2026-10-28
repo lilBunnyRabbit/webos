@@ -1,5 +1,5 @@
 import { resolve_token } from "$lib/core/utils";
-import { PIECE_TOKENS } from "$kit/games/tetromino";
+import { PIECE_TOKENS } from "$kit/games";
 import {
   BUFFER,
   CLEAR_MS,

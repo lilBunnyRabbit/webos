@@ -135,7 +135,8 @@ const zones_cache = new Map<number, Zones>();
 
 // Each zone is the one below the centre (cells with x in [depth + 1, size - 1 - depth] on row size - 1 - depth), turned
 // into its wall's frame. So the diagonal cells go round like a pinwheel: bottom-right to the bottom wall, bottom-left
-// to the left, top-left to the top, top-right to the right, and every zone line has an odd length.
+// to the left, top-left to the top, top-right to the right, and every zone line has an odd length. The one-cell inner
+// lines (the middle 2 × 2, where every piece enters) are left out of `rows`: they never clear and never move.
 export function zones(size: number): Zones {
   const cached = zones_cache.get(size);
   if (cached) return cached;
@@ -151,7 +152,7 @@ export function zones(size: number): Zones {
         zone_of[index] = zone;
         line.push(index);
       }
-      rows[zone].push(line);
+      if (line.length > 1) rows[zone].push(line);
     }
   }
   const result = { zone_of, rows };
@@ -227,12 +228,6 @@ export function level_for(lines: number): number {
 
 function playable(state: GameState): state is GameState & { active: Active } {
   return state.status === Status.PLAYING && state.active !== null && state.clearing === null;
-}
-
-/** The middle 2 × 2: every piece enters over it, and a piece that locks on it ends the game (Blocks' lock out). */
-export function in_centre(size: number, { x, y }: Point): boolean {
-  const half = size / 2;
-  return (x === half - 1 || x === half) && (y === half - 1 || y === half);
 }
 
 export function spawn_point(size: number, piece: Piece): Point {
@@ -366,11 +361,7 @@ export function lock(state: GameState, rng: Rng, clear_ms = CLEAR_MS): GameState
   if (state.status !== Status.PLAYING || !state.active) return state;
   const size = state.size;
   const board = [...state.board];
-  const cells = piece_cells(size, state.active);
-  for (const { x, y } of cells) board[y * size + x] = state.active.piece;
-  if (cells.some((cell) => in_centre(size, cell))) {
-    return { ...state, board, active: null, pieces: state.pieces + 1, last_clear: 0, last_zones: 0, status: Status.OVER };
-  }
+  for (const { x, y } of piece_cells(size, state.active)) board[y * size + x] = state.active.piece;
 
   const lines = full_lines(board, size);
   const cleared_zones = new Set(lines.map((line) => line.zone));

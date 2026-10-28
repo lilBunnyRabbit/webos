@@ -27,6 +27,6 @@ Decided within scope while building ([page](../apps/four-walls.md)):
 
 - **Diagonal cells** go round like a pinwheel (bottom-right half to the bottom wall, bottom-left to the left, top-left to the top, top-right to the right), so the four zones are identical under a quarter turn and a zone's lines hold `size - 1`, `size - 3`, … 1 cells.
 - **Spawn** is the centre 4 × 2 lying across the piece's way, in rotation 0 of the piece's own frame.
-- **Lock out** joins the blocked spawn as a way to lose: a piece that locks on the middle 2 × 2 ends the game. Those four cells are the zones' one-cell inner lines; without the rule a piece stuck at the centre cleared up to four of them for free.
+- **The middle 2 × 2 never makes a line.** Those four cells are the zones' one-cell inner lines; counted, a piece stuck at the centre cleared up to four of them for free. They never clear and never move in a collapse, and the blocked spawn stays the only way to lose (an earlier build also ended the game on any lock over the middle; replaced after review, since only the blocked spawn was decided). A headless bot plays about 7 to 8 lines per game at 14 with this rule; also counting the 3-cell lines out halved that, so only the 1-cell ones are left out.
 - **Board size** 14, from headless play and browser rounds at 12, 14 and 16.
 - The opposite arrow rotates (Blocks' Up); hold keeps the turn's wall; past four lines from one piece each line adds 400 × level; the daily ranks by score in Game Hub.

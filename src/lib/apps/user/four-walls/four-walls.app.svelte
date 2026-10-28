@@ -548,7 +548,8 @@
           <li>The diagonals split the board into four walls' zones.</li>
           <li>A row of a zone that runs along its wall clears, and the zone slides toward its wall.</li>
           <li>The arrow beside each piece in Next is the wall it falls to.</li>
-          <li>A piece that can't leave the middle ends the game.</li>
+          <li>The middle four cells never clear.</li>
+          <li>The game ends when a new piece has no room in the middle.</li>
         </ul>
       </Section>
     </aside>

@@ -12,7 +12,8 @@ With an even size the diagonals run through cells, so every diagonal cell is giv
 
 - a zone has `size / 2` lines, parallel to its wall;
 - line `d` (depth `d` from the wall) holds `size - 1 - 2d` cells: 13, 11, … 3, 1 on a 14 board;
-- the zones partition the board exactly.
+- the zones partition the board exactly;
+- the one-cell inner lines (the middle 2 × 2) don't count as lines (see [Spawn and game over](#spawn-and-game-over)), so `rows` holds `size / 2 - 1` lines per zone.
 
 `zones(size)` builds the bottom zone in the bottom wall's frame (row `size - 1 - d`, columns `d + 1` to `size - 1 - d`) and turns it into each wall's frame with `to_board`, so the other three can't drift from it. It returns `zone_of` (cell → wall) and `rows` (wall → lines as board indices, wall first), cached per size.
 
@@ -22,10 +23,9 @@ Each piece moves in its own frame: the board turned so its wall is at the bottom
 
 ## Spawn and game over
 
-A piece enters in rotation 0 of its frame inside the centre 4 × 2 lying across its way: columns `size/2 - 2 … size/2 + 1`, rows `size/2 - 1 … size/2` of the frame (`spawn_point`; I sits on the back row, O in the middle two columns). The game ends when:
+A piece enters in rotation 0 of its frame inside the centre 4 × 2 lying across its way: columns `size/2 - 2 … size/2 + 1`, rows `size/2 - 1 … size/2` of the frame (`spawn_point`; I sits on the back row, O in the middle two columns). The game ends only when the cells it enters on are taken (blocked spawn, as decided).
 
-- the cells it enters on are taken (blocked spawn, as decided), or
-- it locks with any cell on the middle 2 × 2 (`in_centre`). This is Blocks' lock out, picked by the build: the middle 2 × 2 is the four zones' one-cell inner lines, and without the rule a piece stuck at the centre would clear up to four "lines" for free (a headless run tripled lines per game this way) and the secret achievement would come for nothing. With it the middle is never filled, so in play a line is 3 to `size - 1` cells.
+The middle 2 × 2 is the four zones' one-cell inner lines. Those never count as lines: `zones` leaves them out of `rows`, so they never clear and never move in a collapse. Counted, a piece stuck at the centre would clear up to four "lines" for free (a headless run tripled lines per game this way) and the secret achievement would come for nothing. A piece that locks on the middle stays there, and since every spawn crosses the middle, the next blocked spawn usually ends the game soon after. So a line is 3 to `size - 1` cells.
 
 ## Lines and collapse
 

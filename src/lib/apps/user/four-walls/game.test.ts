@@ -58,11 +58,14 @@ describe("zones", () => {
     const seen = new Set<number>();
     for (const zone of CYCLE) {
       expect(rows[zone].map((line) => line.length)).toEqual(
-        Array.from({ length: size / 2 }, (_, depth) => size - 1 - depth * 2)
+        Array.from({ length: size / 2 - 1 }, (_, depth) => size - 1 - depth * 2)
       );
       for (const line of rows[zone]) for (const index of line) seen.add(index);
     }
-    expect(seen.size).toBe(size * size);
+    const half = size / 2;
+    const centre = [half - 1, half].flatMap((y) => [half - 1, half].map((x) => y * size + x));
+    expect(seen.size).toBe(size * size - 4);
+    for (const index of centre) expect(seen.has(index)).toBe(false);
     expect(zone_of.filter(Boolean)).toHaveLength(size * size);
   });
 
@@ -200,13 +203,33 @@ describe("play", () => {
     expect(over.active).toBeNull();
   });
 
-  test("a piece that locks over the centre ends the game", () => {
-    const state = with_active(game(), Piece.T, Direction.DOWN);
+  test("cells on the middle 2 × 2 never make a line and stay put when the zone collapses", () => {
+    const { rows } = zones(SIZE);
+    const half = SIZE / 2;
+    const centre = [half - 1, half].flatMap((y) => [half - 1, half].map((x) => y * SIZE + x));
     const board: Cell[] = Array<Cell>(SIZE * SIZE).fill(null);
-    for (let x = 0; x < SIZE; x++) board[5 * SIZE + x] = x === 0 ? null : Piece.J;
-    const over = hard_drop({ ...state, board }, create_rng(4), 0);
+    for (const index of centre) board[index] = Piece.O;
+    expect(full_lines(board, SIZE)).toEqual([]);
+    for (const index of rows.down[0]) board[index] = Piece.Z;
+    const lines = full_lines(board, SIZE);
+    expect(lines).toEqual([{ zone: Direction.DOWN, depth: 0 }]);
+    const next = collapse(board, SIZE, lines);
+    for (const index of centre) expect(next[index]).toBe(Piece.O);
+    expect(next.filter(Boolean)).toHaveLength(4);
+  });
+
+  test("a piece that locks on the centre clears nothing and the game goes on until a spawn is blocked", () => {
+    const state = with_active(game(), Piece.O, Direction.DOWN);
+    const placed = lock(state, create_rng(4), 0);
+    expect(placed.last_clear).toBe(0);
+    expect(placed.lines).toBe(0);
+    expect(placed.pieces).toBe(1);
+    const half = SIZE / 2;
+    expect(placed.board[(half - 1) * SIZE + half - 1]).toBe(Piece.O);
+    const next = with_active({ ...placed, status: Status.PLAYING }, Piece.T, Direction.DOWN);
+    const queue = [{ piece: Piece.O, direction: Direction.LEFT }, ...next.queue];
+    const over = hold({ ...next, hold: null, can_hold: true, queue }, create_rng(4));
     expect(over.status).toBe(Status.OVER);
-    expect(over.lines).toBe(0);
   });
 
   test("hold swaps the piece but keeps the wall", () => {

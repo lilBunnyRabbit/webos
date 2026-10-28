@@ -69,6 +69,7 @@ App storage keys in use today (from a grep of `storage.persisted` / `get` / `set
 | `app.diff.{collapse,ignore-whitespace,wrap}` | `user/diff` | View toggles |
 | `app.doodlehop.best` | `user/doodlehop` | Best round `{ recognised, ms }`: most words, then least drawing time |
 | `app.example.count` | `user/example` | Counter (`number`) |
+| `app.four-walls.{mode,best}` | `user/four-walls` | Last mode (Cycle or Random); best score and lines per mode, the daily counting as Random |
 | `app.futoshiki.{stats,daily,game,size}` | `user/futoshiki` | Stats; daily puzzle; game in progress; last size |
 | `app.game-hub.sort` | `user/game-hub` | Library sort |
 | `app.gradient-sort.{level,daily,sorts}` | `user/gradient-sort` | Last practice level; the daily attempt `{ day, state }`; gradients sorted (achievements) |

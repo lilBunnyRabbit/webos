@@ -1,4 +1,4 @@
-import { PIECE_TOKENS, PIECES } from "$kit/games/tetromino";
+import { PIECE_TOKENS, PIECES } from "$kit/games";
 import { resolve_token } from "$lib/core/utils";
 import { CLEAR_MS, Direction, drop_distance, piece_cells, zones, type GameState, type Piece } from "./game";
 
