@@ -1,6 +1,6 @@
 # ADR-087: Drive Hub
 **Date:** 2026-10-28
-**Status:** Implemented (steps 1 and 2: the split and the hub; the forklift is next)
+**Status:** Implemented
 
 ## Context
 Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicles with trailers, polygon collision, a camera with insets, controls, vehicle drawing, sensors, a solvability planner) that more games than parking could use: a forklift warehouse, airport pushback, a ferry loader and others. Decided in [the driving hub brainstorm](../brainstorm/2026-10-28_driving-hub.md).
@@ -41,6 +41,14 @@ Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicl
 - **Landing.** The yard is framed whole, clear of the HUD, cards and touch controls, until the first input; then the 34 m follow takes over. The welcome card shows on the first visit only (`app.tight-spot.yard_intro`); the guide keeps the help.
 - **Yard look.** Roof signs with the game's name and icon (the shut one named after what's coming, Warehouse), lit doorways, real cones and round bollards drawn at a readable size. The switcher reads "Games" where it fits.
 - **Loop.** The yard's frame loop stays up while the front wheels catch up with the steering wheel.
+
+## Revision 2026-10-29 (step 3: the forklift Warehouse)
+- **Model.** Rear steer is `drive: { kind: "ackermann", steer_axle: "rear" }` (ADR-088's union, not the `steer_axle` field this ADR named); the pose is the front axle. The forklift's tines are `VehicleSpec.forks` (`{ length, width }`), a body after the vehicle's own in `bodies()`, so the yard and the planner see them; `reverse_beeper` marks vehicles that beep backing up. Both were the build's call within "a forklift with forks"; flagged to the owner.
+- **Round.** As decided: one to four pallets in order, lift with the forks fully in (mast within 15 cm) and square within 5°, lower with the pallet inside its target and straight, any contact ends it, the carried pallet included. The build added the pocket rule: forks overlapping a pallet are in its pockets within 8° and 12 cm of its axis, and jam (a contact) outside them.
+- **Par time.** The planner's whole job from the real start at 1.4 m/s, plus 2.5 s per change of direction and 2 s per fork action, ×1.25, rounded up to 5 s; worked out per round in a worker (one to six seconds for four pallets). **Par moves** are a formula, 5 per pallet less 2, since the planner shuffles more than a driver.
+- **Levels and daily.** 16 levels, four per job size. The daily is opened in the game and reported under the ADR-050 mode key `tight-spot/forklift` (stars lost as the score, then time); a Game Hub row for it needs a per-mode `daily_rank`, an open decision.
+- **Core.** `core/precision.ts` (`fit`) moved out of parking; `core/seed.ts` (`hash`); `collide_shape`; `PlanOptions.blocked`, `steering` and `switch_cost`; `drive-frame`'s `pedal_top` snippet for the Fork button on touch; `GearStrip.space_parks`; the forklift and pallet drawings and the beeper and fork sounds.
+- **Patterns.** How to add the next game, and the gotchas: [Drive Hub games](../apps/drive-hub-games.md).
 
 ## Consequences
 - One large app; folders keep games apart.

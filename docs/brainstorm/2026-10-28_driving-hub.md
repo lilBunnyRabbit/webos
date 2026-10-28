@@ -60,7 +60,7 @@ After 3.82.1 and 3.83.0 push: (1) refactor into `core/` and `games/parking/` wit
 - [x] Steps 1 and 2: the split into `core/` and `games/parking/`, then the yard, playground, menu, `game` prop and the Drive Hub name (2026-10-28, ADR-087 revision).
 - [x] Display name: **Drive Hub** (owner). The app's display name changes when the hub ships (step 4); the id stays `tight-spot`, and the parking game inside keeps the name Tight Spot.
 - [x] Review fixes and yard polish (2026-10-28): owner confirmed entering by card plus Enter or tap, and shut "Soon" buildings for games not registered yet, as built; play tracking moved to the shell; loading state and chunk-failure fallback; whole-yard landing view; roof signs, lit doorways, real cones and bollards; welcome card on the first visit only; "Games" label on the switcher (ADR-087 revision).
-- [ ] Forklift details at its build: model change for rear steer, pallet and rack shapes, job generator, proof, scoring, achievements.
+- [x] Forklift details at its build: model change for rear steer, pallet and rack shapes, job generator, proof, scoring, achievements (2026-10-29, ADR-087 revision; patterns in `docs/apps/drive-hub-games.md`).
 
 ## Next session topics
 - The yard's look, which buildings show before their game exists.

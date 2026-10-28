@@ -60,6 +60,17 @@ export interface Palette {
   guide: string;
   warning: string;
   error: string;
+  /** Steel: forks, and a rack's beams take `beam`, its uprights `upright`. */
+  steel: string;
+  beam: string;
+  upright: string;
+  /** A pallet's deck boards, a job's cardboard load and the shrink-wrapped stock around it. */
+  wood: string;
+  load: string;
+  load_edge: string;
+  stock: string;
+  beacon: string;
+  beacon_clear: string;
 }
 
 export function read_palette(probe: HTMLElement): Palette {
@@ -130,6 +141,15 @@ export function read_palette(probe: HTMLElement): Palette {
     guide: dark_ground ? token("var(--cottontail)") : token("color-mix(in oklch, var(--cottontail) 55%, var(--foreground))"),
     warning: token("var(--warning)"),
     error: token("var(--error)"),
+    steel: solid("foreground", 55),
+    beam: solid("warning", 80),
+    upright: solid("info", 72),
+    wood: token("color-mix(in oklch, var(--warning) 40%, var(--background-darker))"),
+    load: solid("warning", 62),
+    load_edge: solid("warning", 75),
+    stock: solid("foreground", 22),
+    beacon: token("var(--warning)"),
+    beacon_clear: mix("warning", 0),
   };
 }
 
@@ -191,13 +211,14 @@ export function lamp(
   ctx.globalAlpha = 1;
 }
 
-const Style = { HATCH: "hatch", VAN: "van", PICKUP: "pickup", BUS: "bus" } as const;
+const Style = { HATCH: "hatch", VAN: "van", PICKUP: "pickup", BUS: "bus", FORKLIFT: "forklift" } as const;
 type Style = (typeof Style)[keyof typeof Style];
 
 function style_of(vehicle: Vehicle | undefined): Style {
   if (vehicle === Vehicle.VAN) return Style.VAN;
   if (vehicle === Vehicle.PICKUP) return Style.PICKUP;
   if (vehicle === Vehicle.BUS) return Style.BUS;
+  if (vehicle === Vehicle.FORKLIFT) return Style.FORKLIFT;
   return Style.HATCH;
 }
 
@@ -213,6 +234,7 @@ const CORNERS: Record<Style, number[]> = {
   van: [0.2, 0.4, 0.4, 0.2],
   pickup: [0.2, 0.5, 0.5, 0.2],
   bus: [0.25, 0.4, 0.4, 0.25],
+  forklift: [0.5, 0.08, 0.08, 0.5],
 };
 
 function body_shape(ctx: CanvasRenderingContext2D, l: number, half: number, style: Style) {
@@ -470,9 +492,9 @@ function blur_of(car: Car): number {
   return Math.max(0, Math.min(1, 1 - (Math.abs(car.speed) - 1.2) / 1.8));
 }
 
-function tyres(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, scale: number, palette: Palette) {
+function tyres(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, scale: number, palette: Palette, tread = true) {
   const size = { length: spec.wheel_diameter + 0.04, width: spec.wheel_width + 0.05 };
-  const blur = blur_of(car);
+  const blur = tread ? blur_of(car) : 0;
   for (const [i, wheel] of wheels(car, spec).entries()) {
     tyre(
       ctx,
@@ -554,6 +576,179 @@ function trailer(
   ctx.stroke();
 }
 
+const BEACON_TURN = 5;
+
+// Seen from above a counterbalance forklift is its counterweight, the overhead guard over the seat, the mast across the
+// front and the two tines; the amber beacon on the guard turns while it works.
+function forklift(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, lamps: Lamps, scale: number, palette: Palette, time: number) {
+  const forks = spec.forks;
+  const centre = body_centre(car, spec);
+  const l = spec.length / 2;
+  const half = spec.width / 2;
+  const paint = palette.player;
+  shadow(ctx, centre, car.heading, spec.length, spec.width, Style.FORKLIFT, palette);
+  ctx.save();
+  ctx.translate(centre.x, centre.y);
+  ctx.rotate(car.heading);
+  const line = 1 / scale;
+  if (forks) {
+    const tine = 0.13;
+    for (const side of [-1, 1]) {
+      const y = side * (forks.width / 2 - tine / 2);
+      ctx.beginPath();
+      ctx.moveTo(l, y - tine / 2);
+      ctx.lineTo(l + forks.length - 0.08, y - tine / 2);
+      ctx.lineTo(l + forks.length, y);
+      ctx.lineTo(l + forks.length - 0.08, y + tine / 2);
+      ctx.lineTo(l, y + tine / 2);
+      ctx.closePath();
+      ctx.fillStyle = palette.steel;
+      ctx.fill();
+      ctx.strokeStyle = palette.ink;
+      ctx.lineWidth = Math.max(0.02, line);
+      ctx.stroke();
+    }
+  }
+  body_shape(ctx, spec.length, half, Style.FORKLIFT);
+  ctx.fillStyle = paint.body;
+  ctx.fill();
+  ctx.strokeStyle = palette.edge;
+  ctx.lineWidth = line;
+  ctx.stroke();
+  // The counterweight: a heavy rounded block at the tail, darker than the paint.
+  ctx.beginPath();
+  ctx.roundRect(-l, -half, 0.6, half * 2, [0.5, 0, 0, 0.5]);
+  ctx.fillStyle = palette.ink;
+  ctx.globalAlpha = 0.4;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = palette.edge;
+  ctx.beginPath();
+  for (const x of [-l + 0.22, -l + 0.4]) {
+    ctx.moveTo(x, -half + 0.16);
+    ctx.lineTo(x, half - 0.16);
+  }
+  ctx.stroke();
+  // The seat and the wheel under the guard.
+  pill(ctx, -0.45, -0.25, 0.42, 0.5, 0.12, paint.glass);
+  ctx.beginPath();
+  ctx.arc(0.22, 0, 0.13, 0, Math.PI * 2);
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = 0.05;
+  ctx.stroke();
+  // The overhead guard: a frame with crossbars, so the seat shows through.
+  const g0 = -0.62;
+  const g1 = 0.62;
+  const gw = half - 0.08;
+  ctx.strokeStyle = palette.ink;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 0.075;
+  ctx.strokeRect(g0, -gw, g1 - g0, gw * 2);
+  ctx.lineWidth = 0.045;
+  ctx.beginPath();
+  for (const x of [-0.2, 0.2]) {
+    ctx.moveTo(x, -gw);
+    ctx.lineTo(x, gw);
+  }
+  ctx.stroke();
+  // The mast across the front, the carriage plate the tines hang from.
+  pill(ctx, l - 0.18, -0.55, 0.18, 1.1, 0.04, palette.ink);
+  if (forks) {
+    pill(ctx, l - 0.02, -forks.width / 2 - 0.05, 0.08, forks.width + 0.1, 0.02, palette.steel);
+  }
+  for (const side of [-1, 1]) lamp(ctx, l - 0.16, side * 0.5 - 0.06, 0.08, 0.12, palette.glow, palette, lamps.lit);
+  for (const side of [-1, 1]) {
+    if (lamps.braking) pill(ctx, -l - 0.1, side * (half - 0.2) - 0.18, 0.24, 0.36, 0.16, palette.brake_glow);
+    lamp(ctx, -l + 0.06, side * (half - 0.2) - 0.1, 0.07, 0.2, palette.brake, palette, lamps.braking ? 1 : lamps.lit);
+    if (lamps.reversing) lamp(ctx, -l + 0.06, side * (half - 0.42) - 0.05, 0.07, 0.1, palette.glow, palette);
+  }
+  // The beacon: an amber dome on the back of the guard with a beam sweeping round it.
+  const beacon = { x: g0 + 0.02, y: 0 };
+  const turn = time * BEACON_TURN;
+  const sweep = ctx.createRadialGradient(beacon.x, beacon.y, 0.05, beacon.x, beacon.y, 1.3);
+  sweep.addColorStop(0, palette.beacon);
+  sweep.addColorStop(1, palette.beacon_clear);
+  ctx.fillStyle = sweep;
+  ctx.globalAlpha = palette.beams ? 0.45 : 0.22;
+  for (const offset of [0, Math.PI]) {
+    ctx.beginPath();
+    ctx.moveTo(beacon.x, beacon.y);
+    ctx.arc(beacon.x, beacon.y, 1.3, turn + offset - 0.32, turn + offset + 0.32);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(beacon.x, beacon.y, 0.11, 0, Math.PI * 2);
+  ctx.fillStyle = palette.beacon;
+  ctx.fill();
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = Math.max(0.025, line);
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * A pallet seen from above, `pose` its centre heading the way the forks go in: the deck boards round a load. A job's
+ * load is cardboard with a taped seam, stock is shrink-wrapped.
+ */
+export function pallet(ctx: CanvasRenderingContext2D, pose: Pose, length: number, width: number, load: string, scale: number, palette: Palette) {
+  ctx.save();
+  ctx.translate(pose.x, pose.y);
+  ctx.rotate(pose.heading);
+  const l = length / 2;
+  const w = width / 2;
+  ctx.beginPath();
+  ctx.rect(-l + 0.1, -w + 0.12, length, width);
+  ctx.fillStyle = palette.shadow;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.rect(-l, -w, length, width);
+  ctx.fillStyle = palette.wood;
+  ctx.fill();
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = Math.max(0.02, 1 / scale);
+  ctx.stroke();
+  ctx.strokeStyle = palette.edge;
+  ctx.beginPath();
+  for (const y of [-w * 0.6, -w * 0.2, w * 0.2, w * 0.6]) {
+    ctx.moveTo(-l, y);
+    ctx.lineTo(l, y);
+  }
+  ctx.stroke();
+  const inset = 0.06;
+  const lw = length - inset * 2;
+  const ww = width - inset * 2;
+  ctx.beginPath();
+  ctx.roundRect(-l + inset, -w + inset, lw, ww, 0.08);
+  ctx.fillStyle = load;
+  ctx.fill();
+  // Seen from above a load is one wrapped block: a shaded side and a sheen give it volume, a sticker says it's cargo.
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = palette.shadow;
+  ctx.fillRect(-l + inset, w - inset - 0.14, lw, 0.14);
+  ctx.fillStyle = palette.glow;
+  ctx.globalAlpha = 0.16;
+  ctx.beginPath();
+  ctx.moveTo(-l + inset + 0.2, -w + inset);
+  ctx.lineTo(-l + inset + 0.55, -w + inset);
+  ctx.lineTo(-l + inset + 0.15, w - inset);
+  ctx.lineTo(-l + inset - 0.2, w - inset);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(l - inset - 0.34, -w + inset + 0.1, 0.24, 0.17);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  ctx.beginPath();
+  ctx.roundRect(-l + inset, -w + inset, lw, ww, 0.08);
+  ctx.strokeStyle = palette.edge;
+  ctx.lineWidth = Math.max(0.02, 1 / scale);
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function player(
   ctx: CanvasRenderingContext2D,
   car: Car,
@@ -561,9 +756,15 @@ export function player(
   spec: VehicleSpec,
   braking: boolean,
   scale: number,
-  palette: Palette
+  palette: Palette,
+  time = 0
 ) {
   const lamps = { braking, reversing: car.gear === Gear.REVERSE, lit: 0.85 };
+  if (vehicle === Vehicle.FORKLIFT) {
+    tyres(ctx, car, spec, scale, palette, false);
+    forklift(ctx, car, spec, lamps, scale, palette, time);
+    return;
+  }
   trailer(ctx, car, spec, lamps, scale, palette);
   const style = style_of(vehicle);
   const centre = body_centre(car, spec);

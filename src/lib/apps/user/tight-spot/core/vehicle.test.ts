@@ -2,8 +2,10 @@ import { describe, expect, test } from "vitest";
 import { angle_between } from "./geometry";
 import {
   axles,
+  bodies,
   corners,
   create_car,
+  FORKLIFT,
   Gear,
   HATCHBACK,
   HATCH_TRAILER,
@@ -12,7 +14,9 @@ import {
   max_steer,
   NO_INPUT,
   REAR_STEER,
+  rig_length,
   shift,
+  SteerAxle,
   step,
   steer_boost,
   STEER_BOOST,
@@ -252,7 +256,7 @@ describe("wheel roll", () => {
 });
 
 describe("every vehicle", () => {
-  test("full lock gives its kerb-to-kerb turning radius at the outer front wheel", () => {
+  test("full lock gives its kerb-to-kerb turning radius at the outer steered wheel", () => {
     for (const spec of Object.values(VEHICLES)) {
       const car = run(
         { ...create_car(START, Gear.DRIVE, spec) },
@@ -261,7 +265,8 @@ describe("every vehicle", () => {
         spec
       );
       expect(car.steer).toBeCloseTo(max_steer(spec), 6);
-      expect(distance(wheels(car, spec)[0].at, turn_centre(car, spec)!)).toBeCloseTo(spec.turning_radius, 2);
+      const outer = wheels(car, spec)[spec.drive.steer_axle === SteerAxle.REAR ? 2 : 0];
+      expect(distance(outer.at, turn_centre(car, spec)!)).toBeCloseTo(spec.turning_radius, 2);
     }
   });
 });
@@ -418,5 +423,25 @@ describe("rear-wheel steering", () => {
     expect(a).toEqual(b);
     expect(step(a, input, 0, spec)).toBe(a);
     expect(step(a, input, -0.01, spec)).toBe(a);
+  });
+});
+
+describe("forklift", () => {
+  test("steers its rear wheels to about 80° and is 2.5 m long with 1.2 m forks out ahead", () => {
+    const lock = (max_steer(FORKLIFT) * 180) / Math.PI;
+    expect(lock).toBeGreaterThan(78);
+    expect(lock).toBeLessThan(82);
+    expect(rig_length(FORKLIFT)).toBeCloseTo(3.7, 9);
+    const [body, forks] = bodies(START, FORKLIFT);
+    expect(Math.max(...body.map((p) => p.x))).toBeCloseTo(0.45, 9);
+    expect(Math.min(...body.map((p) => p.x))).toBeCloseTo(-2.05, 9);
+    expect(Math.min(...forks.map((p) => p.x))).toBeCloseTo(0.45, 9);
+    expect(Math.max(...forks.map((p) => p.x))).toBeCloseTo(1.65, 9);
+  });
+
+  test("tops out at a walking pace and a bit", () => {
+    const fast = run(create_car(START, Gear.DRIVE, FORKLIFT), { steer: null, throttle: 1, brake: 0 }, 20, FORKLIFT);
+    expect(fast.speed).toBeLessThanOrEqual(3);
+    expect(fast.speed).toBeGreaterThan(2.4);
   });
 });

@@ -2,14 +2,14 @@
 
 Driving games around one yard. The app opens on the whole yard, your car at the gate; the view follows the car once you drive.
 
-- Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway; a building that says **Soon** (the Warehouse) is still shut.
+- Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway. The car park holds **Tight Spot**, the **Warehouse** the forklift game.
 - **Games** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
 - **Back** in a game returns you to the yard, out of that game's doorway.
 
 ## The yard is a playground
 
 - Nothing is judged here. Touching something just stops you with a bump; back away and carry on.
-- Stop on the **Garage** pad to pick any vehicle: the hatchback, the van, the pickup, the city bus or the car with a trailer. It waits on the pad, ready to drive off, and stays yours in the yard until you close the window.
+- Stop on the **Garage** pad to pick any vehicle: the hatchback, the van, the pickup, the city bus, the car with a trailer or the forklift. It waits on the pad, ready to drive off, and stays yours in the yard until you close the window.
 - The cones are for a slalom, the bays on the left wall for practice parking.
 - The gears, pedals, wheel, sensors and settings work as in every game below.
 
@@ -65,3 +65,26 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - **Spots:** a random spot of the kind you pick, or any. The daily is the same spot for everyone, and Game Hub keeps your results.
 - **Levels:** 42 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot and the slipway. Park one to open the next.
 - **Open lot:** a block of streets and car parks; park in any free bay.
+
+## Warehouse: the forklift
+
+Move pallets with a forklift. A job is one to four pallets, each to be taken from its marked slot to its marked target, in order: a rack bay (**B4**) or a spot at the dock (**Dock C**). The start card lists them and shows the whole floor; the pallet in hand pulses with its number on it, its target is dashed with an arrow and its number, and an arrow on the edge of the view points the way when it's off screen. The chip at the top says what's next: *Pallet 2/3 · pick up at B4*, then *Pallet 2/3 → Dock C*.
+
+- **It steers at the back.** The rear wheels turn, so the forklift pivots near its front wheels and the counterweight swings out wide: watch the tail when you turn beside a rack. The dashed lines show where the corners will go.
+- **Lift:** drive the forks straight into the pallet until they're fully in (the chip shows *Forks 100%*), stop, and press **F** or **Space**, or tap **Lift**. The forks must be square to the pallet, within 5°.
+- **Lower:** carry the pallet into its target, straight, stop, and press **F** again (**Lower**). The button is off until it would work; stopped near a pallet or a target, a line at the bottom says what's off.
+- **Contact ends the job:** the forklift, its forks or the pallet on them touching a rack, a pillar, a wall or another pallet. Forks pushed into a pallet crooked or off its middle jam.
+- The forklift backs up with a beeper and its amber beacon turns while it works. It tops out at about 9 km/h.
+
+## Warehouse scoring
+
+- Three stars: one for finishing the job, one for the moves at or under par, one for the time at or under the par time. The par time comes from the computer driving the job itself, at a careful pace with room to spare; it appears on the card a moment after the job does.
+- **Moves** are changes between D and R, as in Tight Spot. Each pallet needs four drives at least (in, back out, in, back out), so par is five per pallet less two.
+- **Precision** scores each pallet you put down, centred and square in its target, like a park in Tight Spot; the card shows the average and every drop. 95% or more is **Perfect**.
+- A best is more stars, then a quicker time; it's kept per level, per job size and per daily.
+
+## Warehouse modes
+
+- **Jobs:** a random warehouse and job of the size you pick, one to four pallets. **New** deals another.
+- **Levels:** 16 jobs, four of each size, the aisles and bays tighter as you go. Finish one to open the next.
+- **Daily:** the same three-pallet job for everyone today.

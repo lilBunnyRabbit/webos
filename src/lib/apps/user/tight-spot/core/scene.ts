@@ -9,6 +9,8 @@ export const SolidKind = {
   SHELF: "shelf",
   WATER: "water",
   POST: "post",
+  RACK: "rack",
+  PALLET: "pallet",
 } as const;
 export type SolidKind = (typeof SolidKind)[keyof typeof SolidKind];
 

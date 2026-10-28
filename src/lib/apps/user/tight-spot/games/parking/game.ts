@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { inside_convex } from "../../core/collision";
-import { angle_between, clamp, type Polygon, type Vec } from "../../core/geometry";
+import { angle_between, type Vec } from "../../core/geometry";
+import { fit, MAX_ANGLE, type Precision } from "../../core/precision";
 import { collide, obstacles } from "../../core/obstacles";
 import {
   bodies,
@@ -45,7 +46,7 @@ export type Status = (typeof Status)[keyof typeof Status];
 export const ANY = "any";
 export type ScenarioPick = Scenario | typeof ANY;
 
-export const MAX_ANGLE = (5 * Math.PI) / 180;
+export { MAX_ANGLE };
 
 const CARS: readonly Vehicle[] = [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP];
 
@@ -320,63 +321,14 @@ export function record_best(bests: Bests, round: Round, result: Result): Recorde
   return { bests: next, improved, first: old === undefined };
 }
 
-export const PERFECT = 95;
+export { PERFECT, type Precision } from "../../core/precision";
 
-export interface Precision {
-  /** 0 to 100. */
-  score: number;
-  /** Metres off the middle across the bay, and along it; radians off its axis. */
-  side: number;
-  depth: number;
-  angle: number;
-}
-
-/** Distance from `from`, inside the convex polygon, to its boundary along the unit `direction`. */
-function ray_to_edge(from: Vec, direction: Vec, shape: Polygon): number {
-  let nearest = Infinity;
-  for (let i = 0; i < shape.length; i++) {
-    const a = shape[i];
-    const b = shape[(i + 1) % shape.length];
-    const edge = { x: b.x - a.x, y: b.y - a.y };
-    const denominator = direction.x * edge.y - direction.y * edge.x;
-    if (Math.abs(denominator) < 1e-12) continue;
-    const to_a = { x: a.x - from.x, y: a.y - from.y };
-    const t = (to_a.x * edge.y - to_a.y * edge.x) / denominator;
-    const u = (to_a.x * direction.y - to_a.y * direction.x) / denominator;
-    if (t >= -1e-9 && u >= -1e-9 && u <= 1 + 1e-9) nearest = Math.min(nearest, Math.max(0, t));
-  }
-  return nearest;
-}
-
-/**
- * How well a parked rig sits in its bay. The gaps to the bay's sides and ends are the shortest rays from any corner of
- * any body (a trailer counts with the car), so centring judges the whole rig; the angle is the worse of car and
- * trailer against the bay's axis (either way round for an `either` bay). Each error is a share of what the bay
- * allows (half the side room, half the end room, the 5° that still counts as straight) and the score is
- * 100 × Π(1 − e²): 100 dead centre and square, 0 against a line or at 5°.
- */
+/** How well a parked rig sits in its bay: every corner of the car and a trailer's box, the worse of their headings. */
 export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES.hatch): Precision {
-  const reverse = bay.either && angle_between(car.heading, bay.heading) > Math.PI / 2;
-  const axis = reverse ? bay.heading + Math.PI : bay.heading;
-  const along = { x: Math.cos(axis), y: Math.sin(axis) };
-  const across = { x: -along.y, y: along.x };
-  const back = { x: -along.x, y: -along.y };
-  const other = { x: -across.x, y: -across.y };
-  const points = bodies(car, spec).flat();
-  const gap = (direction: Vec) => Math.min(...points.map((point) => ray_to_edge(point, direction, bay.shape)));
-  const front = gap(along);
-  const rear = gap(back);
-  const right = gap(across);
-  const left = gap(other);
-  const side = (right - left) / 2;
-  const depth = (front - rear) / 2;
   const headings = car.trailer ? [car.heading, car.trailer.heading] : [car.heading];
-  const angle = Math.max(...headings.map((heading) => angle_between(heading, axis)));
-  const share = (off: number, room: number) => (room > 1e-9 ? clamp(Math.abs(off) / room, 0, 1) : 0);
-  const errors = [share(side, (right + left) / 2), share(depth, (front + rear) / 2), share(angle, MAX_ANGLE)];
-  const score = 100 * errors.reduce((product, e) => product * (1 - e * e), 1);
-  return { score, side: Math.abs(side), depth: Math.abs(depth), angle };
+  return fit(bodies(car, spec).flat(), headings, bay);
 }
+
 export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
 export type LevelStars = z.infer<typeof levels_schema>;
 
@@ -465,6 +417,8 @@ export const HIT_NAMES: Record<SolidKind, string> = {
   kerb: "the kerb",
   shelf: "a shelf",
   water: "the water",
+  rack: "a rack",
+  pallet: "a pallet",
 };
 
 export function crash_title(hit: GameState["hit"]): string {

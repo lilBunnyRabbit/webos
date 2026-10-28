@@ -167,11 +167,33 @@ function roof_bays(ctx: CanvasRenderingContext2D, scene: YardScene, index: numbe
   ctx.stroke();
 }
 
+// A warehouse reads from above by its ribbed roof and a row of skylights either side of the sign.
+function roof_ribs(ctx: CanvasRenderingContext2D, scene: YardScene, index: number, scale: number, palette: Palette) {
+  const { shape, mouth } = scene.yard.plots[index];
+  const x0 = shape[0].x;
+  const x1 = shape[2].x;
+  const top = shape[0].y;
+  ctx.strokeStyle = palette.faint;
+  ctx.lineWidth = Math.max(0.05, 1 / scale);
+  ctx.beginPath();
+  for (let x = x0 + 0.6; x < x1 - 0.3; x += 0.6) {
+    if (Math.abs(x - mouth.x) < 3.3) continue;
+    ctx.moveTo(x, top + 5.6);
+    ctx.lineTo(x, top + 10.8);
+  }
+  ctx.stroke();
+  ctx.fillStyle = palette.faint;
+  ctx.globalAlpha = 0.5;
+  for (const x of [x0 + 1.2, x1 - 3.2]) ctx.fillRect(x, top + 6.6, 2, 3.2);
+  ctx.globalAlpha = 1;
+}
+
 function buildings(ctx: CanvasRenderingContext2D, scene: YardScene, scale: number, palette: Palette) {
   outlined(ctx, scene.yard.structures, palette.pavement, palette.wall_edge, 3 / scale);
   scene.yard.plots.forEach((plot, index) => {
     if (!plot.open) shutter(ctx, scene, index, scale, palette);
     else if (scene.buildings[index] === Building.CAR_PARK) roof_bays(ctx, scene, index, scale, palette);
+    else if (scene.buildings[index] === Building.WAREHOUSE) roof_ribs(ctx, scene, index, scale, palette);
   });
 }
 
@@ -266,7 +288,7 @@ export function draw_yard(ctx: CanvasRenderingContext2D, scene: YardScene, view:
   bollards(ctx, yard.bollards, scale, palette);
 
   if (extras.guides && car.gear !== Gear.PARK) guides(ctx, car, spec, scale, palette);
-  player(ctx, car, scene.vehicle, spec, car.brake > 0.05 && car.gear !== Gear.PARK, scale, palette);
+  player(ctx, car, scene.vehicle, spec, car.brake > 0.05 && car.gear !== Gear.PARK, scale, palette, extras.time);
   sensor_arcs(ctx, car, spec, extras.sensors, scale, palette);
 
   if (scene.contact && scene.contact.fade > 0) {

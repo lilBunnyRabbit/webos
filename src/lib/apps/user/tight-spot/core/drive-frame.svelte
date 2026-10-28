@@ -32,6 +32,8 @@
     toolbar: Snippet;
     overlay: Snippet;
     status: Snippet;
+    /** Over the pedals on touch, for a game's own control (the forklift's Fork). */
+    pedal_top?: Snippet;
     root?: HTMLDivElement;
     board?: HTMLDivElement;
     canvas?: HTMLCanvasElement;
@@ -57,6 +59,7 @@
     toolbar,
     overlay,
     status,
+    pedal_top,
     root = $bindable(),
     board = $bindable(),
     canvas = $bindable(),
@@ -206,10 +209,10 @@
       <div
         bind:clientWidth={pedal_box.width}
         bind:clientHeight={pedal_box.height}
-        class={cn("ts-pedals hidden touch-none items-end justify-end gap-2 select-none pointer-coarse:flex", pedals_idle && "ts-idle")}
-        role="group"
-        aria-label="Pedals"
+        class={cn("ts-pedals hidden touch-none flex-col items-end justify-end gap-2 select-none pointer-coarse:flex", pedals_idle && "ts-idle")}
       >
+        {@render pedal_top?.()}
+        <div class="flex items-end gap-2" role="group" aria-label="Pedals">
         <button
           type="button"
           class={cn("ts-control ts-pad ts-pedal ts-brake rounded-lg text-ui font-medium transition-colors", input.held.brake ? "ts-pad-held" : "text-foreground/80")}
@@ -226,6 +229,7 @@
         >
           Gas
         </button>
+        </div>
       </div>
     </div>
   </div>

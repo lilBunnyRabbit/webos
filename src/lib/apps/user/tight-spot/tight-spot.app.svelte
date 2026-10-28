@@ -87,7 +87,7 @@
 {#snippet menu()}
   <Button size="sm" variant="quiet" aria-label="Games" title="Yard and games" onclick={switch_game}>
     <SignpostIcon weight="bold" />
-    <span class="hidden @sm:inline">Games</span>
+    <span class="hidden @md:inline">Games</span>
   </Button>
 {/snippet}
 

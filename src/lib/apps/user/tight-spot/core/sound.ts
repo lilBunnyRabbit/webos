@@ -3,11 +3,15 @@ import { beep_period } from "./sensors";
 const PITCH = 1750;
 const BEEP = 0.07;
 const VOLUME = 0.06;
+const ALARM_PITCH = 1040;
+const ALARM_BEEP = 0.32;
+const ALARM_PERIOD = 0.7;
 
 export class Sounds {
   private context: AudioContext | null = null;
   private tone: { oscillator: OscillatorNode; gain: GainNode } | null = null;
   private next_beep = 0;
+  private next_alarm = 0;
 
   private audio(): AudioContext | null {
     if (!this.context) {
@@ -101,9 +105,42 @@ export class Sounds {
     if (audio) this.blip(2400, audio.currentTime, 0.025, VOLUME * 0.35, "triangle");
   }
 
+  /** Called every frame; it paces itself. */
+  reverse_beeper(on: boolean) {
+    if (!on) {
+      this.next_alarm = 0;
+      return;
+    }
+    const audio = this.audio();
+    if (!audio) return;
+    const now = audio.currentTime;
+    if (now < this.next_alarm) return;
+    this.blip(ALARM_PITCH, now, ALARM_BEEP, VOLUME * 0.7, "triangle");
+    this.next_alarm = now + ALARM_PERIOD;
+  }
+
+  fork(up: boolean) {
+    const audio = this.audio();
+    if (!audio) return;
+    const at = audio.currentTime;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = "sawtooth";
+    oscillator.frequency.setValueAtTime(up ? 110 : 190, at);
+    oscillator.frequency.linearRampToValueAtTime(up ? 190 : 100, at + 0.45);
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(VOLUME * 0.45, at + 0.04);
+    gain.gain.setValueAtTime(VOLUME * 0.45, at + 0.38);
+    gain.gain.linearRampToValueAtTime(0, at + 0.48);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(at);
+    oscillator.stop(at + 0.5);
+  }
+
   quiet() {
     this.stop_tone();
     this.next_beep = 0;
+    this.next_alarm = 0;
   }
 
   close() {

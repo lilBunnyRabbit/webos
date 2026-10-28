@@ -55,6 +55,16 @@ export interface VehicleSpec {
   rolling: number;
   park_speed: number;
   trailer?: TrailerSpec;
+  /** Tines out ahead of the body; they collide like the body except where a game lets them into a pallet. */
+  forks?: Forks;
+  /** Beeps whenever it backs up, like site machinery. */
+  reverse_beeper?: boolean;
+}
+
+export interface Forks {
+  length: number;
+  /** Across both tines, outside to outside. */
+  width: number;
 }
 
 export const HATCHBACK: VehicleSpec = {
@@ -160,7 +170,38 @@ export const HATCH_TRAILER: VehicleSpec = {
   trailer: BOX_TRAILER,
 };
 
-export const Vehicle = { HATCH: "hatch", VAN: "van", PICKUP: "pickup", BUS: "bus", TOWING: "towing" } as const;
+// Counterbalance forklift: the counterweight behind the steered rear axle swings wide, the forks barely move.
+export const FORKLIFT: VehicleSpec = {
+  drive: REAR_STEER,
+  length: 2.5,
+  width: 1.2,
+  wheelbase: 1.5,
+  rear_overhang: 0.55,
+  track: 1.0,
+  wheel_diameter: 0.56,
+  wheel_width: 0.24,
+  turning_radius: 1.68,
+  steer_time: 1.05,
+  creep_speed: 0.9,
+  creep_accel: 0.8,
+  max_forward: 3,
+  max_reverse: 2.4,
+  accel: 1.8,
+  brake: 4,
+  rolling: 0.3,
+  park_speed: 0.3,
+  forks: { length: 1.2, width: 0.86 },
+  reverse_beeper: true,
+};
+
+export const Vehicle = {
+  HATCH: "hatch",
+  VAN: "van",
+  PICKUP: "pickup",
+  BUS: "bus",
+  TOWING: "towing",
+  FORKLIFT: "forklift",
+} as const;
 export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
 
 export const VEHICLES: Record<Vehicle, VehicleSpec> = {
@@ -169,6 +210,7 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   pickup: PICKUP,
   bus: BUS,
   towing: HATCH_TRAILER,
+  forklift: FORKLIFT,
 };
 
 export const VEHICLE_NAMES: Record<Vehicle, string> = {
@@ -177,6 +219,7 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   pickup: "Pickup",
   bus: "City bus",
   towing: "Car and trailer",
+  forklift: "Forklift",
 };
 
 const coasting = new WeakMap<VehicleSpec, VehicleSpec>();
@@ -424,9 +467,26 @@ export function trailer_wheels(car: Placement, spec: TrailerSpec): Vec[] {
   return [to_world(pose, { x: 0, y: -spec.track / 2 }), to_world(pose, { x: 0, y: spec.track / 2 })];
 }
 
+export function fork_corners(pose: Pose, spec: VehicleSpec): Vec[] | null {
+  if (!spec.forks) return null;
+  const heel = body_ends(spec).front;
+  const tip = heel + spec.forks.length;
+  const half = spec.forks.width / 2;
+  return [
+    { x: tip, y: -half },
+    { x: tip, y: half },
+    { x: heel, y: half },
+    { x: heel, y: -half },
+  ].map((point) => to_world(pose, point));
+}
+
+/** The body first, then the forks, then a trailer's box. */
 export function bodies(car: Placement, spec: VehicleSpec = HATCHBACK): Vec[][] {
-  const body = corners(car, spec);
-  return spec.trailer ? [body, trailer_corners(car, spec.trailer)] : [body];
+  const found = [corners(car, spec)];
+  const forks = fork_corners(car, spec);
+  if (forks) found.push(forks);
+  if (spec.trailer) found.push(trailer_corners(car, spec.trailer));
+  return found;
 }
 
 export function axles(spec: VehicleSpec): { front: number; rear: number } {
@@ -438,14 +498,15 @@ export function body_ends(spec: VehicleSpec): { front: number; rear: number } {
   return { front: rear + spec.length, rear };
 }
 
-function rig_extent(spec: VehicleSpec): { front: number; rear: number } {
+/** The whole rig's ends from the pose: fork tips at the front, a trailer's tail at the back. */
+export function rig_ends(spec: VehicleSpec): { front: number; rear: number } {
   const { front, rear } = body_ends(spec);
   const t = spec.trailer;
-  return { front, rear: t ? -(t.hitch + t.drawbar + t.box_length) : rear };
+  return { front: front + (spec.forks?.length ?? 0), rear: t ? -(t.hitch + t.drawbar + t.box_length) : rear };
 }
 
 export function rig_length(spec: VehicleSpec): number {
-  const { front, rear } = rig_extent(spec);
+  const { front, rear } = rig_ends(spec);
   return front - rear;
 }
 
@@ -487,7 +548,7 @@ export function corners(pose: Pose, spec: VehicleSpec = HATCHBACK): Vec[] {
 }
 
 export function pose_from_centre(centre: Pose, spec: VehicleSpec = HATCHBACK): Pose {
-  const { front, rear } = rig_extent(spec);
+  const { front, rear } = rig_ends(spec);
   const back = (front + rear) / 2;
   return {
     x: centre.x - Math.cos(centre.heading) * back,

@@ -17,6 +17,7 @@ export function inflate(spec: VehicleSpec, margin: number): VehicleSpec {
     length: spec.length + margin * 2,
     width: spec.width + margin * 2,
     rear_overhang: spec.rear_overhang + margin,
+    ...(spec.forks ? { forks: { length: spec.forks.length, width: spec.forks.width + margin * 2 } } : {}),
   };
   const t = spec.trailer;
   if (!t) return grown;
@@ -37,6 +38,12 @@ export interface PlanOptions {
   directions?: readonly number[];
   /** Replaces the goal of ending within `reach` and `heading_tolerance` of `to`; `to` then only steers the search. */
   arrive?: (pose: Placement) => boolean;
+  /** Replaces the collision test (the margin-grown body against `near`, and a jackknife), for a game with its own rules. */
+  blocked?: (pose: Placement) => boolean;
+  /** Steering per move as shares of full lock; finer ones let a long path line up within centimetres. */
+  steering?: readonly number[];
+  /** Added per change of direction; higher finds paths a driver would take, with fewer shuffles. */
+  switch_cost?: number;
 }
 
 export interface Move {
@@ -138,7 +145,8 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   const tolerance = options.heading_tolerance ?? Math.PI / 6;
   const limit = options.max_expansions ?? 200_000;
   const lock = max_steer(spec);
-  const curvatures = [-1, -0.5, 0, 0.5, 1].map((share) => Math.tan(lock * share) / spec.wheelbase);
+  const curvatures = (options.steering ?? [-1, -0.5, 0, 0.5, 1]).map((share) => Math.tan(lock * share) / spec.wheelbase);
+  const switch_cost = options.switch_cost ?? SWITCH_COST;
   const distance = (pose: Placement) => Math.hypot(pose.x - to.x, pose.y - to.y);
   const turn_weight = tolerance < Math.PI ? TURN_WEIGHT : 0;
   const folded = (pose: Placement) => (pose.trailer ? angle_between(pose.trailer.heading, to.heading) : 0);
@@ -147,7 +155,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   const arrived =
     options.arrive ??
     ((pose: Placement) => distance(pose) <= reach && angle_between(pose.heading, to.heading) <= tolerance);
-  const blocked = (pose: Placement) => jackknifed(pose) || collide(pose, near, body) !== null;
+  const blocked = options.blocked ?? ((pose: Placement) => jackknifed(pose) || collide(pose, near, body) !== null);
 
   if (blocked(from)) return null;
   const open = new Heap();
@@ -182,7 +190,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
         }
         if (travelled === 0 || closed.has(cell_key(pose, direction))) continue;
         const switched = node.direction !== 0 && node.direction !== direction;
-        const cost = node.cost + travelled * (direction < 0 ? REVERSE_COST : 1) + (switched ? SWITCH_COST : 0);
+        const cost = node.cost + travelled * (direction < 0 ? REVERSE_COST : 1) + (switched ? switch_cost : 0);
         open.push({
           pose,
           cost,

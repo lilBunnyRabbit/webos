@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.85.0",
+    date: "2026-10-29",
+    title: "Forklift",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub's Warehouse opens: move pallets between racks and the dock with a rear-steering forklift, in random jobs, sixteen levels and a daily job, scored on moves, time and how neatly each pallet goes down.",
+      },
+    ],
+  },
+  {
     version: "3.84.0",
     date: "2026-10-28",
     title: "Drive Hub",

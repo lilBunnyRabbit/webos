@@ -1,4 +1,5 @@
 import { create_rng, type Rng } from "$lib/core/utils/random";
+import { hash } from "../../core/seed";
 import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
 import {
   ChunkKind,
@@ -57,16 +58,7 @@ export type Plan = (cx: number, cy: number) => Cell | null;
 const STEP: Record<Side, Vec> = { n: { x: 0, y: -1 }, e: { x: 1, y: 0 }, s: { x: 0, y: 1 }, w: { x: -1, y: 0 } };
 const OPPOSITE: Record<Side, Side> = { n: "s", e: "w", s: "n", w: "e" };
 
-export function hash(seed: number, ...values: number[]): number {
-  let h = seed >>> 0;
-  for (const value of values) {
-    h = Math.imul(h ^ (value | 0), 0x9e3779b1);
-    h ^= h >>> 15;
-    h = Math.imul(h, 0x85ebca77);
-    h ^= h >>> 13;
-  }
-  return h >>> 0;
-}
+export { hash };
 
 export function chunk_rng(seed: number, cx: number, cy: number): Rng {
   return create_rng(hash(seed, cx, cy));

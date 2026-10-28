@@ -247,6 +247,7 @@
     const near = obstacles(YARD);
     readings = { front: sensor(next, near, End.FRONT, spec), rear: sensor(next, near, End.REAR, spec) };
     if (settings.sound) sounds.sensor(next.gear === Gear.DRIVE ? readings.front : next.gear === Gear.REVERSE ? readings.rear : null);
+    if (settings.sound) sounds.reverse_beeper(!!spec.reverse_beeper && next.speed < -0.02);
     // A touch is a bump, not the end: one thunk as it starts, and the ring fades while the vehicle stays put.
     if (hit && !touching) {
       contact = { at: hit, since: performance.now() };
