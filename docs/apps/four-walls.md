@@ -71,6 +71,8 @@ Tried 12, 14 and 16 headless (a greedy one-piece bot on the pure rules, tuned by
 
 12 is cramped: the zones are six lines deep with two taken by the spawn, games end in about 30 pieces. 16 lasts longest but its 15-cell lines clear rarely, so a game is long stretches without a clear, and the cells get small on a phone. 14 sits between: a few more lines per piece than 16, a third more room than 12. Measured 2026-10-28 on the build's rules; unmeasured with real players.
 
+Layout: in a wide box Hold and Next stand beside the board; in a tall one (phones, narrow windows, `@container (orientation: portrait)`) they sit in a row above it with two Next pieces, so the board takes the full width (about 26 px cells on a 390 px phone instead of 18). The ready screen is a `BoardOverlay` naming the mode.
+
 ## Data
 
 - `app.four-walls.best` (`storage.persisted`, zod `best_schema`): `{ cycle: { score, lines }, random: { score, lines } }`, each the best of its mode; the daily counts as Random. Reset in the Best sheet.

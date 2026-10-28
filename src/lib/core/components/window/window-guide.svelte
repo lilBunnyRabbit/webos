@@ -2,8 +2,7 @@
   import { onMount } from "svelte";
   import kernel, { type AppHighlight, type AppMeta, type AppsService, WindowFlag, type WindowId, type WindowsService } from "$lib/core/api";
   import { AppCategory } from "$lib/core/api/services/apps/type";
-  import { X as XIcon } from "phosphor-svelte";
-  import { Button, IconButton, Spinner } from "../ui";
+  import { Button, Spinner } from "../ui";
   import MarkdownView from "../markdown/markdown-view.svelte";
 
   let { window_id }: { window_id: WindowId } = $props();
@@ -55,9 +54,6 @@
       close();
     }}
   >
-    <IconButton label="Close guide" size="sm" class="absolute top-2 right-2 z-10 pointer-coarse:size-11" onclick={close}>
-      <XIcon weight="bold" />
-    </IconButton>
 
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
       <div class="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 pt-6 pb-4 @md:px-6">

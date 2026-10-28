@@ -128,7 +128,7 @@ ADR-085. While the window has `WindowFlag.GUIDE`, the host (`window.svelte`, `mo
 
 - **Layout:** `absolute inset-0 z-20` on `bg-background`, a size container of its own. A centred column (`max-w-xl`) scrolls (`overscroll-contain`): a header with the app's duotone icon in a raised tile, the name in `text-lg` and "How to play" (games) or "How to use it" below; the pitch (problem in `foreground/65`, solution) in a `background-light` card; the guide's markdown through `MarkdownView` (`components/markdown`, `utils/markdown`: headings, `-` lists, paragraphs, bold, italic, code, links, never HTML) at `text-sm`; without a guide the description instead; then the highlights as the announcement shows them (icon chip, title, sentence; two columns from `@md`). A footer on `background-light` holds a primary **Got it**.
 - **Loading:** `apps.meta(id)`, `manifest.guide()` and `manifest.highlights()` in one `Promise.all`, so the overlay doesn't grow as parts land; each part that fails is left out. A spinner fades in after 300ms.
-- **Closing:** the × (top right, outside the scroll, 44px on touch), Got it, Escape (handled on the overlay and stopped there, so the app never sees it), and on mobile Back: the overlay registers a back handler while it's mounted. All call `toggle_guide`.
+- **Closing:** Got it, the Guide button again (title bar, nav bar or solo header), Escape (handled on the overlay and stopped there, so the app never sees it), and on mobile Back: the overlay registers a back handler while it's mounted. All call `toggle_guide`.
 - **Focus:** the overlay takes focus when it mounts, unless focus is already inside it.
 
 ## User interactions

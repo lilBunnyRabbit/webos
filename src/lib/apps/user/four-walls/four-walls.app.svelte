@@ -449,7 +449,7 @@
     <div class="flex min-h-0 flex-col items-center gap-3 p-3">
       <div class="grid min-h-0 w-full flex-1 place-items-center [container-type:size]">
         <div class="stage grid grid-cols-[auto_auto_auto] items-start gap-[calc(var(--cell)*0.4)]" style:--size={game.size}>
-          <div class="flex flex-col items-center gap-[calc(var(--cell)*0.3)]">
+          <div class="stage-hold flex flex-col items-center gap-[calc(var(--cell)*0.3)]">
             <span class="text-2xs tracking-wide text-foreground/65 uppercase">Hold</span>
             <FourWallsPreview piece={game.hold} dim={!game.can_hold} />
           </div>
@@ -460,7 +460,7 @@
             role="application"
             aria-label="Four Walls board. Each piece falls toward the wall its arrow shows. The arrows across its way steer, its own arrow drops softly, the opposite arrow or X rotates, Z rotates back, Space drops, C holds, P pauses."
             tabindex="0"
-            class="relative size-[calc(var(--cell)*var(--size))] touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
+            class="stage-board relative size-[calc(var(--cell)*var(--size))] touch-none overflow-hidden rounded-lg ring-1 ring-foreground/8 outline-none select-none focus-visible:ring-2 focus-visible:ring-cottontail"
             onpointerdown={on_pointerdown}
             onpointermove={on_pointermove}
             onpointerup={on_pointerup}
@@ -469,12 +469,12 @@
             <canvas bind:this={canvas} class="block size-full"></canvas>
 
             {#if game.status === Status.READY}
-              <div class="absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-[8%] text-center">
-                <p class="text-ui text-foreground/80">
-                  {daily ? "Daily · the same pieces and walls for everyone" : mode === Mode.CYCLE ? "Walls go round, turning back every 10 pieces" : "Every piece picks its own wall"}
-                </p>
+              <BoardOverlay
+                title={daily ? "Daily" : mode === Mode.CYCLE ? "Cycle" : "Random"}
+                detail={daily ? "The same pieces and walls for everyone" : mode === Mode.CYCLE ? "Walls go round, turning back every 10 pieces" : "Every piece picks its own wall"}
+              >
                 <Button size="sm" variant="primary" onclick={start}>Start</Button>
-              </div>
+              </BoardOverlay>
             {:else if game.status === Status.PAUSED}
               <BoardOverlay title="Paused" detail="Score {game.score}">
                 <Button size="sm" variant="primary" onclick={start}>Resume</Button>
@@ -486,7 +486,7 @@
             {/if}
           </div>
 
-          <div class="flex flex-col items-center gap-[calc(var(--cell)*0.3)]">
+          <div class="stage-next flex flex-col items-center gap-[calc(var(--cell)*0.3)]">
             <span class="text-2xs tracking-wide text-foreground/65 uppercase">Next</span>
             {#each next as turn, i (i)}
               <FourWallsPreview piece={turn.piece} direction={turn.direction} />
@@ -568,5 +568,33 @@
   .stage {
     --cell: min(100cqh / var(--size), 100cqw / (var(--size) + 6));
     --mini: calc(var(--cell) * 0.5);
+  }
+
+  /* Tall boxes (phones, narrow windows): Hold and Next sit in a row above the board so it gets the full width. */
+  @container (orientation: portrait) {
+    .stage {
+      --cell: min(100cqw / var(--size), 100cqh / (var(--size) + 5));
+      grid-template-columns: auto 1fr;
+      grid-template-areas: "hold next" "board board";
+      row-gap: calc(var(--cell) * 0.5);
+    }
+    .stage-hold,
+    .stage-next {
+      flex-direction: row;
+    }
+    .stage-hold {
+      grid-area: hold;
+    }
+    .stage-next {
+      grid-area: next;
+      justify-self: end;
+      column-gap: calc(var(--cell) * 0.9);
+    }
+    .stage-next > :global(:nth-child(n + 4)) {
+      display: none;
+    }
+    .stage-board {
+      grid-area: board;
+    }
   }
 </style>
