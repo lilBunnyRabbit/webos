@@ -30,5 +30,12 @@ Today one car, `HATCHBACK` in `vehicle.ts`; every model function already takes a
 - [x] Build: specs, trailer model + tests, two-body collision and hitch check, drawing (trailer, bus), four new kinds, levels, planner replay test, camera zoom, docs/apps page, guide, changelog `new`, plus the end bay
 - [ ] Feature review, then desktop and mobile visual pass before push
 
+## Trucks (later the same day)
+Owner: "Oh no truck car option?", then: "the classic European truck you see with trailers. Lets work on that later". Parked for a later session; draft picks to revisit then:
+- **Semi:** tractor (about 6 m, 3.8 m wheelbase) with a 13.6 m semi-trailer on a fifth wheel just ahead of the tractor's rear axle. The same one-trailer model (`TrailerSpec`, hitch offset slightly negative); jackknife limit wider than the car's (about 80°, a cab clears more).
+- **Box truck:** a rigid 7.5 t truck, about 8 m with a long rear overhang, a plain `VehicleSpec`.
+- **Loading dock:** new kind, reverse square to a dock door between parked trucks; semi and box truck. The depot also allows the box truck.
+- Rejected for now: a drawbar trailer (second hinge, model change), a truck stop.
+
 ## Next session topics
 - Trailer types (boat, caravan), rear-steer bus, a vehicle picker in the open lot
