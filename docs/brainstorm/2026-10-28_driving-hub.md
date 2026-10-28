@@ -50,6 +50,9 @@ A `game` prop only: `app launch tight-spot game=forklift`, links `#/app/tight-sp
 ### Build order (decided)
 After 3.82.1 and 3.83.0 push: (1) refactor into `core/` and `games/parking/` with no behaviour change, (2) the yard, playground, menu and `game` prop, renamed Drive Hub, (3) the forklift. The new rigs run in parallel with the forklift (owner: "do rigs in parallel with forklift"): they're parking content, not a second game. The forklift's rear-steer change to the core vehicle model lands first; the rigs agent rebases on it and only adds specs and drawings to the core.
 
+### Dailies in Game Hub (decided)
+One Game Hub row per game: Drive Hub reports a daily per game (`daily_rank` as a per-game record, e.g. `{ parking: SCORE_ASC, forklift: SCORE_ASC }`) and the daily launch names the game, like Sudoku's modes. Parking's daily results move to `tight-spot/parking`; older days stay under `tight-spot` (legacy doesn't matter). Rejected: the forklift daily in-game only, one rotating Drive Hub daily.
+
 ## Key takeaways
 - One app holds every driving game; the shared core needs no kit while the hub is its only user.
 - Keeping the id keeps every player's data.
