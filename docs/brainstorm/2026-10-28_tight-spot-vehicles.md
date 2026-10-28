@@ -19,6 +19,8 @@ Today one car, `HATCHBACK` in `vehicle.ts`; every model function already takes a
 - **Shell:** nothing. The spot decides the vehicle, so there's no prop or command; `app launch tight-spot` stays the way in.
 - **Camera:** zoom by vehicle length so a bus covers about the share of the screen a hatchback does, capped so bays stay readable.
 
+- **Old stars after the renumbering (decided after the build):** accept the shift. Tight Spot shipped the same day, so few players have stars; unlocks stay valid. Rejected: a one-time star migration, appending the new kinds as levels 28–42.
+
 ## Key takeaways
 - Most of the roster is data; the trailer is the one new model, and reversing it is the new skill the game teaches.
 - A best per kind now mixes vehicles of different difficulty (accepted with "spot decides").
