@@ -12,7 +12,7 @@ Three layers, each replaceable on its own (the brainstorm's later steps):
 |-------|-------|-------------|
 | Sim | `vehicle.ts` (model), `collision.ts`, `game.ts` (rounds, judging) | a dynamic tyre model behind the same `step()` |
 | World | `world.ts` (chunks, plans), `lots.ts` (layouts), `kinds.ts` (shapes) | streamed chunks for the infinite world |
-| Drawing | `draw.ts`, `camera.ts` | a tilted 3D renderer |
+| Drawing | `draw.ts`, `draw-math.ts`, `camera.ts` | a tilted 3D renderer |
 
 `tight-spot.app.svelte` runs the fixed-step loop and the input; `sensors.ts` and `sound.ts` are the parking sensors; `planner.ts` is test-only.
 
@@ -33,7 +33,22 @@ The hatchback (`HATCHBACK`): 4.3 m long, 1.8 m wide, 2.6 m wheelbase, 0.8 m rear
 
 The front wheels are drawn at their Ackermann angles (`wheels()`): the inner one at `atan(L / (1/κ − track/2))`, the outer at `atan(L / (1/κ + track/2))`. The dashed guide lines are `sweep()`: the two leading corners' paths for 5 m at the current wheel angle.
 
+Each wheel's rolled distance is in `car.roll` (metres, signed, in `wheels()` order), for the tread drawing. `roll()` adds the step's distance times the wheel's own radius over the rear axle centre's: a wheel at `(x, y)` from the rear axle's centre turns on `|κ| · hypot(x, 1/κ − y)` of it, which is `hypot(x·κ, 1 − y·κ)` and 1 driving straight. On lock the outer front wheel rolls the most and the inner rear the least; standing still nothing rolls, whatever the wheel does.
+
 Tests (`vehicle.test.ts`) pin the geometry: the outer front wheel's circle is 5.3 m, the rear axle stays on its 3.84 m circle for 2000 steps, it only ever moves along the heading, the outer front corner swings outside the rear wheels' path, reversing on lock retraces the same circle, plus the steering rate, creep, brake hold, P refusal and determinism.
+
+### Drawing
+
+`draw.ts` draws one frame onto the canvas in world metres; `read_palette` resolves the theme once per theme change.
+
+- **Contrast on any body.** The default theme's primary (the player's paint) is as light as its foreground, so nothing mixed from the foreground shows on it. Detail on a car takes the theme's two extremes instead: `ink`, the darker of foreground and background-darkest, and `glow`, the lightest of foreground, background-lightest and cottontail (lightness read with `oklch(from … l 0 0)`). A lamp is a `glow` (or `error`) lens in an `ink` housing, so one of the two stands off any body. Glass and roof take whichever of `ink` and the plain light tone (no cottontail) is further in lightness from that paint (`against()`), mixed into it. Parked cars' paints are mixed with the background, not with transparent, so lines don't show through them.
+- **Lights.** Headlights, tail lights (brighter with a red halo while braking), reverse lamps in R. In D or R the lamps throw a soft cone on the ground (a linear gradient from `glow` to clear, shorter behind), only when the ground is much darker than `glow`; on light themes it read as a grey smear.
+- **Tyres.** Drawn over the body, slightly wider than real and nudged out, so the front pair's Ackermann angles read. Tread stripes every 11 cm come from `tread(roll, pitch, length)`: seen from above it's the top of the tyre, which moves the way the car does, so stripes run forward in D and back in R. Above 2.5 m/s they fade toward 20 %, the way a spinning wheel blurs, instead of strobing.
+- **Shadows.** Every car casts its body shape offset by a fixed world vector (the sun doesn't turn with the car), in `ink` at 30 %.
+- **Clean lines.** Pieces of one kind (each ground surface, kerbs, walls, shelves, pillars) go in one path, every piece wound the same way (`wound()`), so abutting pieces fill without anti-aliasing seams and a translucent stroke never doubles where two meet. Outlines are stroked before the fill (the fill hides the inner half and every shared edge) with round joins, so corners don't spike. Bay lines and stop lines are one stroke per kind; road centre dashes are phased by where each segment starts along its line (`dash_phase()`), so the pattern runs on across chunks. Mark widths have a floor of 1.25 CSS px when zoomed out. The world transform is rounded to whole device pixels, so thin lines don't shimmer while the camera eases.
+- **Markers.** Target bay: pulsing outline and fill with an arrow (two heads when either way counts); parked: the bay in `success`, thicker; crash: rings at the contact point. The off-screen bay pointer stays 22 px inside the edges and below the 44 px band of chips along the top of the board.
+
+The canvas backing store follows `devicePixelContentBoxSize`. Under Playwright's (and DevTools') device-scale emulation that box reports CSS pixels, so the canvas renders at 1× there; a real high-DPI screen or `--force-device-scale-factor` gives the full resolution.
 
 ### Collision
 

@@ -54,7 +54,11 @@ export interface Car extends Pose {
   gear: Gear;
   throttle: number;
   brake: number;
+  /** Metres each wheel has rolled, signed (negative in reverse), in `wheels()` order: front left, front right, rear left, rear right. */
+  roll: Rolls;
 }
+
+export type Rolls = [number, number, number, number];
 
 export interface Input {
   /** Wanted wheel position from -1 (full left) to 1 (full right); null lets go, so the wheel self-centres as the car rolls. */
@@ -75,7 +79,7 @@ export function max_steer(spec: VehicleSpec): number {
 }
 
 export function create_car(pose: Pose, gear: Gear = Gear.PARK): Car {
-  return { x: pose.x, y: pose.y, heading: pose.heading, speed: 0, steer: 0, gear, throttle: 0, brake: 0 };
+  return { x: pose.x, y: pose.y, heading: pose.heading, speed: 0, steer: 0, gear, throttle: 0, brake: 0, roll: [0, 0, 0, 0] };
 }
 
 export function gear_direction(gear: Gear): -1 | 0 | 1 {
@@ -140,7 +144,23 @@ export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HAT
   const speed = Math.abs(driven) <= resist ? 0 : driven - Math.sign(driven) * resist;
   const distance = ((car.speed + speed) / 2) * dt;
 
-  return { ...next, ...arc(car, Math.tan(steer) / spec.wheelbase, distance), speed };
+  const curvature = Math.tan(steer) / spec.wheelbase;
+  return { ...next, ...arc(car, curvature, distance), speed, roll: roll(car.roll, curvature, distance, spec) };
+}
+
+/**
+ * Each wheel rolls along its own circle about the turn centre, so on lock the outer front wheel covers the most ground.
+ * A wheel at (x, y) from the rear axle's centre turns on a radius |κ|·hypot(x, 1/κ − y) times the axle centre's.
+ */
+export function roll(rolls: Rolls, curvature: number, distance: number, spec: VehicleSpec = HATCHBACK): Rolls {
+  const half = spec.track / 2;
+  const ratio = (x: number, y: number) => Math.hypot(x * curvature, 1 - y * curvature);
+  return [
+    rolls[0] + distance * ratio(spec.wheelbase, -half),
+    rolls[1] + distance * ratio(spec.wheelbase, half),
+    rolls[2] + distance * ratio(0, -half),
+    rolls[3] + distance * ratio(0, half),
+  ];
 }
 
 export function to_world(pose: Pose, local: Vec): Vec {

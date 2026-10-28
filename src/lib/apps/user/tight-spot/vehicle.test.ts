@@ -173,3 +173,30 @@ describe("gears and pedals", () => {
     expect(a).toEqual(b);
   });
 });
+
+describe("wheel roll", () => {
+  test("driving straight, every wheel rolls the distance the car covers, negative in reverse", () => {
+    const forward = run({ ...create_car(START), gear: Gear.DRIVE }, { steer: 0, throttle: 0.6, brake: 0 }, 2);
+    for (const rolled of forward.roll) expect(rolled).toBeCloseTo(forward.x, 9);
+    const back = run({ ...create_car(START), gear: Gear.REVERSE }, { steer: 0, throttle: 0.6, brake: 0 }, 2);
+    for (const rolled of back.roll) expect(rolled).toBeCloseTo(back.x, 9);
+    expect(back.x).toBeLessThan(0);
+  });
+
+  test("on lock each wheel rolls the length of its own circle's arc, the outer front wheel the most", () => {
+    const locked = at_full_lock(Gear.DRIVE);
+    const centre = turn_centre(locked)!;
+    const radii = wheels(locked).map((wheel) => distance(wheel.at, centre));
+    let car = locked;
+    for (let i = 0; i < 600; i++) car = step(car, { steer: 1, throttle: 0, brake: 0 }, DT);
+    const turned = car.heading - locked.heading;
+    car.roll.forEach((rolled, i) => expect(rolled - locked.roll[i]).toBeCloseTo(radii[i] * turned, 6));
+    expect(Math.max(...car.roll)).toBe(car.roll[0]);
+    expect(Math.min(...car.roll)).toBe(car.roll[3]);
+  });
+
+  test("standing still rolls nothing, even while the wheel turns", () => {
+    const parked = run(create_car(START), { steer: 1, throttle: 0, brake: 0 }, 2);
+    expect(parked.roll).toEqual([0, 0, 0, 0]);
+  });
+});
