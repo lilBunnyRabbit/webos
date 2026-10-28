@@ -138,6 +138,7 @@
   let held = $state({ gas: false, brake: false, left: false, right: false });
   let steer_box = $state({ width: 0, height: 0 });
   let pedal_box = $state({ width: 0, height: 0 });
+  let stage_rect = $state<DOMRectReadOnly>();
   let hud_height = $state(0);
 
   // Read every physics step, never rendered, so holding a key doesn't re-run effects.
@@ -292,7 +293,7 @@
   }
 
   function control_insets(): Insets {
-    if (!steer_box.width || size.width <= size.height * OVERLAY_ASPECT) return NO_INSETS;
+    if (!steer_box.width || !stage_rect || stage_rect.width <= stage_rect.height * OVERLAY_ASPECT) return NO_INSETS;
     return { top: hud_height + 8, right: pedal_box.width + OVERLAY_GAP, bottom: 0, left: steer_box.width + OVERLAY_GAP };
   }
 
@@ -496,6 +497,10 @@
   function set_steering_mode(value: SteeringMode) {
     steering_mode = value;
     storage.set("steering", value);
+    // The held buttons unmount with the switch, so their lostpointercapture never arrives.
+    holds.left.clear();
+    holds.right.clear();
+    held = { ...held, left: false, right: false };
   }
 
   function shift(gear: Gear) {
@@ -742,7 +747,7 @@
     </div>
   </div>
 
-  <div class="ts-stage min-h-0 p-2 [container:ts-stage/size] @md:p-3">
+  <div bind:contentRect={stage_rect} class="ts-stage min-h-0 p-2 [container:ts-stage/size] @md:p-3">
     <div class="ts-layout h-full">
       <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
       <div
@@ -955,6 +960,54 @@
   }
 
   /* Phones held upright: the board on top, the wheel under the left thumb, the pedals under the right. */
+  .ts-wheel {
+    grid-area: wheel;
+  }
+
+  .ts-pedals {
+    grid-area: pedals;
+  }
+
+  .ts-wheel :global(.ts-wheel-size) {
+    width: min(10.5rem, 40cqw);
+  }
+
+  .ts-pad {
+    background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
+  }
+
+  .ts-pad-held {
+    color: var(--foreground);
+    background-color: color-mix(in oklch, var(--foreground) 25%, transparent);
+  }
+
+  .ts-pad-gas {
+    background-color: color-mix(in oklch, var(--primary) 35%, transparent);
+  }
+
+  .ts-steer {
+    width: 4.5rem;
+    height: 5rem;
+  }
+
+  .ts-pedal {
+    width: 4rem;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0 0.6rem,
+      color-mix(in oklch, var(--foreground) 7%, transparent) 0.6rem 0.75rem
+    );
+    background-clip: padding-box;
+  }
+
+  .ts-brake {
+    height: 5.5rem;
+  }
+
+  .ts-gas {
+    height: 8rem;
+  }
+
   @media (pointer: coarse) {
     .ts-stage {
       padding: 0;
@@ -1035,54 +1088,6 @@
         height: min(8.5rem, 46cqh);
       }
     }
-  }
-
-  .ts-wheel {
-    grid-area: wheel;
-  }
-
-  .ts-pedals {
-    grid-area: pedals;
-  }
-
-  .ts-wheel :global(.ts-wheel-size) {
-    width: min(10.5rem, 40cqw);
-  }
-
-  .ts-pad {
-    background-color: color-mix(in oklch, var(--foreground) 10%, transparent);
-  }
-
-  .ts-pad-held {
-    color: var(--foreground);
-    background-color: color-mix(in oklch, var(--foreground) 25%, transparent);
-  }
-
-  .ts-pad-gas {
-    background-color: color-mix(in oklch, var(--primary) 35%, transparent);
-  }
-
-  .ts-steer {
-    width: 4.5rem;
-    height: 5rem;
-  }
-
-  .ts-pedal {
-    width: 4rem;
-    background-image: repeating-linear-gradient(
-      to bottom,
-      transparent 0 0.6rem,
-      color-mix(in oklch, var(--foreground) 7%, transparent) 0.6rem 0.75rem
-    );
-    background-clip: padding-box;
-  }
-
-  .ts-brake {
-    height: 5.5rem;
-  }
-
-  .ts-gas {
-    height: 8rem;
   }
 
   :global(.ts-control) {
