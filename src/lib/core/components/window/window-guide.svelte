@@ -52,7 +52,7 @@
 
 {#if manifest}
   <div
-    class={cn("absolute inset-0 z-20 grid bg-(--overlay) backdrop-blur-[2px] @container", docked ? "items-end p-2 pt-16" : "place-items-center p-4")}
+    class={cn("absolute inset-0 z-20 grid bg-(--overlay) backdrop-blur-[2px] @container", docked ? "items-end justify-items-center p-2 pt-[min(4rem,10dvh)]" : "place-items-center p-4")}
     role="presentation"
     onpointerdown={(event) => {
       if (event.target === event.currentTarget) close();

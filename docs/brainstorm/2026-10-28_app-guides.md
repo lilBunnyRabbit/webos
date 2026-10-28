@@ -19,7 +19,12 @@ Today: every app has `description` and `pitch` (catalogue text, ADR-077); 53 of 
 
 ## Action items
 - [x] ADR-085, one app-builder agent (implemented 2026-10-28).
-- [ ] Later: a writing pass, a guide for every app.
+- [x] Writing pass, a guide for every app (2026-10-28, see below).
 
 ## Next session topics
 - Guide writing pass across all apps.
+
+## Writing pass (2026-10-28)
+- **Every app gets a guide** (owner). A guide that pops up on the first launch of an app that explains itself is a popup to dismiss, so apps can opt out: a manifest boolean `guide_on_launch: false` (owner picked it over a line in `guide.md` and an object form of `guide`). 43 apps opt out, mostly viewers, simple tools and settings-like apps; the writers picked them per app.
+- **Modal, not full cover** (owner: "change the design of the info so it doesnt take the full window but its like a modal"). A card over a scrim like a window sheet: centred on desktop, a bottom sheet with a grabber on phones. Closed by Got it, the scrim, swipe down, the Guide button, Escape and Back.
+- Writers read each app's code so the guides only state real keys, gestures and labels. Mismatches they found between apps' own text and code went to the owner as open calls (HTML Preview scripts, QR Reader barcodes).

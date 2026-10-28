@@ -30,6 +30,8 @@ Users open an app and don't know what it is or how to play it ([brainstorm](../b
 ## Revision 2026-10-28 (writing pass)
 Every app gets a guide, but one popping up on the first launch of an app that explains itself (Clock, Calculator) is a popup to dismiss. A manifest boolean `guide_on_launch` (default `true`) turns the first-open overlay off; the ? button, F1 and `app guide` still open it. The catalogue copies it like `restore`, so a stub knows it without loading the code. Rejected: a line in `guide.md` (first launch would load the guide only to learn not to show it), an object form of `guide` (a union every reader handles).
 
+The overlay no longer covers the window (owner: "so it doesnt take the full window but its like a modal"). It is a card over a scrim, laid out like a window sheet: centred on desktop, a bottom sheet on phones with a grabber. Got it, a press on the scrim, a swipe down (phones), the Guide button, Escape and Back close it.
+
 ## Consequences
 - `define_app` gains a field (app API, stable like the rest).
 - A writing pass is needed for guides beyond Plots.
