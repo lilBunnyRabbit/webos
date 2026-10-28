@@ -74,7 +74,7 @@ Cups sort ready first, then by end. A cup started in the last 3 s scrolls itself
 }
 ```
 
-Each top-level part falls back on its own (`.catch`), so one broken part doesn't lose the rest. No props, no shell commands (`app launch tea-timer`), no widget.
+Each top-level part falls back on its own (`.catch`), so one broken part doesn't lose the rest. No props, no shell commands (`app launch tea-timer`), no widget. Guide: `guide.md` (ADR-085), with `guide_on_launch: false`, since the cards explain themselves.
 
 `app.tea-timer.brews` (app storage) counts the cups brewed to the end, first steeps and later ones alike, for `brews-50`. Achievements live in `/var/lib/apps/tea-timer/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)).
 

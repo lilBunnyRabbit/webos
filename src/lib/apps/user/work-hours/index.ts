@@ -9,6 +9,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   props: WORK_HOURS_PROPS,
   defaults: {
     constraints: {

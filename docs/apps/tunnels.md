@@ -60,6 +60,8 @@ The path logic is app-local. Hop, built in parallel, adds a drag-path helper to 
 
 `hint` (`game.ts:79`) reveals the next letter of the word hints already started, else the first letter of the first unfound word in list order. Revealed letters get a dashed ring and their position on the board, and show in the word list. The last letter locks the word. Every hint counts; best times only count solves without hints. Undo takes back the last found word, Reset all of them; revealed letters stay (they were paid for).
 
+**Guide** (`guide.md`, ADR-085): goal, rules, tracing (pointer, tap, keyboard), hints, undo, sizes and the daily. It opens by itself on the first launch with no props; keep it in step with the controls above.
+
 ## Word data
 
 `words.ts` reuses Letterer's lists through `load_words` (`letterer/words.ts`), one lazy chunk per length:

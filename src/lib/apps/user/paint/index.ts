@@ -8,6 +8,8 @@ export default define_app({
   name: "Paint",
   icon: AppIcon,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   category: AppCategory.MEDIA,
   tools: ["image/*"],
   props: FILE_PROPS,

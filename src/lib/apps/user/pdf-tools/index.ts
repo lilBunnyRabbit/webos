@@ -20,5 +20,6 @@ export default define_app({
   defaults: { constraints: { width: { min: 340 }, height: { min: 360 } } },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   component: () => import("./pdf-tools.app.svelte"),
 });

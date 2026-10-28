@@ -1,0 +1,4 @@
+- **Use camera** looks for a code and stops at the first one it reads. Press it again for the next.
+- **Open image…** reads a picture from your files. You can also paste an image or drop one onto the window.
+- Every scan goes into the history with a small picture, newest first, up to 50. Links open in a new tab, and any result copies with one click.
+- The history stays on this device. **Clear all** empties it.

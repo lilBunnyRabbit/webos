@@ -9,6 +9,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   props: z.object({ list: z.string().optional(), photo: z.union([z.boolean(), z.literal("scan")]).optional() }),
   defaults: { constraints: { width: { min: 300 }, height: { min: 400 } } },
   highlights: () => import("./highlights"),

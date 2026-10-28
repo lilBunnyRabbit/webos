@@ -8,6 +8,8 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.UTILITIES,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },
   component: () => import("./rng-tools.app.svelte"),
 });

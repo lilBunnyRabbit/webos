@@ -177,6 +177,8 @@ The bottom of a list: a strip with "N of M in the cart" and Clear done (shown on
 - `photo`: `true` starts the photo read at once, the same `photo()` as Read a photo in the entry bar's camera menu: device picker, crop, review. `"scan"` opens Doc Scan's sheet at once, the same `scan()` as Scan a list in that menu. The picker needs a user gesture; the launch from a widget tap reaches it within Chrome's activation window (checked: `navigator.userActivation.isActive` still true at the picker).
 - Both are acted on once per window, when the file is ready (`shopping-list.app.svelte:126`). The window's `launched` flag keeps a session restore from switching lists or opening the picker again.
 
+The guide (`guide.md`, `guide` in `index.ts`) shows on the first launch and from the window's ? button.
+
 ### Shell and Ask
 
 `commands.ts` (lazy bodies in `shell.ts`, reading `lists.json` through `live_file`, so an open window and a command share one cell):

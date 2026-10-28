@@ -18,6 +18,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   props: SOLITAIRE_PROPS,
   defaults: {
     constraints: {

@@ -89,6 +89,7 @@ One container query on the app root (`container: proposals`): from 44rem the lis
 - Files: `.proposals.md` anywhere, opened through the association, `FILE_PROPS` (`{ path }`), Open…, Save (Mod+S), Save as… (Mod+Shift+S), New notebook. A new notebook starts with one empty proposal and isn't dirty until edited.
 - No app storage, no settings.
 - Shell: none; `open` reaches it through the association.
+- Guide: `guide.md` (manifest `guide`), shown on the first launch.
 
 ## Dependencies & licences
 

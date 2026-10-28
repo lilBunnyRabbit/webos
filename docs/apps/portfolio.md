@@ -124,6 +124,7 @@ A printable key anywhere in the window focuses the terminal's prompt with that k
 
 - Props: `{ section?: "who" | "work" | "projects" | "how" | "contact" }` (`PORTFOLIO_PROPS`, `index.ts`). With a section the app skips the tour the way taking over does (`start_at`) and brings that window forward; on the desktop every window but Contact opens, unless Contact is the one asked for, which then floats over the tiled desk and takes focus. On a phone every window opens and the page scrolls to the section. `#/solo/portfolio?section=work` and `#/app/portfolio?section=contact` work as links.
 - The window opens maximized (`defaults.flags`): the rail layout needs about 1250 px, and the default 62% share would open the stacked layout on most screens. Un-maximized or resized below that, it stacks.
+- Guide: `guide.md`, with `guide_on_launch: false`, since the tour already introduces the app.
 
 `commands.ts`:
 

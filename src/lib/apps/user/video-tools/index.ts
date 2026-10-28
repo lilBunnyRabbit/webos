@@ -8,6 +8,7 @@ export default define_app({
   name: "Video Tools",
   icon: AppIcon,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   category: AppCategory.MEDIA,
   tools: ["video/*"],
   props: z.object({ path: z.string().optional() }),

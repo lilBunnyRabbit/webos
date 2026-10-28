@@ -10,6 +10,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   associations: COOK_FILES,
   props: z.object({ path: z.string().optional() }),
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },

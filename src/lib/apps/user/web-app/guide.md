@@ -1,0 +1,4 @@
+- **Add web app…** asks for an address and a name, and saves a `.webapp` file on the desktop, or in a folder you choose with **Change…**.
+- Open that icon any time to get the site in its own window. **Reload**, **Copy address** and **Open in a browser tab** sit in the bar at the top.
+- Blank page, or stuck loading? Many sites refuse to be shown inside other pages. Open them in a browser tab instead.
+- The Terminal can add one too: `webapp add example.com`.

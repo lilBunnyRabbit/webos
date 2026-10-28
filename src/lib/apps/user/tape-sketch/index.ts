@@ -12,6 +12,7 @@ export default define_app({
   associations: [".tapesketch"],
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 480 } } },
   achievements: [
     { id: "first-save", title: "On paper", text: "Save a sketch." },

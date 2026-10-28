@@ -13,6 +13,8 @@ export default define_app({
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
   highlights: () => import("./highlights"),
+  guide: () => import("./guide.md?raw"),
+  guide_on_launch: false,
   props: PORTFOLIO_PROPS,
   // The terminal rail and three columns need about 1250 px; the default 62% share would open the stacked phone layout.
   defaults: { flags: [WindowFlag.MAXIMIZED], constraints: { width: { min: 340 }, height: { min: 420 } } },

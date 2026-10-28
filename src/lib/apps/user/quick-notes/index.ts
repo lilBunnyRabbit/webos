@@ -15,6 +15,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   props: QUICK_NOTES_PROPS,
   badge: open_todos,
   defaults: {

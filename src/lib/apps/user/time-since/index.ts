@@ -11,6 +11,7 @@ export default define_app({
   icon: AppIcon,
   category: AppCategory.PRODUCTIVITY,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   props: TIME_SINCE_PROPS,
   defaults: {
     constraints: {

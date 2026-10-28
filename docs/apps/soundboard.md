@@ -58,6 +58,8 @@ Props: `{ path }` (`FILE_PROPS`). Soundboard is a tool for `audio/*` and `video/
 
 Shell (`commands.ts`, `shell.ts`): `sb` opens it; `sb ls [-b board]`, `sb play <pad>` (label, key or id; a loop pad that's playing stops), `sb stop`, `sb add <paths…> [-b board]`. `sb add` refuses a video ("open it in Soundboard to pick the part"), since picking the part needs the sheet.
 
+Guide: `guide.md` (ADR-085), shown on the first launch with no props; keep it in step with the controls above.
+
 ## Dependencies & licences
 
 None of its own. It uses the app kit (`$kit/utils/audio`, `$kit/components/waveform`, `$kit/utils/video`) and Video Tools' `kinds.ts` for which names and types count as video.

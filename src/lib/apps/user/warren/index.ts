@@ -8,6 +8,7 @@ export default define_app({
   name: "Warren",
   icon: AppIcon,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   category: AppCategory.PRODUCTIVITY,
   associations: [".warren", ".docx"],
   tools: [".md", ".markdown", "text/markdown"],

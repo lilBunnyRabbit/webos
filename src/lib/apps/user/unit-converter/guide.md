@@ -1,0 +1,4 @@
+- Pick a quantity from the side list, then type a number in either box. The other box follows. Scientific notation like `3e8` works.
+- **All units** shows your value in every unit at once. Click or tap one to convert to it.
+- **Filter units** finds a unit by name or symbol. If it belongs to another quantity, a button takes you there.
+- The app remembers the units you last used for each quantity.

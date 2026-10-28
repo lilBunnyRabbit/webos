@@ -72,6 +72,8 @@ The reason shows in the status line for six seconds (`Flash` from `$kit/utils/fl
 
 Props: `daily` (`YYYY-MM-DD`) opens that day's puzzle; Game Hub's Today tab passes it.
 
+Guide: `guide.md` (ADR-085), shown on the first launch with no props; keep it in step with the rules and controls.
+
 Undo and redo are `$kit/utils/history` over the marks, up to 200 steps, per window and not saved.
 
 **Achievements** (ADR-078), reported from `finish()` after the stats are recorded: `first-solve` (any solve), `daily` (a daily), `big` (8×8 without a hint), `solves-25` (progress: the solves of both sizes added up), secret `quick` (6×6 without a hint, under 45 s from when the puzzle was shown in this window, not from the first move when the clock starts; a game resumed from storage never earns it, since when it was shown is unknown).

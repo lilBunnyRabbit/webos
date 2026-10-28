@@ -267,6 +267,8 @@ Version 2 added `page.font` (optional; absent or `default` is Inter, and a `defa
 
 Props: `{ path }` (`FILE_PROPS`); `.warren` and `.docx` are associated, so `open x.warren` and a double-click open them. No other app lists `.docx`, so Warren is its only opener; a remembered default still wins.
 
+Guide: `guide.md` (ADR-085), shown on the first launch with no props: getting started, where the tools are, pages, exports, version history and the main shortcuts. Keep it in step with the shortcuts and menus above.
+
 Shell (`commands.ts`, `shell.ts`), both reading the JSON without Lexical:
 
 | Command | Yields |

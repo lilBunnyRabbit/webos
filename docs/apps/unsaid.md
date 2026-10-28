@@ -56,6 +56,7 @@ Per card: clues used, plus 3 when passed. The round is the sum. The best (lowest
 - Play time through `track_play` in `/var/lib/games/plays.json` (ADR-035). No daily.
 - Props: `{ seed?: number }` deals that round. The end screen copies a solo link with the round's seed.
 - A round in progress isn't saved: closing the window drops it.
+- Guide: `guide.md` (ADR-085), shown on the first launch with no props; keep it in step with the rules above.
 
 **Achievements** (ADR-078), reported once when the fifth card is left, from `tally(round)` (`round.ts`: guessed, passed, guessed from the first clue): `first-round`, `no-pass` (nothing passed), `first-clue` (a card guessed from its first clue), `guessed-25` (progress: `app.unsaid.guessed`), secret `telepathy` (all five from their first clue). A round abandoned with New round earns nothing.
 

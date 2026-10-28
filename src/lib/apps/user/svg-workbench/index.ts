@@ -8,6 +8,7 @@ export default define_app({
   name: "SVG Workbench",
   icon: AppIcon,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   category: AppCategory.DEVELOPER,
   tools: [".svg", "image/svg+xml"],
   props: z.object({ path: z.string().optional() }),

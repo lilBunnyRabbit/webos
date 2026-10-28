@@ -10,6 +10,7 @@ export default define_app({
   icon: ai_icon(AppIcon),
   category: AppCategory.GAMES,
   meta: () => import("./meta"),
+  guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 480 } } },
   props: z.object({ seed: z.number().int().nonnegative().optional() }),
   highlights: () => import("./highlights"),
