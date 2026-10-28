@@ -6,7 +6,9 @@ import { jackknifed, VEHICLES, type Placement, type VehicleSpec } from "./vehicl
 import { ChunkKind, CHUNK, SIDES, type Bay, type Side, type World } from "./world";
 
 /**
- * Its own file so the trailer's searches run beside the spot sweeps. A reverse-only path out of a bay is a forward path
+ * Its own file so the trailer's searches run beside the spot sweeps. Cars take every free bay; the trailer, whose
+ * searches run seconds to a minute a bay, takes a fixed sample: per seed, bays from every lot covering each way its
+ * bays face (both rows of a nose-in or pillars lot), so each lot kind and both sides are proven. A reverse-only path out of a bay is a forward path
  * in, which a towed trailer follows stably, so it's replayed forward from a straight trailer; reversing one would
  * amplify any difference, so the fallback searches from the gate with the trailer straight instead.
  */
@@ -53,10 +55,20 @@ function towed_in(bay: Bay, gate: Pose, world: World, spec: VehicleSpec): boolea
   });
 }
 
-describe("every free bay in the open lot can be reached through its lot's gate", () => {
+const TOWING_SAMPLE: Record<number, Record<string, readonly number[]>> = {
+  42: { "-1,-1": [0, 4], "1,-1": [4, 6], "-1,1": [0], "1,1": [0, 7] },
+  7: { "-1,-1": [1, 6], "1,-1": [0, 5], "-1,1": [0, 8], "1,1": [1, 9] },
+};
+
+function facing(bay: Bay): number {
+  const degrees = Math.round((bay.heading * 180) / Math.PI);
+  return ((degrees % 360) + 360) % 360;
+}
+
+describe("free bays in the open lot can be reached through their lot's gate", () => {
   for (const vehicle of vehicles_for(null)) {
     for (const seed of [42, 7]) {
-      test(`in a ${vehicle}, seed ${seed}`, { timeout: 300_000 }, () => {
+      test(`${VEHICLES[vehicle].trailer ? "a sample" : "every bay"} in a ${vehicle}, seed ${seed}`, { timeout: 60_000 }, () => {
         const spec = VEHICLES[vehicle];
         const { world, car } = create_game(open_round(seed, vehicle));
         const near = obstacles(world);
@@ -67,7 +79,13 @@ describe("every free bay in the open lot can be reached through its lot's gate",
           const gate = gate_pose(lot.cx, lot.cy, side);
           expect(plan(car, gate, near, { spec, heading_tolerance: Math.PI }), `gate ${lot.cx},${lot.cy}`).not.toBeNull();
           expect(lot.bays.length).toBeGreaterThan(0);
-          for (const bay of lot.bays) {
+          let bays = lot.bays;
+          if (spec.trailer) {
+            bays = TOWING_SAMPLE[seed][`${lot.cx},${lot.cy}`].map((index) => lot.bays[index]);
+            const sides = new Set(bays.map(facing));
+            expect([...new Set(lot.bays.map(facing))].every((each) => sides.has(each)), `sample at ${lot.cx},${lot.cy}`).toBe(true);
+          }
+          for (const bay of bays) {
             const ok = spec.trailer
               ? towed_in(bay, gate, world, spec)
               : parked_poses(bay, near, 0.05, spec).some(

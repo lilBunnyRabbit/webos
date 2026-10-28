@@ -205,13 +205,15 @@ describe("sensors", () => {
 });
 
 describe("vehicles", () => {
-  test("each kind's seed picks one of its vehicles, and so does the open lot's", () => {
+  test("each kind's seed picks one of its vehicles; the open lot stays the hatchback", () => {
     for (const scenario of SCENARIOS) {
       const seen = new Set(Array.from({ length: 40 }, (_, seed) => scenario_round(scenario, seed).vehicle));
       expect([...seen].sort()).toEqual([...SCENARIO_INFO[scenario].vehicles].sort());
     }
     const open = new Set(Array.from({ length: 40 }, (_, seed) => open_round(seed).vehicle));
-    expect([...open].sort()).toEqual([...vehicles_for(null)].sort());
+    expect([...open]).toEqual([Vehicle.HATCH]);
+    expect(open_round(4, ANY).vehicle).toBe(Vehicle.HATCH);
+    expect(vehicles_for(null)).toContain(Vehicle.TOWING);
   });
 
   test("a picked vehicle wins when the kind allows it; the seed still makes the rest", () => {
@@ -221,7 +223,7 @@ describe("vehicles", () => {
     expect(scenario_round(Scenario.PARALLEL, 31, undefined, Vehicle.BUS).vehicle).toBe(scenario_round(Scenario.PARALLEL, 31).vehicle);
     expect(scenario_round(ANY, 31, "2026-10-28", Vehicle.VAN)).toEqual(scenario_round(ANY, 31, "2026-10-28"));
     expect(open_round(4, Vehicle.TOWING).vehicle).toBe(Vehicle.TOWING);
-    expect(open_round(4, Vehicle.BUS).vehicle).toBe(open_round(4).vehicle);
+    expect(open_round(4, Vehicle.BUS).vehicle).toBe(Vehicle.HATCH);
     expect(create_game(open_round(4, Vehicle.TOWING)).car.trailer).toBeDefined();
   });
 
@@ -311,20 +313,12 @@ describe("bests", () => {
   const hatch = scenario_round(Scenario.PARALLEL, 1, undefined, Vehicle.HATCH);
   const van = { ...hatch, vehicle: Vehicle.VAN };
 
-  test("keyed per kind and vehicle; an old key reads as the hatchback's", () => {
+  test("keyed per kind and vehicle", () => {
     expect(round_key(van)).toBe("parallel:van");
     expect(round_key(open_round(3, Vehicle.PICKUP))).toBe("open:pickup");
-    const old = bests_schema.parse({ parallel: { moves: 2, ms: 9000 } });
-    expect(best_of(old, hatch)).toEqual({ moves: 2, ms: 9000 });
-    expect(best_of(old, van)).toBeUndefined();
-  });
-
-  test("the hatchback's record moves to its new key, keeping the old best when the run is worse", () => {
-    const old = { parallel: { moves: 2, ms: 9000 } };
-    const { bests, improved, first } = record_best(old, hatch, { moves: 3, ms: 5000, precision: 80 });
-    expect(improved).toBe(false);
-    expect(first).toBe(false);
-    expect(bests).toEqual({ "parallel:hatch": { moves: 2, ms: 9000, precision: 80 } });
+    const bests = bests_schema.parse({ "parallel:hatch": { moves: 2, ms: 9000 } });
+    expect(best_of(bests, hatch)).toEqual({ moves: 2, ms: 9000 });
+    expect(best_of(bests, van)).toBeUndefined();
   });
 
   test("order stays moves then time; precision only rises", () => {

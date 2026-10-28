@@ -328,12 +328,8 @@ export function better(a: Result | undefined, b: Result): boolean {
   return b.moves !== a.moves ? b.moves < a.moves : b.ms < a.ms;
 }
 
-function legacy_key(round: Round): string {
-  return round.scenario ?? Mode.OPEN;
-}
-
 export function round_key(round: Round): string {
-  return `${legacy_key(round)}:${round.vehicle}`;
+  return `${round.scenario ?? Mode.OPEN}:${round.vehicle}`;
 }
 
 export const result_schema = z.object({
@@ -344,9 +340,8 @@ export const result_schema = z.object({
 export const bests_schema = z.record(z.string(), result_schema);
 export type Bests = z.infer<typeof bests_schema>;
 
-/** Bests from before the vehicle picker are keyed by kind alone, and every one of them was a hatchback. */
 export function best_of(bests: Bests, round: Round): Result | undefined {
-  return bests[round_key(round)] ?? (round.vehicle === Vehicle.HATCH ? bests[legacy_key(round)] : undefined);
+  return bests[round_key(round)];
 }
 
 export interface Recorded {
@@ -363,7 +358,6 @@ export function record_best(bests: Bests, round: Round, result: Result): Recorde
   const run = improved ? { moves: result.moves, ms: result.ms } : { moves: old!.moves, ms: old!.ms };
   const top = Math.max(old?.precision ?? -1, result.precision ?? -1);
   const next: Bests = { ...bests, [round_key(round)]: top >= 0 ? { ...run, precision: top } : run };
-  if (round.vehicle === Vehicle.HATCH) delete next[legacy_key(round)];
   return { bests: next, improved, first: old === undefined };
 }
 
@@ -494,8 +488,10 @@ export function scenario_round(pick: ScenarioPick, seed: number, daily?: string,
   };
 }
 
-export function open_round(seed: number, pick: VehiclePick = ANY): Round {
-  return { mode: Mode.OPEN, scenario: null, difficulty: 0.3, seed, vehicle: vehicle_for(null, seed, pick) };
+/** The open lot has no Any: the hatchback unless another of its vehicles is picked. */
+export function open_round(seed: number, pick: VehiclePick = Vehicle.HATCH): Round {
+  const vehicle = pick !== ANY && OPEN_INFO.vehicles.includes(pick) ? pick : Vehicle.HATCH;
+  return { mode: Mode.OPEN, scenario: null, difficulty: 0.3, seed, vehicle };
 }
 
 export const pick_schema = z.enum([ANY, ...SCENARIOS] as [ScenarioPick, ...ScenarioPick[]]);

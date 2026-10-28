@@ -12,7 +12,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 ## Vehicles
 
 - Each spot hands you a vehicle, named on the start card: the hatchback, a van or a pickup in car spots, a city bus at the bus stop and the depot, a car with a box trailer at the slipway and the driveway. Bigger ones need wider swings, and the bays and gaps grow to fit them.
-- Rather pick? In **Spots** with a kind chosen, and in the **Open lot**, the **Vehicle** picker next to the spot picker takes Any vehicle or one the spot allows (on a narrow window it sits on the start card). The open lot takes the hatchback, the van, the pickup or the car and trailer. Levels and the daily keep their own vehicle.
+- Rather pick? In **Spots** with a kind chosen, and in the **Open lot**, the **Vehicle** picker next to the spot picker takes Any vehicle or one the spot allows (on a narrow window it sits on the start card). The open lot starts in the hatchback and also takes the van, the pickup or the car and trailer. Levels and the daily keep their own vehicle.
 - The **bus** has a 12 m body and a long tail behind the rear wheels: when it turns, the tail swings out the other way.
 - The **trailer** pivots on the tow ball. Towing forward it follows and straightens. Reversing it goes the opposite way to the wheel: steer left to send it right, and catch it early. Past about 70° it jackknifes and the round ends. The guide lines follow the trailer's tail while you reverse, and the rear sensors read from it.
 

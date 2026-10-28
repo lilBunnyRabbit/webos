@@ -170,10 +170,10 @@
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(best_of(bests.value, game.round));
-  // A kind with one vehicle shows it, fixed; Any spot shows Any, fixed.
+  // A kind with one vehicle shows it, fixed; Any spot shows Any, fixed. The open lot has no Any: it was always the hatchback.
   const vehicle_options = $derived.by(() => {
     const allowed = allowed_vehicles().map((value) => ({ value: value as VehiclePick, label: VEHICLE_NAMES[value] }));
-    return allowed.length === 1 ? allowed : [{ value: ANY as VehiclePick, label: "Any vehicle" }, ...allowed];
+    return allowed.length === 1 || mode === Mode.OPEN ? allowed : [{ value: ANY as VehiclePick, label: "Any vehicle" }, ...allowed];
   });
   const choosing_vehicle = $derived((mode === Mode.SCENARIO && !daily) || mode === Mode.OPEN);
   const fit = $derived(game.status === Status.PARKED && game.bay ? precision(game.car, game.bay, spec) : null);
@@ -214,7 +214,8 @@
   }
 
   function chosen_vehicle(): VehiclePick {
-    return vehicle_pick !== ANY && allowed_vehicles().includes(vehicle_pick) ? vehicle_pick : ANY;
+    if (vehicle_pick !== ANY && allowed_vehicles().includes(vehicle_pick)) return vehicle_pick;
+    return mode === Mode.OPEN ? Vehicle.HATCH : ANY;
   }
 
   function make_round(): Round {
