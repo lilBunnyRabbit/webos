@@ -10,6 +10,8 @@ Any digit keys count (top row and numpad, with or without NumLock), `.` (or `,`)
 
 ## How it works
 
+The toolbar shows the day, customers left, cash, jail nights and the sale; its New shop button (quiet) appears only while a shop is running.
+
 All rules are pure functions over one immutable `Run` in `game.ts`; `shop.svelte.ts` holds the run in `$state.raw`, routes a key to the phase that takes it, and fires three events on phase changes: `on_end` (the day is over, → `DAY_OVER` or → `GAME_OVER`; the component records the day's stats, achievements and best run), `on_close` (→ `DAY_OVER`, and again when the sale switch flips; the component saves the run) and `on_lost` (→ `GAME_OVER`). Recording and saving happen at the same moment, after the restock, so closing the window during the restock drops the whole day, its jailing included, and nothing is counted twice. The component drives `tick(run, dt)` from a `requestAnimationFrame` loop (`checkout-challenge.app.svelte:152`, frame time capped at 100 ms) while the window is focused and visible.
 
 ### Phases
@@ -61,7 +63,7 @@ Every wrong total that leaves a patron's trust below `LOW_TRUST` is a strike, wh
 
 ### Staff (`hire_staff`)
 
-The Staff button (or H) costs `staff_price(day)`: `STAFF_SHARE` (1×) the day's item price cap, rounded to a whole unit (9.00 on day 1). It is paid at once from cash and booked as wages. It needs the cash, no staff already working, and customers still to come. The next `STAFF_CUSTOMERS` (4) customers arrive with their list already entered at the right prices (stage `TOTAL`, "Staff rang up") and come in quicker; only the total is typed. Staff hired late keep working into the next day until they've rung up all four (`staff_left`, saved with the run). Doubting customers still ask twice, and the police still watch.
+The Staff button (or H; with Enter, hidden during the warm-up and restock, which take digits only) costs `staff_price(day)`: `STAFF_SHARE` (1×) the day's item price cap, rounded to a whole unit (9.00 on day 1). It is paid at once from cash and booked as wages. It needs the cash, no staff already working, and customers still to come. The next `STAFF_CUSTOMERS` (4) customers arrive with their list already entered at the right prices (stage `TOTAL`, "Staff rang up") and come in quicker; only the total is typed. Staff hired late keep working into the next day until they've rung up all four (`staff_left`, saved with the run). Doubting customers still ask twice, and the police still watch.
 
 ### Closing up: the books and restock
 

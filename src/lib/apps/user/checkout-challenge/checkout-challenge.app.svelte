@@ -259,7 +259,9 @@
       <span class="hidden items-center gap-1 text-ui text-primary @sm:flex"><SealPercentIcon class="size-4" weight="bold" />Sale</span>
     {/if}
     <div class="flex-1"></div>
-    <Button size="sm" variant="primary" onclick={new_shop}>New shop</Button>
+    {#if run.phase !== Phase.READY && run.phase !== Phase.GAME_OVER}
+      <Button size="sm" variant="quiet" onclick={new_shop}>New shop</Button>
+    {/if}
   </Toolbar>
 
   <div class="relative min-h-0">
@@ -449,6 +451,7 @@
           {/each}
         </div>
 
+        {#if !digits_only}
         <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-1.5">
           <Button
             variant="secondary"
@@ -477,6 +480,7 @@
             Enter
           </button>
         </div>
+        {/if}
       </section>
     </div>
 
