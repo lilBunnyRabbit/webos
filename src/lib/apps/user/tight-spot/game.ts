@@ -228,13 +228,6 @@ export function open_round(seed: number): Round {
 export const pick_schema = z.enum([ANY, ...SCENARIOS] as [ScenarioPick, ...ScenarioPick[]]);
 export const mode_schema = z.enum(MODES as [Mode, ...Mode[]]);
 
-export function fixed_steps(accumulator: number, elapsed: number, step_ms: number, max_steps = 12): { steps: number; remainder: number } {
-  const total = accumulator + Math.max(0, elapsed);
-  const steps = Math.floor(total / step_ms);
-  if (steps > max_steps) return { steps: max_steps, remainder: 0 };
-  return { steps, remainder: total - steps * step_ms };
-}
-
 export const WheelMode = { CENTRES: "centres", STAYS: "stays" } as const;
 export type WheelMode = (typeof WheelMode)[keyof typeof WheelMode];
 export const wheel_schema = z.enum([WheelMode.CENTRES, WheelMode.STAYS]);

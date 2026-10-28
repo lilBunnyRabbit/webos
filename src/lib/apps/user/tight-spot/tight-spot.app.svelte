@@ -23,7 +23,6 @@
     bests_schema,
     change_gear,
     create_game,
-    fixed_steps,
     HIT_NAMES,
     LEVEL_COUNT,
     level_round,
@@ -60,7 +59,7 @@
   import { SCENARIOS, Scenario } from "./world";
 
   const STEP_MS = 1000 / 120;
-  const DT = STEP_MS / 1000;
+  const MAX_FRAME_MS = 100;
   const LOCK = max_steer(HATCHBACK);
   const MODE_LABELS: Record<Mode, string> = { scenario: "Spots", levels: "Levels", open: "Open lot" };
   const MODE_OPTIONS = (Object.keys(MODE_LABELS) as Mode[]).map((value) => ({ value, label: MODE_LABELS[value] }));
@@ -80,6 +79,10 @@
     KeyP: Gear.PARK,
     Space: Gear.PARK,
   };
+  const FORWARD_KEYS = ["ArrowUp", "KeyW"];
+  const BACK_KEYS = ["ArrowDown", "KeyS"];
+  // Below this the car counts as standing, so a fresh arrow press picks the direction instead of braking.
+  const STANDING = 0.05;
   const DRIVE_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyA", "KeyD", "KeyW", "KeyS"]);
   const GEARS: Gear[] = [Gear.PARK, Gear.REVERSE, Gear.NEUTRAL, Gear.DRIVE];
   const TOUCH_GEARS: Gear[] = [Gear.PARK, Gear.REVERSE, Gear.DRIVE];
@@ -202,14 +205,13 @@
 
   $effect(() => {
     if (!driving || blocked) return;
-    let accumulator = 0;
     let last = performance.now();
     let frame_id = requestAnimationFrame(function tick(now) {
-      const elapsed = now - last;
-      const result = fixed_steps(accumulator, elapsed, STEP_MS);
+      // Steps split each frame's own time: fixed steps against a 120 Hz screen land 0, 1 or 2 to a frame, and the car shakes.
+      const elapsed = Math.min(now - last, MAX_FRAME_MS);
       last = now;
-      accumulator = result.remainder;
-      if (result.steps > 0) run(result.steps);
+      const steps = Math.max(1, Math.ceil(elapsed / STEP_MS));
+      run(steps, elapsed / steps / 1000);
       render(elapsed / 1000);
       if (game.status === Status.DRIVING) frame_id = requestAnimationFrame(tick);
     });
@@ -305,16 +307,20 @@
   }
 
   function input(): Input {
-    const gas = keys.has("ArrowUp") || keys.has("KeyW") || pedals.gas.size > 0;
-    const brake = keys.has("ArrowDown") || keys.has("KeyS") || pedals.brake.size > 0;
+    // The arrows mean a direction: toward the gear's way is gas, against it the brake.
+    const forward = FORWARD_KEYS.some((code) => keys.has(code));
+    const back = BACK_KEYS.some((code) => keys.has(code));
+    const reversing = game.car.gear === Gear.REVERSE;
+    const gas = (reversing ? back : forward) || pedals.gas.size > 0;
+    const brake = (reversing ? forward : back) || pedals.brake.size > 0;
     return { steer: hands ? wheel : null, throttle: gas ? 1 : 0, brake: brake ? 1 : 0 };
   }
 
-  function run(steps: number) {
+  function run(steps: number, dt: number) {
     let next = game;
     for (let i = 0; i < steps && next.status === Status.DRIVING; i++) {
-      step_wheel(DT);
-      next = advance(next, input(), DT, creep_on ? HATCHBACK : NO_CREEP);
+      step_wheel(dt);
+      next = advance(next, input(), dt, creep_on ? HATCHBACK : NO_CREEP);
     }
     if (!hands) wheel = next.car.steer / LOCK;
     const near = obstacles(next.world);
@@ -473,6 +479,12 @@
     if (next.status === Status.PARKED) parked(next);
   }
 
+  // Holding an arrow against the gear only brakes; pressing it again once the car stands shifts that way.
+  function choose_direction(code: string) {
+    const want = FORWARD_KEYS.includes(code) ? Gear.DRIVE : BACK_KEYS.includes(code) ? Gear.REVERSE : null;
+    if (want && Math.abs(game.car.speed) < STANDING) shift(want);
+  }
+
   function toggle_direction() {
     shift(game.car.gear === Gear.DRIVE ? Gear.REVERSE : Gear.DRIVE);
   }
@@ -532,6 +544,7 @@
       event.preventDefault();
       keys.add(code);
       if (game.status === Status.READY && !event.repeat) start();
+      if (!event.repeat) choose_direction(code);
       return;
     }
     if (code === "KeyC") {
@@ -769,7 +782,7 @@
             </div>
             <Button class="ml-auto" variant="primary" onclick={start}>Start</Button>
             <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-              {@render hint("gas", "↑")}{@render hint("brake", "↓")}{@render hint("steer", "← →")}{@render hint("drive", "E")}{@render hint("reverse", "R")}{@render hint("park", "P")}
+              {@render hint("forward", "↑")}{@render hint("back", "↓")}{@render hint("steer", "← →")}{@render hint("drive", "E")}{@render hint("reverse", "R")}{@render hint("park", "P")}
             </p>
             <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">Hold Gas to roll, steer with the wheel, tap P once you're in the bay.</p>
           </div>

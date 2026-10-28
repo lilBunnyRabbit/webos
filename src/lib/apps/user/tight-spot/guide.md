@@ -11,7 +11,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 
 ## Keyboard
 
-- **← →** or **A D** turn the wheel; **↑** or **W** is gas, **↓** or **S** the brake.
+- **← →** or **A D** turn the wheel. **↑** or **W** drives forward, **↓** or **S** backs up: against the way you're going it brakes, and pressing it again once the car stands switches to D or R.
 - **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel.
 - **+** and **-** zoom. **Escape** pauses and resumes.
 - **Enter** starts, resumes, and once the round is over takes the card's main button: a new spot, the next level, or another try after a touch. **R** tries the same spot again.

@@ -271,8 +271,8 @@ const TYRE_SHOW = 0.08;
 const TREAD_PITCH = 0.11;
 
 function tyres(ctx: CanvasRenderingContext2D, car: Car, scale: number, palette: Palette) {
-  // Past a few metres a second the stripes would strobe; they fade the way a spinning wheel blurs.
-  const blur = Math.max(0.2, Math.min(1, 1 - (Math.abs(car.speed) - 2.5) / 3));
+  // Past parking speed the stripes would strobe at 60 Hz and read as the car shaking; they fade out the way a spinning wheel blurs.
+  const blur = Math.max(0, Math.min(1, 1 - (Math.abs(car.speed) - 1.2) / 1.8));
   for (const [i, wheel] of wheels(car).entries()) {
     ctx.save();
     ctx.translate(wheel.at.x, wheel.at.y);
