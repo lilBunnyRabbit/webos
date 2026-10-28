@@ -1,6 +1,7 @@
 import { z } from "zod";
-import { inside_convex, overlaps, contact_point } from "./collision";
-import { angle_between, bounds_of, bounds_overlap, clamp, type Bounds, type Polygon, type Vec } from "./geometry";
+import { inside_convex } from "../../core/collision";
+import { angle_between, clamp, type Polygon, type Vec } from "../../core/geometry";
+import { collide, obstacles } from "../../core/obstacles";
 import {
   bodies,
   create_car,
@@ -15,7 +16,7 @@ import {
   type Input,
   type Placement,
   type VehicleSpec,
-} from "./vehicle";
+} from "../../core/vehicle";
 import {
   hash,
   open_world,
@@ -113,14 +114,6 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
   },
 };
 
-export const VEHICLE_NAMES: Record<Vehicle, string> = {
-  hatch: "Hatchback",
-  van: "Van",
-  pickup: "Pickup",
-  bus: "City bus",
-  towing: "Car and trailer",
-};
-
 export const OPEN_INFO = {
   name: "Open lot",
   brief: "Drive around and park in any free bay.",
@@ -196,40 +189,6 @@ export function create_game(round: Round): GameState {
 
 export function set_status(state: GameState, status: Status): GameState {
   return state.status === status ? state : { ...state, status };
-}
-
-export interface Hit {
-  solid: Solid;
-  at: Vec;
-}
-
-export interface Obstacles {
-  solids: Solid[];
-  bounds: Bounds[];
-}
-
-const obstacle_cache = new WeakMap<World, Obstacles>();
-
-export function obstacles(world: World): Obstacles {
-  let cached = obstacle_cache.get(world);
-  if (!cached) {
-    cached = { solids: world.solids, bounds: world.solids.map((solid) => bounds_of(solid.shape)) };
-    obstacle_cache.set(world, cached);
-  }
-  return cached;
-}
-
-export function collide(car: Placement, near: Obstacles, spec: VehicleSpec = VEHICLES.hatch): Hit | null {
-  for (const body of bodies(car, spec)) {
-    const box = bounds_of(body);
-    for (let i = 0; i < near.solids.length; i++) {
-      if (!bounds_overlap(box, near.bounds[i])) continue;
-      const solid = near.solids[i];
-      if (!overlaps(body, solid.shape)) continue;
-      return { solid, at: contact_point(body, solid.shape) ?? { x: car.x, y: car.y } };
-    }
-  }
-  return null;
 }
 
 function lined_up(heading: number, bay: Bay): boolean {
@@ -497,14 +456,6 @@ export function open_round(seed: number, pick: VehiclePick = Vehicle.HATCH): Rou
 export const pick_schema = z.enum([ANY, ...SCENARIOS] as [ScenarioPick, ...ScenarioPick[]]);
 export const vehicle_pick_schema = z.enum([ANY, ...Object.values(Vehicle)] as [VehiclePick, ...VehiclePick[]]);
 export const mode_schema = z.enum(MODES as [Mode, ...Mode[]]);
-
-export const WheelMode = { CENTRES: "centres", STAYS: "stays" } as const;
-export type WheelMode = (typeof WheelMode)[keyof typeof WheelMode];
-export const wheel_schema = z.enum([WheelMode.CENTRES, WheelMode.STAYS]);
-
-export const SteeringMode = { WHEEL: "wheel", BUTTONS: "buttons" } as const;
-export type SteeringMode = (typeof SteeringMode)[keyof typeof SteeringMode];
-export const steering_schema = z.enum([SteeringMode.WHEEL, SteeringMode.BUTTONS]);
 
 export const HIT_NAMES: Record<SolidKind, string> = {
   car: "a parked car",

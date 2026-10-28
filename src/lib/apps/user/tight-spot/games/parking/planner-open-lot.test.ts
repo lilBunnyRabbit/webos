@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
-import { collide, create_game, obstacles, open_round, parked_in, vehicles_for } from "./game";
-import { drive, parked_poses, plan, type Move } from "./planner";
-import { centroid, type Pose } from "./geometry";
-import { jackknifed, VEHICLES, type Placement, type VehicleSpec } from "./vehicle";
+import { create_game, open_round, parked_in, vehicles_for } from "./game";
+import { collide, obstacles } from "../../core/obstacles";
+import { drive, plan, type Move } from "../../core/planner";
+import { parked_poses } from "./poses";
+import { centroid, type Pose } from "../../core/geometry";
+import { jackknifed, VEHICLES, type Placement, type VehicleSpec } from "../../core/vehicle";
 import { ChunkKind, CHUNK, SIDES, type Bay, type Side, type World } from "./world";
 
 /**

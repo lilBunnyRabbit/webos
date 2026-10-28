@@ -1,8 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { overlaps } from "./collision";
-import { collide, obstacles, SCENARIO_INFO } from "./game";
-import { centroid } from "./geometry";
-import { BUS, corners, create_car, Gear, VEHICLES, type VehicleSpec } from "./vehicle";
+import { overlaps } from "../../core/collision";
+import { SCENARIO_INFO } from "./game";
+import { collide, obstacles } from "../../core/obstacles";
+import { centroid } from "../../core/geometry";
+import { BUS, corners, create_car, Gear, VEHICLES, type VehicleSpec } from "../../core/vehicle";
 import type { Scenario } from "./world";
 
 function specs(scenario: Scenario): VehicleSpec[] {

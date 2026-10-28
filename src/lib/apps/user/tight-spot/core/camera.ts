@@ -19,6 +19,13 @@ export const NO_INSETS: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
 
 export const ZOOM_MIN = 0.4;
 export const ZOOM_MAX = 2.4;
+// Must equal the `aspect-ratio > 1.25` container query in drive-frame.svelte: past it the touch controls cover the board's sides.
+export const OVERLAY_ASPECT = 1.25;
+export const OVERLAY_GAP = 20;
+
+export function clamp_zoom(zoom: number): number {
+  return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
+}
 const SPAN = 26;
 
 function clamp_axis(centre: number, half: number, lo: number, hi: number): number {

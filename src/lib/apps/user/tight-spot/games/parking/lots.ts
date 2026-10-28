@@ -1,6 +1,6 @@
 import type { Rng } from "$lib/core/utils/random";
-import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "./geometry";
-import { BUS, HATCHBACK, rig_length, Vehicle, type VehicleSpec } from "./vehicle";
+import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { BUS, HATCHBACK, rig_length, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import {
   MarkKind,
   Scenario,

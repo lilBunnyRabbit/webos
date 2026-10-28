@@ -150,6 +150,14 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   towing: HATCH_TRAILER,
 };
 
+export const VEHICLE_NAMES: Record<Vehicle, string> = {
+  hatch: "Hatchback",
+  van: "Van",
+  pickup: "Pickup",
+  bus: "City bus",
+  towing: "Car and trailer",
+};
+
 const coasting = new WeakMap<VehicleSpec, VehicleSpec>();
 
 /** Without an automatic's creep the vehicle moves only on the gas, which is easier to place in a tight spot. */

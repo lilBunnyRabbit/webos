@@ -1,5 +1,5 @@
 import { create_rng, type Rng } from "$lib/core/utils/random";
-import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "./geometry";
+import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
 import {
   ChunkKind,
   MarkKind,
@@ -13,7 +13,7 @@ import {
   type Surface,
 } from "./kinds";
 import { build_lot } from "./lots";
-import { HATCHBACK, type VehicleSpec } from "./vehicle";
+import { HATCHBACK, type VehicleSpec } from "../../core/vehicle";
 
 export * from "./kinds";
 

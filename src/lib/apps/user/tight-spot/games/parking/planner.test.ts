@@ -1,19 +1,19 @@
 import { describe, expect, test } from "vitest";
 import {
-  collide,
   create_game,
   level_round,
   LEVEL_COUNT,
   Mode,
-  obstacles,
   parked_in,
   SCENARIO_INFO,
   spec_of,
   verdict,
   type GameState,
 } from "./game";
-import { drive, parked_poses, plan, type PlanResult } from "./planner";
-import { jackknifed, type Placement } from "./vehicle";
+import { collide, obstacles } from "../../core/obstacles";
+import { drive, plan, type PlanResult } from "../../core/planner";
+import { parked_poses } from "./poses";
+import { jackknifed, type Placement } from "../../core/vehicle";
 import { SCENARIOS } from "./world";
 
 /**

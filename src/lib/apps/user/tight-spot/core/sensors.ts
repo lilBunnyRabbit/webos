@@ -1,5 +1,5 @@
 import { bounds_of, bounds_overlap, type Pose, type Vec } from "./geometry";
-import type { Obstacles } from "./game";
+import type { Obstacles } from "./obstacles";
 import { corners, HATCHBACK, trailer_corners, trailer_pose, type Placement, type VehicleSpec } from "./vehicle";
 
 export const SENSOR_RANGE = 1.6;

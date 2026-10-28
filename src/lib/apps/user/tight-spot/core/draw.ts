@@ -1,7 +1,6 @@
 import { resolve_token } from "$lib/core/utils";
 import type { Insets } from "./camera";
 import { against, dash_phase, darkest, lightest, tread, wound, type Tone } from "./draw-math";
-import { spec_of, Status, type GameState } from "./game";
 import type { Polygon, Pose, Vec } from "./geometry";
 import { End, sensor_frame } from "./sensors";
 import {
@@ -19,7 +18,7 @@ import {
   type Car,
   type VehicleSpec,
 } from "./vehicle";
-import { MarkKind, SolidKind, SurfaceKind, type Bay, type Solid } from "./world";
+import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Solid, type Surface } from "./scene";
 
 export interface Paint {
   body: string;
@@ -144,25 +143,17 @@ export interface View {
   dpr: number;
 }
 
-export interface Extras {
-  guides: boolean;
-  sensors: Record<End, number | null>;
-  time: number;
-  /** What sits over the board's edges (the HUD, sideways touch controls), the same strips the camera keeps clear of. */
-  insets: Insets;
-}
-
 function trace(ctx: CanvasRenderingContext2D, shape: Polygon) {
   shape.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.closePath();
 }
 
-function path(ctx: CanvasRenderingContext2D, shape: Polygon) {
+export function path(ctx: CanvasRenderingContext2D, shape: Polygon) {
   ctx.beginPath();
   trace(ctx, shape);
 }
 
-function fill(ctx: CanvasRenderingContext2D, shape: Polygon, colour: string) {
+export function fill(ctx: CanvasRenderingContext2D, shape: Polygon, colour: string) {
   path(ctx, shape);
   ctx.fillStyle = colour;
   ctx.fill();
@@ -170,12 +161,12 @@ function fill(ctx: CanvasRenderingContext2D, shape: Polygon, colour: string) {
 
 // One path for many pieces: abutting pieces fill without anti-aliasing seams, and a translucent stroke never doubles
 // up where two pieces meet.
-function union(ctx: CanvasRenderingContext2D, shapes: Polygon[]) {
+export function union(ctx: CanvasRenderingContext2D, shapes: Polygon[]) {
   ctx.beginPath();
   for (const shape of shapes) trace(ctx, wound(shape));
 }
 
-function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, colour: string) {
+export function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, colour: string) {
   ctx.fillStyle = colour;
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
@@ -183,7 +174,7 @@ function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h:
 }
 
 // A lamp is a lens in a dark housing: on a light body the housing shows, on a dark one the lens does.
-function lamp(
+export function lamp(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -237,7 +228,7 @@ function body_shape(ctx: CanvasRenderingContext2D, l: number, half: number, styl
 }
 
 // The sun stands still in the world, so the shadow falls the same way whichever way the car points.
-function shadow(
+export function shadow(
   ctx: CanvasRenderingContext2D,
   centre: Vec,
   heading: number,
@@ -403,7 +394,7 @@ function parked_car(ctx: CanvasRenderingContext2D, solid: Solid, scale: number, 
 
 const BEAM = 7;
 
-function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, palette: Palette) {
+export function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, palette: Palette) {
   const direction = gear_direction(car.gear);
   if (direction === 0) return;
   const t = direction < 0 ? spec.trailer : undefined;
@@ -563,7 +554,7 @@ function trailer(
   ctx.stroke();
 }
 
-function player(
+export function player(
   ctx: CanvasRenderingContext2D,
   car: Car,
   vehicle: Vehicle,
@@ -591,7 +582,7 @@ function player(
   tyres(ctx, car, spec, scale, palette);
 }
 
-function guides(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, scale: number, palette: Palette) {
+export function guides(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, scale: number, palette: Palette) {
   const direction = gear_direction(car.gear) || Math.sign(car.speed);
   if (direction === 0) return;
   // Front corners going forwards, rear corners backwards: the corners that lead, where a reversing camera draws its lines.
@@ -617,7 +608,7 @@ function guides(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, scal
   ctx.globalAlpha = 1;
 }
 
-function sensor_arcs(
+export function sensor_arcs(
   ctx: CanvasRenderingContext2D,
   car: Car,
   spec: VehicleSpec,
@@ -659,7 +650,7 @@ function sensor_arcs(
   ctx.globalAlpha = 1;
 }
 
-function bay_outline(
+export function bay_outline(
   ctx: CanvasRenderingContext2D,
   bay: Bay,
   colour: string,
@@ -674,7 +665,7 @@ function bay_outline(
   ctx.stroke();
 }
 
-function bay_arrow(ctx: CanvasRenderingContext2D, bay: Bay, colour: string) {
+export function bay_arrow(ctx: CanvasRenderingContext2D, bay: Bay, colour: string) {
   const centre = bay.shape.reduce(
     (sum, p) => ({ x: sum.x + p.x / bay.shape.length, y: sum.y + p.y / bay.shape.length }),
     { x: 0, y: 0 }
@@ -709,7 +700,7 @@ function bay_arrow(ctx: CanvasRenderingContext2D, bay: Bay, colour: string) {
 
 // The outline is stroked before the fill: the fill then hides the inner half of the stroke and every edge two pieces
 // share, so only the edge a kerb or a building shows to the street stays drawn. Round joins keep corners from spiking.
-function outlined(ctx: CanvasRenderingContext2D, shapes: Polygon[], fill_colour: string, edge: string, width: number) {
+export function outlined(ctx: CanvasRenderingContext2D, shapes: Polygon[], fill_colour: string, edge: string, width: number) {
   if (shapes.length === 0) return;
   union(ctx, shapes);
   ctx.strokeStyle = edge;
@@ -720,7 +711,7 @@ function outlined(ctx: CanvasRenderingContext2D, shapes: Polygon[], fill_colour:
   ctx.fill();
 }
 
-function solids(ctx: CanvasRenderingContext2D, items: Solid[], scale: number, palette: Palette) {
+export function solids(ctx: CanvasRenderingContext2D, items: Solid[], scale: number, palette: Palette) {
   const of = (kind: SolidKind) => items.filter((solid) => solid.kind === kind).map((solid) => solid.shape);
   outlined(ctx, of(SolidKind.WATER), palette.water, palette.water_edge, Math.max(0.12, 3 / scale));
   outlined(ctx, of(SolidKind.KERB), palette.pavement, palette.kerb, 4 / scale);
@@ -733,12 +724,9 @@ function solids(ctx: CanvasRenderingContext2D, items: Solid[], scale: number, pa
 const SURFACES = [SurfaceKind.ASPHALT, SurfaceKind.FLOOR, SurfaceKind.PAVEMENT] as const;
 const DASH = 1.2;
 
-function ground(ctx: CanvasRenderingContext2D, state: GameState, scale: number, palette: Palette) {
-  const chunks = state.world.chunks;
+export function ground(ctx: CanvasRenderingContext2D, surfaces: Surface[], marks: Mark[], scale: number, palette: Palette) {
   for (const kind of SURFACES) {
-    const shapes = chunks.flatMap((chunk) =>
-      chunk.surfaces.filter((surface) => surface.kind === kind).map((surface) => surface.shape)
-    );
+    const shapes = surfaces.filter((surface) => surface.kind === kind).map((surface) => surface.shape);
     if (shapes.length === 0) continue;
     const colour =
       kind === SurfaceKind.FLOOR ? palette.floor : kind === SurfaceKind.PAVEMENT ? palette.pavement : palette.asphalt;
@@ -751,7 +739,6 @@ function ground(ctx: CanvasRenderingContext2D, state: GameState, scale: number, 
     ctx.stroke();
   }
 
-  const marks = chunks.flatMap((chunk) => chunk.marks);
   ctx.lineCap = "butt";
   for (const kind of [MarkKind.LINE, MarkKind.STOP] as const) {
     ctx.beginPath();
@@ -782,7 +769,7 @@ function ground(ctx: CanvasRenderingContext2D, state: GameState, scale: number, 
 // The bay is often out of frame while the camera follows the car: a marker on the edge of the clear part points the way.
 const POINTER_MARGIN = 22;
 
-function bay_pointer(ctx: CanvasRenderingContext2D, bay: Bay, view: View, insets: Insets, palette: Palette) {
+export function bay_pointer(ctx: CanvasRenderingContext2D, bay: Bay, view: View, insets: Insets, palette: Palette) {
   const centre = bay.shape.reduce(
     (sum, p) => ({ x: sum.x + p.x / bay.shape.length, y: sum.y + p.y / bay.shape.length }),
     { x: 0, y: 0 }
@@ -827,13 +814,7 @@ function bay_pointer(ctx: CanvasRenderingContext2D, bay: Bay, view: View, insets
   ctx.stroke();
 }
 
-export function draw_scene(
-  ctx: CanvasRenderingContext2D,
-  state: GameState,
-  view: View,
-  palette: Palette,
-  extras: Extras
-) {
+export function begin_frame(ctx: CanvasRenderingContext2D, view: View, palette: Palette) {
   const { width, height, dpr, scale } = view;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = palette.void;
@@ -847,61 +828,20 @@ export function draw_scene(
     dpr * (width / 2 - view.x * scale),
     dpr * (height / 2 - view.y * scale)
   );
+}
 
-  const world = state.world;
-  const spec = spec_of(state.round);
-  ground(ctx, state, scale, palette);
-
-  const open = state.round.scenario === null;
-  const pulse = 0.5 + 0.5 * Math.sin(extras.time * 3);
-  const line = Math.max(0.12, 2 / scale);
-  for (const bay of world.bays) {
-    const done = state.status === Status.PARKED && state.bay === bay;
-    if (done) bay_outline(ctx, bay, palette.parked, palette.parked_fill, Math.max(0.16, 3 / scale));
-    else if (open) bay_outline(ctx, bay, palette.free, null, line);
-    else {
-      ctx.globalAlpha = 0.7 + 0.3 * pulse;
-      bay_outline(ctx, bay, palette.target, palette.target_fill, line);
-      ctx.globalAlpha = 1;
-      bay_arrow(ctx, bay, palette.target);
-    }
-  }
-
-  if (palette.beams && state.status !== Status.CRASHED) beams(ctx, state.car, spec, palette);
-  solids(ctx, world.solids, scale, palette);
-
-  if (extras.guides && state.status === Status.DRIVING) guides(ctx, state.car, spec, scale, palette);
-  player(
-    ctx,
-    state.car,
-    state.round.vehicle,
-    spec,
-    state.car.brake > 0.05 && state.car.gear !== Gear.PARK,
-    scale,
-    palette
-  );
-  if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
-
-  if (!open && world.bays.length === 1 && state.status === Status.DRIVING) {
-    ctx.save();
-    bay_pointer(ctx, world.bays[0], view, extras.insets, palette);
-    ctx.restore();
-  }
-
-  if (state.status === Status.CRASHED && state.contact) {
-    const at = state.contact;
-    ctx.strokeStyle = palette.error;
-    ctx.fillStyle = palette.error;
-    ctx.lineWidth = 3 / scale;
-    for (const radius of [0.35, 0.7 + pulse * 0.25]) {
-      ctx.globalAlpha = radius < 0.5 ? 1 : 0.5 + pulse * 0.3;
-      ctx.beginPath();
-      ctx.arc(at.x, at.y, radius, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.globalAlpha = 1;
+export function contact_rings(ctx: CanvasRenderingContext2D, at: Vec, pulse: number, scale: number, palette: Palette) {
+  ctx.strokeStyle = palette.error;
+  ctx.fillStyle = palette.error;
+  ctx.lineWidth = 3 / scale;
+  for (const radius of [0.35, 0.7 + pulse * 0.25]) {
+    ctx.globalAlpha = radius < 0.5 ? 1 : 0.5 + pulse * 0.3;
     ctx.beginPath();
-    ctx.arc(at.x, at.y, 0.12, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(at.x, at.y, radius, 0, Math.PI * 2);
+    ctx.stroke();
   }
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, 0.12, 0, Math.PI * 2);
+  ctx.fill();
 }

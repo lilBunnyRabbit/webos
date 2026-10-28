@@ -1,6 +1,6 @@
 # Tight Spot
 
-Id `tight-spot` · Source: `src/lib/apps/user/tight-spot/` · [ADR-086](../adrs/086-tight-spot.md), [brainstorm](../brainstorm/2026-10-28_tight-spot.md)
+Id `tight-spot` · Source: `src/lib/apps/user/tight-spot/` (`core/` shared driving code, `games/parking/` the parking game) · [ADR-086](../adrs/086-tight-spot.md), [brainstorm](../brainstorm/2026-10-28_tight-spot.md)
 
 ## What it does
 
@@ -10,11 +10,11 @@ Three layers, each replaceable on its own (the brainstorm's later steps):
 
 | Layer | Files | Replaced by |
 |-------|-------|-------------|
-| Sim | `vehicle.ts` (model), `collision.ts`, `game.ts` (rounds, judging) | a dynamic tyre model behind the same `step()` |
-| World | `world.ts` (chunks, plans), `lots.ts` (layouts), `kinds.ts` (shapes) | streamed chunks for the infinite world |
-| Drawing | `draw.ts`, `draw-math.ts`, `camera.ts` | a tilted 3D renderer |
+| Sim | `core/vehicle.ts` (model), `core/collision.ts`, `core/obstacles.ts`, `games/parking/game.ts` (rounds, judging) | a dynamic tyre model behind the same `step()` |
+| World | `core/scene.ts` (shapes), `games/parking/world.ts` (chunks, plans), `lots.ts` (layouts), `kinds.ts` (kinds) | streamed chunks for the infinite world |
+| Drawing | `core/draw.ts` (palette, ground, vehicles, markers), `games/parking/draw.ts` (the frame), `core/draw-math.ts`, `core/camera.ts` | a tilted 3D renderer |
 
-`tight-spot.app.svelte` runs the fixed-step loop and the input; `sensors.ts` and `sound.ts` are the parking sensors; `planner.ts` is test-only.
+`games/parking/game.svelte` runs the round on the shared pieces in `core/`: the frame loop (`loop.ts`), the input (`drive-input.svelte.ts`), the board, touch controls and toolbar frame (`drive-frame.svelte`), the gear strip, the round cards and the settings panel; `sensors.ts` and `sound.ts` are the parking sensors; `planner.ts` (with `games/parking/poses.ts`) is test-only. `tight-spot.app.svelte` loads the game lazily and owns the shared settings (`core/settings.svelte.ts`).
 
 ## How it works
 
@@ -89,7 +89,7 @@ The canvas backing store follows `devicePixelContentBoxSize`. Under Playwright's
 
 ### Collision
 
-`collision.ts`, hand-written. Every body is tested: the car and, towing, the trailer's box (`bodies()`); the drawbar isn't a body. `overlaps` is the separating-axis test for two convex polygons: they're apart if some edge normal of either one splits their projections. Touching counts as apart, so a car whose side lies on a wall's face isn't a crash. Every solid is convex (a rectangle or a rotated rectangle), so nothing is decomposed. `game.ts` keeps each world's solids with their bounding boxes (`obstacles`, cached per world) and runs SAT only on boxes that meet the car's.
+`collision.ts`, hand-written. Every body is tested: the car and, towing, the trailer's box (`bodies()`); the drawbar isn't a body. `overlaps` is the separating-axis test for two convex polygons: they're apart if some edge normal of either one splits their projections. Touching counts as apart, so a car whose side lies on a wall's face isn't a crash. Every solid is convex (a rectangle or a rotated rectangle), so nothing is decomposed. `core/obstacles.ts` keeps each scene's solids with their bounding boxes (`obstacles`, cached per world) and runs SAT only on boxes that meet the car's (`collide`).
 
 `contact_point` is where the red ring goes: the average of the corners of each shape inside the other and the edge crossings.
 
@@ -183,10 +183,12 @@ Round cards sit at the bottom of a tall board and on the left, centred, of a boa
 
 ## Data
 
-- `app.tight-spot.best`: best `{ moves, ms, precision? }` per kind and vehicle, keyed `kind:vehicle` (`open:vehicle` for the open lot), fewer moves first, then time (`record_best`). `precision` is the best seen on that key, whichever run set it, so it can come from a slower park. The start card shows the best and its precision.
-- `app.tight-spot.levels`: stars per parked level; the next level after the highest parked one is open. The ladder grew from 27 to 42 levels (three laps of the nine car kinds, then bus stop, end bay, driveway, depot and slipway); car levels kept their kind, difficulty and seed, so levels 1–9 kept their numbers and old 10–27 moved to 15–23 and 29–37, which left their stored stars on other levels.
-- `app.tight-spot.kinds`: kinds parked, for the achievement.
-- `app.tight-spot.mode`, `.pick`, `.vehicle`, `.level`, `.sound`, `.guides`, `.creep`, `.wheel`, `.steering`: last choices and settings (`.vehicle` is `any` or a vehicle id).
+- `app.tight-spot.parking.best`: best `{ moves, ms, precision? }` per kind and vehicle, keyed `kind:vehicle` (`open:vehicle` for the open lot), fewer moves first, then time (`record_best`). `precision` is the best seen on that key, whichever run set it, so it can come from a slower park. The start card shows the best and its precision.
+- `app.tight-spot.parking.levels`: stars per parked level; the next level after the highest parked one is open. The ladder grew from 27 to 42 levels (three laps of the nine car kinds, then bus stop, end bay, driveway, depot and slipway); car levels kept their kind, difficulty and seed, so levels 1–9 kept their numbers and old 10–27 moved to 15–23 and 29–37, which left their stored stars on other levels.
+- `app.tight-spot.parking.kinds`: kinds parked, for the achievement.
+- `app.tight-spot.parking.mode`, `.pick`, `.vehicle`, `.level`: last choices (`.vehicle` is `any` or a vehicle id).
+- `app.tight-spot.sound`, `.guides`, `.creep`, `.wheel`, `.steering`: settings every game shares.
+- Parking data before the split (`app.tight-spot.best` and the rest at the top level) is left behind, not migrated.
 - Props: `daily` (`YYYY-MM-DD`), which Game Hub passes; the day's seed picks the kind and difficulty, and the result goes to `plays.json` with moves as the score (`SCORE_ASC`).
 
 ## Dependencies & licences

@@ -12,7 +12,6 @@ import {
   level_round,
   LEVEL_COUNT,
   Mode,
-  obstacles,
   open_round,
   parked_in,
   PERFECT,
@@ -30,11 +29,12 @@ import {
   vehicles_for,
   type GameState,
 } from "./game";
-import { parked_poses } from "./planner";
-import { bounds_of } from "./geometry";
-import { beep_period, End, sensor, sensor_frame, SENSOR_RANGE } from "./sensors";
-import { corners, create_car, Gear, NO_INPUT, pose_from_centre, Vehicle, VEHICLES, type Placement } from "./vehicle";
-import { centroid } from "./geometry";
+import { obstacles } from "../../core/obstacles";
+import { parked_poses } from "./poses";
+import { bounds_of } from "../../core/geometry";
+import { beep_period, End, sensor, sensor_frame, SENSOR_RANGE } from "../../core/sensors";
+import { corners, create_car, Gear, NO_INPUT, pose_from_centre, Vehicle, VEHICLES, type Placement } from "../../core/vehicle";
+import { centroid } from "../../core/geometry";
 import { SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;
