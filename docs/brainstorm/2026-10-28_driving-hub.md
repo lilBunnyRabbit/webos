@@ -31,6 +31,9 @@ Forklift warehouse, pick and drop: rear-wheel steering (steer at the rear axle),
 ### Pace after the forklift (decided)
 Owner: "lets test with forklift first - then we know all the gotchas then we can be quick". The forklift is the only new game until it ships and its gotchas with the game contract are written down. After that, two or three games run in parallel, one agent each in `games/{id}/`: each game's core changes land first, one at a time, and each game gets its own grill before its agent starts.
 
+### Driving test (decided: later, with focus)
+Owner: "for not just the fun aspect i think the driving test will be the best one", then: "keep the plan, then the easier ones. we will need to put a lot of focus on this one." Order: the forklift, then the easier games in parallel, then the driving test as its own focused piece of work (roads and junctions, traffic rules, signals, examiner prompts, fault scoring, a fixed town first). It gets its own brainstorm and ADR.
+
 ## Key takeaways
 - One app holds every driving game; the shared core needs no kit while the hub is its only user.
 - Keeping the id keeps every player's data.
