@@ -164,4 +164,19 @@ describe("MobileWindowsService", () => {
     expect(windows.toggle_guide(a)).toBe(false);
     expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(false);
   });
+
+  test("Back closes the guide before the app's own handlers, whichever registered first", () => {
+    const windows = new MobileWindowsService();
+    const a = windows.open(app("a"));
+    windows.toggle_guide(a);
+    const calls: string[] = [];
+    windows.add_back_handler(a, () => (calls.push("app"), true));
+
+    expect(windows.back(a)).toBe(true);
+    expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(false);
+    expect(calls).toEqual([]);
+
+    expect(windows.back(a)).toBe(true);
+    expect(calls).toEqual(["app"]);
+  });
 });

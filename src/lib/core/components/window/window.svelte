@@ -15,6 +15,7 @@
   import { view_transition } from "$lib/core/utils/view-transition";
   import { transition_named } from "./window-transition.svelte";
   import { motion_reduced } from "$lib/core/utils/motion";
+  import { load_guide } from "./load-guide";
 
   /** Open and close (ADR-014 revision): a fade and a small scale. `scale`, not `transform`, so a drag can't fight it. */
   function pop(_: Element, { duration }: { duration: number }) {
@@ -163,8 +164,8 @@
           </WindowContent>
         </div>
         {#if has_guide}
-          {#await import("./window-guide.svelte") then { default: WindowGuide }}
-            <div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>
+          {#await load_guide(id) then WindowGuide}
+            {#if WindowGuide}<div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>{/if}
           {/await}
         {/if}
         <WindowSheets window_id={id} />

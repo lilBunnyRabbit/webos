@@ -23,21 +23,22 @@
     onguide: () => void;
   } = $props();
 
-  const button = "relative grid h-10 w-16 place-items-center rounded-xl text-foreground/80 transition-colors duration-150 active:bg-foreground/10";
+  const button = "relative grid h-10 place-items-center rounded-xl text-foreground/80 transition-colors duration-150 active:bg-foreground/10";
+  const main = `${button} w-16 max-[24rem]:w-14`;
 </script>
 
 <!-- Buttons, not gestures: every screen edge belongs to the device (ADR-016). -->
 <nav
   aria-label="Navigation"
-  class="relative flex shrink-0 items-center justify-center gap-6 border-t border-foreground/8 bg-background-light/90 px-4 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl select-none"
+  class="relative flex shrink-0 items-center justify-center gap-6 border-t max-[24rem]:gap-3 border-foreground/8 bg-background-light/90 px-4 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))] backdrop-blur-xl select-none"
 >
-  <button class={button} aria-label="Back" onclick={onback}>
+  <button class={main} aria-label="Back" onclick={onback}>
     <CaretLeftIcon class="size-5.5" weight="bold" />
   </button>
-  <button class={button} aria-label="Home" onclick={onhome}>
+  <button class={main} aria-label="Home" onclick={onhome}>
     <HouseIcon class="size-5.5" weight="bold" />
   </button>
-  <button class={cn(button, switcher && "bg-foreground/10 text-foreground")} aria-label={unread ? "Running apps, new notifications" : "Running apps"}
+  <button class={cn(main, switcher && "bg-foreground/10 text-foreground")} aria-label={unread ? "Running apps, new notifications" : "Running apps"}
     aria-pressed={switcher} onclick={onrecents}>
     <CardsIcon class="size-5.5" weight={switcher ? "fill" : "bold"} />
     {#if running > 0}
@@ -51,7 +52,8 @@
     {/if}
   </button>
   {#if guide !== null}
-    <!-- Off to the side, so the three main buttons stay put whether an app is on screen or not. -->
+    <!-- Off to the side, so the three main buttons stay put whether an app is on screen or not. Narrow phones pull them
+         closer (above) so they clear it down to 320px. -->
     <button class={cn(button, "absolute right-2 w-11", guide && "bg-foreground/10 text-foreground")} aria-label="Guide" aria-pressed={guide} onclick={onguide}>
       <QuestionIcon class="size-5.5" weight={guide ? "fill" : "bold"} />
     </button>

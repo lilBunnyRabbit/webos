@@ -1,5 +1,6 @@
 import { untrack } from "svelte";
 import type { DialogsService, Kernel, ShellService, WindowsService } from "$lib/core/api";
+import { WindowFlag } from "../windows/type";
 import { DEFAULT_SHORTCUTS } from "./defaults";
 import { event_keys, has_command_modifier, is_mac, normalize } from "./keys";
 import { shortcuts_shell } from "./shell";
@@ -112,10 +113,12 @@ export class ShortcutsService implements IShortcutsService {
     if (is_editable(event.target) && !has_command_modifier(keys)) return;
 
     const focused = this.windows_service.get_focused();
+    // The guide covers the app, so the app's own keys wait until it's closed; OS keys (F1 among them) still work.
+    const covered = focused !== null && (this.windows_service.get(focused)?.flags.has(WindowFlag.GUIDE) ?? false);
     // Newest first, window scope ahead of global: the most specific, latest registration wins.
     const candidates = this.shortcuts.filter((shortcut) => shortcut.keys === keys).reverse();
     const pick = () =>
-      candidates.find((shortcut) => focused !== null && scope(shortcut) === focused && this.live(shortcut)) ??
+      candidates.find((shortcut) => focused !== null && !covered && scope(shortcut) === focused && this.live(shortcut)) ??
       candidates.find((shortcut) => scope(shortcut) === undefined && this.live(shortcut));
     const match = pick();
     if (match) {

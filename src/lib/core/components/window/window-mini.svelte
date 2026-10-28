@@ -3,6 +3,7 @@
   import WindowContent from "./window-content.svelte";
   import WindowSheets from "./window-sheets.svelte";
   import DialogsHost from "../dialogs/dialogs-host.svelte";
+  import { load_guide } from "./load-guide";
 
   /** A popped-out window's app inside its mini window (ADR-043), mounted there by `window.svelte`. */
   let { window_id, zoom }: { window_id: WindowId; zoom: number } = $props();
@@ -26,8 +27,8 @@
     <WindowContent {window_id} {zoom} />
   </div>
   {#if has_guide}
-    {#await import("./window-guide.svelte") then { default: WindowGuide }}
-      <div class="contents" inert={has_sheets}><WindowGuide {window_id} /></div>
+    {#await load_guide(window_id) then WindowGuide}
+      {#if WindowGuide}<div class="contents" inert={has_sheets}><WindowGuide {window_id} /></div>{/if}
     {/await}
   {/if}
   <WindowSheets {window_id} />

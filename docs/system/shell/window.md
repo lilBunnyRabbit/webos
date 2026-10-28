@@ -9,6 +9,7 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 | `window-content.svelte` | Awaits the lazy component, renders it inside an error boundary |
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window-guide.svelte` | The app's guide over the content while `WindowFlag.GUIDE` is set (ADR-085). Lazy: each host imports it the first time a guide shows. Desktop, mobile, solo and popped-out windows all render it ([Guide](#guide)) |
+| `load-guide.ts` | `load_guide(window_id)`: the hosts' `import()` of `window-guide.svelte`. On a failed import it turns the window's guide flag off and notifies, then resolves `null` ([Guide](#guide)) |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
 | `window-transition.svelte.ts` | `window_transition(ids, change)`: `view_transition()` that names unfocused windows for its duration; `transition_named(id)` |
 
@@ -124,11 +125,13 @@ Controls are kit `IconButton`s (`size="sm"`, quiet; the zoom ones narrowed to `w
 
 ## Guide
 
-ADR-085. While the window has `WindowFlag.GUIDE`, the host (`window.svelte`, `mobile-window.svelte`, `solo-window.svelte`, `window-mini.svelte`) `import()`s `window-guide.svelte` and renders it between the app and the sheets; the app is `inert` meanwhile, and the guide is `inert` under a sheet. The flag is set by the titlebar button, the mobile nav bar's and solo header's button, `win guide` (F1), `app guide <app>` and the first open ([apps](../services/apps.md#first-open)).
+ADR-085. While the window has `WindowFlag.GUIDE`, the host (`window.svelte`, `mobile-window.svelte`, `solo-window.svelte`, `window-mini.svelte`) loads `window-guide.svelte` through `load_guide(id)` and renders it between the app and the sheets; the app is `inert` meanwhile, and the guide is `inert` under a sheet. The flag is set by the titlebar button, the mobile nav bar's and solo header's button, `win guide` (F1), `app guide <app>` and the first open ([apps](../services/apps.md#first-open)).
 
 - **Layout:** `absolute inset-0 z-20` on `bg-background`, a size container of its own. A centred column (`max-w-xl`) scrolls (`overscroll-contain`): a header with the app's duotone icon in a raised tile, the name in `text-lg` and "How to play" (games) or "How to use it" below; the pitch (problem in `foreground/65`, solution) in a `background-light` card; the guide's markdown through `MarkdownView` (`components/markdown`, `utils/markdown`: headings, `-` lists, paragraphs, bold, italic, code, links, never HTML) at `text-sm`; without a guide the description instead; then the highlights as the announcement shows them (icon chip, title, sentence; two columns from `@md`). A footer on `background-light` holds a primary **Got it**.
-- **Loading:** `apps.meta(id)`, `manifest.guide()` and `manifest.highlights()` in one `Promise.all`, so the overlay doesn't grow as parts land; each part that fails is left out. A spinner fades in after 300ms.
-- **Closing:** Got it, the Guide button again (title bar, nav bar or solo header), Escape (handled on the overlay and stopped there, so the app never sees it), and on mobile Back: the overlay registers a back handler while it's mounted. All call `toggle_guide`.
+- **Loading:** `apps.meta(id)`, `manifest.guide()` and `manifest.highlights()` in one `Promise.all`, so the overlay doesn't grow as parts land; each part that fails is left out. A spinner fades in after 300ms. It loads once per open, keyed on the app id (the rest read `untrack`ed): a version poll re-adopting the same catalogue entries doesn't reload it, flash the spinner or lose the scroll.
+- **A failed chunk:** the app is `inert` while the flag is on, so if `window-guide.svelte` itself fails to import, `load_guide` turns the flag off (the app is usable again) and posts an error notification "Couldn't load the {app} guide" under the app's id.
+- **Closing:** Got it, the Guide button again (title bar, nav bar or solo header), Escape (handled on the overlay and stopped there, so the app never sees it), and Back: `windows.back(id)` closes the guide before running any of the app's back handlers, whichever registered first. All call `toggle_guide`.
+- **Keys:** while a window's guide shows, ShortcutsService skips that window's own (window-scoped) shortcuts, so a game's F2 or H doesn't act behind it; global shortcuts, F1 among them, still run ([shortcuts](../services/shortcuts.md)).
 - **Focus:** the overlay takes focus when it mounts, unless focus is already inside it.
 
 ## User interactions

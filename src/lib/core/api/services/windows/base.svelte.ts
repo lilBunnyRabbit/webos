@@ -35,7 +35,9 @@ export abstract class BaseWindowsService {
     };
   }
 
+  /** The guide sits above the app, so it closes before any of the app's own handlers run. */
   public back(id: WindowId): boolean {
+    if (this.get(id)?.flags.has(WindowFlag.GUIDE)) return (this.toggle_guide(id), true);
     const handlers = [...(this.back_handlers.get(id) ?? [])].reverse();
     return handlers.some((handler) => handler());
   }

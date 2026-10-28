@@ -7,6 +7,7 @@
   import { create_achievements_handle } from "$lib/core/contexts/app/achievements-handle";
   import WindowContent from "../window/window-content.svelte";
   import WindowSheets from "../window/window-sheets.svelte";
+  import { load_guide } from "../window/load-guide";
 
   let { id }: { id: WindowId } = $props();
 
@@ -33,8 +34,8 @@
     <WindowContent window_id={id} zoom={1} />
   </div>
   {#if has_guide}
-    {#await import("../window/window-guide.svelte") then { default: WindowGuide }}
-      <div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>
+    {#await load_guide(id) then WindowGuide}
+      {#if WindowGuide}<div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>{/if}
     {/await}
   {/if}
   <WindowSheets window_id={id} />

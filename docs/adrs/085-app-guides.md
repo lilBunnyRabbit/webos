@@ -22,6 +22,11 @@ Users open an app and don't know what it is or how to play it ([brainstorm](../b
 - **First open** also waits for `usage.json` to be read, and counts an empty props object as no props. A link with no props (`#/app/plots`) is a launch with no props, so it shows the guide on a first open.
 - **Commands:** `win guide [ids]` (F1, focused window by default) and `app guide <app>`. F1 is a bare key, so it doesn't fire inside a text field, like every other F-key shortcut.
 
+## Revision 2026-10-28 (review fixes)
+- **Back** is handled by `windows.back(id)` itself: a shown guide closes before any of the app's back handlers, so registration order can't let the app's handler run first.
+- **Keys:** while a window's guide shows, its window-scoped shortcuts are skipped; global ones (F1) still run.
+- **Loading** happens once per open, keyed on the app id, so a version poll re-adopting the catalogue doesn't reload it. A guide chunk that fails to import turns the flag off and notifies, so the app isn't left inert.
+
 ## Consequences
 - `define_app` gains a field (app API, stable like the rest).
 - A writing pass is needed for guides beyond Plots.

@@ -66,7 +66,7 @@ On every `keydown`, in order:
 2. Skip if a system dialog is open (`dialogs.system.length > 0`): it's modal.
 3. `event_keys(event, mac)`; skip a lone modifier.
 4. In a text field (`input`, `textarea`, `select`, contenteditable), only combinations with `mod`, `ctrl`, `alt` or `meta` fire, so typing is never eaten.
-5. Candidates with these keys, newest first. A shortcut for the focused window wins over a global one. A command shortcut must have `shell.available(command)`, a run shortcut `when()`.
+5. Candidates with these keys, newest first. A shortcut for the focused window wins over a global one, except while that window's guide shows (`WindowFlag.GUIDE`, ADR-085): then its window-scoped shortcuts are skipped, so the app doesn't act behind the guide, and only global ones (F1 among them) match. A command shortcut must have `shell.available(command)`, a run shortcut `when()`.
 6. `preventDefault()` synchronously, then `run()` or `shell.execute(command)` (async; a failure becomes an error toast).
 7. No match, the apps' commands not loaded yet, and a candidate's command unknown to the shell (an app's, like `quno q`): `preventDefault()`, await `shell.load()`, then pick again and fire the match, if any ([shell](shell.md#lazy-parts)).
 

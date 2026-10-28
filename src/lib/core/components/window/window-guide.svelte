@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, untrack } from "svelte";
   import kernel, { type AppHighlight, type AppMeta, type AppsService, WindowFlag, type WindowId, type WindowsService } from "$lib/core/api";
   import { AppCategory } from "$lib/core/api/services/apps/type";
   import { Button, Spinner } from "../ui";
@@ -18,16 +18,22 @@
     highlights: AppHighlight[];
   }
 
-  // One await for all three, so the overlay doesn't grow as each part lands.
+  const app_id = $derived(manifest?.id);
+
+  // One await for all three, so the overlay doesn't grow as each part lands. Keyed on the app id alone: a version
+  // poll re-adopting the same entries would otherwise reload it, flashing the spinner and losing the scroll.
   const loaded = $derived.by(() => {
-    if (!manifest) return null;
-    const { id, guide, highlights } = manifest;
+    if (!app_id) return null;
+    return untrack(() => load(manifest!));
+  });
+
+  function load({ id, guide, highlights }: NonNullable<typeof manifest>): Promise<Loaded> {
     return Promise.all([
       apps.meta(id).catch((): AppMeta => ({})),
       guide?.().then((module) => module.default).catch(() => null) ?? null,
       highlights?.().then((module) => module.default).catch(() => []) ?? [],
     ]).then(([meta, text, list]): Loaded => ({ meta, guide: text, highlights: list }));
-  });
+  }
 
   let element = $state<HTMLElement | null>(null);
 
@@ -37,7 +43,6 @@
 
   onMount(() => {
     if (!element?.contains(element.ownerDocument.activeElement)) element?.focus({ preventScroll: true });
-    return windows.add_back_handler(window_id, () => (close(), true));
   });
 </script>
 

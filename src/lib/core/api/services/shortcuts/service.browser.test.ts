@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 import type { AppInstance, DialogEntry, DialogsService, IService, Kernel } from "$lib/core/api";
 import { boot_test_kernel, stub_service } from "../../kernel/test-kernel";
 import { WindowsService } from "../windows/service.svelte";
+import { WindowFlag } from "../windows/type";
 import { UiService } from "../ui/service.svelte";
 import { UiOverlay } from "../ui/type";
 import { run_in_effect } from "./effect-fixture.svelte";
@@ -126,6 +127,30 @@ describe("ShortcutsService", () => {
     press("KeyJ", { altKey: true });
     expect(global).toHaveBeenCalledTimes(2);
     expect(windows.exists(b)).toBe(true);
+  });
+
+  test("a window's own shortcuts wait while its guide is open; global ones still run", async () => {
+    const kernel = await boot();
+    const windows = kernel.service<WindowsService>("windows");
+    const shortcuts = kernel.service<ShortcutsService>("shortcuts");
+    const a = windows.open(app("a"));
+
+    const own = vi.fn();
+    const global = vi.fn();
+    shortcuts.register({ id: "test.own", keys: "f2", label: "", category: ShortcutCategory.APP, window: a, run: own });
+    shortcuts.register({ id: "test.global", keys: "alt+j", label: "", category: ShortcutCategory.APP, run: global });
+
+    windows.toggle_guide(a);
+    expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(true);
+    expect(press("F2").defaultPrevented).toBe(false);
+    expect(own).not.toHaveBeenCalled();
+    press("KeyJ", { altKey: true });
+    expect(global).toHaveBeenCalledTimes(1);
+
+    press("F1");
+    await vi.waitFor(() => expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(false));
+    press("F2");
+    expect(own).toHaveBeenCalledTimes(1);
   });
 
   test("registering from an effect runs the effect once", async () => {
