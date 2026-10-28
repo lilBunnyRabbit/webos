@@ -703,6 +703,9 @@ Owner-requested topics. Each needs a design session (brainstorm log, then an ADR
   - Is the changelog format structured or markdown?
   - Is it the ADR-006 notification or a dedicated window?
 
+- [ ] **Organising apps** (owner, 2026-10-28; idea from LaxDOTexe: "can I catagorise the apps? there are so many i kinda want to put them in like a sub folder (for example, one to hide the ones i wont use) maybe just a \"my apps\" folder"). Today the start menu groups by the fixed manifest `category` only, uninstall is the only way to hide an app (it still shows in search under Not installed), desktop and mobile-home folders open File Explorer, and the mobile drawer is A to Z. Ideas floated, none picked: desktop folders open as an app-grid popover and a start menu Pinned section read from a directory of `.desktop` shortcuts; start-menu collections in their own JSON; favourites plus a hidden flag. Open: model, whether uninstall is enough as hiding, which surfaces (start menu, mobile home and drawer, desktop folders, App Library)
+- [ ] **App information** (owner, 2026-10-28: a friend had no idea how to play Plots). A way to open, from inside any app, what the app is and how to use or play it. Today an app's `description`, `pitch` and `highlights` only show in the App Library and the Showcase, and Getting started covers the OS, not each app. Open: where it opens (window menu, title-bar button, Mod+? or a first-launch card), what it shows (the existing pitch and highlights, or a new per-app "how to play" field in the manifest), and whether games get rules written for every one of them
+
 ---
 
 ## Unscheduled Ideas
