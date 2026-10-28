@@ -2,8 +2,8 @@ import { describe, expect, test } from "vitest";
 import { overlaps } from "../core/collision";
 import { collide, obstacles } from "../core/obstacles";
 import { plan } from "../core/planner";
-import { bodies, Gear, NO_INPUT, VEHICLES, type Car } from "../core/vehicle";
-import { build_yard, door_at, door_car, drive, gate_car, nose, on_pad, pad_car } from "./yard";
+import { bodies, Gear, NO_INPUT, Vehicle, VEHICLES, type Car } from "../core/vehicle";
+import { build_yard, door_at, door_car, drive, GARAGE, gate_car, nose, on_pad, pad_car } from "./yard";
 
 const YARD = build_yard(2);
 
@@ -26,6 +26,11 @@ describe("yard", () => {
         expect(door_at(YARD, car, spec), `${name} out of door ${i} is past its apron`).toBeNull();
       }
     }
+  });
+
+  test("the garage shelves hold every vehicle once", () => {
+    const shelved = GARAGE.flatMap((shelf) => shelf.vehicles);
+    expect([...shelved].sort()).toEqual(Object.values(Vehicle).sort());
   });
 
   test("the pad sits on open ground, so a new vehicle never lands on something", () => {

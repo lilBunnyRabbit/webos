@@ -443,6 +443,7 @@ const HIT_NAMES: Record<SolidKind, string> = {
   post: "a post",
   rack: "a rack",
   pallet: "a pallet",
+  hedge: "a hedge",
 };
 
 export function crash_title(hit: Hit | null): string {

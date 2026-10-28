@@ -194,6 +194,251 @@ export const FORKLIFT: VehicleSpec = {
   reverse_beeper: true,
 };
 
+export const CITY_CAR: VehicleSpec = {
+  ...HATCHBACK,
+  length: 3.6,
+  width: 1.65,
+  wheelbase: 2.38,
+  rear_overhang: 0.55,
+  track: 1.42,
+  wheel_diameter: 0.58,
+  wheel_width: 0.18,
+  turning_radius: 4.8,
+  steer_time: 1,
+};
+
+export const SUV: VehicleSpec = {
+  ...HATCHBACK,
+  length: 4.75,
+  width: 1.95,
+  wheelbase: 2.85,
+  rear_overhang: 1.0,
+  track: 1.65,
+  wheel_diameter: 0.74,
+  wheel_width: 0.25,
+  turning_radius: 5.9,
+  steer_time: 1.15,
+  accel: 2.3,
+};
+
+export const LIMO: VehicleSpec = {
+  ...HATCHBACK,
+  length: 8.2,
+  width: 1.95,
+  wheelbase: 5.1,
+  rear_overhang: 1.25,
+  track: 1.65,
+  wheel_diameter: 0.7,
+  wheel_width: 0.24,
+  turning_radius: 8.8,
+  steer_time: 1.4,
+  creep_speed: 1.5,
+  creep_accel: 0.9,
+  max_forward: 7.5,
+  max_reverse: 2.4,
+  accel: 1.8,
+};
+
+export const CAMPER: VehicleSpec = {
+  ...VAN,
+  length: 6.6,
+  width: 2.1,
+  wheelbase: 4.0,
+  rear_overhang: 1.55,
+  track: 1.75,
+  wheel_diameter: 0.72,
+  wheel_width: 0.23,
+  turning_radius: 7.2,
+  steer_time: 1.3,
+  max_forward: 7.5,
+  accel: 1.8,
+};
+
+const TRUCK = {
+  drive: FRONT_STEER,
+  width: 2.5,
+  track: 2.05,
+  wheel_diameter: 1,
+  wheel_width: 0.32,
+  creep_speed: 1.4,
+  creep_accel: 0.8,
+  max_forward: 6.5,
+  max_reverse: 2,
+  accel: 1.3,
+  brake: 5,
+  rolling: 0.3,
+  park_speed: 0.25,
+};
+
+export const GARBAGE_TRUCK: VehicleSpec = {
+  ...TRUCK,
+  length: 9.4,
+  wheelbase: 4.5,
+  rear_overhang: 2.8,
+  turning_radius: 9,
+  steer_time: 1.5,
+};
+
+export const FIRE_ENGINE: VehicleSpec = {
+  ...TRUCK,
+  length: 8.8,
+  wheelbase: 4.2,
+  rear_overhang: 2.3,
+  turning_radius: 8.6,
+  steer_time: 1.45,
+  max_forward: 7,
+  accel: 1.4,
+};
+
+/** Its tag axle trails the drive axle; the pose sits between the two, where a rigid pair turns without slip. */
+export const COACH: VehicleSpec = {
+  ...BUS,
+  length: 13.7,
+  wheelbase: 7,
+  rear_overhang: 4,
+  turning_radius: 12,
+  steer_time: 1.7,
+  max_forward: 7,
+  max_reverse: 2,
+  accel: 1.3,
+};
+
+export const DOUBLE_DECKER: VehicleSpec = {
+  ...BUS,
+  length: 11.2,
+  rear_overhang: 2.9,
+  turning_radius: 10.5,
+  accel: 1.2,
+};
+
+export const TRACTOR: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 4.1,
+  width: 2.25,
+  wheelbase: 2.5,
+  rear_overhang: 0.8,
+  track: 1.8,
+  wheel_diameter: 1.45,
+  wheel_width: 0.45,
+  turning_radius: 5.4,
+  steer_time: 1.3,
+  creep_speed: 1.2,
+  creep_accel: 0.9,
+  max_forward: 5,
+  max_reverse: 2,
+  accel: 1.6,
+  brake: 5.5,
+  rolling: 0.4,
+  park_speed: 0.3,
+};
+
+export const QUAD: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 2.1,
+  width: 1.2,
+  wheelbase: 1.3,
+  rear_overhang: 0.35,
+  track: 0.95,
+  wheel_diameter: 0.6,
+  wheel_width: 0.24,
+  turning_radius: 3.2,
+  steer_time: 0.9,
+  creep_speed: 1.5,
+  creep_accel: 1.2,
+  max_forward: 6,
+  max_reverse: 2,
+  accel: 2.4,
+  brake: 6.5,
+  rolling: 0.35,
+  park_speed: 0.3,
+};
+
+const HORSE_BOX: TrailerSpec = {
+  hitch: 1.1,
+  axle: 3.3,
+  drawbar: 1.4,
+  box_length: 3.9,
+  width: 1.95,
+  track: 1.7,
+  wheel_diameter: 0.6,
+  wheel_width: 0.18,
+};
+
+const FARM_TRAILER: TrailerSpec = {
+  hitch: 1.0,
+  axle: 3.6,
+  drawbar: 1.5,
+  box_length: 4.4,
+  width: 2.3,
+  track: 1.85,
+  wheel_diameter: 0.9,
+  wheel_width: 0.35,
+};
+
+const SMALL_TRAILER: TrailerSpec = {
+  hitch: 0.45,
+  axle: 1.5,
+  drawbar: 0.8,
+  box_length: 1.3,
+  width: 1.0,
+  track: 1.15,
+  wheel_diameter: 0.42,
+  wheel_width: 0.13,
+};
+
+const BOAT_TRAILER: TrailerSpec = {
+  hitch: 1.0,
+  axle: 4.0,
+  drawbar: 1.0,
+  box_length: 5.6,
+  width: 1.9,
+  track: 1.75,
+  wheel_diameter: 0.55,
+  wheel_width: 0.17,
+};
+
+export const CARAVAN_TRAILER: TrailerSpec = {
+  hitch: 1.0,
+  axle: 4.8,
+  drawbar: 1.2,
+  box_length: 5.8,
+  width: 2.3,
+  track: 2.0,
+  wheel_diameter: 0.6,
+  wheel_width: 0.19,
+};
+
+/** An articulated bus's rear section is a trailer: the turntable is the ball, the bellows the drawbar. */
+const BUS_REAR: TrailerSpec = {
+  hitch: 1.7,
+  axle: 6.0,
+  drawbar: 0.65,
+  box_length: 7.15,
+  width: 2.55,
+  track: 2.1,
+  wheel_diameter: 1,
+  wheel_width: 0.3,
+};
+
+const TOWING = { max_forward: 6, max_reverse: 2.1, accel: 1.8 };
+
+export const HORSE_BOX_RIG: VehicleSpec = { ...SUV, ...TOWING, trailer: HORSE_BOX };
+export const TRACTOR_RIG: VehicleSpec = { ...TRACTOR, accel: 1.4, trailer: FARM_TRAILER };
+export const QUAD_RIG: VehicleSpec = { ...QUAD, max_forward: 5, max_reverse: 1.8, accel: 2, trailer: SMALL_TRAILER };
+export const BOAT_RIG: VehicleSpec = { ...PICKUP, ...TOWING, trailer: BOAT_TRAILER };
+export const CARAVAN_RIG: VehicleSpec = { ...HATCHBACK, ...TOWING, max_forward: 5.5, accel: 1.6, trailer: CARAVAN_TRAILER };
+
+export const ARTICULATED_BUS: VehicleSpec = {
+  ...BUS,
+  length: 10.35,
+  rear_overhang: 1.75,
+  steer_time: 1.7,
+  max_forward: 6.5,
+  max_reverse: 2,
+  accel: 1.2,
+  trailer: BUS_REAR,
+};
+
 export const Vehicle = {
   HATCH: "hatch",
   VAN: "van",
@@ -201,9 +446,27 @@ export const Vehicle = {
   BUS: "bus",
   TOWING: "towing",
   FORKLIFT: "forklift",
+  CITY: "city",
+  SUV: "suv",
+  LIMO: "limo",
+  CAMPER: "camper",
+  TAXI: "taxi",
+  POLICE: "police",
+  AMBULANCE: "ambulance",
+  GARBAGE: "garbage",
+  FIRE: "fire",
+  COACH: "coach",
+  DECKER: "decker",
+  ARTIC: "artic",
+  HORSE_BOX: "horse-box",
+  TRACTOR: "tractor",
+  QUAD: "quad",
+  BOAT: "boat",
+  CARAVAN: "caravan",
 } as const;
 export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
 
+/** The taxi, the police car and the ambulance are looks: another vehicle's spec under their own livery. */
 export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   hatch: HATCHBACK,
   van: VAN,
@@ -211,6 +474,23 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   bus: BUS,
   towing: HATCH_TRAILER,
   forklift: FORKLIFT,
+  city: CITY_CAR,
+  suv: SUV,
+  limo: LIMO,
+  camper: CAMPER,
+  taxi: HATCHBACK,
+  police: SUV,
+  ambulance: VAN,
+  garbage: GARBAGE_TRUCK,
+  fire: FIRE_ENGINE,
+  coach: COACH,
+  decker: DOUBLE_DECKER,
+  artic: ARTICULATED_BUS,
+  "horse-box": HORSE_BOX_RIG,
+  tractor: TRACTOR_RIG,
+  quad: QUAD_RIG,
+  boat: BOAT_RIG,
+  caravan: CARAVAN_RIG,
 };
 
 export const VEHICLE_NAMES: Record<Vehicle, string> = {
@@ -220,6 +500,23 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   bus: "City bus",
   towing: "Car and trailer",
   forklift: "Forklift",
+  city: "City car",
+  suv: "SUV",
+  limo: "Limousine",
+  camper: "Camper van",
+  taxi: "Taxi",
+  police: "Police car",
+  ambulance: "Ambulance",
+  garbage: "Garbage truck",
+  fire: "Fire engine",
+  coach: "Coach",
+  decker: "Double-decker",
+  artic: "Articulated bus",
+  "horse-box": "Car and horse box",
+  tractor: "Tractor and trailer",
+  quad: "Quad and trailer",
+  boat: "Pickup and boat",
+  caravan: "Car and caravan",
 };
 
 const coasting = new WeakMap<VehicleSpec, VehicleSpec>();

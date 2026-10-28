@@ -11,6 +11,7 @@ export const SolidKind = {
   POST: "post",
   RACK: "rack",
   PALLET: "pallet",
+  HEDGE: "hedge",
 } as const;
 export type SolidKind = (typeof SolidKind)[keyof typeof SolidKind];
 
@@ -36,7 +37,7 @@ export interface Mark {
   b: Vec;
 }
 
-export const SurfaceKind = { ASPHALT: "asphalt", FLOOR: "floor", PAVEMENT: "pavement" } as const;
+export const SurfaceKind = { ASPHALT: "asphalt", FLOOR: "floor", PAVEMENT: "pavement", GRASS: "grass" } as const;
 export type SurfaceKind = (typeof SurfaceKind)[keyof typeof SurfaceKind];
 
 export interface Surface {

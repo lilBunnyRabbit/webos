@@ -1,23 +1,12 @@
 import { resolve_token } from "$lib/core/utils";
 import type { Insets } from "./camera";
-import { against, dash_phase, darkest, lightest, tread, wound, type Tone } from "./draw-math";
+import { against, dash_phase, darkest, lightest, wound, type Tone } from "./draw-math";
+import { parked_vehicle } from "./draw-vehicles";
 import type { Polygon, Pose, Vec } from "./geometry";
 import { End, sensor_frame } from "./sensors";
-import {
-  body_centre,
-  gear_direction,
-  Gear,
-  hitch_point,
-  sweep,
-  to_world,
-  trailer_pose,
-  trailer_sweep,
-  trailer_wheels,
-  Vehicle,
-  wheels,
-  type Car,
-  type VehicleSpec,
-} from "./vehicle";
+import { body_centre, gear_direction, sweep, to_world, trailer_pose, trailer_sweep, type Car, type VehicleSpec } from "./vehicle";
+
+export { lamp, pill, player } from "./draw-vehicles";
 import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Solid, type Surface } from "./scene";
 
 export interface Paint {
@@ -59,7 +48,15 @@ export interface Palette {
   parked_fill: string;
   guide: string;
   warning: string;
+  warning_glow: string;
   error: string;
+  info: string;
+  info_glow: string;
+  success: string;
+  grass: string;
+  hedge: string;
+  hedge_edge: string;
+  hedge_leaf: string;
   /** Steel: forks, and a rack's beams take `beam`, its uprights `upright`. */
   steel: string;
   beam: string;
@@ -140,7 +137,15 @@ export function read_palette(probe: HTMLElement): Palette {
     // Cottontail is a light tint on most themes; on a light ground the dashed guides take some foreground to show.
     guide: dark_ground ? token("var(--cottontail)") : token("color-mix(in oklch, var(--cottontail) 55%, var(--foreground))"),
     warning: token("var(--warning)"),
+    warning_glow: mix("warning", 35),
     error: token("var(--error)"),
+    info: token("var(--info)"),
+    info_glow: mix("info", 35),
+    success: token("var(--success)"),
+    grass: solid("success", 10),
+    hedge: solid("success", 20),
+    hedge_edge: solid("success", 34),
+    hedge_leaf: solid("success", 27),
     steel: solid("foreground", 55),
     beam: solid("warning", 80),
     upright: solid("info", 72),
@@ -185,508 +190,6 @@ export function fill(ctx: CanvasRenderingContext2D, shape: Polygon, colour: stri
 export function union(ctx: CanvasRenderingContext2D, shapes: Polygon[]) {
   ctx.beginPath();
   for (const shape of shapes) trace(ctx, wound(shape));
-}
-
-export function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, colour: string) {
-  ctx.fillStyle = colour;
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
-  ctx.fill();
-}
-
-// A lamp is a lens in a dark housing: on a light body the housing shows, on a dark one the lens does.
-export function lamp(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-  lens: string,
-  palette: Palette,
-  lit = 1
-) {
-  const rim = 0.035;
-  pill(ctx, x - rim, y - rim, w + rim * 2, h + rim * 2, 0.07, palette.ink);
-  ctx.globalAlpha = lit;
-  pill(ctx, x, y, w, h, 0.05, lens);
-  ctx.globalAlpha = 1;
-}
-
-const Style = { HATCH: "hatch", VAN: "van", PICKUP: "pickup", BUS: "bus", FORKLIFT: "forklift" } as const;
-type Style = (typeof Style)[keyof typeof Style];
-
-function style_of(vehicle: Vehicle | undefined): Style {
-  if (vehicle === Vehicle.VAN) return Style.VAN;
-  if (vehicle === Vehicle.PICKUP) return Style.PICKUP;
-  if (vehicle === Vehicle.BUS) return Style.BUS;
-  if (vehicle === Vehicle.FORKLIFT) return Style.FORKLIFT;
-  return Style.HATCH;
-}
-
-interface Body {
-  length: number;
-  width: number;
-  paint: Paint;
-  style: Style;
-}
-
-const CORNERS: Record<Style, number[]> = {
-  hatch: [0.35, 0.55, 0.55, 0.35],
-  van: [0.2, 0.4, 0.4, 0.2],
-  pickup: [0.2, 0.5, 0.5, 0.2],
-  bus: [0.25, 0.4, 0.4, 0.25],
-  forklift: [0.5, 0.08, 0.08, 0.5],
-};
-
-function body_shape(ctx: CanvasRenderingContext2D, l: number, half: number, style: Style) {
-  ctx.beginPath();
-  // Clockwise from the rear left: a rounder nose, a squarer tail, the same on both sides.
-  ctx.roundRect(
-    -l / 2,
-    -half,
-    l,
-    half * 2,
-    CORNERS[style].map((r) => Math.min(r, half))
-  );
-}
-
-// The sun stands still in the world, so the shadow falls the same way whichever way the car points.
-export function shadow(
-  ctx: CanvasRenderingContext2D,
-  centre: Vec,
-  heading: number,
-  length: number,
-  width: number,
-  style: Style,
-  palette: Palette
-) {
-  ctx.save();
-  ctx.translate(centre.x + 0.1, centre.y + 0.16);
-  ctx.rotate(heading);
-  body_shape(ctx, length + 0.06, width / 2 + 0.03, style);
-  ctx.fillStyle = palette.shadow;
-  ctx.fill();
-  ctx.restore();
-}
-
-// The glass runs from the roof's edge out to a wider base, the way a cabin tapers seen from above.
-function pane(ctx: CanvasRenderingContext2D, from: number, to: number, roof: number, base: number) {
-  ctx.beginPath();
-  ctx.moveTo(from, -roof);
-  ctx.lineTo(to, -base);
-  ctx.lineTo(to, base);
-  ctx.lineTo(from, roof);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-}
-
-function glass(ctx: CanvasRenderingContext2D, paint: Paint) {
-  ctx.fillStyle = paint.glass;
-  ctx.strokeStyle = paint.glass;
-  ctx.lineJoin = "round";
-  ctx.lineWidth = 0.06;
-}
-
-function car_body(ctx: CanvasRenderingContext2D, body: Body, scale: number, palette: Palette) {
-  const { length: l, width: w, paint, style } = body;
-  const half = w / 2;
-  body_shape(ctx, l, half, style);
-  ctx.fillStyle = paint.body;
-  ctx.fill();
-  ctx.strokeStyle = palette.edge;
-  ctx.lineWidth = 1 / scale;
-  ctx.stroke();
-  const roof = half - 0.22;
-  if (style === Style.HATCH) {
-    const back = -l * 0.2;
-    const front = l * 0.1;
-    pill(ctx, back, -roof, front - back, roof * 2, 0.14, paint.roof);
-    glass(ctx, paint);
-    pane(ctx, front, l * 0.24, roof, half - 0.14);
-    pane(ctx, back, -l * 0.3, roof, half - 0.16);
-  } else if (style === Style.VAN) {
-    const front = l / 2 - 1.15;
-    pill(ctx, -l / 2 + 0.12, -roof, front + l / 2 - 0.12, roof * 2, 0.12, paint.roof);
-    glass(ctx, paint);
-    pane(ctx, front, front + 0.42, roof, half - 0.12);
-    ctx.strokeStyle = palette.edge;
-    ctx.lineWidth = 1 / scale;
-    ctx.beginPath();
-    for (const x of [-l * 0.18, l * 0.06]) {
-      ctx.moveTo(x, -roof + 0.08);
-      ctx.lineTo(x, roof - 0.08);
-    }
-    ctx.moveTo(-l / 2 + 0.03, 0);
-    ctx.lineTo(-l / 2 + 0.3, 0);
-    ctx.stroke();
-  } else if (style === Style.PICKUP) {
-    const cab_back = -l * 0.08;
-    const cab_front = l * 0.12;
-    const bed_front = cab_back - 0.32;
-    pill(ctx, cab_back, -roof, cab_front - cab_back, roof * 2, 0.12, paint.roof);
-    glass(ctx, paint);
-    pane(ctx, cab_front, l * 0.25, roof, half - 0.14);
-    pane(ctx, cab_back, cab_back - 0.18, roof, roof + 0.02);
-    const rail = 0.12;
-    pill(ctx, -l / 2 + rail, -half + rail, bed_front - (-l / 2 + rail), (half - rail) * 2, 0.06, paint.glass);
-    ctx.globalAlpha = 0.55;
-    pill(
-      ctx,
-      -l / 2 + rail + 0.05,
-      -half + rail + 0.05,
-      bed_front - (-l / 2 + rail) - 0.1,
-      (half - rail - 0.05) * 2,
-      0.04,
-      paint.roof
-    );
-    ctx.globalAlpha = 1;
-  } else {
-    const front = l / 2 - 0.45;
-    const back = -l / 2 + 0.35;
-    pill(ctx, back, -roof - 0.08, front - back, (roof + 0.08) * 2, 0.16, paint.roof);
-    glass(ctx, paint);
-    pane(ctx, front - 0.05, l / 2 - 0.1, roof + 0.08, half - 0.1);
-    // Side windows run in a strip along each flank; the doors are breaks in the right one, the kerb side.
-    const strip = 0.2;
-    const from = back + 0.3;
-    const to = front - 0.5;
-    for (const side of [-1, 1]) ctx.fillRect(from, side > 0 ? half - strip - 0.06 : -half + 0.06, to - from, strip);
-    ctx.fillStyle = paint.body;
-    for (const at of [front - 1.6, -0.6]) ctx.fillRect(at, half - strip - 0.08, 1.15, strip + 0.04);
-    ctx.strokeStyle = palette.edge;
-    ctx.lineWidth = 1 / scale;
-    ctx.beginPath();
-    for (const at of [front - 1.6, -0.6]) {
-      ctx.moveTo(at + 0.575, half - strip - 0.06);
-      ctx.lineTo(at + 0.575, half - 0.06);
-    }
-    ctx.stroke();
-    pill(ctx, -1.6, -0.55, 2.2, 1.1, 0.14, paint.glass);
-    ctx.globalAlpha = 0.5;
-    pill(ctx, -1.5, -0.45, 2, 0.9, 0.1, paint.body);
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    for (const y of [-0.5, -0.25, 0, 0.25, 0.5]) {
-      ctx.moveTo(-l / 2 + 0.08, y);
-      ctx.lineTo(-l / 2 + 0.32, y);
-    }
-    ctx.stroke();
-  }
-}
-
-interface Lamps {
-  braking: boolean;
-  reversing: boolean;
-  lit: number;
-}
-
-function head_lamps(ctx: CanvasRenderingContext2D, l: number, w: number, style: Style, palette: Palette, lit: number) {
-  const big = style === Style.BUS ? 1.3 : 1;
-  for (const side of [-1, 1])
-    lamp(ctx, l - 0.14, side * (w - 0.36 * big) - 0.18 * big, 0.1, 0.36 * big, palette.glow, palette, lit);
-}
-
-function tail_lamps(ctx: CanvasRenderingContext2D, l: number, w: number, palette: Palette, lamps: Lamps) {
-  for (const side of [-1, 1]) {
-    if (lamps.braking) pill(ctx, -l - 0.12, side * (w - 0.28) - 0.26, 0.3, 0.52, 0.2, palette.brake_glow);
-    lamp(ctx, -l + 0.05, side * (w - 0.28) - 0.15, 0.09, 0.3, palette.brake, palette, lamps.braking ? 1 : lamps.lit);
-    if (lamps.reversing) lamp(ctx, -l + 0.05, side * (w - 0.64) - 0.07, 0.09, 0.14, palette.glow, palette);
-  }
-}
-
-function parked_car(ctx: CanvasRenderingContext2D, solid: Solid, scale: number, palette: Palette) {
-  const car = solid.car!;
-  const style = style_of(car.vehicle);
-  const body = { length: car.length, width: car.width, paint: palette.cars[car.paint % palette.cars.length], style };
-  shadow(ctx, car.pose, car.pose.heading, car.length, car.width, style, palette);
-  ctx.save();
-  ctx.translate(car.pose.x, car.pose.y);
-  ctx.rotate(car.pose.heading);
-  const l = car.length / 2;
-  const w = car.width / 2;
-  const axles = style === Style.BUS ? [l - 2.5, -l + 3.6] : [l - 0.85, -l + 0.75];
-  const tyre = style === Style.BUS ? 1 : 0.6;
-  for (const x of axles)
-    for (const side of [-1, 1]) pill(ctx, x - tyre / 2, side * (w - 0.1) - 0.11, tyre, 0.22, 0.06, palette.ink);
-  car_body(ctx, body, scale, palette);
-  head_lamps(ctx, l, w, style, palette, 0.6);
-  tail_lamps(ctx, l, w, palette, { braking: false, reversing: false, lit: 0.6 });
-  ctx.restore();
-}
-
-const BEAM = 7;
-
-export function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, palette: Palette) {
-  const direction = gear_direction(car.gear);
-  if (direction === 0) return;
-  const t = direction < 0 ? spec.trailer : undefined;
-  // Reversing with a trailer, the light comes off the trailer's tail.
-  const frame: Pose = t
-    ? {
-        ...to_world(trailer_pose(car, t), { x: t.axle - t.drawbar - t.box_length / 2, y: 0 }),
-        heading: trailer_pose(car, t).heading,
-      }
-    : { ...body_centre(car, spec), heading: car.heading };
-  const l = (t ? t.box_length : spec.length) / 2;
-  const width = t ? t.width : spec.width;
-  const reach = direction > 0 ? BEAM : BEAM * 0.45;
-  const from = direction * (l - 0.1);
-  const to = from + direction * reach;
-  const near = width / 2 - 0.25;
-  const far = width / 2 + (direction > 0 ? 1.8 : 0.9);
-  ctx.save();
-  ctx.translate(frame.x, frame.y);
-  ctx.rotate(frame.heading);
-  const gradient = ctx.createLinearGradient(from, 0, to, 0);
-  gradient.addColorStop(0, palette.glow);
-  gradient.addColorStop(1, palette.glow_clear);
-  ctx.fillStyle = gradient;
-  ctx.globalAlpha = direction > 0 ? 0.2 : 0.14;
-  ctx.beginPath();
-  ctx.moveTo(from, -near);
-  ctx.lineTo(to, -far);
-  ctx.quadraticCurveTo(to + direction * 0.8, 0, to, far);
-  ctx.lineTo(from, near);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-// Tyres are drawn over the body so the player sees where the front pair points; nudged out so they sit on its edge.
-const TYRE_SHOW = 0.08;
-const TREAD_PITCH = 0.11;
-
-function tyre(
-  ctx: CanvasRenderingContext2D,
-  at: Vec,
-  angle: number,
-  roll: number,
-  out: number,
-  size: { length: number; width: number },
-  blur: number,
-  scale: number,
-  palette: Palette
-) {
-  ctx.save();
-  ctx.translate(at.x, at.y);
-  ctx.rotate(angle);
-  ctx.translate(0, out);
-  ctx.beginPath();
-  ctx.roundRect(-size.length / 2, -size.width / 2, size.length, size.width, 0.07);
-  ctx.fillStyle = palette.ink;
-  ctx.fill();
-  ctx.save();
-  ctx.clip();
-  ctx.fillStyle = palette.tread;
-  ctx.globalAlpha = blur;
-  for (const x of tread(roll, TREAD_PITCH, size.length)) ctx.fillRect(x - 0.022, -size.width / 2, 0.044, size.width);
-  ctx.restore();
-  ctx.strokeStyle = palette.tread;
-  ctx.lineWidth = 1.25 / scale;
-  ctx.stroke();
-  ctx.restore();
-}
-
-// Past parking speed the stripes would strobe at 60 Hz and read as the car shaking; they fade out the way a spinning wheel blurs.
-function blur_of(car: Car): number {
-  return Math.max(0, Math.min(1, 1 - (Math.abs(car.speed) - 1.2) / 1.8));
-}
-
-function tyres(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, scale: number, palette: Palette, tread = true) {
-  const size = { length: spec.wheel_diameter + 0.04, width: spec.wheel_width + 0.05 };
-  const blur = tread ? blur_of(car) : 0;
-  for (const [i, wheel] of wheels(car, spec).entries()) {
-    tyre(
-      ctx,
-      wheel.at,
-      car.heading + wheel.angle,
-      car.roll[i],
-      (i % 2 ? 1 : -1) * TYRE_SHOW,
-      size,
-      blur,
-      scale,
-      palette
-    );
-  }
-}
-
-function trailer(
-  ctx: CanvasRenderingContext2D,
-  car: Car,
-  spec: VehicleSpec,
-  lamps: Lamps,
-  scale: number,
-  palette: Palette
-) {
-  const t = spec.trailer;
-  if (!t || !car.trailer) return;
-  const pose = trailer_pose(car, t);
-  const front = t.axle - t.drawbar;
-  const centre = to_world(pose, { x: front - t.box_length / 2, y: 0 });
-  const half = t.width / 2;
-  const paint = palette.player;
-  shadow(ctx, centre, pose.heading, t.box_length, t.width, Style.VAN, palette);
-
-  const size = { length: t.wheel_diameter + 0.04, width: t.wheel_width + 0.05 };
-  const blur = blur_of(car);
-  trailer_wheels(car, t).forEach((at, i) =>
-    tyre(ctx, at, pose.heading, car.trailer!.roll[i], (i ? 1 : -1) * 0.1, size, blur, scale, palette)
-  );
-
-  // The A-frame drawbar from the box's front corners to the coupling on the ball.
-  const ball = hitch_point(car, t);
-  ctx.strokeStyle = palette.ink;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.lineWidth = 0.09;
-  ctx.beginPath();
-  const left = to_world(pose, { x: front, y: -half + 0.25 });
-  const right = to_world(pose, { x: front, y: half - 0.25 });
-  ctx.moveTo(left.x, left.y);
-  ctx.lineTo(ball.x, ball.y);
-  ctx.lineTo(right.x, right.y);
-  ctx.stroke();
-  ctx.lineCap = "butt";
-
-  ctx.save();
-  ctx.translate(centre.x, centre.y);
-  ctx.rotate(pose.heading);
-  const l = t.box_length / 2;
-  ctx.beginPath();
-  ctx.roundRect(-l, -half, l * 2, half * 2, 0.12);
-  ctx.fillStyle = paint.body;
-  ctx.fill();
-  ctx.strokeStyle = palette.edge;
-  ctx.lineWidth = 1 / scale;
-  ctx.stroke();
-  // Seen from above an open box trailer is its floor inside a rim of side boards.
-  pill(ctx, -l + 0.1, -half + 0.1, l * 2 - 0.2, half * 2 - 0.2, 0.06, paint.glass);
-  ctx.globalAlpha = 0.6;
-  pill(ctx, -l + 0.14, -half + 0.14, l * 2 - 0.28, half * 2 - 0.28, 0.05, paint.roof);
-  ctx.globalAlpha = 1;
-  tail_lamps(ctx, l, half, palette, lamps);
-  ctx.restore();
-
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, 0.11, 0, Math.PI * 2);
-  ctx.fillStyle = palette.ink;
-  ctx.fill();
-  ctx.strokeStyle = palette.tread;
-  ctx.lineWidth = 1.25 / scale;
-  ctx.stroke();
-}
-
-const BEACON_TURN = 5;
-
-// Seen from above a counterbalance forklift is its counterweight, the overhead guard over the seat, the mast across the
-// front and the two tines; the amber beacon on the guard turns while it works.
-function forklift(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, lamps: Lamps, scale: number, palette: Palette, time: number) {
-  const forks = spec.forks;
-  const centre = body_centre(car, spec);
-  const l = spec.length / 2;
-  const half = spec.width / 2;
-  const paint = palette.player;
-  shadow(ctx, centre, car.heading, spec.length, spec.width, Style.FORKLIFT, palette);
-  ctx.save();
-  ctx.translate(centre.x, centre.y);
-  ctx.rotate(car.heading);
-  const line = 1 / scale;
-  if (forks) {
-    const tine = 0.13;
-    for (const side of [-1, 1]) {
-      const y = side * (forks.width / 2 - tine / 2);
-      ctx.beginPath();
-      ctx.moveTo(l, y - tine / 2);
-      ctx.lineTo(l + forks.length - 0.08, y - tine / 2);
-      ctx.lineTo(l + forks.length, y);
-      ctx.lineTo(l + forks.length - 0.08, y + tine / 2);
-      ctx.lineTo(l, y + tine / 2);
-      ctx.closePath();
-      ctx.fillStyle = palette.steel;
-      ctx.fill();
-      ctx.strokeStyle = palette.ink;
-      ctx.lineWidth = Math.max(0.02, line);
-      ctx.stroke();
-    }
-  }
-  body_shape(ctx, spec.length, half, Style.FORKLIFT);
-  ctx.fillStyle = paint.body;
-  ctx.fill();
-  ctx.strokeStyle = palette.edge;
-  ctx.lineWidth = line;
-  ctx.stroke();
-  // The counterweight: a heavy rounded block at the tail, darker than the paint.
-  ctx.beginPath();
-  ctx.roundRect(-l, -half, 0.6, half * 2, [0.5, 0, 0, 0.5]);
-  ctx.fillStyle = palette.ink;
-  ctx.globalAlpha = 0.4;
-  ctx.fill();
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = palette.edge;
-  ctx.beginPath();
-  for (const x of [-l + 0.22, -l + 0.4]) {
-    ctx.moveTo(x, -half + 0.16);
-    ctx.lineTo(x, half - 0.16);
-  }
-  ctx.stroke();
-  // The seat and the wheel under the guard.
-  pill(ctx, -0.45, -0.25, 0.42, 0.5, 0.12, paint.glass);
-  ctx.beginPath();
-  ctx.arc(0.22, 0, 0.13, 0, Math.PI * 2);
-  ctx.strokeStyle = palette.ink;
-  ctx.lineWidth = 0.05;
-  ctx.stroke();
-  // The overhead guard: a frame with crossbars, so the seat shows through.
-  const g0 = -0.62;
-  const g1 = 0.62;
-  const gw = half - 0.08;
-  ctx.strokeStyle = palette.ink;
-  ctx.lineJoin = "round";
-  ctx.lineWidth = 0.075;
-  ctx.strokeRect(g0, -gw, g1 - g0, gw * 2);
-  ctx.lineWidth = 0.045;
-  ctx.beginPath();
-  for (const x of [-0.2, 0.2]) {
-    ctx.moveTo(x, -gw);
-    ctx.lineTo(x, gw);
-  }
-  ctx.stroke();
-  // The mast across the front, the carriage plate the tines hang from.
-  pill(ctx, l - 0.18, -0.55, 0.18, 1.1, 0.04, palette.ink);
-  if (forks) {
-    pill(ctx, l - 0.02, -forks.width / 2 - 0.05, 0.08, forks.width + 0.1, 0.02, palette.steel);
-  }
-  for (const side of [-1, 1]) lamp(ctx, l - 0.16, side * 0.5 - 0.06, 0.08, 0.12, palette.glow, palette, lamps.lit);
-  for (const side of [-1, 1]) {
-    if (lamps.braking) pill(ctx, -l - 0.1, side * (half - 0.2) - 0.18, 0.24, 0.36, 0.16, palette.brake_glow);
-    lamp(ctx, -l + 0.06, side * (half - 0.2) - 0.1, 0.07, 0.2, palette.brake, palette, lamps.braking ? 1 : lamps.lit);
-    if (lamps.reversing) lamp(ctx, -l + 0.06, side * (half - 0.42) - 0.05, 0.07, 0.1, palette.glow, palette);
-  }
-  // The beacon: an amber dome on the back of the guard with a beam sweeping round it.
-  const beacon = { x: g0 + 0.02, y: 0 };
-  const turn = time * BEACON_TURN;
-  const sweep = ctx.createRadialGradient(beacon.x, beacon.y, 0.05, beacon.x, beacon.y, 1.3);
-  sweep.addColorStop(0, palette.beacon);
-  sweep.addColorStop(1, palette.beacon_clear);
-  ctx.fillStyle = sweep;
-  ctx.globalAlpha = palette.beams ? 0.45 : 0.22;
-  for (const offset of [0, Math.PI]) {
-    ctx.beginPath();
-    ctx.moveTo(beacon.x, beacon.y);
-    ctx.arc(beacon.x, beacon.y, 1.3, turn + offset - 0.32, turn + offset + 0.32);
-    ctx.closePath();
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-  ctx.beginPath();
-  ctx.arc(beacon.x, beacon.y, 0.11, 0, Math.PI * 2);
-  ctx.fillStyle = palette.beacon;
-  ctx.fill();
-  ctx.strokeStyle = palette.ink;
-  ctx.lineWidth = Math.max(0.025, line);
-  ctx.stroke();
-  ctx.restore();
 }
 
 /**
@@ -783,38 +286,42 @@ export function pallet(ctx: CanvasRenderingContext2D, pose: Pose, length: number
   ctx.restore();
 }
 
-export function player(
-  ctx: CanvasRenderingContext2D,
-  car: Car,
-  vehicle: Vehicle,
-  spec: VehicleSpec,
-  braking: boolean,
-  scale: number,
-  palette: Palette,
-  time = 0
-) {
-  const lamps = { braking, reversing: car.gear === Gear.REVERSE, lit: 0.85 };
-  if (vehicle === Vehicle.FORKLIFT) {
-    tyres(ctx, car, spec, scale, palette, false);
-    forklift(ctx, car, spec, lamps, scale, palette, time);
-    return;
-  }
-  trailer(ctx, car, spec, lamps, scale, palette);
-  const style = style_of(vehicle);
-  const centre = body_centre(car, spec);
-  const body = { length: spec.length, width: spec.width, paint: palette.player, style };
-  shadow(ctx, centre, car.heading, spec.length, spec.width, style, palette);
+const BEAM = 7;
+
+export function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, palette: Palette) {
+  const direction = gear_direction(car.gear);
+  if (direction === 0) return;
+  const t = direction < 0 ? spec.trailer : undefined;
+  // Reversing with a trailer, the light comes off the trailer's tail.
+  const frame: Pose = t
+    ? {
+        ...to_world(trailer_pose(car, t), { x: t.axle - t.drawbar - t.box_length / 2, y: 0 }),
+        heading: trailer_pose(car, t).heading,
+      }
+    : { ...body_centre(car, spec), heading: car.heading };
+  const l = (t ? t.box_length : spec.length) / 2;
+  const width = t ? t.width : spec.width;
+  const reach = direction > 0 ? BEAM : BEAM * 0.45;
+  const from = direction * (l - 0.1);
+  const to = from + direction * reach;
+  const near = width / 2 - 0.25;
+  const far = width / 2 + (direction > 0 ? 1.8 : 0.9);
   ctx.save();
-  ctx.translate(centre.x, centre.y);
-  ctx.rotate(car.heading);
-  car_body(ctx, body, scale, palette);
-  const l = spec.length / 2;
-  const w = spec.width / 2;
-  head_lamps(ctx, l, w, style, palette, 1);
-  // Towing, the trailer's lamps take over the car's at the back.
-  tail_lamps(ctx, l, w, palette, spec.trailer ? { braking: false, reversing: false, lit: 0.6 } : lamps);
+  ctx.translate(frame.x, frame.y);
+  ctx.rotate(frame.heading);
+  const gradient = ctx.createLinearGradient(from, 0, to, 0);
+  gradient.addColorStop(0, palette.glow);
+  gradient.addColorStop(1, palette.glow_clear);
+  ctx.fillStyle = gradient;
+  ctx.globalAlpha = direction > 0 ? 0.2 : 0.14;
+  ctx.beginPath();
+  ctx.moveTo(from, -near);
+  ctx.lineTo(to, -far);
+  ctx.quadraticCurveTo(to + direction * 0.8, 0, to, far);
+  ctx.lineTo(from, near);
+  ctx.closePath();
+  ctx.fill();
   ctx.restore();
-  tyres(ctx, car, spec, scale, palette);
 }
 
 export function guides(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, scale: number, palette: Palette) {
@@ -953,18 +460,53 @@ export function solids(ctx: CanvasRenderingContext2D, items: Solid[], scale: num
   outlined(ctx, of(SolidKind.WALL), palette.wall, palette.wall_edge, 3 / scale);
   outlined(ctx, of(SolidKind.SHELF), palette.shelf, palette.wall_edge, 2 / scale);
   outlined(ctx, [...of(SolidKind.PILLAR), ...of(SolidKind.POST)], palette.pillar, palette.wall_edge, 2 / scale);
-  for (const solid of items) if (solid.kind === SolidKind.CAR && solid.car) parked_car(ctx, solid, scale, palette);
+  hedges(ctx, of(SolidKind.HEDGE), scale, palette);
+  for (const solid of items) if (solid.kind === SolidKind.CAR && solid.car) parked_vehicle(ctx, solid, scale, palette);
 }
 
-const SURFACES = [SurfaceKind.ASPHALT, SurfaceKind.FLOOR, SurfaceKind.PAVEMENT] as const;
+const LEAF = 0.42;
+
+// Clumps on a grid, nudged by where they sit, so a hedge reads as foliage and stays the same every frame.
+function hedges(ctx: CanvasRenderingContext2D, shapes: Polygon[], scale: number, palette: Palette) {
+  if (shapes.length === 0) return;
+  ctx.lineJoin = "round";
+  union(ctx, shapes);
+  ctx.strokeStyle = palette.hedge_edge;
+  ctx.lineWidth = Math.max(0.18, 3 / scale);
+  ctx.stroke();
+  ctx.fillStyle = palette.hedge;
+  ctx.fill();
+  ctx.save();
+  ctx.clip();
+  ctx.fillStyle = palette.hedge_leaf;
+  ctx.beginPath();
+  for (const shape of shapes) {
+    const xs = shape.map((p) => p.x);
+    const ys = shape.map((p) => p.y);
+    for (let x = Math.min(...xs) + LEAF / 2; x < Math.max(...xs); x += LEAF)
+      for (let y = Math.min(...ys) + LEAF / 2; y < Math.max(...ys); y += LEAF) {
+        const jitter = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
+        const nudge = jitter - Math.floor(jitter);
+        const r = LEAF * (0.3 + nudge * 0.22);
+        const cx = x + (nudge - 0.5) * 0.14;
+        const cy = y + (0.5 - nudge) * 0.1;
+        ctx.moveTo(cx + r, cy);
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      }
+  }
+  ctx.fill();
+  ctx.restore();
+}
+
+const SURFACES = [SurfaceKind.GRASS, SurfaceKind.ASPHALT, SurfaceKind.FLOOR, SurfaceKind.PAVEMENT] as const;
+const GROUND: Record<SurfaceKind, "grass" | "asphalt" | "floor" | "pavement"> = { grass: "grass", asphalt: "asphalt", floor: "floor", pavement: "pavement" };
 const DASH = 1.2;
 
 export function ground(ctx: CanvasRenderingContext2D, surfaces: Surface[], marks: Mark[], scale: number, palette: Palette) {
   for (const kind of SURFACES) {
     const shapes = surfaces.filter((surface) => surface.kind === kind).map((surface) => surface.shape);
     if (shapes.length === 0) continue;
-    const colour =
-      kind === SurfaceKind.FLOOR ? palette.floor : kind === SurfaceKind.PAVEMENT ? palette.pavement : palette.asphalt;
+    const colour = palette[GROUND[kind]];
     union(ctx, shapes);
     ctx.fillStyle = colour;
     ctx.fill();

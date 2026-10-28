@@ -39,13 +39,14 @@ import { SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;
 
-function driving(round = scenario_round(Scenario.GARAGE, 11)): GameState {
+function driving(round = scenario_round(Scenario.GARAGE, 11, undefined, Vehicle.HATCH)): GameState {
   return set_status(create_game(round), Status.DRIVING);
 }
 
 function park_in_bay(state: GameState): GameState {
-  const pose = parked_poses(state.world.bays[0], obstacles(state.world))[0];
-  return { ...state, car: { ...create_car(pose), gear: Gear.DRIVE } };
+  const spec = spec_of(state.round);
+  const pose = parked_poses(state.world.bays[0], obstacles(state.world), 0.05, spec)[0];
+  return { ...state, car: { ...create_car(pose, Gear.PARK, spec), gear: Gear.DRIVE } };
 }
 
 describe("judging", () => {
@@ -72,14 +73,14 @@ describe("judging", () => {
   });
 
   test("a bay that must be entered nose first refuses the car backwards", () => {
-    const state = park_in_bay(driving(scenario_round(Scenario.FORWARD, 4)));
+    const state = park_in_bay(driving(scenario_round(Scenario.FORWARD, 4, undefined, Vehicle.HATCH)));
     expect(parked_in(state.car, state.world.bays[0])).toBe(true);
     const turned = { ...state.car, heading: state.car.heading + Math.PI };
     expect(parked_in(turned, state.world.bays[0])).toBe(false);
   });
 
   test("turned round in the bay reads as facing the wrong way", () => {
-    const state = park_in_bay(driving(scenario_round(Scenario.FORWARD, 4)));
+    const state = park_in_bay(driving(scenario_round(Scenario.FORWARD, 4, undefined, Vehicle.HATCH)));
     const body = corners(state.car);
     const centre = { x: body.reduce((sum, p) => sum + p.x, 0) / 4, y: body.reduce((sum, p) => sum + p.y, 0) / 4 };
     const turned = { ...state.car, x: 2 * centre.x - state.car.x, y: 2 * centre.y - state.car.y, heading: state.car.heading + Math.PI };
@@ -143,6 +144,14 @@ describe("rounds", () => {
     expect(rounds[0].difficulty).toBe(0);
     expect(rounds[LEVEL_COUNT - 1].difficulty).toBe(1);
     expect(rounds.every((round) => round.mode === Mode.LEVELS)).toBe(true);
+  });
+
+  test("a level picks its vehicle from what its kind had when the ladder was laid out", () => {
+    for (let level = 1; level <= LEVEL_COUNT; level++) {
+      const round = level_round(level);
+      const info = SCENARIO_INFO[round.scenario!];
+      expect(info.ladder ?? info.vehicles, `level ${level}`).toContain(round.vehicle);
+    }
   });
 
   test("unlocking runs one past the highest level parked", () => {

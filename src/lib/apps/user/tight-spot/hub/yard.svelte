@@ -10,7 +10,7 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
-  import { Button } from "$lib/core/components/ui";
+  import { Button, Segmented } from "$lib/core/components/ui";
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
@@ -45,7 +45,7 @@
   } from "../core/vehicle";
   import { draw_yard } from "./draw";
   import { icon_image } from "./icons";
-  import { door_at, door_car, drive, gate_car, on_pad, pad_car } from "./yard";
+  import { door_at, door_car, drive, GARAGE, gate_car, on_pad, pad_car, shelf_of } from "./yard";
 
   interface Props {
     settings: DriveSettings;
@@ -62,7 +62,9 @@
   const CONTACT_FADE = 0.8;
   const YARD_SPAN = 34;
   const OVERVIEW_MARGIN = 1;
-  const VEHICLE_ORDER = Object.values(Vehicle);
+  const SHELF_OPTIONS = GARAGE.map((each) => ({ value: each.id, label: each.name }));
+  let shelf = $state(untrack(() => shelf_of(vehicle).id));
+  const shelf_vehicles = $derived(GARAGE.find((each) => each.id === shelf)?.vehicles ?? []);
 
   const { window: win, storage } = get_app_context();
   const intro_seen = storage.persisted("yard_intro", false, z.boolean());
@@ -398,8 +400,9 @@
         <p class="text-base font-semibold">Garage</p>
         <p class="text-ui text-foreground/80">Try any vehicle. It waits here, ready to drive off.</p>
       </div>
+      <Segmented size="sm" class="basis-full overflow-x-auto [&>label]:flex-1" label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={shelf} />
       <div class="flex basis-full flex-wrap gap-1.5" role="group" aria-label="Vehicle">
-        {#each VEHICLE_ORDER as each (each)}
+        {#each shelf_vehicles as each (each)}
           <Button size="sm" variant={each === vehicle ? "primary" : "quiet"} aria-pressed={each === vehicle} onclick={() => swap(each)}>{VEHICLE_NAMES[each]}</Button>
         {/each}
       </div>

@@ -30,6 +30,24 @@ const DOOR_DEPTH = 5;
 const APRON = 4;
 const CONE = 0.45;
 
+export interface Shelf {
+  id: string;
+  name: string;
+  vehicles: readonly Vehicle[];
+}
+
+/** The garage's vehicles in shelves, so a phone's card shows a handful at a time; every vehicle is on one. */
+export const GARAGE: readonly Shelf[] = [
+  { id: "cars", name: "Cars", vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.LIMO, Vehicle.VAN, Vehicle.PICKUP, Vehicle.CAMPER] },
+  { id: "service", name: "Service", vehicles: [Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.GARBAGE, Vehicle.FORKLIFT] },
+  { id: "buses", name: "Buses", vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.COACH, Vehicle.ARTIC] },
+  { id: "towing", name: "Towing", vehicles: [Vehicle.TOWING, Vehicle.CARAVAN, Vehicle.BOAT, Vehicle.HORSE_BOX, Vehicle.TRACTOR, Vehicle.QUAD] },
+];
+
+export function shelf_of(vehicle: Vehicle): Shelf {
+  return GARAGE.find((shelf) => shelf.vehicles.includes(vehicle)) ?? GARAGE[0];
+}
+
 export interface Plot {
   shape: Polygon;
   /** The doorway and the apron in front of it: the vehicle's nose in here offers the game. */
@@ -116,7 +134,7 @@ export function build_yard(games: number): Yard {
   const marks: Mark[] = bays_y.map((y) => ({ kind: MarkKind.LINE, a: { x: WALL, y }, b: { x: 6, y } }));
   const cars = [parked(2.9, 17 + bay / 2, 1), parked(3.6, 17 + bay * 2.5, 3, Vehicle.VAN)];
 
-  const cones = [18, 23, 28, 33, 38].map((x, i) => ({ x, y: i % 2 ? 26.5 : 27.5 }));
+  const cones = [18, 23, 28, 33, 38].map((x, i) => ({ x, y: i % 2 ? 22.5 : 23.5 }));
   const cone_solids: Solid[] = cones.map((at) => ({ kind: SolidKind.POST, shape: rect(at.x - CONE / 2, at.y - CONE / 2, at.x + CONE / 2, at.y + CONE / 2) }));
 
   const built = PLOT_X.map((x, i) => plot(x, i < games));

@@ -131,7 +131,7 @@ describe("scenario worlds", () => {
   });
 
   test("seeds change the layout within one difficulty, mirrored both ways where the kind mirrors", () => {
-    const kinds = ["dead-end", "driveway", "slipway", "end-bay", "depot", "bus-stop"] as const;
+    const kinds = ["dead-end", "driveway", "slipway", "end-bay", "depot", "bus-stop", "camping"] as const;
     for (const scenario of kinds) {
       const spec = specs(scenario)[0];
       const seen = new Set<string>();
@@ -143,7 +143,7 @@ describe("scenario worlds", () => {
         sides.add(bay.x < 16);
       }
       expect(seen.size, scenario).toBeGreaterThanOrEqual(12);
-      if (scenario === "dead-end" || scenario === "driveway" || scenario === "slipway") expect(sides.size, scenario).toBe(2);
+      if (scenario === "dead-end" || scenario === "driveway" || scenario === "slipway" || scenario === "camping") expect(sides.size, scenario).toBe(2);
     }
   });
 

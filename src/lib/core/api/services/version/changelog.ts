@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.86.0",
+    date: "2026-10-29",
+    title: "Full garage",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub's garage fills up with 17 more vehicles, from a city car, a limousine and a fire engine with flashing lights to a double-decker, an articulated bus and a car towing a caravan, and Tight Spot gains a camping pitch where you back the caravan in between the hedges.",
+      },
+    ],
+  },
+  {
     version: "3.85.0",
     date: "2026-10-29",
     title: "Forklift",

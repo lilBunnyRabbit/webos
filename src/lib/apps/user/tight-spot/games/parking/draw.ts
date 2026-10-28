@@ -72,7 +72,8 @@ export function draw_scene(
     spec,
     state.car.brake > 0.05 && state.car.gear !== Gear.PARK,
     scale,
-    palette
+    palette,
+    extras.time
   );
   if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
 

@@ -1,6 +1,6 @@
 import type { Rng } from "$lib/core/utils/random";
 import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
-import { BUS, HATCHBACK, rig_length, Vehicle, type VehicleSpec } from "../../core/vehicle";
+import { body_ends, BUS, CARAVAN_TRAILER, HATCHBACK, rig_length, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import {
   MarkKind,
   Scenario,
@@ -19,9 +19,12 @@ const GATE_LO = 12;
 const GATE_HI = 20;
 const NORTH = -Math.PI / 2;
 const SOUTH = Math.PI / 2;
+const SWING = Math.PI / 6;
 const PAINTS = 5;
 const BUS_LENGTH = BUS.length;
 const BUS_WIDTH = BUS.width;
+const CARAVAN_LENGTH = CARAVAN_TRAILER.box_length + CARAVAN_TRAILER.drawbar;
+const CARAVAN_WIDTH = CARAVAN_TRAILER.width;
 
 class Builder implements Layout {
   surfaces: Surface[] = [];
@@ -70,6 +73,13 @@ class Builder implements Layout {
     const paint = Math.floor(this.rng() * PAINTS);
     const car = { pose, length: BUS_LENGTH, width: BUS_WIDTH, paint, vehicle: Vehicle.BUS };
     this.solids.push({ kind: SolidKind.CAR, shape: oriented_box(x, y, heading, BUS_LENGTH, BUS_WIDTH), car });
+  }
+
+  caravan(x: number, y: number, heading: number) {
+    const pose = { x, y, heading };
+    const paint = Math.floor(this.rng() * PAINTS);
+    const car = { pose, length: CARAVAN_LENGTH, width: CARAVAN_WIDTH, paint, vehicle: Vehicle.CARAVAN };
+    this.solids.push({ kind: SolidKind.CAR, shape: oriented_box(x, y, heading, CARAVAN_LENGTH, CARAVAN_WIDTH), car });
   }
 
   perimeter(kind: SolidKind) {
@@ -483,6 +493,8 @@ interface Fit {
   wider: number;
   turn: number;
   depth: number;
+  /** From the pose back to the rig's tail. */
+  rear: number;
 }
 
 function fit_for(spec: VehicleSpec): Fit {
@@ -490,9 +502,10 @@ function fit_for(spec: VehicleSpec): Fit {
   return {
     length,
     longer: length - HATCHBACK.length,
-    wider: spec.width - HATCHBACK.width,
-    turn: spec.turning_radius / HATCHBACK.turning_radius,
+    wider: Math.max(spec.width, spec.trailer?.width ?? 0) - HATCHBACK.width,
+    turn: Math.max(1, spec.turning_radius / HATCHBACK.turning_radius),
     depth: length + 0.7,
+    rear: length - body_ends(spec).front,
   };
 }
 
@@ -529,7 +542,7 @@ function bus_stop(d: number, rng: Rng, fit: Fit): Layout {
 function depot(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
   const width = lerp(3.8, 3.25, d);
-  const front = EDGE + fit.depth + 0.5;
+  const front = EDGE + Math.max(fit.depth, BUS_LENGTH + 0.7) + 0.5;
   b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
   b.perimeter(SolidKind.WALL);
@@ -622,7 +635,8 @@ function slipway(d: number, rng: Rng, fit: Fit): Layout {
   for (const x of [x0, x1]) b.line({ x, y: quay }, { x, y: bay_end }, MarkKind.DASH);
   b.line({ x: x0, y: bay_end }, { x: x1, y: bay_end }, MarkKind.DASH);
   b.bay(rect(x0, toe, x1, bay_end), SOUTH, false);
-  b.start = { x: c + 7 + between(rng, -0.5, 1.2), y: quay + between(rng, 3.8, 4.8), heading: 0 };
+  const x = c + 7 + between(rng, -0.5, 1.2);
+  b.start = { x, y: Math.max(quay + between(rng, 3.8, 4.8), bay_end + 0.8), heading: 0 };
   return chance(rng, 0.5) ? mirror(b) : b;
 }
 
@@ -682,6 +696,66 @@ function end_bay(d: number, rng: Rng, fit: Fit): Layout {
   return b;
 }
 
+// Pitches along the north hedge with caravans on them, a track in front, hedges along the south verge. The rig waits
+// on the track past its empty pitch and reverses in, caravan first, so the car's nose ends up facing the track.
+function camping(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const hedge = 0.7;
+  const pitch = lerp(4.6, 3.6, d) + fit.wider;
+  const depth = fit.depth;
+  const front = EDGE + depth;
+  const track = lerp(8.6, 7.8, d) * fit.turn;
+  const verge = front + track;
+  b.ground(SurfaceKind.GRASS, rect(0, 0, SIZE, SIZE));
+  b.ground(SurfaceKind.ASPHALT, rect(EDGE, front, SIZE - EDGE, verge));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, verge, GATE_HI, SIZE));
+  const rim = EDGE - 0.9;
+  b.block(SolidKind.HEDGE, rim, rim, SIZE - rim, EDGE);
+  b.block(SolidKind.HEDGE, rim, EDGE, EDGE, SIZE - rim);
+  b.block(SolidKind.HEDGE, SIZE - EDGE, EDGE, SIZE - rim, SIZE - rim);
+  for (const y of [verge + 1, SIZE - EDGE]) {
+    b.block(SolidKind.HEDGE, EDGE, y, GATE_LO - 0.6, y + 0.9);
+    b.block(SolidKind.HEDGE, GATE_HI + 0.6, y, SIZE - EDGE, y + 0.9);
+  }
+
+  const count = Math.floor((SIZE - EDGE * 2 - hedge) / (pitch + hedge));
+  const from = (SIZE - count * (pitch + hedge) - hedge) / 2;
+  const left = (i: number) => from + hedge + i * (pitch + hedge);
+  // The rig waits set up on the track, swung out with its tail at the pitch's mouth, the way a driver lines up to back
+  // a caravan in; from straight on the track the search takes minutes a pitch. The car's nose has to clear the hedge.
+  const cos = Math.cos(SWING);
+  const sin = Math.sin(SWING);
+  const start_at = (i: number) => left(i) + pitch / 2 + 1.5 + fit.rear * cos;
+  let last = 1;
+  for (let i = 1; i < count - 1; i++) if (start_at(i) + 0.8 + (fit.length - fit.rear) * cos + 1.2 <= SIZE - EDGE - 0.3) last = i;
+  const target = 1 + Math.floor(rng() * last);
+  const fill = lerp(0.6, 0.95, d);
+  const stub = front - lerp(1.2, 0.4, d);
+  for (let i = 0; i < count; i++) {
+    const x = left(i);
+    b.block(SolidKind.HEDGE, x - hedge, EDGE, x, stub);
+    if (i === count - 1) b.block(SolidKind.HEDGE, x + pitch, EDGE, x + pitch + hedge, stub);
+    b.line({ x, y: front }, { x: x + pitch, y: front }, MarkKind.DASH);
+    if (i === target) {
+      b.bay(rect(x, EDGE, x + pitch, front), SOUTH, false);
+      continue;
+    }
+    if (!chance(rng, fill)) continue;
+    const room = (pitch - CARAVAN_WIDTH) / 2 - 0.1;
+    const centre = x + pitch / 2 + Math.max(-room, Math.min(room, (rng() * 2 - 1) * 0.3));
+    const behind = EDGE + 0.3 + rng() * 0.5;
+    b.caravan(centre, behind + CARAVAN_LENGTH / 2, SOUTH);
+    const space = Math.min(4.6, front - 0.3 - (behind + CARAVAN_LENGTH + 0.3));
+    if (space > 3.6 && chance(rng, lerp(0.3, 0.7, d))) b.car(x + pitch / 2, front - 0.3 - space / 2, chance(rng, 0.5) ? SOUTH : NORTH, space);
+  }
+  const x = start_at(target) + between(rng, 0, 0.8);
+  const nose = x + (fit.length - fit.rear) * cos + 1.2;
+  const across = nose + between(rng, 2.6, 4.5);
+  if (d > 0.45 && across + 2.3 < SIZE - EDGE - 0.2) b.car(across, verge - 1.05, 0, 4.6);
+  b.start = { x, y: front + 1.2 + fit.rear * sin, heading: SWING };
+  return chance(rng, 0.5) ? mirror(b) : b;
+}
+
 /** A lot laid out in its own frame: 32 m square, the way in through the south edge between x 12 and 20. */
 export function build_lot(
   scenario: Scenario,
@@ -720,5 +794,7 @@ export function build_lot(
       return slipway(difficulty, rng, fit);
     case Scenario.END_BAY:
       return end_bay(difficulty, rng, fit);
+    case Scenario.CAMPING:
+      return camping(difficulty, rng, fit);
   }
 }

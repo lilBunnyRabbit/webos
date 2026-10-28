@@ -49,69 +49,87 @@ export type ScenarioPick = Scenario | typeof ANY;
 export { MAX_ANGLE };
 
 const CARS: readonly Vehicle[] = [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP];
+const CAR_LIKES: readonly Vehicle[] = [...CARS, Vehicle.CITY, Vehicle.SUV, Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE];
+const ROOMY: readonly Vehicle[] = [...CAR_LIKES, Vehicle.LIMO, Vehicle.CAMPER];
 
 interface ScenarioInfo {
   name: string;
   brief: string;
   par: number;
-  /** The round's seed picks one; the lot sizes its bays and gaps to it. */
+  /** The round's seed picks one; the lot sizes its bays and gaps to it. Only those the planner proves the kind with. */
   vehicles: readonly Vehicle[];
+  /** What a level's seed picks from instead, when not all of them: the vehicles the kind had when its levels were laid out, so they keep their layouts. */
+  ladder?: readonly Vehicle[];
 }
 
 export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
-  parallel: { name: "Parallel", brief: "Slot in between the two cars along the kerb.", par: 2, vehicles: CARS },
-  forward: { name: "Nose in", brief: "Drive forward into the marked bay.", par: 0, vehicles: CARS },
-  reverse: { name: "Reverse in", brief: "Back into the marked bay, nose out.", par: 1, vehicles: CARS },
-  angled: { name: "Angled", brief: "Turn into the slanted bay, nose first.", par: 0, vehicles: CARS },
+  parallel: { name: "Parallel", brief: "Slot in between the two cars along the kerb.", par: 2, vehicles: ROOMY, ladder: CARS },
+  forward: { name: "Nose in", brief: "Drive forward into the marked bay.", par: 0, vehicles: ROOMY, ladder: CARS },
+  reverse: { name: "Reverse in", brief: "Back into the marked bay, nose out.", par: 1, vehicles: ROOMY, ladder: CARS },
+  angled: { name: "Angled", brief: "Turn into the slanted bay, nose first.", par: 0, vehicles: CAR_LIKES, ladder: CARS },
   garage: {
     name: "Garage",
     brief: "Drive in and stop close to the back wall. Listen to the sensors.",
     par: 0,
-    vehicles: CARS,
+    vehicles: ROOMY,
+    ladder: CARS,
   },
   pillars: {
     name: "Pillars",
     brief: "Squeeze past the pillar into the bay, either way round.",
     par: 1,
-    vehicles: CARS,
+    vehicles: ROOMY,
+    ladder: CARS,
   },
-  narrow: { name: "Narrow aisle", brief: "Cars on both sides and little room to swing.", par: 2, vehicles: CARS },
-  door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: CARS },
+  narrow: { name: "Narrow aisle", brief: "Cars on both sides and little room to swing.", par: 2, vehicles: ROOMY, ladder: CARS },
+  door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: [...CAR_LIKES, Vehicle.CAMPER], ladder: CARS },
   "dead-end": {
     name: "Dead end",
     brief: "Turn round in the street and stop in the box facing out.",
     par: 2,
-    vehicles: CARS,
+    vehicles: [...CAR_LIKES, Vehicle.LIMO],
+    ladder: CARS,
   },
   "end-bay": {
     name: "End bay",
     brief: "The last free bay is in the corner at the end of a full aisle. No room to swing: take it in turns.",
     par: 2,
-    vehicles: CARS,
+    vehicles: ROOMY,
+    ladder: CARS,
   },
   "bus-stop": {
     name: "Bus stop",
     brief: "Pull into the stop box along the kerb, short of the parked car. The tail swings out as you straighten.",
     par: 1,
-    vehicles: [Vehicle.BUS],
+    vehicles: [Vehicle.BUS, Vehicle.DECKER],
+    ladder: [Vehicle.BUS],
   },
   depot: {
     name: "Depot",
-    brief: "Back the bus into its lane between the others, nose out.",
+    brief: "Back into your lane between the parked buses, nose out.",
     par: 1,
-    vehicles: [Vehicle.BUS],
+    vehicles: [Vehicle.BUS, Vehicle.COACH, Vehicle.DECKER, Vehicle.GARBAGE, Vehicle.FIRE],
+    ladder: [Vehicle.BUS],
   },
   driveway: {
     name: "Driveway",
     brief: "Back the trailer off the street through the gate. Steer the other way to swing it.",
     par: 2,
-    vehicles: [Vehicle.TOWING],
+    vehicles: [Vehicle.TOWING, Vehicle.HORSE_BOX, Vehicle.QUAD],
+    ladder: [Vehicle.TOWING],
   },
   slipway: {
     name: "Slipway",
     brief: "Back the trailer down the ramp to the water, between the posts.",
     par: 2,
-    vehicles: [Vehicle.TOWING],
+    vehicles: [Vehicle.TOWING, Vehicle.BOAT],
+    ladder: [Vehicle.TOWING],
+  },
+  camping: {
+    name: "Camping pitch",
+    brief: "Back the caravan onto the empty pitch between the hedges, car facing the track.",
+    par: 2,
+    vehicles: [Vehicle.CARAVAN],
   },
 };
 
@@ -164,6 +182,12 @@ export function spec_of(round: Round): VehicleSpec {
 export function vehicle_for(scenario: Scenario | null, seed: number, pick: VehiclePick = ANY): Vehicle {
   const choices = vehicles_for(scenario);
   if (pick !== ANY && choices.includes(pick)) return pick;
+  return choices[hash(seed, 13) % choices.length];
+}
+
+function ladder_vehicle(scenario: Scenario, seed: number): Vehicle {
+  const info = SCENARIO_INFO[scenario];
+  const choices = info.ladder ?? info.vehicles;
   return choices[hash(seed, 13) % choices.length];
 }
 
@@ -349,6 +373,7 @@ const BIG_LAP: readonly Scenario[] = [
   Scenario.DRIVEWAY,
   Scenario.DEPOT,
   Scenario.SLIPWAY,
+  Scenario.CAMPING,
 ];
 const LAPS = 3;
 const PER_LAP = LAP.length + BIG_LAP.length;
@@ -368,13 +393,13 @@ export function level_round(level: number): Round {
     const old = lap * LAP.length + at;
     const scenario = LAP[at];
     const seed = hash(0x7195, old);
-    return { ...base, scenario, difficulty: old / (CAR_LEVELS - 1), seed, vehicle: vehicle_for(scenario, seed) };
+    return { ...base, scenario, difficulty: old / (CAR_LEVELS - 1), seed, vehicle: ladder_vehicle(scenario, seed) };
   }
   const k = at - LAP.length;
   const scenario = BIG_LAP[k];
   const seed = hash(0x7195, 100 + lap * BIG_LAP.length + k);
   const difficulty = Math.min(1, (lap * LAP.length + 1.5 + k * 1.75) / (CAR_LEVELS - 1));
-  return { ...base, scenario, difficulty, seed, vehicle: vehicle_for(scenario, seed) };
+  return { ...base, scenario, difficulty, seed, vehicle: ladder_vehicle(scenario, seed) };
 }
 
 export function unlocked(levels: LevelStars): number {
@@ -419,6 +444,7 @@ export const HIT_NAMES: Record<SolidKind, string> = {
   water: "the water",
   rack: "a rack",
   pallet: "a pallet",
+  hedge: "a hedge",
 };
 
 export function crash_title(hit: GameState["hit"]): string {
