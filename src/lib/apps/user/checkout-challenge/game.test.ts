@@ -116,6 +116,21 @@ function with_trust(run: Run, trust: number): Run {
   };
 }
 
+function as_patron(run: Run, id: number): Run {
+  const patron = run.roster.find((entry) => entry.id === id)!;
+  return { ...run, customer: { ...run.customer!, patron: id, doubting: patron.trust < LOW_TRUST } };
+}
+
+function restocked(run: Run): Run {
+  let next = run;
+  for (const product of [...next.restock]) next = [...PRODUCT_CODES[product]].reduce(restock_key, next);
+  return next;
+}
+
+function reload(run: Run): Run {
+  return load_run(saved_run_schema.parse(JSON.parse(JSON.stringify(save_run(run)))));
+}
+
 describe("amounts", () => {
   test("format shows whole numbers until prices have cents", () => {
     expect(format_amount(1200, false)).toBe("12");
@@ -264,6 +279,46 @@ describe("trust and the police", () => {
     expect(stars(run.today, run.jailed)).toBeLessThanOrEqual(1);
   });
 
+  test("a new patron short-changed three times calls the police", () => {
+    let run = at_counter();
+    const id = run.customer!.patron;
+    expect(patron_of(run).trust).toBe(START_TRUST);
+    run = serve(run, false);
+    expect(patron_of(run).strikes).toBe(0);
+    run = serve(as_patron(next_customer(run), id), false);
+    expect(patron_of(run).strikes).toBe(1);
+    expect(run.police_left).toBe(0);
+    run = serve(as_patron(next_customer(run), id), false);
+    expect(run.police_left).toBeGreaterThan(0);
+    expect(run.reported).not.toBeNull();
+  });
+
+  test("right sales in between don't wash the strikes out", () => {
+    let run = serve(at_counter(), false);
+    const id = run.customer!.patron;
+    run = serve(as_patron(next_customer(run), id), false);
+    run = serve(as_patron(next_customer(run), id));
+    run = serve(as_patron(next_customer(run), id));
+    expect(patron_of(run).trust).toBeGreaterThan(0);
+    expect(run.police_left).toBe(0);
+    run = serve(as_patron(next_customer(run), id), false);
+    expect(run.police_left).toBeGreaterThan(0);
+  });
+
+  test("the police watch carries into the next day and the save", () => {
+    let run = { ...at_counter(), police_left: 1 };
+    for (let served = 1; served < day_customers(1); served++) run = next_customer(serve({ ...run, police_left: 0 }));
+    run = leave(serve({ ...run, police_left: 0 }));
+    run = restocked({ ...run, police_left: 3 });
+    expect(run.phase).toBe(Phase.DAY_OVER);
+    const loaded = reload(run);
+    expect(loaded.police_left).toBe(3);
+    run = at_counter(open(loaded));
+    expect(run.day).toBe(2);
+    expect(run.police_left).toBe(3);
+    expect(run.customer!.mood).toBe(Mood.VEXED);
+  });
+
   test("right sales while watched send the police away", () => {
     let run = { ...at_counter(), police_left: 1 };
     run = serve(run);
@@ -350,6 +405,30 @@ describe("end of day", () => {
     for (const product of [...run.restock]) run = [...PRODUCT_CODES[product]].reduce(restock_key, run);
     expect(run.phase).toBe(Phase.DAY_OVER);
     expect(PRODUCTS.every((product) => run.stock[product] === STOCK_FULL)).toBe(true);
+  });
+
+  test("staff paid for keep working the next day, through the save", () => {
+    let run = at_counter();
+    for (let served = 1; served < day_customers(1) - 1; served++) run = next_customer(serve(run));
+    run = hire_staff({ ...run, money: staff_price(1) });
+    expect(run.staff_left).toBe(STAFF_CUSTOMERS);
+    run = next_customer(serve(run));
+    expect(run.customer!.staffed).toBe(true);
+    run = restocked(leave(serve(run)));
+    expect(run.phase).toBe(Phase.DAY_OVER);
+    expect(run.staff_left).toBe(STAFF_CUSTOMERS - 1);
+    run = at_counter(open(reload(run)));
+    expect(run.customer!.staffed).toBe(true);
+    expect(run.staff_left).toBe(STAFF_CUSTOMERS - 2);
+  });
+
+  test("a save from before staff and police were kept reads as none", () => {
+    const old: Record<string, unknown> = { ...save_run(create_run()) };
+    delete old.staff_left;
+    delete old.police_left;
+    const loaded = load_run(saved_run_schema.parse(old));
+    expect(loaded.staff_left).toBe(0);
+    expect(loaded.police_left).toBe(0);
   });
 
   test("codes are distinct and two digits", () => {

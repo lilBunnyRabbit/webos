@@ -94,7 +94,8 @@ export class Shop {
     const before = this.run;
     if (next === before) return;
     this.run = next;
-    if (before.phase === Phase.OPEN && next.phase !== Phase.OPEN) this.events.on_end(next);
+    const done = next.phase === Phase.DAY_OVER || next.phase === Phase.GAME_OVER;
+    if (done && before.phase !== next.phase) this.events.on_end(next);
     if (before.phase !== Phase.DAY_OVER && next.phase === Phase.DAY_OVER) this.events.on_close(next);
     if (before.phase !== Phase.GAME_OVER && next.phase === Phase.GAME_OVER) this.events.on_lost(next);
   }

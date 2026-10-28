@@ -398,8 +398,6 @@ export function begin_day(run: Run, rng: Rng): Run {
     customer: null,
     arrived: 0,
     next_arrival: null,
-    staff_left: 0,
-    police_left: 0,
     reported: null,
     typed: "",
     lamp: null,
@@ -586,8 +584,8 @@ function settle(run: Run, customer: Customer, result: Result, rng: Rng): Run {
       if (police_left === 0) cleared = 1;
     }
   } else {
-    if (customer.doubting) strikes += 1;
     trust = Math.max(0, trust - TRUST_LOSS);
+    if (trust < LOW_TRUST) strikes += 1;
     if (watched) {
       jailed = true;
       police_left = 0;
@@ -679,8 +677,6 @@ function end_day(run: Run): Run {
     code_miss: null,
     customer: null,
     next_arrival: null,
-    police_left: 0,
-    staff_left: 0,
     typed: "",
   };
 }
@@ -745,7 +741,8 @@ const patron_schema = z.object({
   strikes: z.number().int().nonnegative(),
 });
 
-/** The run between days: written when a day's restock is done, read by Continue. Nothing mid-day. */
+/** The run between days: written when a day's restock is done, read by Continue. Nothing mid-day. Staff and police
+ * fields came after the first saves, so they default to 0. */
 export const saved_run_schema = z.object({
   version: z.literal(1),
   day: z.number().int().positive(),
@@ -757,6 +754,8 @@ export const saved_run_schema = z.object({
   roster: z.array(patron_schema),
   next_patron: z.number().int().positive(),
   stock: z.record(z.enum(PRODUCTS), z.number().int().min(0).max(STOCK_FULL)),
+  staff_left: z.number().int().nonnegative().default(0),
+  police_left: z.number().int().nonnegative().default(0),
 });
 export type SavedRun = z.infer<typeof saved_run_schema>;
 
@@ -772,6 +771,8 @@ export function save_run(run: Run): SavedRun {
     roster: run.roster,
     next_patron: run.next_patron,
     stock: run.stock,
+    staff_left: run.staff_left,
+    police_left: run.police_left,
   };
 }
 
@@ -788,6 +789,8 @@ export function load_run(saved: SavedRun): Run {
     roster: saved.roster,
     next_patron: saved.next_patron,
     stock: { ...full_stock(), ...saved.stock },
+    staff_left: saved.staff_left,
+    police_left: saved.police_left,
   };
 }
 

@@ -436,7 +436,7 @@
                 class: cn(
                   "h-10 rounded-lg font-mono text-lg pointer-coarse:h-12 @2xl:h-11",
                   watched && "text-error",
-                  shop.lit === key && "bg-primary/20 text-primary",
+                  shop.lit === key && !(watched && digit) && "bg-primary/20 text-primary",
                   warm_target === key && "bg-success text-background shadow-[0_0_12px_var(--color-success)] hover:bg-success"
                 ),
               })}
