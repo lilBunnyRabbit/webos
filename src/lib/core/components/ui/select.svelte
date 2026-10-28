@@ -14,6 +14,7 @@
 
 <!-- Customizable native select (appearance: base-select): the platform handles keyboard, popup and positioning. -->
 <select bind:value class={field({ size, class: ["ui-select flex cursor-pointer items-center gap-2 pr-7", class_name as string] })} {...rest}>
+  <button class="ui-select-button"><selectedcontent></selectedcontent></button>
   {#each options as option (option.value)}
     <option value={option.value}>{option.label}</option>
   {/each}
@@ -23,6 +24,23 @@
   .ui-select,
   .ui-select::picker(select) {
     appearance: base-select;
+  }
+
+  /* A long label in a narrow trigger wrapped onto a second line; keep it on one and cut it with an ellipsis. */
+  .ui-select {
+    min-width: 0;
+  }
+
+  .ui-select-button {
+    display: contents;
+  }
+
+  .ui-select :global(selectedcontent) {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 
   .ui-select::picker-icon {
