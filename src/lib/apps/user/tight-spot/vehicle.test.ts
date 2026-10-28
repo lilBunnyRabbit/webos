@@ -120,6 +120,13 @@ describe("steering wheel", () => {
 });
 
 describe("gears and pedals", () => {
+  test("a zero or negative step leaves the car as it was, in P too", () => {
+    const car = create_car(START);
+    expect(step(car, NO_INPUT, 0)).toBe(car);
+    expect(step(car, NO_INPUT, -0.004)).toBe(car);
+    expect(Number.isFinite(step(car, NO_INPUT, DT).speed)).toBe(true);
+  });
+
   test("creeps in D with no pedals, like an automatic", () => {
     const car = run({ ...create_car(START), gear: Gear.DRIVE }, NO_INPUT, 6);
     expect(car.speed).toBeGreaterThan(0.8);

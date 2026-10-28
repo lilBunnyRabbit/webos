@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.80.1",
+    date: "2026-10-28",
+    title: "Tight Spot fix",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Tight Spot no longer loses the car and shrinks the map to nothing after a pause or a gear change.",
+      },
+    ],
+  },
+  {
     version: "3.80.0",
     date: "2026-10-28",
     title: "Tight spots",

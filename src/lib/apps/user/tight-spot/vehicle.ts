@@ -135,6 +135,7 @@ function resistance(car: Car, spec: VehicleSpec): number {
  * heading and the car turns about a point on the rear axle line. The arc is integrated exactly for the step.
  */
 export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HATCHBACK): Car {
+  if (!(dt > 0)) return car;
   const limit = max_steer(spec);
   const steer = approach(car.steer, steer_target(car, input, limit), steer_rate(car, input, limit, spec), dt);
   const next: Car = { ...car, steer, throttle: pedal(car.throttle, input.throttle, dt), brake: pedal(car.brake, input.brake, dt) };

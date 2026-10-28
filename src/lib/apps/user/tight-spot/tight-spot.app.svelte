@@ -208,10 +208,13 @@
     let last = performance.now();
     let frame_id = requestAnimationFrame(function tick(now) {
       // Steps split each frame's own time: fixed steps against a 120 Hz screen land 0, 1 or 2 to a frame, and the car shakes.
-      const elapsed = Math.min(now - last, MAX_FRAME_MS);
-      last = now;
-      const steps = Math.max(1, Math.ceil(elapsed / STEP_MS));
-      run(steps, elapsed / steps / 1000);
+      // A frame's timestamp is when it started, so the first one can come before the effect's `performance.now()`.
+      const elapsed = Math.max(0, Math.min(now - last, MAX_FRAME_MS));
+      last = Math.max(last, now);
+      if (elapsed > 0) {
+        const steps = Math.ceil(elapsed / STEP_MS);
+        run(steps, elapsed / steps / 1000);
+      }
       render(elapsed / 1000);
       if (game.status === Status.DRIVING) frame_id = requestAnimationFrame(tick);
     });

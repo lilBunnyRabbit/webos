@@ -24,7 +24,7 @@ Three layers, each replaceable on its own (the brainstorm's later steps):
 
 The hatchback (`HATCHBACK`): 4.3 m long, 1.8 m wide, 2.6 m wheelbase, 0.8 m rear overhang (0.9 m front), 1.55 m track. Its `turning_radius` is 5.3 m kerb to kerb, the circle the outer front wheel draws at full lock. `max_steer` derives the bicycle-model lock from it: the outer front wheel sits at `sqrt(R² − L²)` from the turn centre sideways, half a track out from the rear axle's centre, so `δ = atan(L / (sqrt(R² − L²) − track/2))` = 34.1°, and the rear axle's centre turns on a 3.84 m circle.
 
-`step(car, input, dt)` is the kinematic (no-slip) bicycle model, stepped at 120 Hz or finer: each animation frame is split into equal steps of at most 1/120 s covering exactly its own time (capped at 100 ms), since fixed steps against a 120 Hz screen land 0, 1 or 2 to a frame and the car visibly shakes:
+`step(car, input, dt)` is the kinematic (no-slip) bicycle model, stepped at 120 Hz or finer: each animation frame is split into equal steps of at most 1/120 s covering exactly its own time (capped at 100 ms; a frame stamped before the loop started, or a zero step, moves nothing, since `Infinity · 0` in P would make the speed NaN), since fixed steps against a 120 Hz screen land 0, 1 or 2 to a frame and the car visibly shakes:
 
 1. The wheel moves toward the wanted angle at `max_steer / steer_time` (1.1 s centre to lock), at a standstill too. With `steer: null` (hands off) the target is straight ahead and the rate scales with speed up to 2 m/s, so the wheel self-centres only while rolling, like caster.
 2. Pedals ramp (3/s down, 8/s up) so a key press isn't an on/off jump.
