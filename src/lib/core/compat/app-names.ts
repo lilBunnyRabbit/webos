@@ -46,6 +46,7 @@ export const APP_NAMES: Record<string, string> = {
   "tape-sketch": "Tape Sketch",
   terminal: "Terminal",
   "text-editor": "Text Editor",
+  "tight-spot": "Tight Spot",
   unsaid: "Unsaid",
   "video-tools": "Video Tools",
   warren: "Warren",

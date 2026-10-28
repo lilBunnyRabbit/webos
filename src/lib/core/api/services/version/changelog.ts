@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.80.0",
+    date: "2026-10-28",
+    title: "Tight spots",
+    introduces: ["tight-spot"],
+    changes: [
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Tight Spot: a top-down parking game with a car that steers like a real one, in kerbside gaps, garages, pillared car parks, narrow aisles and dead ends, with levels, an open car park and a daily spot.",
+      },
+    ],
+  },
+  {
     version: "3.79.0",
     date: "2026-10-28",
     title: "A guide for every app",

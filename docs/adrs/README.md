@@ -119,6 +119,7 @@ What are the implications of this decision?
 | [083](./083-favourite-apps.md) | Favourite Apps | 2026-10-28 | Implemented |
 | [084](./084-four-walls.md) | Four Walls | 2026-10-28 | Implemented |
 | [085](./085-app-guides.md) | App Guides | 2026-10-28 | Implemented |
+| [086](./086-tight-spot.md) | Tight Spot | 2026-10-28 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

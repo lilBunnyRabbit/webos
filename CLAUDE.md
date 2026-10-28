@@ -216,6 +216,7 @@ If architectural work is blocked waiting on the owner, finish everything that do
 | `doc-scan` | `docs/apps/doc-scan.md` |
 | `motion-watch` | `docs/apps/motion-watch.md` |
 | `four-walls` | `docs/apps/four-walls.md` |
+| `tight-spot` | `docs/apps/tight-spot.md` |
 
 **Every change under `src/lib/apps/user/{id}/` for a listed id updates `docs/apps/{id}.md` in the same commit**, and so does a change to kit code a page describes (`$kit/utils/p2p`, `$kit/utils/light`, `$kit/utils/codecs`, `$kit/utils/qr`, `$kit/utils/video`, `$kit/utils/perspective`). A commit that changes behaviour and leaves the page stale is incomplete. Check the table before you commit; don't rely on remembering.
 
