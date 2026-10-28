@@ -159,21 +159,17 @@
         <AppByline {manifest} />
         <StoreButton {manifest} size="md" labelled primary class="mt-2 flex-wrap" />
       </div>
-      {#if installed && !solo}
-        <IconButton
-          label={favourite ? "Remove from favourites" : "Add to favourites"}
-          pressed={favourite}
-          class="shrink-0"
-          onclick={() => apps.favourite(manifest.id, !favourite)}
-        >
-          <StarIcon weight={favourite ? "fill" : "bold"} class={cn(favourite && "text-primary")} />
-        </IconButton>
-      {/if}
     </div>
 
     {#if !solo}
       <div class="flex flex-wrap gap-1.5">
         <!-- Pins and widgets open the app on demand, so they don't need it installed (ADR-077). -->
+        {#if installed}
+          <Button size="sm" aria-pressed={favourite} onclick={() => apps.favourite(manifest.id, !favourite)}>
+            <StarIcon weight={favourite ? "fill" : "bold"} class={cn(favourite && "text-primary")} />
+            {favourite ? "Favourite" : "Add to favourites"}
+          </Button>
+        {/if}
         <Button size="sm" onclick={pin}><PushPinIcon weight="bold" /> {mobile ? "Add to home screen" : "Pin to desktop"}</Button>
           {#if !mobile}
             <Button
