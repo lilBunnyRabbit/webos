@@ -64,6 +64,7 @@ One Game Hub row per game: Drive Hub reports a daily per game (`daily_rank` as a
 - [x] Display name: **Drive Hub** (owner). The app's display name changes when the hub ships (step 4); the id stays `tight-spot`, and the parking game inside keeps the name Tight Spot.
 - [x] Review fixes and yard polish (2026-10-28): owner confirmed entering by card plus Enter or tap, and shut "Soon" buildings for games not registered yet, as built; play tracking moved to the shell; loading state and chunk-failure fallback; whole-yard landing view; roof signs, lit doorways, real cones and bollards; welcome card on the first visit only; "Games" label on the switcher (ADR-087 revision).
 - [x] Forklift details at its build: model change for rear steer, pallet and rack shapes, job generator, proof, scoring, achievements (2026-10-29, ADR-087 revision; patterns in `docs/apps/drive-hub-games.md`).
+- [x] Dailies in Game Hub: a per-game `daily_rank`, the `mode` launch prop, parking under `tight-spot/parking` (2026-10-29, ADR-087 revision), with the Warehouse review fixes.
 
 ## Next session topics
 - The yard's look, which buildings show before their game exists.

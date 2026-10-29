@@ -21,7 +21,7 @@ import {
   type Placement,
   type VehicleSpec,
 } from "../../core/vehicle";
-import { build_floor, PALLET, pallet_shape, SlotKind, type Floor, type Slot } from "./warehouse";
+import { build_floor, PALLET, pallet_shape, type Floor, type Slot } from "./warehouse";
 
 export { PERFECT };
 
@@ -41,9 +41,12 @@ export type Status = (typeof Status)[keyof typeof Status];
 export const SIZES = [1, 2, 3, 4] as const;
 export const size_schema = z.number().int().min(1).max(4);
 
-/** The forks still count as in a pallet's pockets this far off its axis; past it they jam. */
-export const JAM_ANGLE = (8 * Math.PI) / 180;
-export const JAM_SIDE = 0.12;
+/**
+ * The forks count as in a pallet's pockets only with both tines under it: off its centre by at most the room either
+ * side of the fork spread, and square within the 5° a lift allows. Otherwise forks overlapping a pallet jam.
+ */
+export const JAM_ANGLE = MAX_ANGLE;
+export const JAM_SIDE = (PALLET.width - (FORKLIFT.forks?.width ?? PALLET.width)) / 2;
 /** Forks fully in: the mast within this of the pallet's face. */
 export const FULL_GAP = 0.15;
 
@@ -157,7 +160,7 @@ export function in_pockets(at: ForkFit): boolean {
 }
 
 export function can_lift(at: ForkFit): boolean {
-  return in_pockets(at) && at.angle <= MAX_ANGLE && at.gap <= FULL_GAP;
+  return in_pockets(at) && at.gap <= FULL_GAP;
 }
 
 export function placed_in(pose: Pose, slot: Slot): boolean {
@@ -284,6 +287,10 @@ export function use_fork(state: GameState): GameState {
   return { ...state, loads, drops, current, car: { ...state.car, speed: 0 }, status: done ? Status.DONE : state.status };
 }
 
+// How far off a pallet the forks may stand for the hint to say how to line up.
+const LINE_UP_ANGLE = (25 * Math.PI) / 180;
+const LINE_UP_SIDE = 0.5;
+
 /** Why the Fork control is off, once the forklift stands at the pallet or carries one near its target. */
 export function fork_hint(state: GameState): string | null {
   if (state.status !== Status.DRIVING || Math.abs(state.car.speed) >= STANDING) return null;
@@ -298,10 +305,12 @@ export function fork_hint(state: GameState): string | null {
     return placed_in(pose, task.to) ? null : `Not inside ${task.to.name} yet`;
   }
   const at = fork_fit(state.car, load.pose);
-  if (at.gap > PALLET.length + 0.6 || !in_pockets(at)) return null;
-  if (at.gap > FULL_GAP) return "Drive the forks fully in";
-  if (at.angle > MAX_ANGLE) return `Not square: ${degrees(at.angle)}° off`;
-  return null;
+  if (at.gap > PALLET.length + 0.6) return null;
+  if (in_pockets(at)) return at.gap > FULL_GAP ? "Drive the forks fully in" : null;
+  // Short of the pallet and off its pockets: say how before the tines go in and jam.
+  if (at.gap <= PALLET.length || at.angle > LINE_UP_ANGLE || Math.abs(at.side) > LINE_UP_SIDE) return null;
+  if (at.angle > JAM_ANGLE) return `Line up: ${degrees(at.angle)}° off`;
+  return `Line up: pallet ${Math.round(Math.abs(at.side) * 100)} cm to the ${at.side > 0 ? "right" : "left"}`;
 }
 
 function degrees(radians: number): string {
@@ -456,8 +465,4 @@ export function task_line(state: GameState): string | null {
   if (!task || !load) return null;
   const count = `Pallet ${state.current + 1}/${state.floor.tasks.length}`;
   return load.carried ? `${count} → ${task.to.name}` : `${count} · pick up at ${task.from.name}`;
-}
-
-export function slot_kind_name(slot: Slot): string {
-  return slot.kind === SlotKind.DOCK ? slot.name : `rack ${slot.name}`;
 }

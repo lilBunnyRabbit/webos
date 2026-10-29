@@ -325,7 +325,7 @@
       achievements.progress("licensed", Object.keys(level_stars.value).length);
     }
     if (state.round.daily) {
-      play.daily(state.round.daily, result.ms, result.moves);
+      play.daily(state.round.daily, result.ms, result.moves, "parking");
       achievements.achieve("daily");
     }
   }

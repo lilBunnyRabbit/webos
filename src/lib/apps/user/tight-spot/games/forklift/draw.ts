@@ -7,6 +7,7 @@ import {
   guides,
   outlined,
   pallet,
+  PalletLoad,
   path,
   player,
   solids,
@@ -17,7 +18,7 @@ import {
 import type { Polygon, Pose, Vec } from "../../core/geometry";
 import { SolidKind } from "../../core/scene";
 import { Gear, Vehicle } from "../../core/vehicle";
-import { carried_pose, objective, SPEC, Status, type GameState } from "./game";
+import { carried_pose, fork_depth, objective, SPEC, Status, type GameState } from "./game";
 import { PALLET, pallet_shape, SlotKind, type Slot } from "./warehouse";
 
 export interface Extras {
@@ -42,6 +43,8 @@ interface Tag {
   colour: string;
   /** A filled pill behind the text, for the job's own markers. */
   pill?: string;
+  /** The pill's outline, the palette's edge without it. */
+  ring?: string;
 }
 
 // Names are drawn in screen pixels after the world, so they stay readable at any zoom and never turn with the camera.
@@ -60,8 +63,8 @@ function tags(ctx: CanvasRenderingContext2D, items: Tag[], view: View, font: str
       ctx.roundRect(x - width / 2, y - height / 2, width, height, height / 2);
       ctx.fillStyle = tag.pill;
       ctx.fill();
-      ctx.strokeStyle = palette.edge;
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = tag.ring ?? palette.edge;
+      ctx.lineWidth = tag.ring ? 1.5 : 1;
       ctx.stroke();
     }
     ctx.fillStyle = tag.colour;
@@ -191,12 +194,13 @@ function ring(ctx: CanvasRenderingContext2D, pose: Pose, colour: string, width: 
 function names(state: GameState, scale: number, palette: Palette): Tag[] {
   const { floor } = state;
   const items: Tag[] = [];
-  const small = Math.max(9, Math.min(13, scale * 0.5));
+  // Rack names grow with the zoom up to a size that reads without crowding the bays (about 1.4 m apart).
+  const small = Math.max(10, Math.min(17, scale * 0.36));
   if (scale > 14) {
     for (const slot of floor.slots) {
       if (slot.kind !== SlotKind.RACK) continue;
       const at = { x: slot.home.x, y: slot.home.y - Math.sin(slot.heading) * (PALLET.length / 2 + 0.57) };
-      items.push({ at, text: slot.name, size: small, colour: palette.faint });
+      items.push({ at, text: slot.name, size: small, colour: palette.paint });
     }
   }
   for (const slot of floor.slots) {
@@ -204,7 +208,7 @@ function names(state: GameState, scale: number, palette: Palette): Tag[] {
     const size = Math.max(10, Math.min(14, scale * 0.55));
     // Spots are 3 m apart: far out "Dock A" runs into "Dock B", so only the letter shows.
     const text = scale * 3 < size * 5 ? slot.name.slice(-1) : slot.name;
-    items.push({ at: { x: slot.home.x, y: slot.home.y - 1.4 }, text, size, colour: palette.paint });
+    items.push({ at: { x: slot.home.x, y: slot.home.y - 1.75 }, text, size, colour: palette.paint });
   }
   return items;
 }
@@ -224,14 +228,18 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   const playing = state.status !== Status.DONE;
   const goal = playing ? objective(state) : null;
   const carrying = state.loads[state.current]?.carried ?? null;
-  // The job's targets: the one in hand pulses, the ones still to come are dashed, the ones done are green.
+  // The job's targets: the current one is outlined and glows (pulsing once its pallet is on the forks), the ones still
+  // to come are dashed, the ones done are green.
   floor.tasks.forEach((task, i) => {
     const load = state.loads[i];
     if (load.placed) slot_mark(ctx, task.to, palette.parked, palette.parked_fill, Math.max(0.06, 2.5 / scale));
-    else if (i === state.current && carrying) {
-      ctx.globalAlpha = 0.7 + 0.3 * pulse;
-      slot_mark(ctx, task.to, palette.target, palette.target_fill, Math.max(0.08, 2.5 / scale));
-      ctx.globalAlpha = 1;
+    else if (playing && i === state.current) {
+      ctx.save();
+      ctx.shadowColor = palette.target;
+      ctx.shadowBlur = (carrying ? 10 + 8 * pulse : 8) * view.dpr;
+      ctx.globalAlpha = carrying ? 0.75 + 0.25 * pulse : 0.9;
+      slot_mark(ctx, task.to, palette.target, palette.target_fill, Math.max(0.1, 3 / scale));
+      ctx.restore();
     } else slot_mark(ctx, task.to, palette.free, null, line, [0.3, 0.2]);
   });
 
@@ -256,12 +264,12 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, SPEC, scale, palette);
   player(ctx, state.car, Vehicle.FORKLIFT, SPEC, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
   // Pallets go over the forklift: its tines slide in under the deck, and nothing else of it can overlap one.
-  for (const pose of floor.stock) pallet(ctx, pose, PALLET.length, PALLET.width, palette.stock, scale, palette);
+  for (const pose of floor.stock) pallet(ctx, pose, PALLET.length, PALLET.width, PalletLoad.WRAPPED, scale, palette);
   state.loads.forEach((each) => {
-    if (!each.carried) pallet(ctx, each.pose, PALLET.length, PALLET.width, palette.load, scale, palette);
+    if (!each.carried) pallet(ctx, each.pose, PALLET.length, PALLET.width, PalletLoad.BOXES, scale, palette);
   });
   const load = carried_pose(state);
-  if (load) pallet(ctx, load, PALLET.length, PALLET.width, palette.load, scale, palette);
+  if (load) pallet(ctx, load, PALLET.length, PALLET.width, PalletLoad.BOXES, scale, palette);
   if (playing && current && !current.carried) {
     ctx.globalAlpha = 0.6 + 0.4 * pulse;
     ring(ctx, current.pose, palette.target, Math.max(0.08, 2.5 / scale), 1.18);
@@ -276,17 +284,24 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     const each = state.loads[i];
     if (each.placed || each.carried) return;
     const mine = playing && i === state.current;
-    items.push({ at: each.pose, text: String(i + 1), size: badge, colour: mine ? palette.void : palette.paint, pill: mine ? palette.target : palette.floor });
+    // With the forks going in, the forklift stands where the number would be.
+    if (mine && fork_depth(state) !== null) return;
+    // Close enough to see its load, the number moves into the aisle at the pallet's open face, where the forks go in.
+    const out = scale < 25 ? 0 : PALLET.length / 2 + 0.4;
+    const at = { x: each.pose.x - Math.cos(each.pose.heading) * out, y: each.pose.y - Math.sin(each.pose.heading) * out };
+    items.push({ at, text: String(i + 1), size: badge, colour: mine ? palette.void : palette.paint, pill: mine ? palette.target : palette.floor, ring: mine ? undefined : palette.free });
   });
   floor.tasks.forEach((task, i) => {
     const each = state.loads[i];
-    if (each.placed || (playing && i === state.current && each.carried)) return;
-    items.push({ at: centre(task.to.shape), text: `→${i + 1}`, size: badge * 0.85, colour: palette.target, pill: palette.floor });
+    if (each.placed) return;
+    const at = centre(task.to.shape);
+    if (playing && i === state.current) {
+      // Once the load is over its target the pill would hide how it sits; the glowing outline is enough there.
+      if (load && Math.hypot(load.x - at.x, load.y - at.y) < 1.2) return;
+      items.push({ at, text: `→${i + 1}`, size: badge, colour: palette.void, pill: palette.target });
+    }
+    else items.push({ at, text: `→${i + 1}`, size: badge * 0.85, colour: palette.paint, pill: palette.floor, ring: palette.free });
   });
-  if (goal && carrying) {
-    const at = centre(goal.shape);
-    items.push({ at, text: String(state.current + 1), size: badge, colour: palette.void, pill: palette.target });
-  }
   tags(ctx, items, view, extras.font, palette);
 
   if (goal && state.status === Status.DRIVING) {

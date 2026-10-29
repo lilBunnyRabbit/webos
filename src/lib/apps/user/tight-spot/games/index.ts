@@ -10,6 +10,13 @@ export const UPCOMING: readonly string[] = [];
 // The `game` prop's values: decided ahead of the games, so a link to one that hasn't shipped lands in the yard.
 export const GAME_CHOICES = [YARD, "parking", "forklift"] as const;
 export type GameChoice = (typeof GAME_CHOICES)[number];
+// The games with a daily, in Game Hub's row order: each is one mode of the app's per-mode daily (ADR-050).
+export const DAILY_GAMES = ["parking", "forklift"] as const satisfies readonly GameChoice[];
+export type DailyGame = (typeof DAILY_GAMES)[number];
+
+export function is_daily_game(id: string | undefined): id is DailyGame {
+  return (DAILY_GAMES as readonly (string | undefined)[]).includes(id);
+}
 
 export function game_of(id: string): GameDefinition | undefined {
   return GAMES.find((game) => game.id === id);

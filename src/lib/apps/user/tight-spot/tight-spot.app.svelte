@@ -10,11 +10,11 @@
   import { z } from "zod";
   import { DriveSettings } from "./core/settings.svelte";
   import { Vehicle } from "./core/vehicle";
-  import { game_of, GAMES, YARD, type GameChoice } from "./games";
+  import { game_of, GAMES, is_daily_game, YARD, type DailyGame, type GameChoice } from "./games";
   import type { GameProps } from "./games/define";
   import Yard from "./hub/yard.svelte";
 
-  const { daily: daily_prop, game: game_prop }: { daily?: string; game?: GameChoice } = $props();
+  const { daily: daily_prop, game: game_prop, mode: mode_prop }: { daily?: string; game?: GameChoice; mode?: DailyGame } = $props();
 
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const { app_id, window: win, storage } = get_app_context();
@@ -23,8 +23,11 @@
   const settings = new DriveSettings(storage);
   const loaded = new SvelteMap<string, Component<GameProps>>();
 
-  // The daily is parking's; a game that hasn't shipped yet opens the yard.
-  const first = untrack(() => (daily_prop ? "parking" : game_prop && game_of(game_prop) ? game_prop : YARD));
+  // A daily opens its game (`mode`, else a `game` with a daily, else parking); a game that hasn't shipped yet opens the yard.
+  const first = untrack(() => {
+    if (daily_prop) return mode_prop ?? (is_daily_game(game_prop) ? game_prop : "parking");
+    return game_prop && game_of(game_prop) ? game_prop : YARD;
+  });
   let active = $state<string>(first);
   let daily = $state(untrack(() => daily_prop));
   let from = $state<string | null>(null);
@@ -87,7 +90,7 @@
 {#snippet menu()}
   <Button size="sm" variant="quiet" aria-label="Games" title="Yard and games" onclick={switch_game}>
     <SignpostIcon weight="bold" />
-    <span class="hidden @md:inline">Games</span>
+    <span class="hidden @sm:inline">Games</span>
   </Button>
 {/snippet}
 

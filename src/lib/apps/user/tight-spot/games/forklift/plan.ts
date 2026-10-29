@@ -24,6 +24,8 @@ const STAGE = 2.4;
 const EXPANSIONS = 60_000;
 const STEERING = [-1, -0.6, -0.25, -0.08, 0, 0.08, 0.25, 0.6, 1];
 const SWITCH = 8;
+const LINED_UP = (1 * Math.PI) / 180;
+const SIDE_ROOM = 0.02;
 
 export interface Leg {
   moves: Move[];
@@ -99,9 +101,10 @@ export function plan_job(state: GameState): JobPlan | null {
 
     const empty = (pose: Placement) => contact(near, poses, pose, null, MARGIN) !== null;
     const pick_stage = along({ ...pallet, heading: pallet.heading }, -(PALLET.length / 2 + mast + STAGE));
+    // Lined up before the tips reach the pallet, with room inside the pockets' limits, as a driver would square up.
     const facing = (pose: Placement) => {
       const off = fork_fit(pose, pallet);
-      return off.angle <= MAX_ANGLE && Math.abs(off.side) <= JAM_SIDE && off.gap > 0 && off.gap < REACH + PALLET.length;
+      return off.angle <= MAX_ANGLE - LINED_UP && Math.abs(off.side) <= JAM_SIDE - SIDE_ROOM && off.gap > PALLET.length && off.gap < REACH + PALLET.length;
     };
     const fetched = leg(at, pick_stage, facing, (pose) => can_lift(fork_fit(pose, pallet)), empty, near);
     if (!fetched) return null;

@@ -71,7 +71,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 Move pallets with a forklift. A job is one to four pallets, each to be taken from its marked slot to its marked target, in order: a rack bay (**B4**) or a spot at the dock (**Dock C**). The start card lists them and shows the whole floor; the pallet in hand pulses with its number on it, its target is dashed with an arrow and its number, and an arrow on the edge of the view points the way when it's off screen. The chip at the top says what's next: *Pallet 2/3 · pick up at B4*, then *Pallet 2/3 → Dock C*.
 
 - **It steers at the back.** The rear wheels turn, so the forklift pivots near its front wheels and the counterweight swings out wide: watch the tail when you turn beside a rack. The dashed lines show where the corners will go.
-- **Lift:** drive the forks straight into the pallet until they're fully in (the chip shows *Forks 100%*), stop, and press **F** or **Space**, or tap **Lift**. The forks must be square to the pallet, within 5°.
+- **Lift:** drive the forks straight into the pallet until they're fully in (the chip shows *Forks 100%*), stop, and press **F** or **Space**, or tap **Lift**. Both tines have to go under the pallet: square to it within 5° and no more than 7 cm off its centre, or they jam. Standing short of it, the hint says how far off you are.
 - **Lower:** carry the pallet into its target, straight, stop, and press **F** again (**Lower**). The button is off until it would work; stopped near a pallet or a target, a line at the bottom says what's off.
 - **Contact ends the job:** the forklift, its forks or the pallet on them touching a rack, a pillar, a wall or another pallet. Forks pushed into a pallet crooked or off its middle jam.
 - The forklift backs up with a beeper and its amber beacon turns while it works. It tops out at about 9 km/h.
@@ -87,4 +87,4 @@ Move pallets with a forklift. A job is one to four pallets, each to be taken fro
 
 - **Jobs:** a random warehouse and job of the size you pick, one to four pallets. **New** deals another.
 - **Levels:** 16 jobs, four of each size, the aisles and bays tighter as you go. Finish one to open the next.
-- **Daily:** the same three-pallet job for everyone today.
+- **Daily:** the same three-pallet job for everyone today. Game Hub lists it as Drive Hub · Forklift, next to Tight Spot's daily.

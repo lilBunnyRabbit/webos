@@ -1,7 +1,7 @@
 import { define_app } from "$lib/core/api";
 import { AppCategory, DailyRank } from "$lib/core/api/services/apps/type";
 import { z } from "zod";
-import { GAME_CHOICES, GAMES } from "./games";
+import { DAILY_GAMES, GAME_CHOICES, GAMES } from "./games";
 import AppIcon from "./icon.svelte";
 
 export default define_app({
@@ -23,8 +23,13 @@ export default define_app({
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
     game: z.enum(GAME_CHOICES).optional(),
+    /** With `daily`, which game's daily (ADR-050): parking, or the Warehouse. */
+    mode: z.enum(DAILY_GAMES).optional(),
   }),
-  daily_rank: DailyRank.SCORE_ASC,
+  daily_rank: {
+    parking: DailyRank.SCORE_ASC,
+    forklift: DailyRank.SCORE_ASC,
+  },
   achievements: GAMES.flatMap((game) => game.achievements),
   component: () => import("./tight-spot.app.svelte"),
 });

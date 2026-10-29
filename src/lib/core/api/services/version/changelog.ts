@@ -12,7 +12,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
-        text: "Drive Hub's Warehouse opens: move pallets between racks and the dock with a rear-steering forklift, in random jobs, sixteen levels and a daily job, scored on moves, time and how neatly each pallet goes down.",
+        text: "Drive Hub's Warehouse opens: move pallets between racks and the dock with a rear-steering forklift, in random jobs, sixteen levels and a daily job that Game Hub lists next to Tight Spot's, scored on moves, time and how neatly each pallet goes down.",
       },
     ],
   },

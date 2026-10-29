@@ -64,7 +64,7 @@ export interface Palette {
   steel: string;
   beam: string;
   upright: string;
-  /** A pallet's deck boards, a job's cardboard load and the shrink-wrapped stock around it. */
+  /** A pallet's deck boards, a job's cardboard boxes (`load_edge` their seams and tape), the shrink-wrapped stock around it. */
   wood: string;
   load: string;
   load_edge: string;
@@ -144,10 +144,11 @@ export function read_palette(probe: HTMLElement): Palette {
     steel: solid("foreground", 55),
     beam: solid("warning", 80),
     upright: solid("info", 72),
-    wood: token("color-mix(in oklch, var(--warning) 40%, var(--background-darker))"),
-    load: solid("warning", 62),
-    load_edge: solid("warning", 75),
-    stock: solid("foreground", 22),
+    // Mixed in oklab: an oklch mix of an amber and a blue-grey ground turns green on the way round the hue circle.
+    wood: token("color-mix(in oklab, var(--warning) 40%, var(--foreground))"),
+    load: token("color-mix(in oklab, var(--warning) 68%, var(--background))"),
+    load_edge: token(`color-mix(in oklab, var(--warning) 45%, ${ink.colour})`),
+    stock: solid("foreground", 42),
     beacon: token("var(--warning)"),
     beacon_clear: mix("warning", 0),
   };
@@ -692,60 +693,93 @@ function forklift(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, la
  * A pallet seen from above, `pose` its centre heading the way the forks go in: the deck boards round a load. A job's
  * load is cardboard with a taped seam, stock is shrink-wrapped.
  */
-export function pallet(ctx: CanvasRenderingContext2D, pose: Pose, length: number, width: number, load: string, scale: number, palette: Palette) {
+export const PalletLoad = { BOXES: "boxes", WRAPPED: "wrapped" } as const;
+export type PalletLoad = (typeof PalletLoad)[keyof typeof PalletLoad];
+
+/**
+ * A loaded pallet from above: deck boards across the forks' way, their ends showing round the load. The job's are
+ * cardboard boxes, the warehouse's stock a shrink-wrapped block, so neither reads as an empty slot.
+ */
+export function pallet(ctx: CanvasRenderingContext2D, pose: Pose, length: number, width: number, load: PalletLoad, scale: number, palette: Palette) {
   ctx.save();
   ctx.translate(pose.x, pose.y);
   ctx.rotate(pose.heading);
   const l = length / 2;
   const w = width / 2;
+  const hair = Math.max(0.015, 1 / scale);
   ctx.beginPath();
-  ctx.rect(-l + 0.1, -w + 0.12, length, width);
+  ctx.rect(-l + 0.08, -w + 0.1, length, width);
   ctx.fillStyle = palette.shadow;
   ctx.fill();
-  ctx.beginPath();
-  ctx.rect(-l, -w, length, width);
+  const boards = 5;
+  const gap = 0.05;
+  const board = (length - gap * (boards - 1)) / boards;
   ctx.fillStyle = palette.wood;
-  ctx.fill();
   ctx.strokeStyle = palette.ink;
-  ctx.lineWidth = Math.max(0.02, 1 / scale);
-  ctx.stroke();
-  ctx.strokeStyle = palette.edge;
-  ctx.beginPath();
-  for (const y of [-w * 0.6, -w * 0.2, w * 0.2, w * 0.6]) {
-    ctx.moveTo(-l, y);
-    ctx.lineTo(l, y);
+  ctx.lineWidth = hair;
+  for (let i = 0; i < boards; i++) {
+    ctx.beginPath();
+    ctx.rect(-l + i * (board + gap), -w, board, width);
+    ctx.fill();
+    ctx.stroke();
   }
-  ctx.stroke();
-  const inset = 0.06;
+  const inset = 0.1;
   const lw = length - inset * 2;
   const ww = width - inset * 2;
-  ctx.beginPath();
-  ctx.roundRect(-l + inset, -w + inset, lw, ww, 0.08);
-  ctx.fillStyle = load;
-  ctx.fill();
-  // Seen from above a load is one wrapped block: a shaded side and a sheen give it volume, a sticker says it's cargo.
-  ctx.save();
-  ctx.clip();
-  ctx.fillStyle = palette.shadow;
-  ctx.fillRect(-l + inset, w - inset - 0.14, lw, 0.14);
-  ctx.fillStyle = palette.glow;
-  ctx.globalAlpha = 0.16;
-  ctx.beginPath();
-  ctx.moveTo(-l + inset + 0.2, -w + inset);
-  ctx.lineTo(-l + inset + 0.55, -w + inset);
-  ctx.lineTo(-l + inset + 0.15, w - inset);
-  ctx.lineTo(-l + inset - 0.2, w - inset);
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = 0.85;
-  ctx.fillRect(l - inset - 0.34, -w + inset + 0.1, 0.24, 0.17);
-  ctx.globalAlpha = 1;
-  ctx.restore();
-  ctx.beginPath();
-  ctx.roundRect(-l + inset, -w + inset, lw, ww, 0.08);
-  ctx.strokeStyle = palette.edge;
-  ctx.lineWidth = Math.max(0.02, 1 / scale);
-  ctx.stroke();
+  const x0 = -l + inset;
+  const y0 = -w + inset;
+  if (load === PalletLoad.BOXES) {
+    for (const [bx, by] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+      const x = x0 + (bx * lw) / 2 + 0.015;
+      const y = y0 + (by * ww) / 2 + 0.015;
+      const bw = lw / 2 - 0.03;
+      const bh = ww / 2 - 0.03;
+      ctx.beginPath();
+      ctx.rect(x, y, bw, bh);
+      ctx.fillStyle = palette.load;
+      ctx.fill();
+      ctx.strokeStyle = palette.load_edge;
+      ctx.lineWidth = Math.max(0.025, 1.5 / scale);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y + bh / 2);
+      ctx.lineTo(x + bw, y + bh / 2);
+      ctx.strokeStyle = palette.load_edge;
+      ctx.lineWidth = Math.max(0.04, 2 / scale);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.rect(x0, y0, lw, ww);
+    ctx.strokeStyle = palette.edge;
+    ctx.lineWidth = hair;
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, lw, ww, 0.1);
+    ctx.fillStyle = palette.stock;
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    // Wrap catching the light: a few pale streaks across the block.
+    ctx.strokeStyle = palette.glow;
+    ctx.globalAlpha = 0.28;
+    ctx.lineWidth = 0.05;
+    ctx.beginPath();
+    for (let k = -0.6; k < 1.2; k += 0.3) {
+      ctx.moveTo(x0 + k, y0);
+      ctx.lineTo(x0 + k + ww * 0.6, y0 + ww);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = palette.shadow;
+    ctx.fillRect(x0, y0 + ww - 0.12, lw, 0.12);
+    ctx.restore();
+    ctx.beginPath();
+    ctx.roundRect(x0, y0, lw, ww, 0.1);
+    ctx.strokeStyle = palette.edge;
+    ctx.lineWidth = hair;
+    ctx.stroke();
+  }
   ctx.restore();
 }
 

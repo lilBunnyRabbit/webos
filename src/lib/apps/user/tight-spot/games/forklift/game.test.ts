@@ -11,8 +11,10 @@ import {
   fork_action,
   fork_fit,
   fork_hint,
+  in_pockets,
   ForkAction,
   JAM,
+  JAM_SIDE,
   level_round,
   LEVEL_COUNT,
   load_pose,
@@ -56,6 +58,15 @@ describe("forks", () => {
     expect(can_lift(fork_fit(at_pallet(pallet, FULL_GAP + 0.05), pallet))).toBe(false);
     expect(can_lift(fork_fit(at_pallet(pallet, 0.05, 0, 4 * DEG), pallet))).toBe(true);
     expect(can_lift(fork_fit(at_pallet(pallet, 0.05, 0, 6 * DEG), pallet))).toBe(false);
+  });
+
+  test("the pockets take both tines under the pallet: 7 cm either side of centre at most, square within 5°", () => {
+    expect(JAM_SIDE).toBeCloseTo(0.07, 9);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0.06), pallet))).toBe(true);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0.08), pallet))).toBe(false);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, -0.08), pallet))).toBe(false);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0, 4.5 * DEG), pallet))).toBe(true);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0, 6 * DEG), pallet))).toBe(false);
   });
 
   test("a carried pallet keeps the offset it was picked up with", () => {
@@ -103,7 +114,10 @@ describe("a job", () => {
     const moving = { ...driving(start, at_pallet(task.from.home)), car: { ...driving(start, at_pallet(task.from.home)).car, speed: 0.4 } };
     expect(fork_action(moving)).toBeNull();
     expect(fork_hint(driving(start, at_pallet(task.from.home, 0.6)))).toBe("Drive the forks fully in");
-    expect(fork_hint(driving(start, at_pallet(task.from.home, 0.05, 0, 6.5 * DEG)))).toMatch(/^Not square: 6\.5° off$/);
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0, 6.5 * DEG)))).toBe("Line up: 6.5° off");
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0.1)))).toBe("Line up: pallet 10 cm to the left");
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, -0.1)))).toBe("Line up: pallet 10 cm to the right");
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0.03)))).toBe("Drive the forks fully in");
   });
 
   test("forks off the pockets jam; the body touching a pallet is a contact", () => {
@@ -113,6 +127,8 @@ describe("a job", () => {
     expect(after.status).toBe(Status.CRASHED);
     expect(after.hit?.kind).toBe(JAM);
     expect(crash_title(after.hit)).toBe("Jammed the forks into a pallet");
+    const beside = advance(driving(start, at_pallet(pallet, 0.3, 0.1)), { steer: 0, throttle: 0, brake: 0 }, 1 / 120);
+    expect(beside.hit?.kind).toBe(JAM);
     const clean = advance(driving(start, at_pallet(pallet, 0.3)), { steer: 0, throttle: 0, brake: 0 }, 1 / 120);
     expect(clean.status).toBe(Status.DRIVING);
     const rammed = advance(driving(start, at_pallet(pallet, -0.1)), { steer: 0, throttle: 0, brake: 0 }, 1 / 120);

@@ -59,6 +59,7 @@
     type GameState,
     type LevelStars,
     type Par,
+    type Recorded,
     type Round,
   } from "./game";
   import { work_out_par, type ParJob } from "./par";
@@ -72,13 +73,14 @@
   const DAILY_MODE = "forklift";
 
   const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
   const bests = storage.persisted<Bests>("forklift.best", {}, bests_schema);
   const level_stars = storage.persisted<LevelStars>("forklift.levels", {}, levels_schema);
   const input = new DriveInput();
 
-  let daily = $state<string | null>(null);
+  let daily = $state<string | null>(daily_day ?? null);
   let mode = $state<Mode>(storage.get("forklift.mode", mode_schema) ?? Mode.JOBS);
   let size = $state(storage.get("forklift.size", size_schema) ?? 2);
   let level = $state(Math.min(untrack(() => unlocked(level_stars.value)), storage.get("forklift.level", z.number().int().min(1)) ?? 1));
@@ -86,7 +88,6 @@
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let par = $state.raw<Par | null>(null);
   let par_failed = $state(false);
-  let recorded = $state(false);
   let new_best = $state(false);
   let first_job = $state(false);
   let board_size = $state({ width: 0, height: 0, dpr: 1 });
@@ -103,8 +104,14 @@
 
   let camera: Camera | null = null;
   let par_job: ParJob | null = null;
+  let par_round: Round | null = null;
+  let orphan: ParJob | null = null;
+  // A finished job recorded before its par was known: the par, when it lands, may still earn it the time star.
+  let awaiting: Finished | null = null;
   const sounds = new Sounds();
 
+  // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its par).
+  const round = $derived(game.round);
   const lock = $derived(max_steer(SPEC));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
@@ -136,6 +143,11 @@
   const par_time = $derived(par ? format_time(par.ms) : null);
   const fork_label = $derived(action === ForkAction.LOWER ? "Lower" : action === ForkAction.LIFT ? "Lift" : game.loads[game.current]?.carried ? "Lower" : "Lift");
 
+  interface Finished {
+    state: GameState;
+    stars: number;
+  }
+
   function moves_text(count: number): string {
     return `${count} ${count === 1 ? "move" : "moves"}`;
   }
@@ -151,22 +163,28 @@
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }
 
-  // The par comes from the planner in a worker; the round can start before it's known, and the stars wait for it.
+  // The par comes from the planner in a worker; the round can start, and finish, before it's known.
   $effect(() => {
-    const round = game.round;
+    const current = round;
     untrack(() => {
-      par_job?.cancel();
+      if (par_job && awaiting?.state.round === par_round) {
+        orphan?.cancel();
+        orphan = par_job;
+      } else par_job?.cancel();
       par = null;
       par_failed = false;
-      const job = work_out_par(round);
+      const job = work_out_par(current);
       par_job = job;
+      par_round = current;
       job.result.then(
         (found) => {
+          settle(current, found);
           if (par_job !== job) return;
           par = found;
           par_failed = found === null;
         },
         (reason: unknown) => {
+          if (awaiting?.state.round === current) awaiting = null;
           if (par_job !== job) return;
           par_failed = true;
           report_error(app_id, "Couldn't work out the par", reason);
@@ -175,7 +193,10 @@
     });
   });
 
-  $effect(() => () => par_job?.cancel());
+  $effect(() => () => {
+    par_job?.cancel();
+    orphan?.cancel();
+  });
 
   $effect(() => {
     if (!blocked) return;
@@ -213,12 +234,6 @@
     void [game, palette, board_size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
-  });
-
-  // A job ends before its par may be known; it's recorded once both are in.
-  $effect(() => {
-    if (game.status !== Status.DONE || recorded || (!par && !par_failed)) return;
-    untrack(() => finish());
   });
 
   function sideways(): boolean {
@@ -286,30 +301,47 @@
     if (settings.sound) sounds.crash();
   }
 
-  function finish() {
-    recorded = true;
+  function finish(state: GameState) {
     release_all();
-    const score = earned || 1;
-    const result = { stars: score, ms: Math.round(game.ms), ...(precision_percent === null ? {} : { precision: precision_percent }) };
-    const done = record_best(bests.value, game.round, result);
-    bests.value = done.bests;
-    new_best = done.improved;
-    first_job = done.first;
+    const result = record(state, stars(state, par?.ms ?? null));
+    new_best = result.improved;
+    first_job = result.first;
     if (settings.sound) sounds.parked(new_best && !first_job);
-    const pallets = game.round.size;
+    awaiting = !par && !par_failed && result.stars < 3 ? { state, stars: result.stars } : null;
+  }
+
+  // The time star arrives with the par: the run is recorded again with it, as a better result.
+  function settle(for_round: Round, found: Par | null) {
+    const waiting = awaiting;
+    if (!waiting || waiting.state.round !== for_round) return;
+    awaiting = null;
+    if (!found) return;
+    const score = stars(waiting.state, found.ms);
+    if (score <= waiting.stars) return;
+    const result = record(waiting.state, score);
+    if (game.round === for_round && game.status === Status.DONE) new_best ||= result.improved;
+  }
+
+  function record(state: GameState, score: number): Recorded & { stars: number } {
+    const precision = average_precision(state.drops);
+    const result = { stars: score, ms: Math.round(state.ms), ...(precision === null ? {} : { precision: Math.round(precision) }) };
+    const done = record_best(bests.value, state.round, result);
+    bests.value = done.bests;
+    const pallets = state.round.size;
     achievements.achieve("forklift-first");
     if (pallets >= 4) achievements.achieve("forklift-full-load");
     if (pallets >= 3 && score === 3) achievements.achieve("forklift-by-the-book");
-    if (pallets >= 3 && game.drops.every((drop) => Math.round(drop.score) >= PERFECT)) achievements.achieve("forklift-spotless");
-    if (game.round.level !== undefined) {
-      const at = game.round.level;
+    if (pallets >= 3 && state.drops.every((drop) => Math.round(drop.score) >= PERFECT)) achievements.achieve("forklift-spotless");
+    if (state.round.level !== undefined) {
+      const at = state.round.level;
       level_stars.value[at] = Math.max(level_stars.value[at] ?? 0, score);
       achievements.progress("forklift-levels", Object.keys(level_stars.value).length);
     }
-    if (game.round.daily) {
-      play.daily(game.round.daily, result.ms, 3 - score, DAILY_MODE);
+    if (state.round.daily) {
+      play.daily(state.round.daily, result.ms, 3 - score, DAILY_MODE);
       achievements.achieve("forklift-daily");
     }
+    return { ...done, stars: score };
   }
 
   function fork() {
@@ -319,6 +351,7 @@
     input.release();
     game = next;
     if (settings.sound) sounds.fork(action === ForkAction.LIFT);
+    if (next.status === Status.DONE) finish(next);
     const drop = next.drops.length > 0 && action === ForkAction.LOWER ? next.drops[next.drops.length - 1] : null;
     if (drop && Math.round(drop.score) >= PERFECT) achievements.achieve("forklift-perfect");
     focus_board();
@@ -362,7 +395,6 @@
     sounds.quiet();
     new_best = false;
     first_job = false;
-    recorded = false;
     camera = null;
     game = create_game(round);
     focus_board();
@@ -374,7 +406,7 @@
 
   function next_round() {
     if (game.round.level !== undefined && has_next_level && game.status === Status.DONE) {
-      level = game.round.level + 1;
+      level = Math.min(max_level, game.round.level + 1);
       storage.set("forklift.level", level);
     }
     load(make_round());
@@ -512,6 +544,10 @@
   Par {moves_text(par_moves(game.round.size))}{par_time ? ` · ${par_time}` : par_failed ? "" : " · …"}
 {/snippet}
 
+{#snippet size_picker(class_name: string)}
+  <Select class={class_name} size="sm" aria-label="Pallets per job" options={SIZE_OPTIONS} bind:value={() => String(size), set_size} />
+{/snippet}
+
 {#snippet toolbar()}
   {@render menu?.()}
   <Segmented size="sm" class="hidden @xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => (daily ? Mode.JOBS : mode), set_mode} />
@@ -519,9 +555,9 @@
   {#if daily}
     <span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>
   {:else if mode === Mode.JOBS}
-    <Select class="w-[6.75rem] min-w-0" size="sm" aria-label="Pallets per job" options={SIZE_OPTIONS} bind:value={() => String(size), set_size} />
+    {@render size_picker("hidden w-[6.75rem] min-w-0 @md/ts-app:inline-flex")}
   {:else}
-    <Select class="w-28 min-w-0 @md:w-36" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+    <Select class="w-[7.5rem] min-w-0 @md:w-36" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
   {/if}
   <div class="flex-1"></div>
   {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}
@@ -615,6 +651,12 @@
             <li><span class="text-primary">{i + 1}</span> {task.from.name} → {task.to.name}</li>
           {/each}
         </ol>
+        {#if mode === Mode.JOBS && !daily}
+          <!-- A phone's toolbar has no room for it next to the switcher, the mode, settings and New. -->
+          <div class="mt-1.5 flex items-center gap-2 text-2xs text-foreground/65 @md/ts-app:hidden">
+            Job size {@render size_picker("w-[6.75rem] min-w-0")}
+          </div>
+        {/if}
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
           {@render par_line()}{best ? ` · Best ${"★".repeat(best.stars)} ${format_time(best.ms, { tenths: true })}` : ""}{best?.precision !== undefined ? ` · precision ${best.precision}%` : ""}
         </p>
@@ -638,9 +680,9 @@
       <div class="min-w-0 flex-1 basis-52">
         <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
           Job done
-          {#if par || par_failed}{@render star_row(earned, true)}{/if}
+          {@render star_row(earned, true)}
           {#if perfect}<Badge class="ts-pop" tone="success">Perfect</Badge>{/if}
-          {#if recorded && new_best}<Badge class="ts-pop" tone={first_job ? "neutral" : "primary"}>{first_job ? "First job" : "New best"}</Badge>{/if}
+          {#if new_best}<Badge class="ts-pop" tone={first_job ? "neutral" : "primary"}>{first_job ? "First job" : "New best"}</Badge>{/if}
         </p>
         <p class="font-mono text-2xs text-foreground/80 tabular-nums">
           {time}{par_time ? ` (par ${par_time})` : ""} · {moves_text(game.moves)} (par {par_moves(game.round.size)})
@@ -731,15 +773,18 @@
     touch-action: manipulation;
   }
 
+  /* Ready is the primary action with a halo; off stays legible, outlined and dashed, so it reads as waiting, not broken. */
   .ts-fork-ready {
     color: var(--background);
     background-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 35%, transparent);
   }
 
   .ts-fork-off {
-    color: color-mix(in oklch, var(--foreground) 50%, transparent);
-    background-color: color-mix(in oklch, var(--background) 80%, var(--foreground) 8%);
-    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--foreground) 15%, transparent);
+    color: color-mix(in oklch, var(--foreground) 78%, transparent);
+    background-color: color-mix(in oklch, var(--background) 90%, var(--foreground));
+    outline: 1.5px dashed color-mix(in oklch, var(--foreground) 40%, transparent);
+    outline-offset: -1.5px;
   }
 
   @keyframes ts-star {
