@@ -3,6 +3,7 @@ import type { Pose } from "../../core/geometry";
 import { body_ends, Gear, type Placement } from "../../core/vehicle";
 import {
   advance,
+  along,
   can_lift,
   change_gear,
   BUMP_CLEAR,
@@ -40,6 +41,7 @@ import {
 } from "./game";
 import { close_side, CLEAN, Fit, ideal_lift, judge, LIFT_RATE, open_side, reach, side_action, step_side, TRAVEL, use_side } from "./rack";
 import { PALLET } from "./warehouse";
+import { SolidKind } from "../../core/scene";
 
 const DEG = Math.PI / 180;
 const MAST = body_ends(SPEC).front;
@@ -251,6 +253,37 @@ describe("an upper tier", () => {
     const ready = drive_in(lowered);
     expect(ready.bumps).toBe(1);
     expect(side_action(ready)).toBe(ForkAction.LIFT);
+  });
+
+  test("holding raise and in together raises the forks through the bump and goes in", () => {
+    let state = opened;
+    for (let i = 0; i < 1200 && !side_action(state); i++) state = step_side(state, { lift: 1, drive: 1 }, 1 / 120);
+    expect(state.bumps).toBe(1);
+    expect(state.bumped).toBeNull();
+    expect(side_action(state)).toBe(ForkAction.LIFT);
+  });
+
+  test("a height bump goes with the view: backing out and pushing in low again is a new bump", () => {
+    const low = drive_in(with_lift(ideal_lift(view) - 0.12));
+    const closed = close_side(low);
+    expect(closed.side).toBeNull();
+    expect(closed.bumped).toBeNull();
+    expect(bump_hint(closed)).toBeNull();
+    const again = drive_in({ ...open_side(closed), side: { ...view, lift: ideal_lift(view) - 0.12 } });
+    expect(again.bumps).toBe(2);
+  });
+
+  test("a bump close to where the view opened clears once the forklift is back there", () => {
+    const touch = (into: number): GameState => {
+      const car = { ...opened.car, ...along(view.from, into) };
+      return { ...opened, car, bumped: { kind: SolidKind.RACK, by_load: false, from: { x: car.x, y: car.y }, miss: null } };
+    };
+    let state = touch(0.1);
+    for (let i = 0; i < 120 && state.bumped; i++) state = step_side(state, { lift: 0, drive: -1 }, 1 / 120);
+    expect(state.bumped).toBeNull();
+    let stuck = touch(0);
+    for (let i = 0; i < 60; i++) stuck = step_side(stuck, { lift: 0, drive: -1 }, 1 / 120);
+    expect(stuck.bumped).not.toBeNull();
   });
 
   test("at the face, travel-height forks meeting the floor stock under the pallet stop without a bump", () => {

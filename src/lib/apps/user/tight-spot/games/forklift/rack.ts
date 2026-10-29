@@ -70,12 +70,17 @@ export function open_side(state: GameState): GameState {
   const carrying = !!state.loads[state.current].carried;
   const from: Placement = { x: state.car.x, y: state.car.y, heading: state.car.heading };
   const side: SideView = { slot: carrying ? task.to : task.from, kind: carrying ? SideKind.DROP : SideKind.PICK, lift: TRAVEL, from, miss: null };
-  return { ...state, side, car: { ...state.car, speed: 0 } };
+  return { ...state, side, car: { ...state.car, speed: 0 }, bumped: floor_bump(state.bumped) };
 }
 
 export function close_side(state: GameState): GameState {
   if (!state.side || reach(state, state.side) > 0) return state;
-  return { ...state, side: null, raised: null };
+  return { ...state, side: null, raised: null, bumped: floor_bump(state.bumped) };
+}
+
+/** A height bump belongs to the side view it happened in; leaving or reopening the view drops it. */
+function floor_bump(bumped: GameState["bumped"]): GameState["bumped"] {
+  return bumped?.miss === null ? bumped : null;
 }
 
 export interface SideControls {
@@ -103,32 +108,44 @@ export function step_side(state: GameState, controls: SideControls, dt: number):
   const lift = before > 0 ? view.lift : clamp(view.lift + Math.sign(controls.lift) * LIFT_RATE * dt, 0, MAST);
   const heading = view.slot.heading;
   const cos = Math.max(0.5, Math.cos(angle_between(state.car.heading, heading)));
-  const travelled = (state.car.x - view.from.x) * Math.cos(state.car.heading) + (state.car.y - view.from.y) * Math.sin(state.car.heading);
+  const travelled = travel(view, state.car);
   const room = (PALLET.length - before) / cos;
   const next = clamp(travelled + Math.sign(controls.drive) * CREEP * dt, 0, travelled + room);
   const placed = along(view.from, next);
   const car = { ...state.car, x: placed.x, y: placed.y, speed: 0 };
   let side: SideView = { ...view, lift };
   const moved = { ...state, car, ms, side };
+  const held = { ...state, side };
   const after = reach(moved, view);
   if (before <= 0 && after > 0) {
     const miss = lift - ideal_lift(view);
     if (judge(miss) === Fit.HIT) {
       const kind = view.kind === SideKind.PICK && miss > 0 ? JAM : BEAM;
-      return bump(state, ms, { kind, at: face_point(state, view), by_load: view.kind === SideKind.DROP }, miss);
+      return bump(held, ms, { kind, at: face_point(state, view), by_load: view.kind === SideKind.DROP }, miss);
     }
     side = { ...side, miss };
   } else if (after <= 0) side = { ...side, miss: null };
   const hit = contact(near_of(state.floor), resting(state.loads), car, carried_pose(moved), view.slot, 0, SPEC);
-  if (hit) return bump(state, ms, hit);
+  if (hit) return bump(held, ms, hit);
   return { ...moved, side, bumped: cleared(state.bumped, view, car, lift) };
 }
 
-/** At the rack a bump clears once the forklift backs off `BUMP_CLEAR`, or, for a height bump, the forks are at a height that goes in. */
+/** How far the forklift has crept in from where the view opened. */
+function travel(view: SideView, at: { x: number; y: number }): number {
+  return (at.x - view.from.x) * Math.cos(view.from.heading) + (at.y - view.from.y) * Math.sin(view.from.heading);
+}
+
+/**
+ * At the rack a bump clears once the forklift backs off `BUMP_CLEAR`, or as far as the view lets it (back to where it
+ * opened), or, for a height bump, once the forks are at a height that goes in.
+ */
 function cleared(bumped: GameState["bumped"], view: SideView, car: Placement, lift: number): GameState["bumped"] {
   if (!bumped) return null;
   if (bumped.miss !== null && judge(lift - ideal_lift(view)) !== Fit.HIT) return null;
-  return Math.hypot(car.x - bumped.from.x, car.y - bumped.from.y) > BUMP_CLEAR ? null : bumped;
+  if (Math.hypot(car.x - bumped.from.x, car.y - bumped.from.y) > BUMP_CLEAR) return null;
+  const into = travel(view, bumped.from);
+  const back = into - travel(view, car);
+  return back > 0 && back >= Math.min(BUMP_CLEAR, into) ? null : bumped;
 }
 
 export function side_action(state: GameState): ForkAction | null {
