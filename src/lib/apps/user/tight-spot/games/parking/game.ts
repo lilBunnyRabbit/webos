@@ -4,7 +4,7 @@ import { angle_between, type Vec } from "../../core/geometry";
 import { fit, MAX_ANGLE, type Precision } from "../../core/precision";
 import { collide, obstacles } from "../../core/obstacles";
 import { pass_portals } from "../../core/portals";
-import { ground_under, support, tyres } from "../../core/support";
+import { support, tyres } from "../../core/support";
 import {
   bodies,
   create_car,
@@ -347,7 +347,6 @@ export function advance(
   const ground = state.world.ground;
   const off = ground ? support(car, spec, ground) : [];
   if (ground && off.length > 0) {
-    const was = ground_under(tyres(state.car, spec)[off[0]], ground);
     const course = course_by_id(state.round.course ?? "");
     return {
       ...state,
@@ -356,7 +355,7 @@ export function advance(
       passes,
       status: Status.CRASHED,
       contact: tyres(car, spec)[off[0]],
-      hit: { kind: OFF, title: edge_title(course, was) },
+      hit: { kind: OFF, title: edge_title(course, tyres(state.car, spec)[off[0]]) },
     };
   }
   return { ...state, car, ms, passes };

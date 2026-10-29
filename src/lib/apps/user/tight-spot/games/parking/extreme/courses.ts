@@ -2,6 +2,7 @@ import { bounds_of, rect, type Polygon, type Pose, type Vec } from "../../../cor
 import { ChunkKind, type World } from "../../../core/lot";
 import { SolidKind, type Bay, type Solid } from "../../../core/scene";
 import { pose_from_centre, Vehicle, VEHICLES, type VehicleSpec } from "../../../core/vehicle";
+import { ground_under } from "../../../core/support";
 
 export const GroundKind = {
   PAD: "pad",
@@ -317,7 +318,7 @@ export const COURSES: readonly Course[] = [
     name: "Dogleg",
     brief: "The planks turn on a platform halfway. Turn on it, then out onto the next pair.",
     vehicle: Vehicle.HATCH,
-    par: 2,
+    par: 5,
     build: (spec) =>
       crossing(spec, {
         points: [{ x: 0, y: 0 }, { x: 0, y: -8 }, { x: 5.5, y: -13.5 }],
@@ -332,7 +333,7 @@ export const COURSES: readonly Course[] = [
     name: "Quay edge",
     brief: "Along the quay to the end, then turn and park along the water.",
     vehicle: Vehicle.VAN,
-    par: 3,
+    par: 8,
     walls: "the warehouse",
     build: quay,
   },
@@ -350,7 +351,7 @@ export const COURSES: readonly Course[] = [
     name: "Offset planks",
     brief: "Two pairs of planks that don't line up, a small platform between them.",
     vehicle: Vehicle.HATCH,
-    par: 4,
+    par: 9,
     build: (spec) =>
       crossing(spec, {
         points: [{ x: 0, y: 0 }, { x: 0, y: -6 }, { x: 1.3, y: -6 }, { x: 1.3, y: -12 }],
@@ -441,7 +442,9 @@ const EDGE_NAMES: Record<GroundKind, string> = {
   road: "Over the edge",
 };
 
-export function edge_title(course: Course, piece: number): string {
-  const kind = layout_of(course).pieces[piece]?.kind ?? GroundKind.PAD;
+/** Pads overlap the planks and ramps they meet, so a tyre on both was on the narrow piece. */
+export function edge_title(course: Course, point: Vec): string {
+  const under = layout_of(course).pieces.filter((piece) => ground_under(point, [piece.shape]) === 0);
+  const kind = (under.find((piece) => piece.kind !== GroundKind.PAD && piece.kind !== GroundKind.ROAD) ?? under[0])?.kind ?? GroundKind.PAD;
   return EDGE_NAMES[kind];
 }
