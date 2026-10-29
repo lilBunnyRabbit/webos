@@ -1,6 +1,6 @@
 ## Drive Hub
 
-Driving games around one yard. The app opens on the whole yard, your car at the gate; the view follows the car once you drive.
+Driving games along one street. The app opens on the gate and the first buildings, your car at the gate; the view follows the car once you drive, and the street runs on east with a building for every game.
 
 - Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway. The car park holds **Tight Spot**, the **Warehouse** the forklift game.
 - **Games** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
@@ -10,7 +10,7 @@ Driving games around one yard. The app opens on the whole yard, your car at the 
 
 - Nothing is judged here. Touching something just stops you with a bump; back away and carry on.
 - Stop on the **Garage** pad to pick any of 41 vehicles, shelf by shelf: **Cars** (hatchback to camper van and a stretch limousine), **Service** (taxi, police car, ambulance, fire engine, ladder truck, garbage truck, baggage train), **Buses** (city bus, double-decker, coach, articulated bus), **Trucks** (box truck, semi-trailer truck, truck and drawbar trailer, road train), **Towing** (trailer, caravan, boat, horse box, tractor, tractor and two trailers, quad), **Machines** (forklift, skid-steer loader, telehandler, wheel loader, articulated dump truck, zero-turn mower, tank) and **Fun** (tuk-tuk, golf cart, ice resurfacer, shopping trolley, F1 car). It waits on the pad, ready to drive off, and stays yours in the yard until you close the window. The police car, ambulance and fire engine flash their lights while in gear.
-- The cones are for a slalom, the bays on the left wall for practice parking.
+- The garage pad, the cones (a slalom) and the bays along the north wall (practice parking) are by the gate.
 - The gears, pedals, wheel, sensors and settings work as in every game below.
 
 ## Tight Spot: the goal

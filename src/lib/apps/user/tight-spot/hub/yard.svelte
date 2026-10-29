@@ -2,8 +2,8 @@
   import { GAMES, UPCOMING } from "../games";
   import { build_yard } from "./yard";
 
-  const YARD = build_yard(GAMES.length);
-  const NAMES = YARD.plots.map((_, index) => GAMES[index]?.name ?? UPCOMING[index - GAMES.length] ?? "Soon");
+  const YARD = build_yard(GAMES.length, UPCOMING.length);
+  const NAMES = YARD.plots.map((_, index) => GAMES[index]?.name ?? UPCOMING[index - GAMES.length] ?? null);
   const BUILDINGS = YARD.plots.map((_, index) => GAMES[index]?.building ?? null);
 </script>
 
@@ -188,12 +188,13 @@
     return { ...insets, right: pedal_box.width + OVERLAY_GAP, left: Math.max(card_left, steer_box.width + OVERLAY_GAP) };
   }
 
-  // Until the first input the whole yard shows, so a player sees every building before driving off.
+  // Until the first input the gate and the nearest buildings show; the street runs on east past them.
   function target_camera(): Camera {
     const insets = control_insets();
     if (!moved) {
-      const middle = { x: (YARD.bounds.x0 + YARD.bounds.x1) / 2, y: (YARD.bounds.y0 + YARD.bounds.y1) / 2 };
-      return frame(YARD.bounds, middle, size.width, size.height, zoom, insets, fit_span(YARD.bounds, size.width, size.height, insets, OVERVIEW_MARGIN));
+      const { landing } = YARD;
+      const middle = { x: (landing.x0 + landing.x1) / 2, y: (landing.y0 + landing.y1) / 2 };
+      return frame(YARD.bounds, middle, size.width, size.height, zoom, insets, fit_span(landing, size.width, size.height, insets, OVERVIEW_MARGIN));
     }
     const centre = body_centre(car, spec);
     const ahead = car.speed * 0.9;
@@ -433,7 +434,7 @@
       <div class="min-w-0 basis-full">
         <p class="text-base font-semibold">Drive Hub</p>
         <p class="text-ui text-foreground/80">
-          Drive into a lit doorway to play. The garage on the right swaps your vehicle; the cones and bays are for practice. The guide (?) has the rest.
+          Drive into a lit doorway to play; each game has a building along the street. The garage pad by the gate swaps your vehicle, and the cones and bays are for practice.
         </p>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">

@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.88.0",
+    date: "2026-10-29",
+    title: "Main street",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub's yard is now a street with a building for every game, and it grows longer as new games arrive.",
+      },
+    ],
+  },
+  {
     version: "3.87.0",
     date: "2026-10-29",
     title: "Wheels out",

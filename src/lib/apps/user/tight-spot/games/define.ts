@@ -4,7 +4,16 @@ import type { IconComponentProps } from "phosphor-svelte";
 import type { Component, Snippet } from "svelte";
 import type { DriveSettings } from "../core/settings.svelte";
 
-export const Building = { CAR_PARK: "car-park", WAREHOUSE: "warehouse" } as const;
+export const Building = {
+  CAR_PARK: "car-park",
+  WAREHOUSE: "warehouse",
+  VALET_STAND: "valet-stand",
+  APRON: "apron",
+  FERRY: "ferry",
+  GARDEN: "garden",
+  ARENA: "arena",
+  TRACK: "track",
+} as const;
 export type Building = (typeof Building)[keyof typeof Building];
 
 export interface GameProps {

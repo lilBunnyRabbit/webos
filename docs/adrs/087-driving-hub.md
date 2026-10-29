@@ -59,6 +59,15 @@ Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicl
 ## Revision 2026-10-29 (accepted: the yard street, a plot per game)
 Decided in `docs/brainstorm/2026-10-29_drive-hub-wave-3.md`, not built yet. The fixed 56 × 44 m yard with two plots becomes a street: one road west to east, the gate at the west end, plots on both sides, `ceil(n / 2)` pairs for `n` games, so every registered game gets a plot and a new game extends the street east. The landing frames the gate and the nearest plots, not the whole yard. One plot per game; a game's modes stay inside its building. Each game decides what a hit means (the detection, `collide()`, stays shared). New games keep their saved data in the app's data folder (ADR-035), not localStorage.
 
+## Revision 2026-10-29 (implemented: the yard street)
+Built as accepted above. The build's calls within scope:
+- **Plot order.** Plot `i` is in pair `⌊i / 2⌋`, the north side for an even `i` and the south side for an odd one, so `GAMES` fill the street west to east alternating sides (Tight Spot north, the Warehouse across the road from it). An odd count finishes its pair with a shut building marked Soon.
+- **Cross-section.** Buildings stay 18 × 11.6 m with their 6 m doorways; 34 m of road between the rows of fronts (the old yard had 32 m to its south wall), so a 24 m road train just out of a doorway stops short of the apron across the street and isn't offered that game.
+- **Forecourt.** The gate moved to the west wall; the bays (north wall), the cone slalom and the garage pad (now lying east to west, the vehicle placed facing east) sit in a 30 m forecourt before the first pair; the bollards stand across the road at the east end. The street ends 10 m past the last pair.
+- **Landing.** The camera frames the gate, the forecourt and the first pair (`Yard.landing`), not the whole street; a wide window shows more of it.
+- **Looks.** `Building` gains `valet-stand`, `apron`, `ferry`, `garden`, `arena` and `track`, each with a roof in `hub/draw.ts`, so a new game only registers. The south side is drawn through a mirror of the north.
+- **The open lot** (`open_world`, its chunks and the rows and angled layouts it uses) moved to `core/lot.ts` and `core/lot-layout.ts`; a lot cell now carries its own `build(rng)`, so parking's spots build their kind through it and the core never imports a game.
+
 ## Consequences
 - One large app; folders keep games apart.
 - The id `tight-spot` stays even for games that aren't parking.
