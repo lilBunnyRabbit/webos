@@ -12,6 +12,11 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["tight-spot"],
+        text: "Tight Spot lets you park the GT car: pick it in any car spot or in the open lot.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
         text: "The GT and F1 cars turn less sharply at speed.",
       },
       {

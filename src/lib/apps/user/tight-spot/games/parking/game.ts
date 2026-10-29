@@ -50,7 +50,7 @@ export type ScenarioPick = Scenario | typeof ANY;
 export { MAX_ANGLE };
 
 const CARS: readonly Vehicle[] = [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP];
-const CAR_LIKES: readonly Vehicle[] = [...CARS, Vehicle.CITY, Vehicle.SUV, Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.TUK_TUK, Vehicle.GOLF_CART];
+const CAR_LIKES: readonly Vehicle[] = [...CARS, Vehicle.CITY, Vehicle.SUV, Vehicle.GT, Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.TUK_TUK, Vehicle.GOLF_CART];
 const ROOMY: readonly Vehicle[] = [...CAR_LIKES, Vehicle.LIMO, Vehicle.CAMPER];
 // The machines the planner proves in the car kinds: the skid steers everywhere, the tank and the telehandler where
 // their width still leaves room.
@@ -90,7 +90,8 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
     name: "Underground",
     brief: "Down the ramp into the garage, along the aisle and in between the pillars, either way round.",
     par: 1,
-    vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN],
+    vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.GT],
+    ladder: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN],
   },
   narrow: { name: "Narrow aisle", brief: "Cars on both sides and little room to swing.", par: 2, vehicles: [...ROOMY, ...WIDE_MACHINES], ladder: CARS },
   door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: [...CAR_LIKES, Vehicle.CAMPER, ...SKIDS], ladder: CARS },
@@ -166,7 +167,7 @@ export const OPEN_INFO = {
   name: "Open lot",
   brief: "Drive around and park in any free bay.",
   par: 1,
-  vehicles: [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP, Vehicle.TOWING, Vehicle.F1, Vehicle.TUK_TUK, Vehicle.GOLF_CART] as readonly Vehicle[],
+  vehicles: [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP, Vehicle.GT, Vehicle.TOWING, Vehicle.F1, Vehicle.TUK_TUK, Vehicle.GOLF_CART] as readonly Vehicle[],
 };
 
 export type VehiclePick = Vehicle | typeof ANY;
