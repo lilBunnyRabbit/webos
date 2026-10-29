@@ -29,6 +29,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "A Machines shelf in Drive Hub's garage brings vehicles that drive differently: a skid-steer loader, a zero-turn mower and a tank that spin on the spot, a wheel loader and an articulated dump truck that bend in the middle, a ladder truck whose back wheels steer too, and a telehandler that can crab sideways; Tight Spot parks them where they fit.",
       },
+      {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Tight Spot's toolbar fits on one row on a phone again, so the lot gets that height back: the kind of spot is picked on the start card, and Restart sits in the pause menu and the end card.",
+      },
     ],
   },
   {

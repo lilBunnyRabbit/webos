@@ -542,14 +542,18 @@
   />
 {/snippet}
 
+{#snippet kind_picker(class_name: string)}
+  <Select class={class_name} size="sm" aria-label="Kind of spot" options={PICK_OPTIONS} bind:value={() => pick, set_pick} />
+{/snippet}
+
 {#snippet toolbar()}
   {@render menu?.()}
   <Segmented size="sm" class="hidden @xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
-  <Select class="w-[5.75rem] @xl:hidden" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
+  <Select class="w-[5.75rem] @xl:hidden pointer-coarse:w-[6.5rem]" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
   {#if mode === Mode.SCENARIO && !daily}
-    <Select class="w-[7.5rem] min-w-0 @md:w-32" size="sm" aria-label="Kind of spot" options={PICK_OPTIONS} bind:value={() => pick, set_pick} />
+    {@render kind_picker("hidden w-32 min-w-0 @md/ts-app:inline-flex")}
   {:else if mode === Mode.LEVELS}
-    <Select class="w-36 min-w-0 @md:w-40" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+    <Select class="w-[7.5rem] min-w-0 @md:w-40" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
   {/if}
   {#if choosing_vehicle}{@render vehicle_picker("hidden w-36 min-w-0 @2xl/ts-app:inline-flex")}{/if}
   {#if daily}<span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>{/if}
@@ -558,7 +562,7 @@
   <IconButton size="sm" class="hidden @md:inline-flex" label={play_label} disabled={!can_pause} onclick={toggle_pause}>
     {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
   </IconButton>
-  <IconButton size="sm" label="Retry this spot" onclick={retry}>
+  <IconButton size="sm" class="hidden @md:inline-flex" label="Retry this spot" onclick={retry}>
     <ArrowCounterClockwiseIcon weight="bold" />
   </IconButton>
   {#if mode !== Mode.LEVELS}
@@ -624,6 +628,12 @@
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
           Par {moves_text(round_par)}{best ? ` · Best ${moves_text(best.moves)}, ${format_time(best.ms, { tenths: true })}` : ""}{best?.precision !== undefined ? ` · precision ${best.precision}%` : ""}
         </p>
+        {#if mode === Mode.SCENARIO && !daily}
+          <!-- A phone's toolbar has no room for it next to the switcher, the mode, settings and New. -->
+          <div class="mt-1.5 flex items-center gap-2 text-2xs text-foreground/65 @md/ts-app:hidden">
+            Spot {@render kind_picker("w-40 min-w-0")}
+          </div>
+        {/if}
         {#if choosing_vehicle && vehicle_options.length > 1}
           <div class="mt-1.5 flex items-center gap-2 text-2xs text-foreground/65 @2xl/ts-app:hidden">
             Vehicle {@render vehicle_picker("w-40 min-w-0")}
