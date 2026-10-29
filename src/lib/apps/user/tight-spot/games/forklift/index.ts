@@ -14,6 +14,7 @@ export default define_game({
     { id: "forklift-levels", title: "Shift lead", text: "Finish every warehouse level.", goal: 16 },
     { id: "forklift-daily", title: "Daily delivery", text: "Finish the daily job." },
     { id: "forklift-spotless", title: "Spotless", text: "Put every pallet of a job of three or more down Perfect.", secret: true },
+    { id: "forklift-top-shelf", title: "Top shelf", text: "Put a pallet away on a top shelf without a scrape." },
   ],
   load: () => import("./game.svelte"),
 });

@@ -1,5 +1,6 @@
 import { create_rng, random_int, shuffle, type Rng } from "$lib/core/utils/random";
 import { bounds_of, lerp, oriented_box, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import type { Scene } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "../../core/seed";
 
@@ -23,6 +24,9 @@ const PILLAR = 0.5;
 const NORTH = -Math.PI / 2;
 const SOUTH = Math.PI / 2;
 
+/** The top of each tier's beam above the floor: the floor, about 1.5 m and about 3 m. */
+export const TIER_HEIGHTS = [0, 1.5, 3] as const;
+
 export const SlotKind = { RACK: "rack", DOCK: "dock" } as const;
 export type SlotKind = (typeof SlotKind)[keyof typeof SlotKind];
 
@@ -36,6 +40,10 @@ export interface Slot {
   heading: number;
   /** Where a pallet stored here sits: its centre, heading the way the forks go in. */
   home: Pose;
+  /** 0 on the floor, 1 and 2 on the rack's beams (`TIER_HEIGHTS`); a bay's tiers share its footprint. */
+  tier: number;
+  /** How many tiers its bay has: 2 or 3 in a rack, 1 at the dock. */
+  tiers: number;
 }
 
 /** One face of a rack row: its bays open onto the aisle on the `facing` side (1 south, −1 north). */
@@ -46,6 +54,8 @@ export interface Face {
   facing: 1 | -1;
   x0: number;
   x1: number;
+  /** Tiers in each of its bays, 2 or 3. */
+  tiers: number;
 }
 
 export interface Warehouse {
@@ -54,8 +64,10 @@ export interface Warehouse {
   bounds: Bounds;
   floor: Polygon;
   walls: Polygon[];
-  /** Every solid but the job's pallets: walls, pillars, rack uprights and rails, stored stock. */
+  /** What never moves and stands full height: walls, pillars, rack uprights and rails. */
   solids: Solid[];
+  /** The stock on each tier as solids, the floor's first: forks and loads only meet the tier they're at. */
+  shelves: Scene[];
   faces: Face[];
   /** The ground under each rack row. */
   footprints: Polygon[];
@@ -69,8 +81,8 @@ export interface Warehouse {
   lines: [Vec, Vec][];
   charger: Polygon;
   start: Pose;
-  /** The pallets already stored, as their centre poses. */
-  stock: Pose[];
+  /** The slots holding stock, every tier. */
+  stock: Slot[];
 }
 
 export interface Layout {
@@ -80,18 +92,22 @@ export interface Layout {
   bays: number;
   rows: number;
   main: number;
+  /** Tiers per rack face, from the north. */
+  tiers: number[];
 }
 
 export function layout(seed: number, difficulty: number): Layout {
   const rng = create_rng(hash(seed, 0xa15e));
   const t = Math.max(0, Math.min(1, difficulty));
-  return {
-    aisle: lerp(4.6, 4.0, t) + rng() * 0.25,
-    clear: lerp(0.2, 0.1, t),
-    bays: random_int(6, 8, rng),
-    rows: t < 0.3 && rng() < 0.75 ? 1 : 2,
-    main: lerp(5.6, 4.8, t) + rng() * 0.3,
-  };
+  const aisle = lerp(4.6, 4.4, t) + rng() * 0.25;
+  const clear = lerp(0.2, 0.1, t);
+  const bays = random_int(6, 8, rng);
+  const rows = t < 0.3 && rng() < 0.75 ? 1 : 2;
+  const main = lerp(5.6, 4.8, t) + rng() * 0.3;
+  // A rng of its own, so the floors and jobs of the seeds from before the tiers stay as they were.
+  const tall = create_rng(hash(seed, 0x7e75));
+  const tiers = Array.from({ length: 1 + rows * 2 }, () => (tall() < lerp(0.35, 0.8, t) ? 3 : 2));
+  return { aisle, clear, bays, rows, main, tiers };
 }
 
 export function pallet_shape(pose: Pose): Polygon {
@@ -103,18 +119,22 @@ function rack_slots(face: Face, pitch: number, bays: number): Slot[] {
   const heading = inward < 0 ? NORTH : SOUTH;
   const at = (u: number) => face.front + inward * u;
   const slots: Slot[] = [];
-  for (let k = 0; k < bays; k++) {
-    const x0 = face.x0 + k * pitch + UPRIGHT;
-    const x1 = face.x0 + (k + 1) * pitch;
-    const a = at(-OUT);
-    const b = at(DEPTH - 0.02);
-    slots.push({
-      name: `${face.letter}${k + 1}`,
-      kind: SlotKind.RACK,
-      shape: rect(x0, Math.min(a, b), x1, Math.max(a, b)),
-      heading,
-      home: { x: (x0 + x1) / 2, y: at(-OVERHANG + PALLET.length / 2), heading },
-    });
+  for (let tier = 0; tier < face.tiers; tier++) {
+    for (let k = 0; k < bays; k++) {
+      const x0 = face.x0 + k * pitch + UPRIGHT;
+      const x1 = face.x0 + (k + 1) * pitch;
+      const a = at(-OUT);
+      const b = at(DEPTH - 0.02);
+      slots.push({
+        name: `${face.letter}${k + 1}`,
+        kind: SlotKind.RACK,
+        shape: rect(x0, Math.min(a, b), x1, Math.max(a, b)),
+        heading,
+        home: { x: (x0 + x1) / 2, y: at(-OVERHANG + PALLET.length / 2), heading },
+        tier,
+        tiers: face.tiers,
+      });
+    }
   }
   return slots;
 }
@@ -139,7 +159,7 @@ const LETTERS = "ABCDEFGH";
  * aisles between, cross aisles at both ends, a main aisle and the dock along the south wall with a door per spot, the
  * forklift's charging bay in the south-east corner. Tighter aisles and bays with difficulty.
  */
-export function build_warehouse(seed: number, difficulty: number): Omit<Warehouse, "stock"> {
+export function build_warehouse(seed: number, difficulty: number): Omit<Warehouse, "stock" | "shelves"> {
   const plan = layout(seed, difficulty);
   const pitch = PALLET.width + plan.clear * 2 + UPRIGHT;
   const cross = plan.aisle + 0.6;
@@ -150,7 +170,7 @@ export function build_warehouse(seed: number, difficulty: number): Omit<Warehous
   const faces: Face[] = [];
   const footprints: Polygon[] = [];
   const add_face = (front: number, back: number, facing: 1 | -1) =>
-    faces.push({ letter: LETTERS[faces.length], front, back, facing, x0, x1 });
+    faces.push({ letter: LETTERS[faces.length], front, back, facing, x0, x1, tiers: plan.tiers[faces.length] });
 
   let y = RAIL + DEPTH;
   add_face(y, RAIL, 1);
@@ -196,6 +216,8 @@ export function build_warehouse(seed: number, difficulty: number): Omit<Warehous
       shape: rect(cx - half, front, cx + half, back),
       heading: SOUTH,
       home: { x: cx, y: (front + back) / 2, heading: SOUTH },
+      tier: 0,
+      tiers: 1,
     });
     doors.push([
       { x: cx - 1.3, y: height },
@@ -267,34 +289,63 @@ function pick_kind(rng: Rng, docks_left: number): TaskKind {
   return roll < 0.42 ? TaskKind.PICK : roll < 0.84 ? TaskKind.PUT_AWAY : TaskKind.MOVE;
 }
 
+export function slot_key(slot: Slot): string {
+  return `${slot.name}:${slot.tier}`;
+}
+
+/** "B4", or "B4 ↑2" on an upper tier. */
+export function slot_label(slot: Slot): string {
+  return slot.tier > 0 ? `${slot.name} ↑${slot.tier}` : slot.name;
+}
+
+/** The share of the job's rack slots that sit on an upper tier. */
+export function upper_share(difficulty: number): number {
+  return lerp(0.25, 0.6, Math.max(0, Math.min(1, difficulty)));
+}
+
 /**
  * The warehouse with a job of `size` pallets: each from a slot to a free one, picked from the racks to the dock, put
- * away from the dock, or moved between racks. The racks' other bays hold stock, fuller with difficulty.
+ * away from the dock, or moved between racks. A rack slot of the job sits on an upper tier more often with difficulty.
+ * The racks' other slots hold stock, fuller with difficulty.
  */
 export function build_floor(seed: number, difficulty: number, size: number): Floor {
   const house = build_warehouse(seed, difficulty);
   const rng = create_rng(hash(seed, 0x70b5, size));
-  const racks = shuffle(house.slots.filter((slot) => slot.kind === SlotKind.RACK), rng);
+  const racks = shuffle(house.slots.filter((slot) => slot.kind === SlotKind.RACK && slot.tier === 0), rng);
   const docks = shuffle(house.slots.filter((slot) => slot.kind === SlotKind.DOCK), rng);
-  const tasks: Task[] = [];
+  const floor_tasks: Task[] = [];
   for (let i = 0; i < size; i++) {
     const kind = pick_kind(rng, docks.length);
-    if (kind === TaskKind.PICK) tasks.push({ kind, from: racks.pop()!, to: docks.pop()! });
-    else if (kind === TaskKind.PUT_AWAY) tasks.push({ kind, from: docks.pop()!, to: racks.pop()! });
+    if (kind === TaskKind.PICK) floor_tasks.push({ kind, from: racks.pop()!, to: docks.pop()! });
+    else if (kind === TaskKind.PUT_AWAY) floor_tasks.push({ kind, from: docks.pop()!, to: racks.pop()! });
     else {
       const from = racks.pop()!;
       let at = racks.length - 1;
       while (at > 0 && racks[at].name[0] === from.name[0]) at--;
       const [to] = racks.splice(at, 1);
-      tasks.push({ kind, from, to });
+      floor_tasks.push({ kind, from, to });
     }
   }
   const density = lerp(0.35, 0.7, Math.max(0, Math.min(1, difficulty)));
-  const stock = racks.filter(() => rng() < density).map((slot) => slot.home);
-  return {
-    ...house,
-    solids: [...house.solids, ...stock.map((pose) => ({ kind: SolidKind.PALLET, shape: pallet_shape(pose) }))],
-    stock,
-    tasks,
+  const floor_stock = racks.filter(() => rng() < density);
+
+  // The tiers draw from a rng of their own, so the floor-level choices of the seeds from before them stay as they were.
+  const high = create_rng(hash(seed, 0x71e2, size));
+  const share = upper_share(difficulty);
+  const by_key = new Map(house.slots.map((slot) => [slot_key(slot), slot]));
+  const raise = (slot: Slot): Slot => {
+    if (slot.kind !== SlotKind.RACK || high() >= share) return slot;
+    return by_key.get(slot_key({ ...slot, tier: 1 + Math.floor(high() * (slot.tiers - 1)) }))!;
   };
+  const tasks = floor_tasks.map((task) => ({ ...task, from: raise(task.from), to: raise(task.to) }));
+  const used = new Set(tasks.flatMap((task) => [slot_key(task.from), slot_key(task.to)]));
+  const kept = new Set(racks.map(slot_key));
+  const stock = [
+    ...floor_stock,
+    ...house.slots.filter((slot) => slot.kind === SlotKind.RACK && !kept.has(slot_key(slot)) && !used.has(slot_key(slot)) && high() < density),
+  ];
+  const shelves = TIER_HEIGHTS.map((_, tier) => ({
+    solids: stock.filter((slot) => slot.tier === tier).map((slot) => ({ kind: SolidKind.PALLET, shape: pallet_shape(slot.home) })),
+  }));
+  return { ...house, shelves, stock, tasks };
 }

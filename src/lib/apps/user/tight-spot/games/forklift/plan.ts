@@ -1,18 +1,22 @@
 import { angle_between, type Pose } from "../../core/geometry";
-import { obstacles } from "../../core/obstacles";
 import { arc, body_ends, type Placement } from "../../core/vehicle";
 import { plan, type Move } from "../../core/planner";
 import {
   can_lift,
   contact,
+  depth_to,
   fork_fit,
   JAM_SIDE,
   load_pose,
+  near_of,
   offset_of,
   placed_in,
+  side_room,
   SPEC,
   type GameState,
+  type Near,
   type Par,
+  type Resting,
 } from "./game";
 import { PALLET, type Slot } from "./warehouse";
 import { MAX_ANGLE } from "../../core/precision";
@@ -53,7 +57,7 @@ function straight_in(from: Placement, done: (pose: Placement) => boolean, blocke
   return null;
 }
 
-function along(pose: Pose, distance: number): Pose {
+function ahead_of(pose: Pose, distance: number): Pose {
   return { x: pose.x + Math.cos(pose.heading) * distance, y: pose.y + Math.sin(pose.heading) * distance, heading: pose.heading };
 }
 
@@ -63,7 +67,8 @@ function lateral(pose: Pose, target: Pose): number {
 
 /**
  * A leg ends with a straight run in: the search only has to line the forklift up with the slot, as a driver does, and
- * the last stretch goes straight until the forks are fully in or the pallet sits in its target.
+ * the last stretch goes straight until the forks are fully in or the pallet sits in its target. At an upper tier that
+ * run is the side view's, the forks raised into the slot (`blocked_in`).
  */
 function leg(
   from: Placement,
@@ -71,71 +76,80 @@ function leg(
   lined_up: (pose: Placement) => boolean,
   done: (pose: Placement) => boolean,
   blocked: (pose: Placement) => boolean,
-  near: ReturnType<typeof obstacles>
+  near: Near,
+  blocked_in: (pose: Placement) => boolean = blocked
 ): Leg | null {
-  const finish = (pose: Placement) => lined_up(pose) && straight_in(pose, done, blocked) !== null;
-  const found = plan(from, stage, near, { spec: SPEC, arrive: finish, blocked, max_expansions: EXPANSIONS, steering: STEERING, switch_cost: SWITCH });
+  const finish = (pose: Placement) => lined_up(pose) && straight_in(pose, done, blocked_in) !== null;
+  const found = plan(from, stage, near.base, { spec: SPEC, arrive: finish, blocked, max_expansions: EXPANSIONS, steering: STEERING, switch_cost: SWITCH });
   if (!found) return null;
   const last = found.path[found.path.length - 1];
-  const run = straight_in(last, done, blocked)!;
+  const run = straight_in(last, done, blocked_in)!;
   const moves = run > 0 ? [...found.moves, { steer: 0, distance: run }] : found.moves;
   return { moves, end: arc(last, 0, run) };
 }
 
 /**
  * The whole job as a driver could do it from the forklift's real start: to each pallet, forks fully and squarely in,
- * then with it on the forks to its target, every pallet in the way where the job has left it. Null when a leg can't be
+ * then with it on the forks to its target, every pallet in the way where the job has left it. After a lift or a
+ * put-down at an upper tier the forks stay raised into that slot while they reach into it. Null when a leg can't be
  * found.
  */
 export function plan_job(state: GameState): JobPlan | null {
   const { floor } = state;
-  const near = obstacles(floor);
+  const near = near_of(floor);
   const mast = body_ends(SPEC).front;
-  let poses = state.loads.map((load) => load.pose);
+  let items: Resting[] = state.loads.map((load) => ({ pose: load.pose, tier: load.tier }));
   let at: Placement = { x: state.car.x, y: state.car.y, heading: state.car.heading };
+  let raised: Slot | null = null;
   const legs: Leg[] = [];
   for (let i = 0; i < floor.tasks.length; i++) {
     const task = floor.tasks[i];
-    const others = (except: number) => poses.filter((_, k) => k !== except);
-    const pallet = poses[i];
+    const pallet = items[i].pose;
+    const upper_from = task.from.tier > 0 ? task.from : null;
+    const upper_to = task.to.tier > 0 ? task.to : null;
 
-    const empty = (pose: Placement) => contact(near, poses, pose, null, MARGIN) !== null;
-    const pick_stage = along({ ...pallet, heading: pallet.heading }, -(PALLET.length / 2 + mast + STAGE));
+    const was_raised = raised;
+    // The search keeps the forks out from under an upper pallet, and the load out of an upper target's floor slot, as if
+    // they stood on the floor: wandering in under them only cost it its expansions.
+    const fenced = items.map((item, k) => (k === i ? { ...item, tier: 0 } : item));
+    const empty = (pose: Placement) => contact(near, fenced, pose, null, was_raised, MARGIN) !== null;
+    const empty_in = upper_from ? (pose: Placement) => contact(near, items, pose, null, upper_from, MARGIN) !== null : empty;
+    const pick_stages = (upper_from ? [PALLET.length + 0.1, STAGE] : [STAGE]).map((back) => ahead_of(pallet, -(PALLET.length / 2 + mast + back)));
     // Lined up before the tips reach the pallet, with room inside the pockets' limits, as a driver would square up.
     const facing = (pose: Placement) => {
       const off = fork_fit(pose, pallet);
       return off.angle <= MAX_ANGLE - LINED_UP && Math.abs(off.side) <= JAM_SIDE - SIDE_ROOM && off.gap > PALLET.length && off.gap < REACH + PALLET.length;
     };
-    const fetched = leg(at, pick_stage, facing, (pose) => can_lift(fork_fit(pose, pallet)), empty, near);
+    let fetched: Leg | null = null;
+    for (const stage of pick_stages) fetched ??= leg(at, stage, facing, (pose) => can_lift(fork_fit(pose, pallet)), empty, near, empty_in);
     if (!fetched) return null;
     legs.push(fetched);
     at = fetched.end;
 
     const offset = offset_of(at, pallet);
-    const rest = others(i);
-    const loaded = (pose: Placement) => contact(near, rest, pose, load_pose(pose, offset), MARGIN) !== null;
+    const rest = items.filter((_, k) => k !== i);
+    const fence = upper_to ? [...rest, { pose: upper_to.home, tier: 0 }] : rest;
+    const loaded = (pose: Placement) => contact(near, fence, pose, load_pose(pose, offset), upper_from, MARGIN) !== null;
+    const loaded_in = upper_to ? (pose: Placement) => contact(near, rest, pose, load_pose(pose, offset), upper_to, MARGIN) !== null : loaded;
     const reach_to = offset.x;
-    const drop_stage = along(task.to.home, -(reach_to + STAGE));
+    const drop_stages = (upper_to ? [PALLET.length + 0.1, STAGE] : [STAGE]).map((back) => ahead_of(task.to.home, -(reach_to + back)));
+    // At an upper tier the load has to stop short of the slot's face, where the side view raises it.
     const toward = (pose: Placement) => {
       const load = load_pose(pose, offset);
-      return angle_between(load.heading, task.to.heading) <= MAX_ANGLE && lateral(load, task.to.home) <= slack(task.to) && ahead(load, task.to.home);
+      if (upper_to && depth_to(load, upper_to) < PALLET.length) return false;
+      return angle_between(load.heading, task.to.heading) <= MAX_ANGLE && lateral(load, task.to.home) <= side_room(task.to) && ahead(load, task.to.home);
     };
-    const delivered = leg(at, drop_stage, toward, (pose) => placed_in(load_pose(pose, offset), task.to), loaded, near);
+    let delivered: Leg | null = null;
+    for (const stage of drop_stages) delivered ??= leg(at, stage, toward, (pose) => placed_in(load_pose(pose, offset), task.to), loaded, near, loaded_in);
     if (!delivered) return null;
     legs.push(delivered);
     at = delivered.end;
     const dropped = load_pose(at, offset);
-    poses = poses.map((pose, k) => (k === i ? dropped : pose));
+    items = items.map((item, k) => (k === i ? { pose: dropped, tier: task.to.tier } : item));
+    raised = upper_to;
   }
   const moves = legs.flatMap((each) => each.moves);
   return { moves, reversals: reversals(moves), distance: moves.reduce((sum, move) => sum + Math.abs(move.distance), 0), legs };
-}
-
-function slack(slot: Slot): number {
-  const xs = slot.shape.map((p) => p.x);
-  const ys = slot.shape.map((p) => p.y);
-  const across = Math.abs(Math.cos(slot.heading)) > 0.5 ? Math.max(...ys) - Math.min(...ys) : Math.max(...xs) - Math.min(...xs);
-  return Math.max(0.02, (across - PALLET.width) / 2);
 }
 
 function ahead(from: Pose, target: Pose): boolean {
@@ -157,16 +171,23 @@ export function reversals(moves: readonly Move[]): number {
 
 /** Metres a second a careful driver averages round a warehouse, start and stop included. */
 export const PAR_SPEED = 1.4;
-/** Seconds per change of direction (stop, shift, set off) and per lift or lower. */
+/** Seconds per change of direction (stop, shift, set off), per lift or lower, and on top of that per one at an upper tier. */
 export const PAR_TURN = 2.5;
 export const PAR_FORK = 2;
+export const PAR_RACK = 10;
 export const PAR_SLACK = 1.25;
 
 /**
- * The par time from the planner's path: its length at a careful pace, time for each of its changes of direction and
- * for each lift and lower, plus a quarter for slack, rounded up to 5 s.
+ * The par time from the planner's path: its length at a careful pace, time for each of its changes of direction, for
+ * each lift and lower and for each of those `racked` at an upper tier (raising, lining up, creeping in), plus a quarter
+ * for slack, rounded up to 5 s.
  */
-export function par_of(found: JobPlan, pallets: number): Par {
-  const seconds = (found.distance / PAR_SPEED + found.reversals * PAR_TURN + pallets * 2 * PAR_FORK) * PAR_SLACK;
+export function par_of(found: JobPlan, pallets: number, racked = 0): Par {
+  const seconds = (found.distance / PAR_SPEED + found.reversals * PAR_TURN + pallets * 2 * PAR_FORK + racked * PAR_RACK) * PAR_SLACK;
   return { ms: Math.ceil(seconds / 5) * 5000 };
+}
+
+/** Lifts and put-downs of the job at an upper tier. */
+export function racked(state: Pick<GameState, "floor">): number {
+  return state.floor.tasks.reduce((count, task) => count + (task.from.tier > 0 ? 1 : 0) + (task.to.tier > 0 ? 1 : 0), 0);
 }

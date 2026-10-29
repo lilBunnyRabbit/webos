@@ -21,6 +21,13 @@ import { Gear, Vehicle } from "../../core/vehicle";
 import { carried_pose, fork_depth, objective, SPEC, Status, type GameState } from "./game";
 import { PALLET, pallet_shape, SlotKind, type Slot } from "./warehouse";
 
+// An upper tier's pallet is drawn shifted up and left per tier, so a bay's stack reads from above.
+const STACK = 0.09;
+
+function stacked(pose: Pose, tier: number): Pose {
+  return tier > 0 ? { ...pose, x: pose.x - STACK * tier, y: pose.y - STACK * tier } : pose;
+}
+
 export interface Extras {
   guides: boolean;
   time: number;
@@ -198,7 +205,7 @@ function names(state: GameState, scale: number, palette: Palette): Tag[] {
   const small = Math.max(10, Math.min(17, scale * 0.36));
   if (scale > 14) {
     for (const slot of floor.slots) {
-      if (slot.kind !== SlotKind.RACK) continue;
+      if (slot.kind !== SlotKind.RACK || slot.tier > 0) continue;
       const at = { x: slot.home.x, y: slot.home.y - Math.sin(slot.heading) * (PALLET.length / 2 + 0.57) };
       items.push({ at, text: slot.name, size: small, colour: palette.paint });
     }
@@ -264,15 +271,17 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, SPEC, scale, palette);
   player(ctx, state.car, Vehicle.FORKLIFT, SPEC, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
   // Pallets go over the forklift: its tines slide in under the deck, and nothing else of it can overlap one.
-  for (const pose of floor.stock) pallet(ctx, pose, PALLET.length, PALLET.width, PalletLoad.WRAPPED, scale, palette);
-  state.loads.forEach((each) => {
-    if (!each.carried) pallet(ctx, each.pose, PALLET.length, PALLET.width, PalletLoad.BOXES, scale, palette);
-  });
+  const stack = [
+    ...floor.stock.map((slot) => ({ pose: slot.home, tier: slot.tier, load: PalletLoad.WRAPPED })),
+    ...state.loads.filter((each) => !each.carried).map((each) => ({ pose: each.pose, tier: each.tier, load: PalletLoad.BOXES })),
+  ].sort((a, b) => a.tier - b.tier);
+  for (const each of stack) pallet(ctx, stacked(each.pose, each.tier), PALLET.length, PALLET.width, each.load, scale, palette);
   const load = carried_pose(state);
-  if (load) pallet(ctx, load, PALLET.length, PALLET.width, PalletLoad.BOXES, scale, palette);
+  const lifted = state.side ? state.side.slot.tier : (state.raised?.tier ?? 0);
+  if (load) pallet(ctx, stacked(load, lifted), PALLET.length, PALLET.width, PalletLoad.BOXES, scale, palette);
   if (playing && current && !current.carried) {
     ctx.globalAlpha = 0.6 + 0.4 * pulse;
-    ring(ctx, current.pose, palette.target, Math.max(0.08, 2.5 / scale), 1.18);
+    ring(ctx, stacked(current.pose, current.tier), palette.target, Math.max(0.08, 2.5 / scale), 1.18);
     ctx.globalAlpha = 1;
   }
 
@@ -289,18 +298,19 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     // Close enough to see its load, the number moves into the aisle at the pallet's open face, where the forks go in.
     const out = scale < 25 ? 0 : PALLET.length / 2 + 0.4;
     const at = { x: each.pose.x - Math.cos(each.pose.heading) * out, y: each.pose.y - Math.sin(each.pose.heading) * out };
-    items.push({ at, text: String(i + 1), size: badge, colour: mine ? palette.void : palette.paint, pill: mine ? palette.target : palette.floor, ring: mine ? undefined : palette.free });
+    items.push({ at, text: task.from.tier > 0 ? `${i + 1} ↑${task.from.tier}` : String(i + 1), size: badge, colour: mine ? palette.void : palette.paint, pill: mine ? palette.target : palette.floor, ring: mine ? undefined : palette.free });
   });
   floor.tasks.forEach((task, i) => {
     const each = state.loads[i];
     if (each.placed) return;
     const at = centre(task.to.shape);
+    const up = task.to.tier > 0 ? ` ↑${task.to.tier}` : "";
     if (playing && i === state.current) {
       // Once the load is over its target the pill would hide how it sits; the glowing outline is enough there.
       if (load && Math.hypot(load.x - at.x, load.y - at.y) < 1.2) return;
-      items.push({ at, text: `→${i + 1}`, size: badge, colour: palette.void, pill: palette.target });
+      items.push({ at, text: `→${i + 1}${up}`, size: badge, colour: palette.void, pill: palette.target });
     }
-    else items.push({ at, text: `→${i + 1}`, size: badge * 0.85, colour: palette.paint, pill: palette.floor, ring: palette.free });
+    else items.push({ at, text: `→${i + 1}${up}`, size: badge * 0.85, colour: palette.paint, pill: palette.floor, ring: palette.free });
   });
   tags(ctx, items, view, extras.font, palette);
 

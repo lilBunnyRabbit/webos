@@ -29,8 +29,13 @@ import {
   task_line,
   unlocked,
   use_fork,
+  carried_pose,
+  drop_fit,
+  settle_raised,
+  SideKind,
   type GameState,
 } from "./game";
+import { close_side, CLEAN, Fit, ideal_lift, judge, LIFT_RATE, open_side, reach, side_action, step_side, TRAVEL, use_side } from "./rack";
 import { PALLET } from "./warehouse";
 
 const DEG = Math.PI / 180;
@@ -80,7 +85,7 @@ describe("forks", () => {
 });
 
 describe("a job", () => {
-  const start = create_game(level_round(1));
+  const start = create_game(level_round(3));
   const task = start.floor.tasks[0];
 
   test("starts ready, the forklift parked at the charger, no pallet in hand", () => {
@@ -141,6 +146,79 @@ describe("a job", () => {
     state = change_gear(state, Gear.DRIVE);
     state = change_gear(state, Gear.REVERSE);
     expect(state.moves).toBe(2);
+  });
+});
+
+describe("an upper tier", () => {
+  const start = create_game(level_round(1));
+  const task = start.floor.tasks[0];
+  const at_face = driving(start, at_pallet(task.from.home, PALLET.length + 0.3));
+  const opened = open_side(at_face);
+  const view = opened.side!;
+  const with_lift = (lift: number): GameState => ({ ...opened, side: { ...view, lift } });
+  const drive_in = (state: GameState, steps = 600): GameState => {
+    let next = state;
+    for (let i = 0; i < steps && next.status === Status.DRIVING && !side_action(next); i++) next = step_side(next, { lift: 0, drive: 1 }, 1 / 120);
+    return next;
+  };
+
+  test("the job's first pallet sits on ↑1 and the task line says so", () => {
+    expect(task.from.tier).toBe(1);
+    expect(task_line(start)).toBe(`Pallet 1/1 · pick up at ${task.from.name} ↑1`);
+  });
+
+  test("standing at the rack face, F opens the side view, the forks at travel height", () => {
+    expect(fork_action(at_face)).toBe(ForkAction.RACK);
+    expect(fork_hint(at_face)).toBeNull();
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 0.6)))).toBe("Back out to the rack face: it's up on ↑1");
+    expect(view.kind).toBe(SideKind.PICK);
+    expect(view.lift).toBe(TRAVEL);
+  });
+
+  test("raising runs at a fixed rate and holds once the tips are in", () => {
+    const raised = step_side(opened, { lift: 1, drive: 0 }, 0.5);
+    expect(raised.side!.lift).toBeCloseTo(TRAVEL + 0.5 * LIFT_RATE, 9);
+    const inside = drive_in(with_lift(ideal_lift(view)), 180);
+    expect(reach(inside, inside.side!)).toBeGreaterThan(0);
+    expect(step_side(inside, { lift: 1, drive: 0 }, 0.5).side!.lift).toBe(inside.side!.lift);
+  });
+
+  test("clean or scraped goes in and lifts; the forks stay raised into the slot until they're out of it", () => {
+    for (const off of [0.02, -0.07]) {
+      const ready = drive_in(with_lift(ideal_lift(view) + off));
+      expect(ready.status).toBe(Status.DRIVING);
+      expect(judge(ready.side!.miss!)).toBe(Math.abs(off) <= CLEAN ? Fit.CLEAN : Fit.SCRAPE);
+      expect(side_action(ready)).toBe(ForkAction.LIFT);
+      const lifted = use_side(ready);
+      expect(lifted.side).toBeNull();
+      expect(lifted.raised).toBe(task.from);
+      expect(lifted.loads[0].miss).toBeCloseTo(off, 9);
+      const load = carried_pose(lifted);
+      expect(settle_raised(lifted.raised, lifted.car, load)).toBe(task.from);
+      const out = { ...lifted.car, ...at_pallet(task.from.home, 2.5) };
+      expect(settle_raised(lifted.raised, out, load_pose(out, lifted.loads[0].carried!))).toBeNull();
+    }
+  });
+
+  test("more than 10 cm off hits: too low the beam, too high the pallet", () => {
+    const low = drive_in(with_lift(ideal_lift(view) - 0.12));
+    expect(low.status).toBe(Status.CRASHED);
+    expect(crash_title(low.hit)).toBe("The forks hit a rack beam");
+    const high = drive_in(with_lift(ideal_lift(view) + 0.12));
+    expect(high.hit?.kind).toBe(JAM);
+  });
+
+  test("back out of the view only with the forks out", () => {
+    expect(close_side(opened).side).toBeNull();
+    const inside = drive_in(with_lift(ideal_lift(view)), 180);
+    expect(close_side(inside)).toBe(inside);
+  });
+
+  test("a height miss costs precision as a share of 10 cm", () => {
+    const home = task.from.home;
+    expect(drop_fit(home, task.from, [0.05]).score).toBeCloseTo(drop_fit(home, task.from).score * 0.75, 6);
+    expect(drop_fit(home, task.from, [0.02, -0.07]).miss).toBeCloseTo(0.07, 9);
+    expect(drop_fit(home, task.from, [0.12]).score).toBe(0);
   });
 });
 

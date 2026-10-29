@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { inside_convex, overlaps } from "../../core/collision";
 import { collide, obstacles } from "../../core/obstacles";
 import { create_car, FORKLIFT, Gear } from "../../core/vehicle";
-import { build_floor, layout, pallet_shape, SlotKind } from "./warehouse";
+import { build_floor, layout, pallet_shape, slot_key, SlotKind, upper_share } from "./warehouse";
 
 const SEEDS = [1, 7, 42, 2026, 99_001];
 
@@ -29,7 +29,7 @@ describe("warehouse floor", () => {
         for (const slot of floor.slots) {
           const shape = pallet_shape(slot.home);
           expect(shape.every((corner) => inside_convex(corner, slot.shape)), slot.name).toBe(true);
-          const others = floor.solids.filter((solid) => !(solid.kind === "pallet" && solid.shape.every((p, i) => Math.abs(p.x - shape[i].x) < 1e-9)));
+          const others = [...floor.solids, ...floor.shelves[slot.tier].solids].filter((solid) => !(solid.kind === "pallet" && solid.shape.every((p, i) => Math.abs(p.x - shape[i].x) < 1e-9)));
           expect(others.some((solid) => overlaps(shape, solid.shape)), slot.name).toBe(false);
         }
       });
@@ -39,14 +39,23 @@ describe("warehouse floor", () => {
         expect(floor.tasks).toHaveLength(4);
         const used = floor.tasks.flatMap((task) => [task.from.name, task.to.name]);
         expect(new Set(used).size).toBe(used.length);
-        const stocked = new Set(floor.stock.map((pose) => `${pose.x.toFixed(3)},${pose.y.toFixed(3)}`));
+        const stocked = new Set(floor.stock.map(slot_key));
         for (const task of floor.tasks) {
-          expect(stocked.has(`${task.from.home.x.toFixed(3)},${task.from.home.y.toFixed(3)}`)).toBe(false);
-          expect(stocked.has(`${task.to.home.x.toFixed(3)},${task.to.home.y.toFixed(3)}`)).toBe(false);
+          expect(stocked.has(slot_key(task.from))).toBe(false);
+          expect(stocked.has(slot_key(task.to))).toBe(false);
+          for (const slot of [task.from, task.to]) expect(slot.tier).toBeLessThan(slot.tiers);
         }
       });
     }
   }
+
+  test("racks have two or three tiers a face, taller and with more of the job up high as it gets harder", () => {
+    for (const seed of SEEDS) for (const tiers of layout(seed, 0.5).tiers) expect([2, 3]).toContain(tiers);
+    expect(upper_share(1)).toBeGreaterThan(upper_share(0));
+    const upper = (difficulty: number) =>
+      SEEDS.flatMap((seed) => build_floor(seed, difficulty, 4).tasks.flatMap((task) => [task.from, task.to])).filter((slot) => slot.tier > 0).length;
+    expect(upper(1)).toBeGreaterThan(upper(0));
+  });
 
   test("has three to six dock spots on the south wall, named in order, and racks lettered from the north", () => {
     const floor = build_floor(7, 0.3, 1);

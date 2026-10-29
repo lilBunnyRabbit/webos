@@ -5,7 +5,16 @@
   import { random_seed } from "$lib/core/utils/random";
   import { cn } from "$lib/core/utils";
   import { Badge, BoardOverlay, Button, IconButton, Segmented, Select } from "$lib/core/components/ui";
-  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
+  import {
+    ArrowCounterClockwise as ArrowCounterClockwiseIcon,
+    CaretDown as CaretDownIcon,
+    CaretLeft as CaretLeftIcon,
+    CaretRight as CaretRightIcon,
+    CaretUp as CaretUpIcon,
+    Pause as PauseIcon,
+    Play as PlayIcon,
+    Star as StarIcon,
+  } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
   import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, type Camera, type Insets } from "../../core/camera";
@@ -23,6 +32,8 @@
   import { body_centre, Gear, max_steer, without_creep } from "../../core/vehicle";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
+  import { draw_side } from "./draw-side";
+  import { close_side, CLEAN, open_side, reach, side_action, step_side, use_side } from "./rack";
   import {
     advance,
     average_precision,
@@ -55,14 +66,17 @@
     task_line,
     unlocked,
     use_fork,
+    SideKind,
     type Bests,
     type GameState,
     type LevelStars,
     type Par,
     type Recorded,
     type Round,
+    type SideView,
   } from "./game";
   import { work_out_par, type ParJob } from "./par";
+  import { slot_label } from "./warehouse";
 
   const MODE_LABELS: Record<Mode, string> = { jobs: "Jobs", levels: "Levels" };
   const MODE_OPTIONS = (Object.keys(MODE_LABELS) as Mode[]).map((value) => ({ value, label: MODE_LABELS[value] }));
@@ -101,6 +115,11 @@
   let pedal_box = $state({ width: 0, height: 0 });
   let stage_rect = $state<DOMRectReadOnly>();
   let hud_height = $state(0);
+  let side_canvas: HTMLCanvasElement | undefined = $state();
+  let side_box = $state({ width: 0, height: 0 });
+  // The side view's own buttons, read every physics step like the keys.
+  const side_held = { up: new Set<number>(), down: new Set<number>(), in: new Set<number>(), out: new Set<number>() };
+  let side_pressed = $state({ up: false, down: false, in: false, out: false });
 
   let camera: Camera | null = null;
   let par_job: ParJob | null = null;
@@ -119,7 +138,9 @@
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(bests.value[round_key(game.round)]);
-  const action = $derived(fork_action(game));
+  const action = $derived(game.side ? side_action(game) : fork_action(game));
+  const side = $derived(game.side);
+  const side_in = $derived(side ? reach(game, side) > 0 : false);
   const hint = $derived(fork_hint(game));
   const depth = $derived(fork_depth(game));
   const line = $derived(task_line(game));
@@ -141,7 +162,21 @@
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
   const time = $derived(format_time(game.ms, { tenths: true }));
   const par_time = $derived(par ? format_time(par.ms) : null);
-  const fork_label = $derived(action === ForkAction.LOWER ? "Lower" : action === ForkAction.LIFT ? "Lift" : game.loads[game.current]?.carried ? "Lower" : "Lift");
+  const fork_label = $derived(
+    action === ForkAction.RACK
+      ? "Raise"
+      : action === ForkAction.LOWER
+        ? "Lower"
+        : action === ForkAction.LIFT
+          ? "Lift"
+          : game.side
+            ? game.side.kind === SideKind.DROP
+              ? "Lower"
+              : "Lift"
+            : game.loads[game.current]?.carried
+              ? "Lower"
+              : "Lift"
+  );
 
   interface Finished {
     state: GameState;
@@ -231,7 +266,7 @@
   });
 
   $effect(() => {
-    void [game, palette, board_size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
+    void [game, palette, board_size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, side_box.width, side_box.height, side_canvas];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -274,17 +309,47 @@
     camera = dt > 0 ? ease(camera, target, dt) : target;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const font = getComputedStyle(canvas).fontFamily;
     draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
       guides: settings.guides,
       time: performance.now() / 1000,
       insets: control_insets(),
-      font: getComputedStyle(canvas).fontFamily,
+      font,
     });
+    render_side(font);
+  }
+
+  function render_side(font: string) {
+    if (!game.side || !side_canvas || !palette || !side_box.width) return;
+    const dpr = board_size.dpr;
+    const width = Math.round(side_box.width * dpr);
+    const height = Math.round(side_box.height * dpr);
+    if (side_canvas.width !== width) side_canvas.width = width;
+    if (side_canvas.height !== height) side_canvas.height = height;
+    const ctx = side_canvas.getContext("2d");
+    if (ctx) draw_side(ctx, game, { width: side_box.width, height: side_box.height, dpr }, palette, font);
+  }
+
+  function held(codes: string[], extra: boolean): boolean {
+    return extra || codes.some((code) => input.keys.has(code));
+  }
+
+  // At the rack the arrows (and the pedals, and the steer buttons) work the forks: up and down raise and lower, right and left drive in and out.
+  function side_controls() {
+    const up = held(["ArrowUp", "KeyW"], input.held.gas || side_held.up.size > 0);
+    const down = held(["ArrowDown", "KeyS"], input.held.brake || side_held.down.size > 0);
+    const forward = held(["ArrowRight", "KeyD"], input.held.right || side_held.in.size > 0);
+    const back = held(["ArrowLeft", "KeyA"], input.held.left || side_held.out.size > 0);
+    return { lift: (up ? 1 : 0) - (down ? 1 : 0), drive: (forward ? 1 : 0) - (back ? 1 : 0) };
   }
 
   function run(steps: number, dt: number) {
     let next = game;
     for (let i = 0; i < steps && next.status === Status.DRIVING; i++) {
+      if (next.side) {
+        next = step_side(next, side_controls(), dt);
+        continue;
+      }
       input.step_wheel(dt, SPEC, settings.wheel);
       next = advance(next, input.read(next.car.gear), dt, settings.creep ? SPEC : without_creep(SPEC));
     }
@@ -346,20 +411,50 @@
 
   function fork() {
     if (!action) return;
-    const next = use_fork(game);
+    const view = game.side;
+    const next = action === ForkAction.RACK ? open_side(game) : view ? use_side(game) : use_fork(game);
     if (next === game) return;
-    input.release();
+    release_all();
     game = next;
-    sounds.fork(action === ForkAction.LIFT);
+    if (action !== ForkAction.RACK) sounds.fork(action === ForkAction.LIFT);
     if (next.status === Status.DONE) finish(next);
     const drop = next.drops.length > 0 && action === ForkAction.LOWER ? next.drops[next.drops.length - 1] : null;
     if (drop && Math.round(drop.score) >= PERFECT) achievements.achieve("forklift-perfect");
+    if (drop && view?.slot.tier === 2 && drop.miss <= CLEAN) achievements.achieve("forklift-top-shelf");
+    focus_board();
+  }
+
+  function leave_side() {
+    const next = close_side(game);
+    if (next === game) return;
+    release_all();
+    game = next;
     focus_board();
   }
 
   function release_all() {
     input.release();
+    for (const pointers of Object.values(side_held)) pointers.clear();
+    side_pressed = { up: false, down: false, in: false, out: false };
     sounds.quiet();
+  }
+
+  type SideHold = keyof typeof side_held;
+
+  function side_hold(which: SideHold) {
+    return {
+      onpointerdown: (event: PointerEvent) => {
+        event.preventDefault();
+        (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+        side_held[which].add(event.pointerId);
+        side_pressed[which] = true;
+      },
+      onlostpointercapture: (event: PointerEvent) => {
+        side_held[which].delete(event.pointerId);
+        side_pressed[which] = side_held[which].size > 0;
+      },
+      oncontextmenu: (event: Event) => event.preventDefault(),
+    };
   }
 
   function focus_board() {
@@ -482,7 +577,8 @@
     if (code === "Escape") {
       if (game.status !== Status.DRIVING && game.status !== Status.PAUSED) return;
       event.preventDefault();
-      toggle_pause();
+      if (game.status === Status.DRIVING && game.side && !side_in) leave_side();
+      else toggle_pause();
       return;
     }
     if (code === "Enter") {
@@ -508,6 +604,13 @@
     if (code === "KeyF" || code === "Space") {
       event.preventDefault();
       if (!event.repeat) fork();
+      return;
+    }
+    if (game.side) {
+      if (DRIVE_KEYS.has(code)) {
+        event.preventDefault();
+        input.keys.add(code);
+      }
       return;
     }
     if (DRIVE_KEYS.has(code)) {
@@ -586,6 +689,46 @@
   </button>
 {/snippet}
 
+{#snippet side_button(which: SideHold, label: string, icon: typeof CaretUpIcon)}
+  {@const Icon = icon}
+  <button
+    type="button"
+    class={cn("ts-control ts-pad grid size-11 place-items-center rounded-lg transition-colors", side_pressed[which] ? "ts-pad-held" : "bg-background/85 text-foreground/80")}
+    aria-label={label}
+    title={label}
+    {...side_hold(which)}
+  >
+    <Icon weight="bold" class="size-5" />
+  </button>
+{/snippet}
+
+{#snippet side_view(view: SideView)}
+  <section
+    class="absolute inset-x-2 bottom-2 flex flex-col overflow-hidden rounded-lg bg-background ring-1 ring-foreground/15 shadow-lg"
+    style:top="{hud_height + 16}px"
+    aria-label="Side view at {slot_label(view.slot)}"
+  >
+    <div bind:clientWidth={side_box.width} bind:clientHeight={side_box.height} class="relative min-h-0 flex-1">
+      <canvas bind:this={side_canvas} class="absolute inset-0 block size-full"></canvas>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 border-t border-foreground/10 p-2">
+      <div class="flex gap-1.5" role="group" aria-label="Forks">
+        {@render side_button("down", "Lower the forks (↓)", CaretDownIcon)}
+        {@render side_button("up", "Raise the forks (↑)", CaretUpIcon)}
+        {@render side_button("out", "Back out (←)", CaretLeftIcon)}
+        {@render side_button("in", "Drive in (→)", CaretRightIcon)}
+      </div>
+      <p class="hidden min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 @lg:pointer-fine:flex">
+        <KeyHint key_name="↑ ↓" text="height" /><KeyHint key_name="← →" text="out, in" /><KeyHint key_name="F" text={view.kind === SideKind.PICK ? "lift" : "lower"} />{#if !side_in}<KeyHint key_name="Esc" text="back" />{/if}
+      </p>
+      <div class="ml-auto flex gap-1.5">
+        <Button size="sm" variant="quiet" class="pointer-coarse:h-11" disabled={side_in} onclick={leave_side}>Back</Button>
+        <span class="hidden pointer-fine:inline-flex">{@render fork_button("h-9 px-4 text-ui")}</span>
+      </div>
+    </div>
+  </section>
+{/snippet}
+
 {#snippet pedal_top()}
   {#if game.status === Status.DRIVING}{@render fork_button("h-11 w-full text-ui")}{/if}
 {/snippet}
@@ -627,12 +770,15 @@
       </div>
     </div>
   {/if}
+  {#if side && (game.status === Status.DRIVING || game.status === Status.PAUSED)}
+    {@render side_view(side)}
+  {/if}
   {#if hint && game.status === Status.DRIVING}
     <p class="pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit animate-pop-in rounded-md bg-background/85 px-2 py-1 text-ui text-warning backdrop-blur-[2px]" aria-live="polite">
       {hint}
     </p>
   {/if}
-  {#if game.status === Status.DRIVING}
+  {#if game.status === Status.DRIVING && !side}
     <div class="absolute right-2 bottom-2 hidden pointer-fine:block">
       {@render fork_button("h-9 px-4 text-ui")}
     </div>
@@ -645,10 +791,10 @@
           {round_title(game.round)}
           {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
-        <p class="text-ui text-foreground/80">Take each pallet to its target, in order.</p>
+        <p class="text-ui text-foreground/80">Take each pallet to its target, in order; ↑1 and ↑2 are upper shelves.</p>
         <ol class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-2xs text-foreground/80 tabular-nums">
           {#each game.floor.tasks as task, i (i)}
-            <li><span class="text-primary">{i + 1}</span> {task.from.name} → {task.to.name}</li>
+            <li><span class="text-primary">{i + 1}</span> {slot_label(task.from)} → {slot_label(task.to)}</li>
           {/each}
         </ol>
         {#if mode === Mode.JOBS && !daily}

@@ -10,6 +10,11 @@ export const CHANGELOG: Release[] = [
     title: "Main street",
     changes: [
       {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub's warehouse racks have upper shelves: stop at the rack face and a side view opens where you raise the forks, line them up with the pallet's pockets and drive in.",
+      },
+      {
         kind: IMPROVED,
         apps: ["tight-spot"],
         text: "Drive Hub's yard is now a street with a building for every game, and it grows longer as new games arrive.",
