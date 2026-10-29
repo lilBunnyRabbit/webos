@@ -155,6 +155,7 @@ Owner: "with parking im really looking for difficulty"; on the garages: "the poi
 11. [x] The hub becomes a small town: districts round a plaza, a shape and an entrance sign per building (ADR-087 revision).
 12. [x] Multi-floor garages (ADR-090): core portals, the Multi-storey spot (straight ramps and a helix, one to three floors down), the open lot's garage with a floor below for Tight Spot and Valet Rush. The town's multi-storey building follows.
 13. [x] Parking difficulty pass: every spot kind's difficulty 1 at the tightest the proofs solve, a hardest lap of 18 levels after the ladder, Spots up to difficulty 1.
+14. [x] The town's car park: drivable floors through portals off a ramp in Tight Spot's building, a doorway on −1 into the Multi-storey spot (ADR-090 revision, 2026-10-29).
 
 ## Next session topics
 - The boat: where a dynamic (non-kinematic) model lives, shared with F1's later slip model.

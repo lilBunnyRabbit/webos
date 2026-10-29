@@ -39,6 +39,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Valet Rush's view of the street between cars stays big and centred on a phone when the lot has underground garages.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub's car park opens up: take a car or a van down its ramp to three tight floors of parked cars, and the doorway on −1 goes straight into Tight Spot's Multi-storey spot.",
+      },
     ],
   },
   {

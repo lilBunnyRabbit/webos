@@ -41,3 +41,13 @@ Owner's intent, given during the build: "the point of the garage is to have real
 
 ## Revision 2026-10-29 (town building decided)
 The hub's multi-storey building is both: a ramp in the town leads through portals to garage floors drawn beside the town, free roam with nothing scored, and a doorway on −1 starts Tight Spot's Multi-storey kind. Cars and vans only, as elsewhere; other vehicles meet the height bar.
+
+## Revision 2026-10-29 (town car park built)
+What the build decided within scope ([The yard › Car park](../apps/tight-spot.md#the-yard)):
+- **Which building.** Tight Spot's own car park, not a new plot: its doorway still offers the game, and a ramp through the back of the doorway (a height bar across the recess, a funnel to a 3.4 m walled lane, the crossing line 5 m in) leads down. A second car park building in a grown town gets the lane as a dead end.
+- **The floors.** The Multi-storey spot's `garage()` at difficulty 1, laid out for the van's fit (the biggest vehicle under the bar; the planner takes the van, the hatchback and the SUV from the ramp's foot down to −3), three floors, from a fixed seed so it's the same garage every visit, placed east of the town with `chunks()`. Its target bay on −3 is never judged; it and its neighbours are the free bays.
+- **Town portals.** Two portals added to the garage's own: down from the town's ramp line to 5.6 m up −1's walled way in, and back. The lot's gate is closed by the chunk barrier.
+- **Bar.** Solid only to vehicles `under_headroom` rejects, through a second collision scene (`near(yard, spec)`); a swap below ground to such a vehicle puts it on the pad.
+- **Doorway on −1.** The east end of −1's aisle, its extent read off −1's own bay lines. It opens parking on the Multi-storey kind through the last-choice keys the picker already reads (`app.tight-spot.parking.mode` and `.pick`), so `GameProps` and the `game` prop didn't change; the yard and the shell remember the vehicle came from there (`onenter(id, true)`, `from_below`) so it comes back out of that doorway.
+- **Camera.** Below ground the view stays inside the floors and closes in to a round's span; crossing cuts and fades like a round.
+

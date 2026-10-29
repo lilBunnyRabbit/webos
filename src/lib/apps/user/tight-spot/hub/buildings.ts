@@ -2,8 +2,8 @@ import { outlined, solids, type Palette } from "../core/draw";
 import type { Polygon, Vec } from "../core/geometry";
 import { SolidKind } from "../core/scene";
 import { Building } from "../games/define";
-import { blueprint, box, DOOR_HALF, RECESS, type Blueprint } from "./blueprints";
-import { to_town, type House, type Plot } from "./yard";
+import { blueprint, box, DOOR_HALF, RAMP_BAR, RAMP_END, RAMP_FUNNEL, RAMP_HALF, RECESS, to_town, type Blueprint } from "./blueprints";
+import type { House, Plot } from "./yard";
 
 interface Pen {
   ctx: CanvasRenderingContext2D;
@@ -73,26 +73,24 @@ function car_park(pen: Pen) {
   ctx.strokeStyle = palette.paint;
   ctx.lineWidth = Math.max(line, 0.08);
   ctx.beginPath();
-  for (let u = -6.2; u <= 6.21; u += 2.48) {
-    ctx.moveTo(u, -8.7);
-    ctx.lineTo(u, -6.2);
-  }
-  for (const [a, b] of [
-    [-6.2, -3.3],
-    [3.3, 6.2],
+  for (const [u, v0, v1] of [
+    [-6.2, -8.7, -6.2],
+    [-3.3, -8.7, -6.2],
+    [-6.2, -3.7, -1.2],
+    [-3.3, -3.7, -1.2],
+    [3.3, -3.7, -1.2],
+    [6.2, -3.7, -1.2],
   ]) {
-    for (let u = a; u <= b + 0.01; u += (b - a) / 1) {
-      ctx.moveTo(u, -3.7);
-      ctx.lineTo(u, -1.2);
-    }
+    ctx.moveTo(u, v0);
+    ctx.lineTo(u, v1);
   }
   ctx.moveTo(-6.2, -8.7);
-  ctx.lineTo(6.2, -8.7);
+  ctx.lineTo(-3.3, -8.7);
   ctx.stroke();
   const cars = palette.cars;
-  small_car(ctx, -4.96, -7.45, true, cars[0], line, palette.edge);
-  small_car(ctx, 0, -7.45, true, cars[2], line, palette.edge);
+  small_car(ctx, -4.75, -7.45, true, cars[0], line, palette.edge);
   small_car(ctx, -4.75, -2.45, true, cars[1], line, palette.edge);
+  ramp_down(pen);
   circle(ctx, 4.9, -9.1, 2.3);
   ctx.fillStyle = palette.floor;
   ctx.fill();
@@ -117,14 +115,42 @@ function car_park(pen: Pen) {
     ctx.textBaseline = "middle";
     ctx.fillText("P", 0, 0.08);
   });
-  const stripes = 6;
-  for (let i = 0; i < stripes; i++) {
-    const a = -2.6 + (i * 4.4) / stripes;
-    fill_box(ctx, a, -0.55, a + 4.4 / stripes, -0.25, i % 2 ? palette.ink : palette.warning);
+}
+
+// The lane through the back of the doorway runs down out of the light: chevrons pointing in, darkening to the floor below.
+function ramp_down(pen: Pen) {
+  const { ctx, palette, line } = pen;
+  ctx.beginPath();
+  for (const [u, v] of [
+    [-DOOR_HALF, -RECESS],
+    [DOOR_HALF, -RECESS],
+    [RAMP_HALF, -RECESS - RAMP_FUNNEL],
+    [RAMP_HALF, RAMP_END],
+    [-RAMP_HALF, RAMP_END],
+    [-RAMP_HALF, -RECESS - RAMP_FUNNEL],
+  ]) {
+    ctx.lineTo(u, v);
   }
-  circle(ctx, -2.75, -0.4, 0.28);
-  ctx.fillStyle = palette.pillar;
+  ctx.closePath();
+  ctx.fillStyle = palette.ramp;
   ctx.fill();
+  const dusk = ctx.createLinearGradient(0, -RECESS - RAMP_FUNNEL, 0, RAMP_END);
+  dusk.addColorStop(0, palette.glow_clear);
+  dusk.addColorStop(1, palette.void);
+  ctx.fillStyle = dusk;
+  ctx.globalAlpha = 0.85;
+  ctx.fillRect(-RAMP_HALF, -RECESS - RAMP_FUNNEL, RAMP_HALF * 2, RAMP_END + RECESS + RAMP_FUNNEL);
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = palette.paint;
+  ctx.lineWidth = Math.max(line, 0.1);
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  for (let v = RAMP_BAR[0] - 0.4; v - 0.7 > RAMP_END + 1; v -= 1.4) {
+    ctx.moveTo(-1, v);
+    ctx.lineTo(0, v - 0.7);
+    ctx.lineTo(1, v);
+  }
+  ctx.stroke();
 }
 
 function warehouse(pen: Pen) {

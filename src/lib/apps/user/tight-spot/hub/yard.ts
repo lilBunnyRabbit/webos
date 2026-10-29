@@ -1,6 +1,9 @@
 import { inside_convex } from "../core/collision";
 import { bounds_of, oriented_box, rect, type Bounds, type Polygon, type Pose, type Vec } from "../core/geometry";
-import { collide, obstacles } from "../core/obstacles";
+import { under_headroom } from "../core/garage";
+import { CHUNK } from "../core/lot";
+import { collide, obstacles, type Obstacles, type Scene } from "../core/obstacles";
+import { pass_portals } from "../core/portals";
 import { MarkKind, SolidKind, SurfaceKind, type Mark, type Solid, type Surface } from "../core/scene";
 import {
   bodies,
@@ -22,8 +25,9 @@ import {
   type Placement,
   type VehicleSpec,
 } from "../core/vehicle";
-import type { Building } from "../games/define";
-import { blueprint, box, disc, DOOR_HALF, RECESS } from "./blueprints";
+import { Building } from "../games/define";
+import { blueprint, box, disc, DOOR_HALF, RECESS, shape_at, to_town, type Frame } from "./blueprints";
+import { build_car_park, type CarPark } from "./car-park";
 
 const WALL = 0.4;
 const NORTH = -Math.PI / 2;
@@ -108,7 +112,13 @@ export interface House {
 }
 
 export interface Yard {
+  /** The town; the car park's floors lie beside it. */
   bounds: Bounds;
+  /** The town and the car park's floors. */
+  world: Bounds;
+  car_park: CarPark | null;
+  /** What a car or a van runs into, and what anything taller does: the car park's bar too. */
+  scenes: { low: Scene; tall: Scene };
   /** What the landing frames: the gate, the plaza and the buildings nearest it, not the whole town. */
   landing: Bounds;
   /** Inside the four rows of buildings: the ring road, and the plaza in its middle. */
@@ -150,19 +160,6 @@ const PAD_LENGTH = 12;
 const PAD_WIDTH = 7;
 const GATE_HALF = 4;
 const SIDEWALK = 2;
-
-export interface Frame {
-  mouth: Vec;
-  facing: number;
-}
-
-export function to_town(frame: Frame, u: number, v: number): Vec {
-  const fx = Math.cos(frame.facing);
-  const fy = Math.sin(frame.facing);
-  return { x: frame.mouth.x - fy * u + fx * v, y: frame.mouth.y + fx * u + fy * v };
-}
-
-const shape_at = (frame: Frame, shape: Polygon) => shape.map((p) => to_town(frame, p.x, p.y));
 
 type SideName = "north" | "east" | "south" | "west";
 
@@ -353,8 +350,18 @@ export function build_yard(games: readonly { id: string; building: Building }[],
   }
   const tree_solids: Solid[] = trees.map((at) => ({ kind: SolidKind.HEDGE, shape: disc(at.x, at.y, TREE * 0.8, 8) }));
   const props = [...walls, harbour, ...posts, ...cars];
+  const solids = [...props, ...pieces, ...house_solids, ...tree_solids, ...cone_solids];
+  // The first car park's ramp leads down to the floors; another one's lane is a dead end.
+  const park_plot = plots.findIndex((plot) => plot.open && plot.building === Building.CAR_PARK);
+  const car_park = park_plot >= 0 ? build_car_park(plots[park_plot], park_plot, W) : null;
+  const low = { solids: [...solids, ...(car_park?.solids ?? [])] };
+  const tall = { solids: [...low.solids, ...(car_park?.bars ?? []).map((shape) => ({ kind: SolidKind.WALL, shape }))] };
+  const bounds = { x0: 0, y0: 0, x1: W, y1: H };
   return {
-    bounds: { x0: 0, y0: 0, x1: W, y1: H },
+    bounds,
+    world: car_park ? bounds_of([...rect(0, 0, W, H), ...rect(car_park.bounds.x0, car_park.bounds.y0, car_park.bounds.x1, car_park.bounds.y1)]) : bounds,
+    car_park,
+    scenes: { low, tall },
     landing: { x0: 0, y0: 0, x1: Math.min(W, centre.x + 14), y1: quay },
     court,
     plaza,
@@ -379,7 +386,7 @@ export function build_yard(games: readonly { id: string; building: Building }[],
       ].map((shape) => ({ kind: SurfaceKind.FLOOR, shape })),
     ],
     marks,
-    solids: [...props, ...pieces, ...house_solids, ...tree_solids, ...cone_solids],
+    solids,
     props,
     cones,
     houses,
@@ -413,10 +420,48 @@ export function pad_car(yard: Yard, spec: VehicleSpec): Car {
   return place(yard.pad_pose, spec);
 }
 
+/** Out of the doorway on −1, facing back along the aisle. */
+export function below_car(yard: Yard, spec: VehicleSpec): Car | null {
+  const park = yard.car_park;
+  return park ? place(ahead(park.door_pose, APRON + 0.5 + rig_length(spec) / 2), spec) : null;
+}
+
+/** What this vehicle runs into: the car park's bar stops anything taller than a car or a van. */
+export function near(yard: Yard, spec: VehicleSpec): Obstacles {
+  return obstacles(under_headroom(spec) ? yard.scenes.low : yard.scenes.tall);
+}
+
+export function in_car_park(yard: Yard, at: Vec): boolean {
+  const box = yard.car_park?.bounds;
+  return !!box && at.x >= box.x0 && at.x <= box.x1 && at.y >= box.y0 && at.y <= box.y1;
+}
+
+export function floor_of(yard: Yard, at: Vec): number | null {
+  if (!in_car_park(yard, at)) return null;
+  const cx = Math.floor(at.x / CHUNK);
+  const cy = Math.floor(at.y / CHUNK);
+  return yard.car_park!.chunks.find((chunk) => chunk.cx === cx && chunk.cy === cy)?.floor ?? null;
+}
+
+/** Where the camera stays: the town, or the car park's floors. */
+export function area_of(yard: Yard, at: Vec): Bounds {
+  return in_car_park(yard, at) ? yard.car_park!.bounds : yard.bounds;
+}
+
+// A swap keeps a vehicle on the floor it's on, or in the town short of the harbour.
+function room_of(yard: Yard, at: Vec): Bounds {
+  if (!in_car_park(yard, at)) return { ...yard.bounds, y1: yard.quay };
+  const x0 = Math.floor(at.x / CHUNK) * CHUNK;
+  const y0 = Math.floor(at.y / CHUNK) * CHUNK;
+  return { x0, y0, x1: x0 + CHUNK, y1: y0 + CHUNK };
+}
+
 export interface Swapped {
   car: Car;
   /** The new rig didn't fit where the old one stood: it went to the nearest clear spot, or the pad. */
   moved: boolean;
+  /** Too tall for the car park it stood in: it went up to the pad. */
+  raised: boolean;
 }
 
 const SEARCH_RADIUS = 30;
@@ -429,10 +474,12 @@ const TURN_COST = 8;
 export function swap_car(yard: Yard, car: Placement, from: VehicleSpec, to: VehicleSpec): Swapped {
   const ends = rig_ends(from);
   const middle = to_world(car, { x: (ends.front + ends.rear) / 2, y: 0 });
-  const near = obstacles(yard);
+  if (in_car_park(yard, middle) && !under_headroom(to)) return { car: pad_car(yard, to), moved: true, raised: true };
+  const solid = near(yard, to);
+  const room = room_of(yard, middle);
   const fits = (candidate: Car) =>
-    collide(candidate, near, to) === null &&
-    bodies(candidate, to).every((body) => body.every((p) => p.x > yard.bounds.x0 && p.x < yard.bounds.x1 && p.y > yard.bounds.y0 && p.y < yard.quay));
+    collide(candidate, solid, to) === null &&
+    bodies(candidate, to).every((body) => body.every((p) => p.x > room.x0 && p.x < room.x1 && p.y > room.y0 && p.y < room.y1));
   const ring = (r: number, turns: number[]): Car | null => {
     const steps = r === 0 ? 1 : Math.ceil((Math.PI * 2 * r) / 1.5);
     for (const turn of turns) {
@@ -446,11 +493,11 @@ export function swap_car(yard: Yard, car: Placement, from: VehicleSpec, to: Vehi
   };
   for (let r = 0; r <= SEARCH_RADIUS + TURN_COST; r++) {
     const same = r <= SEARCH_RADIUS ? ring(r, [0]) : null;
-    if (same) return { car: same, moved: r > 0 };
+    if (same) return { car: same, moved: r > 0, raised: false };
     const turned = r >= TURN_COST ? ring(r - TURN_COST, [Math.PI, Math.PI / 2, -Math.PI / 2]) : null;
-    if (turned) return { car: turned, moved: true };
+    if (turned) return { car: turned, moved: true, raised: false };
   }
-  return { car: pad_car(yard, to), moved: true };
+  return { car: pad_car(yard, to), moved: true, raised: false };
 }
 
 export function nose(car: Placement, spec: VehicleSpec): Vec {
@@ -461,6 +508,11 @@ export function door_at(yard: Yard, car: Placement, spec: VehicleSpec): number |
   const at = nose(car, spec);
   const index = yard.plots.findIndex((plot) => plot.open && inside_convex(at, plot.door));
   return index < 0 ? null : index;
+}
+
+/** At the doorway on −1, which offers the Multi-storey spot. */
+export function at_below_door(yard: Yard, car: Placement, spec: VehicleSpec): boolean {
+  return !!yard.car_park && inside_convex(nose(car, spec), yard.car_park.door);
 }
 
 // A rig longer than the pad can't get its vehicle onto it while straight, so its middle counts instead; a shorter rig
@@ -476,15 +528,18 @@ export function on_pad(yard: Yard, car: Placement, spec: VehicleSpec): boolean {
 export interface Bumped {
   car: Car;
   hit: Vec | null;
+  /** Through a ramp, to another floor or back up to the town. */
+  passed: boolean;
 }
 
 /** A step that would run into something, or jackknife, doesn't happen: the vehicle stops where it was. */
 export function drive(yard: Yard, car: Car, input: Input, dt: number, spec: VehicleSpec): Bumped {
-  const next = step(car, input, dt, spec);
+  const stepped = step(car, input, dt, spec);
+  const next = yard.car_park ? pass_portals(stepped, yard.car_park.portals) : stepped;
   const folded = jackknife(next, spec);
-  if (folded >= 0) return { car: stopped(car, next, spec), hit: hitch_point(car, spec, folded) };
-  const hit = collide(next, obstacles(yard), spec);
-  return hit ? { car: stopped(car, next, spec), hit: hit.at } : { car: next, hit: null };
+  if (folded >= 0) return { car: stopped(car, next, spec), hit: hitch_point(car, spec, folded), passed: false };
+  const hit = collide(next, near(yard, spec), spec);
+  return hit ? { car: stopped(car, next, spec), hit: hit.at, passed: false } : { car: next, hit: null, passed: next !== stepped };
 }
 
 // A frame steer's bend is its shape, so a bend into something is stopped too.

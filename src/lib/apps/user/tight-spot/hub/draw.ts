@@ -1,10 +1,13 @@
 import { bounds_of, type Bounds, type Vec } from "../core/geometry";
-import { beams, begin_frame, contact_rings, ground, guides, path, player, sensor_arcs, solids, type Palette, type View } from "../core/draw";
+import type { Insets } from "../core/camera";
+import { beams, begin_frame, contact_rings, floor_labels, ground, guides, headroom, path, player, sensor_arcs, solids, type Palette, type View } from "../core/draw";
+import { CHUNK } from "../core/lot";
 import type { End } from "../core/sensors";
 import { Gear, type Car, type Vehicle, type VehicleSpec } from "../core/vehicle";
-import { RECESS } from "./blueprints";
+import { RECESS, to_town } from "./blueprints";
 import { building, house, in_plan, shadow_of, tree } from "./buildings";
-import { District, to_town, type Plot, type Yard } from "./yard";
+import type { CarPark } from "./car-park";
+import { District, type Plot, type Yard } from "./yard";
 
 const SOON = "Soon";
 // From this many pixels a metre the doorway's own sign reads, and the roof names give way to the buildings' look.
@@ -23,6 +26,8 @@ export interface YardScene {
   /** The plot of the game played last, whose door glows. */
   last: number | null;
   at_door: number | null;
+  /** At the car park's doorway on −1. */
+  at_below: boolean;
   on_pad: boolean;
   /** `fade` runs from 1 at the touch down to 0. */
   contact: { at: Vec; fade: number } | null;
@@ -34,6 +39,8 @@ export interface YardExtras {
   sensors: Record<End, number | null>;
   time: number;
   font: string;
+  /** The HUD's strips, which the floor labels keep clear of. */
+  insets: Insets;
 }
 
 /**
@@ -204,10 +211,13 @@ function doorway(ctx: CanvasRenderingContext2D, scene: YardScene, index: number,
     ctx.strokeStyle = palette.target;
     ctx.lineCap = "round";
     ctx.lineWidth = Math.max(0.25, 4 / scale);
-    ctx.beginPath();
-    ctx.moveTo(-2.4, -RECESS + 0.15);
-    ctx.lineTo(2.4, -RECESS + 0.15);
-    ctx.stroke();
+    // The car park's doorway has its ramp where the lamps would be.
+    if (scene.yard.car_park?.plot !== index) {
+      ctx.beginPath();
+      ctx.moveTo(-2.4, -RECESS + 0.15);
+      ctx.lineTo(2.4, -RECESS + 0.15);
+      ctx.stroke();
+    }
     ctx.globalAlpha = glow ? 0.7 + 0.3 * pulse : 1;
     ctx.strokeStyle = glow ? palette.target : palette.free;
     ctx.lineJoin = "round";
@@ -353,6 +363,69 @@ function town(ctx: CanvasRenderingContext2D, yard: Yard, scale: number, palette:
   // Far out a 1.4 m drop is less than the text's own height, so the name would sit on the pad's edge.
   const drop = Math.max(1.4, (size * 0.5 + 5) / scale);
   label(ctx, { x: (box.x0 + box.x1) / 2, y: box.y0 + drop }, "Garage", size, palette.paint, font, scale);
+  if (yard.car_park) floors(ctx, yard.car_park, scale, palette);
+}
+
+function floors(ctx: CanvasRenderingContext2D, park: CarPark, scale: number, palette: Palette) {
+  ground(
+    ctx,
+    park.chunks.flatMap((chunk) => chunk.surfaces),
+    park.chunks.flatMap((chunk) => chunk.marks),
+    scale,
+    palette
+  );
+  solids(ctx, park.solids, scale, palette);
+}
+
+const BELOW = "Multi-storey";
+
+// The doorway on −1 is a lit door in the wall at the aisle's end, its light out over the aisle, and a sign over it.
+function below_door(ctx: CanvasRenderingContext2D, scene: YardScene, park: CarPark, view: View, pulse: number, palette: Palette, font: string) {
+  const { scale } = view;
+  const box = bounds_of(park.door);
+  const glow = scene.at_below;
+  const light = ctx.createLinearGradient(box.x1, 0, box.x0, 0);
+  light.addColorStop(0, palette.target);
+  light.addColorStop(1, palette.glow_clear);
+  ctx.globalAlpha = glow ? 0.5 + 0.2 * pulse : 0.3;
+  ctx.fillStyle = light;
+  ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
+  ctx.globalAlpha = glow ? 0.7 + 0.3 * pulse : 1;
+  ctx.strokeStyle = glow ? palette.target : palette.free;
+  ctx.lineJoin = "round";
+  ctx.lineWidth = Math.max(0.12, 2 / scale);
+  ctx.setLineDash(glow ? [] : [0.6, 0.4]);
+  ctx.strokeRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
+  ctx.setLineDash([]);
+  ctx.globalAlpha = 1;
+  const door = park.door_pose;
+  ctx.fillStyle = palette.target;
+  ctx.fillRect(door.x, door.y - 1.2, 0.35, 2.4);
+  const icon = scene.icons[park.plot];
+  const size = Math.max(12, Math.min(15, scale * 0.5));
+  ctx.save();
+  screen_text(ctx, view, `700 ${size}px ${font}`);
+  const width = ctx.measureText(BELOW).width + (icon ? size * 1.45 : 0);
+  const at = to_screen({ x: (box.x0 + box.x1) / 2, y: (box.y0 + box.y1) / 2 }, view);
+  const x0 = at.x - width / 2;
+  const pad = size * 0.5;
+  ctx.beginPath();
+  ctx.roundRect(x0 - pad, at.y - size * 0.95, width + pad * 2, size * 1.9, size * 0.5);
+  ctx.fillStyle = palette.void;
+  ctx.globalAlpha = 0.86;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = palette.target;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (icon && icon.complete && icon.naturalWidth) {
+    const side = size * 1.15;
+    ctx.drawImage(icon, x0, at.y - side / 2, side, side);
+  }
+  ctx.textAlign = "left";
+  ctx.fillStyle = palette.paint;
+  ctx.fillText(BELOW, x0 + (icon ? size * 1.45 : 0), at.y);
+  ctx.restore();
 }
 
 function label(ctx: CanvasRenderingContext2D, at: Vec, text: string, size: number, colour: string, font: string, scale: number) {
@@ -381,12 +454,13 @@ export function draw_yard(ctx: CanvasRenderingContext2D, scene: YardScene, view:
   const { scale } = view;
   const { yard, car, spec } = scene;
   begin_frame(ctx, view, palette);
-  scene.layer.draw(ctx, view, palette, extras.font, yard.bounds, (layer) => town(layer, yard, scale, palette, extras.font));
+  scene.layer.draw(ctx, view, palette, extras.font, yard.world, (layer) => town(layer, yard, scale, palette, extras.font));
   const pulse = 0.5 + 0.5 * Math.sin(extras.time * 3);
   pad(ctx, scene, scale, pulse, palette);
   yard.plots.forEach((plot, index) => {
     if (plot.open) doorway(ctx, scene, index, scale, pulse, palette);
   });
+  if (yard.car_park) below_door(ctx, scene, yard.car_park, view, pulse, palette, extras.font);
   if (palette.beams) beams(ctx, car, spec, palette);
   const roof = roof_size(ctx, scene, view, extras.font);
   yard.plots.forEach((_, index) => sign(ctx, scene, index, view, palette, extras.font, roof));
@@ -394,6 +468,10 @@ export function draw_yard(ctx: CanvasRenderingContext2D, scene: YardScene, view:
   if (extras.guides && car.gear !== Gear.PARK) guides(ctx, car, spec, scale, palette);
   player(ctx, car, scene.vehicle, spec, car.brake > 0.05 && car.gear !== Gear.PARK, scale, palette, extras.time);
   sensor_arcs(ctx, car, spec, extras.sensors, scale, palette);
+  if (yard.car_park) {
+    headroom(ctx, yard.car_park.headroom, scale, palette);
+    floor_labels(ctx, yard.car_park.chunks, CHUNK, view, palette, extras.font, extras.insets);
+  }
 
   if (scene.contact && scene.contact.fade > 0) {
     ctx.globalAlpha = scene.contact.fade;

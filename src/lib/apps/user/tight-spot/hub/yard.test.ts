@@ -3,9 +3,30 @@ import { inside_convex, overlaps } from "../core/collision";
 import { bounds_of } from "../core/geometry";
 import { collide, obstacles } from "../core/obstacles";
 import { plan } from "../core/planner";
+import type { World } from "../core/lot";
+import { plan_across } from "../games/parking/proof";
 import { bodies, Gear, NO_INPUT, rig_length, Vehicle, VEHICLES, type Car, type VehicleSpec } from "../core/vehicle";
 import { Building } from "../games/define";
-import { build_yard, District, district_of, door_at, door_car, drive, GARAGE, gate_car, nose, on_pad, pad_car, place, swap_car, type Yard } from "./yard";
+import {
+  at_below_door,
+  below_car,
+  build_yard,
+  District,
+  district_of,
+  door_at,
+  door_car,
+  drive,
+  floor_of,
+  GARAGE,
+  gate_car,
+  near as near_for,
+  nose,
+  on_pad,
+  pad_car,
+  place,
+  swap_car,
+  type Yard,
+} from "./yard";
 
 const GAMES = [
   { id: "parking", building: Building.CAR_PARK },
@@ -33,7 +54,8 @@ const GROWN = build_yard(
 );
 
 const SPECS = Object.entries(VEHICLES);
-const near = obstacles(TOWN);
+// With the car park's bar: a search without portals would wander down its ramp, a dead end to it.
+const near = near_for(TOWN, VEHICLES.bus);
 
 function clear(yard: Yard, car: Car, spec: VehicleSpec): boolean {
   return collide(car, obstacles(yard), spec) === null;
@@ -177,5 +199,70 @@ describe("yard", () => {
     for (let i = 0; i < 120; i++) ({ car, hit } = drive(TOWN, car, { ...NO_INPUT, throttle: 1 }, 1 / 120, spec));
     expect(hit).toBeNull();
     expect(car.y).toBeGreaterThan(before);
+  });
+
+  describe("the car park", () => {
+    const park = TOWN.car_park!;
+    const plot = TOWN.plots[park.plot];
+    const landing = park.portals[0].to;
+
+    function drive_in(spec: VehicleSpec): { car: Car; hit: unknown; passed: boolean } {
+      const out = { x: plot.mouth.x + Math.cos(plot.facing) * 6, y: plot.mouth.y + Math.sin(plot.facing) * 6 };
+      let car: Car = { ...place({ ...out, heading: plot.facing + Math.PI }, spec), gear: Gear.DRIVE };
+      let hit = null;
+      let passed = false;
+      for (let i = 0; i < 120 * 10 && !passed && !hit; i++) ({ car, hit, passed } = drive(TOWN, car, { ...NO_INPUT, throttle: 0.5 }, 1 / 120, spec));
+      return { car, hit, passed };
+    }
+
+    test("is Tight Spot's building, its floors beside the town", () => {
+      expect(plot.game).toBe("parking");
+      expect(park.bounds.x0).toBeGreaterThan(TOWN.bounds.x1);
+      expect(park.chunks.map((chunk) => chunk.floor)).toEqual([-1, -2, -3]);
+    });
+
+    test("a car or a van drives down the ramp to −1 and back up; a bus or a forklift meets the bar", () => {
+      for (const name of ["hatch", "van"] as const) {
+        const spec = VEHICLES[name];
+        const down = drive_in(spec);
+        expect(down.passed, name).toBe(true);
+        expect(floor_of(TOWN, down.car), name).toBe(-1);
+        expect(clear(TOWN, down.car, spec), name).toBe(true);
+        let car: Car = { ...place({ x: landing.x, y: landing.y - 3, heading: Math.PI / 2 }, spec), gear: Gear.DRIVE };
+        let passed = false;
+        for (let i = 0; i < 120 * 5 && !passed; i++) ({ car, passed } = drive(TOWN, car, { ...NO_INPUT, throttle: 0.5 }, 1 / 120, spec));
+        expect(floor_of(TOWN, car), name).toBeNull();
+        expect(clear(TOWN, car, spec), name).toBe(true);
+      }
+      for (const name of ["bus", "forklift"] as const) {
+        const up = drive_in(VEHICLES[name]);
+        expect(up.passed, name).toBe(false);
+        expect(up.hit, name).not.toBeNull();
+        expect(collide(up.car, near_for(TOWN, VEHICLES[name]), VEHICLES[name]), name).toBeNull();
+      }
+    });
+
+    test("from the ramp's foot the van reaches the doorway on −1 and gets down to −3; out of the doorway it stands clear", { timeout: 30_000 }, () => {
+      const spec = VEHICLES.van;
+      const world: World = { chunks: park.chunks, solids: park.solids, portals: park.portals, bounds: park.bounds, start: landing, bays: [], headroom: [] };
+      const start = { x: landing.x, y: landing.y, heading: landing.heading };
+      const door = plan(start, { ...park.door_pose, x: park.door_pose.x - 3.5, heading: 0 }, obstacles(world), { spec, arrive: (pose) => at_below_door(TOWN, pose, spec) });
+      expect(door).not.toBeNull();
+      expect(plan_across(world, start, { x: park.bounds.x1 - 12, y: 20, heading: 0 }, { spec, arrive: (pose) => floor_of(TOWN, pose) === -3 })).not.toBeNull();
+      const out = below_car(TOWN, spec)!;
+      expect(clear(TOWN, out, spec)).toBe(true);
+      expect(at_below_door(TOWN, out, spec)).toBe(false);
+    });
+
+    test("swapped below ground, a car stays on its floor and anything taller goes up to the pad", () => {
+      const hatch = VEHICLES.hatch;
+      const out = below_car(TOWN, hatch)!;
+      const suv = swap_car(TOWN, out, hatch, VEHICLES.suv);
+      expect(suv.raised).toBe(false);
+      expect(floor_of(TOWN, suv.car)).toBe(-1);
+      const bus = swap_car(TOWN, out, hatch, VEHICLES.bus);
+      expect(bus.raised).toBe(true);
+      expect(on_pad(TOWN, bus.car, VEHICLES.bus)).toBe(true);
+    });
   });
 });

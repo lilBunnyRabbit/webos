@@ -3,6 +3,7 @@
   import { build_yard } from "./yard";
 
   const YARD = build_yard(GAMES, UPCOMING.length);
+  const PARKING = YARD.car_park ? GAMES[YARD.car_park.plot] : null;
   const NAMES = YARD.plots.map((_, index) => GAMES[index]?.name ?? UPCOMING[index - GAMES.length] ?? null);
 </script>
 
@@ -13,8 +14,8 @@
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, view_stretch, type Camera, type Insets } from "../core/camera";
-  import type { Palette } from "../core/draw";
+  import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, view_stretch, type Camera, type Insets } from "../core/camera";
+  import { veil, type Palette } from "../core/draw";
   import DriveFrame from "../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../core/drive-input.svelte";
   import GearStrip from "../core/gear-strip.svelte";
@@ -23,7 +24,6 @@
   import CrabToggle from "../core/crab-toggle.svelte";
   import { CRAB_KEY, drive_note, DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, steer_hints, zoom_step } from "../core/keys";
   import { frame_loop } from "../core/loop";
-  import { obstacles } from "../core/obstacles";
   import RoundCard from "../core/round-card.svelte";
   import { End, sensor } from "../core/sensors";
   import SettingsPanel from "../core/settings-panel.svelte";
@@ -47,19 +47,22 @@
   } from "../core/vehicle";
   import { draw_yard, StaticLayer } from "./draw";
   import { icon_image } from "./icons";
-  import { door_at, door_car, drive, GARAGE, gate_car, on_pad, pad_car, shelf_of, swap_car } from "./yard";
+  import { Scenario } from "../games/parking/kinds";
+  import { area_of, at_below_door, below_car, door_at, door_car, drive, floor_of, GARAGE, gate_car, near, on_pad, pad_car, shelf_of, swap_car } from "./yard";
 
   interface Props {
     settings: DriveSettings;
     vehicle: Vehicle;
     /** The game just left: the vehicle comes out of its doorway instead of starting at the gate. */
     from: string | null;
+    /** The game was entered from the car park's doorway on −1, so the vehicle comes back out there. */
+    from_below: boolean;
     last: string | null;
     menu: Snippet;
-    onenter: (id: string) => void;
+    onenter: (id: string, below?: boolean) => void;
   }
 
-  let { settings, vehicle = $bindable(), from, last, menu, onenter }: Props = $props();
+  let { settings, vehicle = $bindable(), from, from_below, last, menu, onenter }: Props = $props();
 
   const CONTACT_FADE = 0.8;
   const YARD_SPAN = 34;
@@ -70,7 +73,7 @@
   const MOVED_NOTE = 2.5;
   const vehicle_shelf = $derived(shelf_of(vehicle));
   const vehicle_options = $derived(vehicle_shelf.vehicles.map((each) => ({ value: each, label: VEHICLE_NAMES[each] })));
-  let moved_note = $state(false);
+  let moved_note = $state<string | null>(null);
   let moved_timer: ReturnType<typeof setTimeout> | undefined;
 
   const { window: win, storage } = get_app_context();
@@ -79,8 +82,11 @@
   const sounds = new Sounds(() => settings);
 
   const start_door = untrack(() => (from ? GAMES.findIndex((game) => game.id === from) : -1));
-  let car = $state.raw<Car>(untrack(() => (start_door >= 0 ? door_car(YARD, start_door, VEHICLES[vehicle]) : gate_car(YARD, VEHICLES[vehicle]))));
-  let moved = $state(start_door >= 0);
+  const start_below = untrack(() => (from_below && from === PARKING?.id ? below_car(YARD, VEHICLES[vehicle]) : null));
+  let car = $state.raw<Car>(
+    untrack(() => start_below ?? (start_door >= 0 ? door_car(YARD, start_door, VEHICLES[vehicle]) : gate_car(YARD, VEHICLES[vehicle])))
+  );
+  let moved = $state(start_door >= 0 || start_below !== null);
   let awake = $state(false);
   let contact = $state.raw<{ at: Vec; since: number } | null>(null);
   let size = $state({ width: 0, height: 0, dpr: 1 });
@@ -98,6 +104,7 @@
   let icons_ready = $state(0);
 
   let camera: Camera | null = null;
+  let cut_at = -Infinity;
   const layer = new StaticLayer();
   let readings = $state.raw<Record<End, number | null>>({ front: null, rear: null });
   let touching = false;
@@ -105,11 +112,16 @@
   const spec = $derived(VEHICLES[vehicle]);
   const lock = $derived(max_steer(spec));
   const note = $derived(drive_note(spec));
-  // Wider than a round's view: the yard is for looking around, and its buildings should show from the gate.
-  const span = $derived(Math.max(YARD_SPAN * Math.min(1, view_stretch(rig_length(spec))), view_span(rig_length(spec))));
+  const floor = $derived(floor_of(YARD, body_centre(car, spec)));
+  // Wider than a round's view: the yard is for looking around, and its buildings should show from the gate. Below
+  // ground it closes in to a round's view, as tight as the floors.
+  const span = $derived(
+    floor !== null ? view_span(rig_length(spec)) : Math.max(YARD_SPAN * Math.min(1, view_stretch(rig_length(spec))), view_span(rig_length(spec)))
+  );
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const door = $derived(door_at(YARD, car, spec));
-  const door_game = $derived(door === null ? null : GAMES[door]);
+  const below = $derived(at_below_door(YARD, car, spec));
+  const door_game = $derived(below ? PARKING : door === null ? null : GAMES[door]);
   const at_pad = $derived(on_pad(YARD, car, spec));
   const last_plot = $derived(last ? GAMES.findIndex((game) => game.id === last) : -1);
   const card = $derived(door_game ? "door" : at_pad ? "pad" : moved || intro_seen.value ? null : "welcome");
@@ -158,7 +170,11 @@
     untrack(() => render(0));
   });
 
-  function fade(): number {
+  function cut(): number {
+    return fade((performance.now() - cut_at) / 1000);
+  }
+
+  function ring_fade(): number {
     return contact ? Math.max(0, 1 - (performance.now() - contact.since) / 1000 / CONTACT_FADE) : 0;
   }
 
@@ -170,7 +186,7 @@
 
   // The yard has no round to pause, so the loop sleeps once nothing moves and wakes on the next input.
   function going(): boolean {
-    const on = car.speed !== 0 || input.busy() || steering() || fade() > 0 || (settings.creep && gear_direction(car.gear) !== 0);
+    const on = car.speed !== 0 || input.busy() || steering() || ring_fade() > 0 || cut() > 0 || (settings.creep && gear_direction(car.gear) !== 0);
     if (!on) awake = false;
     return on;
   }
@@ -207,7 +223,7 @@
     // Capped so a fast car (the GT tops 36 m/s) stays in view on a phone's narrow side.
     const ahead = clamp(car.speed * 0.9, -span * 0.4, span * 0.4);
     const focus = { x: centre.x + Math.cos(car.heading) * ahead, y: centre.y + Math.sin(car.heading) * ahead };
-    return frame(YARD.bounds, focus, size.width, size.height, zoom, insets, span);
+    return frame(area_of(YARD, centre), focus, size.width, size.height, zoom, insets, span);
   }
 
   function render(dt: number) {
@@ -220,6 +236,7 @@
     camera = dt > 0 ? ease(camera, target, dt) : target;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const view = { ...camera, width: size.width, height: size.height, dpr: size.dpr };
     draw_yard(
       ctx,
       {
@@ -232,10 +249,11 @@
         layer,
         last: last_plot >= 0 ? last_plot : null,
         at_door: door,
+        at_below: below,
         on_pad: at_pad,
-        contact: contact ? { at: contact.at, fade: fade() } : null,
+        contact: contact ? { at: contact.at, fade: ring_fade() } : null,
       },
-      { ...camera, width: size.width, height: size.height, dpr: size.dpr },
+      view,
       palette,
       {
         guides: settings.guides,
@@ -245,22 +263,31 @@
         },
         time: performance.now() / 1000,
         font,
+        insets: control_insets(),
       }
     );
+    veil(ctx, view, cut(), palette);
   }
 
   function run(steps: number, dt: number) {
     let next = car;
     let hit: Vec | null = null;
+    let passed = false;
     for (let i = 0; i < steps; i++) {
       input.step_wheel(dt, spec, settings.wheel);
       const bumped = drive(YARD, next, input.read(next.gear), dt, settings.creep ? spec : without_creep(spec));
       next = bumped.car;
       hit = bumped.hit ?? hit;
+      passed ||= bumped.passed;
     }
     input.follow(next.steer / lock);
-    const near = obstacles(YARD);
-    readings = { front: sensor(next, near, End.FRONT, spec), rear: sensor(next, near, End.REAR, spec) };
+    // Through a ramp the camera cuts to the vehicle and the board fades in, as a round does.
+    if (passed) {
+      camera = null;
+      cut_at = performance.now();
+    }
+    const solid = near(YARD, spec);
+    readings = { front: sensor(next, solid, End.FRONT, spec), rear: sensor(next, solid, End.REAR, spec) };
     sounds.sensor(next.gear === Gear.DRIVE ? readings.front : next.gear === Gear.REVERSE ? readings.rear : null);
     sounds.reverse_beeper(!!spec.reverse_beeper && next.speed < -0.02);
     // A touch is a bump, not the end: one thunk as it starts, and the ring fades while the vehicle stays put.
@@ -336,10 +363,14 @@
     sounds.quiet();
     contact = null;
     car = swapped.car;
+    if (swapped.raised) {
+      camera = null;
+      cut_at = performance.now();
+    }
     wake();
-    moved_note = swapped.moved;
+    moved_note = swapped.raised ? "Too tall for the car park: up on the pad" : swapped.moved ? "Moved to the nearest clear spot" : null;
     clearTimeout(moved_timer);
-    if (swapped.moved) moved_timer = setTimeout(() => (moved_note = false), MOVED_NOTE * 1000);
+    if (moved_note) moved_timer = setTimeout(() => (moved_note = null), MOVED_NOTE * 1000);
     focus_board();
   }
 
@@ -350,8 +381,13 @@
 
   $effect(() => () => clearTimeout(moved_timer));
 
+  // Parking opens on the spot kind it last had, so the doorway below leaves the Multi-storey one picked.
   function enter() {
-    if (door_game) onenter(door_game.id);
+    if (!door_game) return;
+    if (!below) return onenter(door_game.id);
+    storage.set("parking.mode", "scenario");
+    storage.set("parking.pick", Scenario.MULTI_STOREY);
+    onenter(door_game.id, true);
   }
 
   function on_keydown(event: KeyboardEvent) {
@@ -420,14 +456,20 @@
     <div class="flex flex-col items-end gap-1.5">
       <SpeedChip class="hidden pointer-coarse:block" speed={car.speed} />
       {#if card === "door" && door_game}
-        <Button class="pointer-events-auto gap-1.5 pointer-coarse:h-11" size="sm" variant="primary" onclick={enter}>
+        <Button
+          class="pointer-events-auto gap-1.5 pointer-coarse:h-11"
+          size="sm"
+          variant="primary"
+          aria-label={below ? `${door_game.name}: Multi-storey` : undefined}
+          onclick={enter}
+        >
           <door_game.icon weight="bold" class="size-4" />
-          {door_game.name}
+          {#if below}<span class="hidden @md:inline">{door_game.name}:</span> Multi-storey{:else}{door_game.name}{/if}
           <span class="hidden text-2xs opacity-75 pointer-fine:inline">Enter ↵</span>
         </Button>
       {/if}
       {#if moved_note}
-        <div class="rounded-md bg-background/85 px-1.5 py-0.5 text-ui backdrop-blur-[2px]" role="status">Moved to the nearest clear spot</div>
+        <div class="rounded-md bg-background/85 px-1.5 py-0.5 text-ui backdrop-blur-[2px]" role="status">{moved_note}</div>
       {/if}
       {#if facing_reading !== null}
         <div
@@ -475,7 +517,7 @@
 {/snippet}
 
 {#snippet status()}
-  <span>Yard</span>
+  <span>{floor === null ? "Yard" : `Car park ${floor < 0 ? "−" : ""}${Math.abs(floor)}`}</span>
   <span>{VEHICLE_NAMES[vehicle]}</span>
   <span class="tabular-nums pointer-coarse:hidden">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 2 ? " R" : wheel_degrees < -2 ? " L" : ""}</span>
   <span class="hidden @3xl:inline">Drive into a doorway to play · the garage swaps the vehicle · + − zoom</span>

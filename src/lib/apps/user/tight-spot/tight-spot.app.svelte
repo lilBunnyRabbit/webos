@@ -31,6 +31,7 @@
   let active = $state<string>(first);
   let daily = $state(untrack(() => daily_prop));
   let from = $state<string | null>(null);
+  let below = $state(false);
   let vehicle = $state<Vehicle>(Vehicle.HATCH);
   let last = $state<string | null>(storage.get("last", z.string()) ?? null);
   if (first !== YARD) remember(first);
@@ -61,10 +62,13 @@
     storage.set("last", id);
   }
 
-  function open(id: string) {
+  function open(id: string, from_below = false) {
     if (id === active) return;
     if (id === YARD) from = loaded.has(active) ? active : null;
-    else remember(id);
+    else {
+      remember(id);
+      below = from_below;
+    }
     daily = undefined;
     active = id;
   }
@@ -95,7 +99,7 @@
 {/snippet}
 
 {#if active === YARD}
-  <Yard {settings} bind:vehicle {from} {last} {menu} onenter={open} />
+  <Yard {settings} bind:vehicle {from} from_below={below} {last} {menu} onenter={open} />
 {:else if Game}
   {#key active}
     <Game {settings} {daily} {menu} {play} onexit={() => open(YARD)} />
