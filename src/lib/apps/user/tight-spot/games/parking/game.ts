@@ -101,14 +101,14 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
     name: "Bus stop",
     brief: "Pull into the stop box along the kerb, short of anything parked ahead. The tail swings out as you straighten.",
     par: 1,
-    vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.ARTIC],
+    vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.ARTIC, Vehicle.BOX_TRUCK],
     ladder: [Vehicle.BUS],
   },
   depot: {
     name: "Depot",
     brief: "Park in your lane between the parked buses, facing the way its arrow points.",
     par: 1,
-    vehicles: [Vehicle.BUS, Vehicle.COACH, Vehicle.DECKER, Vehicle.GARBAGE, Vehicle.FIRE, Vehicle.ARTIC],
+    vehicles: [Vehicle.BUS, Vehicle.COACH, Vehicle.DECKER, Vehicle.GARBAGE, Vehicle.FIRE, Vehicle.ARTIC, Vehicle.BOX_TRUCK],
     ladder: [Vehicle.BUS],
   },
   driveway: {
@@ -130,6 +130,13 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
     brief: "Back the caravan onto the empty pitch between the hedges, car facing the track.",
     par: 2,
     vehicles: [Vehicle.CARAVAN],
+  },
+  "loading-dock": {
+    name: "Loading dock",
+    brief: "Line up at the free dock door between the trucks, the way its arrow points.",
+    par: 2,
+    vehicles: [Vehicle.SEMI, Vehicle.BOX_TRUCK, Vehicle.DRAWBAR, Vehicle.ROAD_TRAIN],
+    ladder: [Vehicle.SEMI],
   },
 };
 
@@ -164,7 +171,11 @@ export interface Hit {
   kind: HitKind;
   /** Which hinge folded too far, on a rig with more than one. */
   hinge?: number;
+  /** A parked truck or trailer rather than a car. */
+  truck?: boolean;
 }
+
+const TRUCKS: ReadonlySet<Vehicle | undefined> = new Set([Vehicle.SEMI, Vehicle.BOX_TRUCK]);
 
 export interface GameState {
   round: Round;
@@ -280,7 +291,7 @@ export function advance(
       ms,
       status: Status.CRASHED,
       contact: hit.at,
-      hit: { kind: hit.solid.kind },
+      hit: TRUCKS.has(hit.solid.car?.vehicle) ? { kind: hit.solid.kind, truck: true } : { kind: hit.solid.kind },
     };
   return { ...state, car, ms };
 }
@@ -381,8 +392,11 @@ const BIG_LAP: readonly Scenario[] = [
   Scenario.DEPOT,
   Scenario.SLIPWAY,
   Scenario.CAMPING,
+  Scenario.LOADING_DOCK,
 ];
 const BIG_KINDS_BEFORE = 5;
+// Each kind that joined the laps later has its own seeds, so the levels before it keep theirs.
+const LATER_SEEDS: Partial<Record<Scenario, number>> = { camping: 200, "loading-dock": 300 };
 const LAPS = 3;
 const PER_LAP = LAP.length + BIG_LAP.length;
 const CAR_LEVELS = LAP.length * LAPS;
@@ -405,8 +419,7 @@ export function level_round(level: number): Round {
   }
   const k = at - LAP.length;
   const scenario = BIG_LAP[k];
-  // The seeds stay those of the five big kinds the ladder had before the camping pitch; it gets its own.
-  const seed = k < BIG_KINDS_BEFORE ? hash(0x7195, 100 + lap * BIG_KINDS_BEFORE + k) : hash(0x7195, 200 + lap);
+  const seed = k < BIG_KINDS_BEFORE ? hash(0x7195, 100 + lap * BIG_KINDS_BEFORE + k) : hash(0x7195, LATER_SEEDS[scenario]! + lap);
   const difficulty = Math.min(1, (lap * LAP.length + 1.5 + k * 1.75) / (CAR_LEVELS - 1));
   return { ...base, scenario, difficulty, seed, vehicle: ladder_vehicle(scenario, seed) };
 }
@@ -461,7 +474,7 @@ const ORDINALS = ["first", "second", "third", "fourth", "fifth"];
 export function crash_title(hit: GameState["hit"]): string {
   if (!hit) return "Touched something";
   if (hit.kind === JACKKNIFE) return hit.hinge === undefined ? "Jackknifed the trailer" : `Jackknifed at the ${ORDINALS[hit.hinge]} hinge`;
-  return `Touched ${HIT_NAMES[hit.kind]}`;
+  return hit.truck ? "Touched a parked truck" : `Touched ${HIT_NAMES[hit.kind]}`;
 }
 
 export function round_title(round: Round): string {

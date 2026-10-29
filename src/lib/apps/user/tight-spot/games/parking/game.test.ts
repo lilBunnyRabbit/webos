@@ -134,7 +134,7 @@ describe("moves", () => {
 describe("rounds", () => {
   test("Any picks a scenario from the seed; the same seed always gives the same round", () => {
     expect(scenario_round(ANY, 77)).toEqual(scenario_round(ANY, 77));
-    const seen = new Set(Array.from({ length: 60 }, (_, i) => scenario_round(ANY, i).scenario));
+    const seen = new Set(Array.from({ length: 120 }, (_, i) => scenario_round(ANY, i).scenario));
     expect(seen.size).toBe(SCENARIOS.length);
   });
 
@@ -146,11 +146,13 @@ describe("rounds", () => {
     expect(rounds.every((round) => round.mode === Mode.LEVELS)).toBe(true);
   });
 
-  test("the big kinds' levels keep the seeds they had before the camping pitch joined the laps", () => {
+  test("the big kinds' levels keep the seeds they had before the camping pitch and the loading dock joined the laps", () => {
     for (let lap = 0; lap < 3; lap++) {
       for (let k = 0; k < 5; k++) {
-        expect(level_round(lap * 15 + 9 + k + 1).seed, `lap ${lap} kind ${k}`).toBe(hash(0x7195, 100 + lap * 5 + k));
+        expect(level_round(lap * 16 + 9 + k + 1).seed, `lap ${lap} kind ${k}`).toBe(hash(0x7195, 100 + lap * 5 + k));
       }
+      expect(level_round(lap * 16 + 15)).toMatchObject({ scenario: Scenario.CAMPING, seed: hash(0x7195, 200 + lap) });
+      expect(level_round(lap * 16 + 16)).toMatchObject({ scenario: Scenario.LOADING_DOCK, seed: hash(0x7195, 300 + lap) });
     }
   });
 
@@ -264,6 +266,15 @@ describe("vehicles", () => {
     expect(next.status).toBe(Status.CRASHED);
     expect(next.hit).toEqual({ kind: JACKKNIFE, hinge: 1 });
     expect(crash_title(next.hit)).toBe("Jackknifed at the second hinge");
+  });
+
+  test("backing into a dropped trailer at the dock says it was a truck", () => {
+    const state = driving(scenario_round(Scenario.LOADING_DOCK, 4, undefined, Vehicle.SEMI));
+    const truck = state.world.solids.find((solid) => solid.car?.vehicle === Vehicle.SEMI || solid.car?.vehicle === Vehicle.BOX_TRUCK)!;
+    const at = truck.car!.pose;
+    const next = advance({ ...state, car: { ...state.car, x: at.x, y: at.y, heading: at.heading, trailers: [{ heading: at.heading, roll: [0, 0] }] } }, NO_INPUT, DT);
+    expect(next.status).toBe(Status.CRASHED);
+    expect(crash_title(next.hit)).toBe("Touched a parked truck");
   });
 
   test("parked with a trailer needs the trailer lined up too", () => {

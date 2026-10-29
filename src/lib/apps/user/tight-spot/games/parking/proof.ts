@@ -1,10 +1,10 @@
 import { angle_between } from "../../core/geometry";
 import { collide, obstacles, type Obstacles } from "../../core/obstacles";
 import { drive, inflate, plan, type Move } from "../../core/planner";
-import { jackknifed, VEHICLES, type Placement, type Vehicle, type VehicleSpec } from "../../core/vehicle";
+import { jackknifed, rig_length, VEHICLES, type Placement, type Vehicle, type VehicleSpec } from "../../core/vehicle";
 import { create_game, Mode, parked_in, SCENARIO_INFO, spec_of, verdict, type GameState } from "./game";
 import { parked_poses } from "./poses";
-import type { Bay, Scenario } from "./world";
+import { Scenario, type Bay } from "./world";
 
 /** The vehicles a kind gained after its levels were laid out; a look on a spec already proven there needs no proof. */
 export function added(scenario: Scenario): Vehicle[] {
@@ -46,7 +46,7 @@ const PULL_UP_ANGLE = (3 * Math.PI) / 180;
 function pull_up(at: Placement, bay: Bay, near: Obstacles, spec: VehicleSpec, body: VehicleSpec): number | null {
   if (angle_between(at.heading, bay.heading) > PULL_UP_ANGLE) return null;
   let pose = at;
-  for (let s = 0; s <= PULL_UP_RANGE; s += PIECE) {
+  for (let s = 0; s <= Math.max(PULL_UP_RANGE, rig_length(spec)); s += PIECE) {
     if (parked_in(pose, bay, spec)) return s;
     pose = drive(pose, { curvature: 0, distance: PIECE }, spec);
     if (collide(pose, near, body)) return null;
@@ -60,7 +60,13 @@ export function reachable(state: GameState, from_start: boolean): boolean {
   const near = obstacles(world);
   const bay = world.bays[0];
   const start: Placement = { x: car.x, y: car.y, heading: car.heading, trailers: car.trailers };
-  const straight = spec.hitches.length > 0 && state.round.scenario !== null && PULL_UP.has(state.round.scenario);
+  const scenario = state.round.scenario;
+  const straight =
+    (spec.hitches.length > 0 && scenario !== null && PULL_UP.has(scenario)) ||
+    (spec.hitches.length > 1 && scenario === Scenario.LOADING_DOCK);
+  // A semi waits set up at the dock, its tail at the door: one reverse in is what a driver does from there, and a
+  // search in reverse only finds it in a second or two; the odd start that needs a shunt gets the full search.
+  const backs = spec.hitches.length === 1 && scenario === Scenario.LOADING_DOCK;
   const body = inflate(spec, 0.05);
   const arrive = straight
     ? (at: Placement) => pull_up(at, bay, near, spec, body) !== null
@@ -72,7 +78,9 @@ export function reachable(state: GameState, from_start: boolean): boolean {
     if (count >= 3) return false;
     tried.set(pose.heading, count + 1);
     if (!from_start && spec.hitches.length === 0) return plan(pose, world.start, near, { spec }) !== null;
-    const found = plan(start, pose, near, { spec, arrive, directions: straight ? [1] : undefined });
+    const found =
+      plan(start, pose, near, { spec, arrive, directions: straight ? [1] : backs ? [-1] : undefined }) ??
+      (backs ? plan(start, pose, near, { spec, arrive }) : null);
     if (!found) return false;
     const end = straight ? pull_up(found.path.at(-1)!, bay, near, spec, body) : null;
     const moves = end ? [...found.moves, { curvature: 0, distance: end }] : found.moves;

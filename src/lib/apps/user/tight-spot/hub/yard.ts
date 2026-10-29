@@ -39,9 +39,10 @@ export interface Shelf {
 /** The garage's vehicles in shelves, so a phone's card shows a handful at a time; every vehicle is on one. */
 export const GARAGE: readonly Shelf[] = [
   { id: "cars", name: "Cars", vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.LIMO, Vehicle.VAN, Vehicle.PICKUP, Vehicle.CAMPER] },
-  { id: "service", name: "Service", vehicles: [Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.GARBAGE, Vehicle.FORKLIFT] },
+  { id: "service", name: "Service", vehicles: [Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.GARBAGE, Vehicle.FORKLIFT, Vehicle.BAGGAGE] },
   { id: "buses", name: "Buses", vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.COACH, Vehicle.ARTIC] },
-  { id: "towing", name: "Towing", vehicles: [Vehicle.TOWING, Vehicle.CARAVAN, Vehicle.BOAT, Vehicle.HORSE_BOX, Vehicle.TRACTOR, Vehicle.QUAD] },
+  { id: "trucks", name: "Trucks", vehicles: [Vehicle.BOX_TRUCK, Vehicle.SEMI, Vehicle.DRAWBAR, Vehicle.ROAD_TRAIN] },
+  { id: "towing", name: "Towing", vehicles: [Vehicle.TOWING, Vehicle.CARAVAN, Vehicle.BOAT, Vehicle.HORSE_BOX, Vehicle.TRACTOR, Vehicle.TRACTOR_TWO, Vehicle.QUAD] },
   { id: "fun", name: "Fun", vehicles: [Vehicle.TUK_TUK, Vehicle.GOLF_CART, Vehicle.RESURFACER, Vehicle.TROLLEY, Vehicle.F1] },
 ];
 
@@ -127,7 +128,8 @@ export function build_yard(games: number): Yard {
     rect(31.6, H - 0.7, 32.4, H),
     rect(24.4, H - 0.3, 31.6, H - 0.1),
   ].map((shape) => ({ kind: SolidKind.POST, shape }));
-  const bollards = [40, 44, 48].map((x) => ({ x, y: 39.5 }));
+  // Off the lines a road train takes out of the east doorway and in from the gate.
+  const bollards = [44, 48, 52].map((x) => ({ x, y: 39.5 }));
   const bollard_solids: Solid[] = bollards.map((at) => ({ kind: SolidKind.POST, shape: rect(at.x - 0.2, at.y - 0.2, at.x + 0.2, at.y + 0.2) }));
 
   const bay = 2.7;
@@ -135,7 +137,7 @@ export function build_yard(games: number): Yard {
   const marks: Mark[] = bays_y.map((y) => ({ kind: MarkKind.LINE, a: { x: WALL, y }, b: { x: 6, y } }));
   const cars = [parked(2.9, 17 + bay / 2, 1), parked(3.6, 17 + bay * 2.5, 3, Vehicle.VAN)];
 
-  const cones = [18, 23, 28, 33, 38].map((x, i) => ({ x, y: i % 2 ? 22.5 : 23.5 }));
+  const cones = [18, 22.5, 33.5, 38].map((x, i) => ({ x, y: i % 2 ? 22.5 : 23.5 }));
   const cone_solids: Solid[] = cones.map((at) => ({ kind: SolidKind.POST, shape: rect(at.x - CONE / 2, at.y - CONE / 2, at.x + CONE / 2, at.y + CONE / 2) }));
 
   const built = PLOT_X.map((x, i) => plot(x, i < games));
@@ -192,8 +194,11 @@ export function door_at(yard: Yard, car: Placement, spec: VehicleSpec): number |
   return index < 0 ? null : index;
 }
 
+// A long rig's vehicle sits past the pad when the rig's middle is on it, so either counts.
 export function on_pad(yard: Yard, car: Placement, spec: VehicleSpec): boolean {
-  return inside_convex(body_centre(car, spec), yard.pad);
+  const { front, rear } = rig_ends(spec);
+  const middle = to_world(car, { x: (front + rear) / 2, y: 0 });
+  return inside_convex(body_centre(car, spec), yard.pad) || inside_convex(middle, yard.pad);
 }
 
 export interface Bumped {

@@ -19,6 +19,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "A Fun shelf in Drive Hub's garage holds a tuk-tuk, a golf cart, an ice resurfacer, a shopping trolley and an F1 car; the tuk-tuk and the golf cart can park in Tight Spot's car spots, and the F1 car takes on the open lot with its lorry-sized turning circle.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Trucks arrive in Drive Hub: a semi-trailer truck, a box truck, a truck with a drawbar trailer and a road train, plus a baggage train and a tractor with two trailers, where every hinge can jackknife; Tight Spot adds a loading dock where you back the semi up to a free door or drive the long rigs down a dock lane.",
+      },
     ],
   },
   {

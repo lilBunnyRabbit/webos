@@ -12,7 +12,7 @@
   import DriveFrame from "../../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../../core/drive-input.svelte";
   import GearStrip from "../../core/gear-strip.svelte";
-  import { centroid } from "../../core/geometry";
+  import { bounds_of, centroid } from "../../core/geometry";
   import KeyHint from "../../core/key-hint.svelte";
   import { DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, zoom_step } from "../../core/keys";
   import { frame_loop } from "../../core/loop";
@@ -22,7 +22,7 @@
   import SettingsPanel from "../../core/settings-panel.svelte";
   import { Sounds } from "../../core/sound";
   import SpeedChip from "../../core/speed-chip.svelte";
-  import { body_centre, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, without_creep } from "../../core/vehicle";
+  import { bodies, body_centre, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, without_creep } from "../../core/vehicle";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
   import {
@@ -218,6 +218,8 @@
     if (game.status === Status.READY && game.world.bays.length === 1) {
       // Before the start, frame the car and its bay together so the player sees the task.
       const bay = centroid(game.world.bays[0].shape);
+      // A long rig or a long bay can reach past the usual margin round the two: frame all of both then.
+      const all = bounds_of([...game.world.bays[0].shape, ...bodies(game.car, spec).flat()]);
       // The start card covers the bottom of the board, or its left on a wide one; the framing keeps clear of it, and
       // of the pedals floating on the right of a phone held sideways.
       const covered_x = side_card ? Math.min(card_size.width + 16, size.width * 0.6) : 0;
@@ -225,11 +227,13 @@
       const covered_right = sideways() ? pedal_box.width + OVERLAY_GAP : 0;
       const width = size.width - covered_x - covered_right;
       const height = size.height - covered_y;
-      const across = Math.abs(bay.x - car.x) + 12;
-      const along = Math.abs(bay.y - car.y) + 12;
+      const across = Math.max(Math.abs(bay.x - car.x) + 12, all.x1 - all.x0 + 4);
+      const along = Math.max(Math.abs(bay.y - car.y) + 12, all.y1 - all.y0 + 4);
+      const long = across > Math.abs(bay.x - car.x) + 12 || along > Math.abs(bay.y - car.y) + 12;
+      const middle = long ? { x: (all.x0 + all.x1) / 2, y: (all.y0 + all.y1) / 2 } : { x: (bay.x + car.x) / 2, y: (bay.y + car.y) / 2 };
       const short = Math.min(width, height);
       const fit = Math.min(1, (span * width) / short / across, (span * height) / short / along);
-      const view = frame(bounds, { x: (bay.x + car.x) / 2, y: (bay.y + car.y) / 2 }, width, height, Math.max(0.25, fit) * zoom, NO_INSETS, span);
+      const view = frame(bounds, middle, width, height, Math.max(0.25, fit) * zoom, NO_INSETS, span);
       return { ...view, x: view.x - (covered_x - covered_right) / 2 / view.scale, y: view.y + covered_y / 2 / view.scale };
     }
     const ahead = game.car.speed * 0.9;

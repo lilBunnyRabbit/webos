@@ -460,6 +460,153 @@ const ARTICULATED_BUS: VehicleSpec = {
   hitches: [BUS_REAR],
 };
 
+const KINGPIN = degrees(80);
+const DRAWBAR = degrees(60);
+const TURNTABLE = degrees(45);
+const CART = degrees(75);
+
+/** A cab-over tractor unit: the cab sits over the front axle, so the front overhang is short and the lock tight. */
+const CAB_OVER: VehicleSpec = {
+  ...TRUCK,
+  length: 6,
+  wheelbase: 3.7,
+  rear_overhang: 0.85,
+  turning_radius: 6.9,
+  steer_time: 1.5,
+  max_forward: 5.5,
+  max_reverse: 1.9,
+  accel: 1,
+};
+
+// The kingpin sits just ahead of the tractor's drive axle, and the trailer's box reaches past it over the fifth wheel.
+// Its tri-axle group turns about its middle, where the axle is.
+const SEMI_TRAILER: TrailerSpec = {
+  hitch: -0.35,
+  axle: 7.7,
+  drawbar: -1.6,
+  box_length: 13.6,
+  width: 2.55,
+  track: 2.05,
+  wheel_diameter: 0.9,
+  wheel_width: 0.3,
+  max_angle: KINGPIN,
+};
+
+const SEMI: VehicleSpec = { ...CAB_OVER, hitches: [SEMI_TRAILER] };
+
+export const BOX_TRUCK: VehicleSpec = {
+  ...TRUCK,
+  length: 7.2,
+  width: 2.45,
+  track: 1.95,
+  wheel_diameter: 0.85,
+  wheel_width: 0.28,
+  wheelbase: 3.9,
+  rear_overhang: 1.9,
+  turning_radius: 7.6,
+  steer_time: 1.35,
+  max_forward: 7,
+  accel: 1.4,
+};
+
+const RIGID_TRUCK: VehicleSpec = {
+  ...TRUCK,
+  length: 9.4,
+  width: 2.55,
+  wheelbase: 5.4,
+  rear_overhang: 2.6,
+  turning_radius: 9.4,
+  steer_time: 1.55,
+  max_forward: 5.5,
+  max_reverse: 1.9,
+  accel: 1,
+};
+
+// A drawbar trailer is two hinges: the drawbar pivots on the truck's coupling and steers a dolly, and the body turns on
+// a turntable over the dolly's axle.
+const DOLLY: TrailerSpec = {
+  hitch: 2.75,
+  axle: 2.7,
+  drawbar: 2.1,
+  box_length: 1.2,
+  width: 2.2,
+  track: 2.0,
+  wheel_diameter: 0.9,
+  wheel_width: 0.3,
+  max_angle: DRAWBAR,
+};
+
+const DRAWBAR_BODY: TrailerSpec = {
+  hitch: 0,
+  axle: 5,
+  drawbar: -1.6,
+  box_length: 7.6,
+  width: 2.55,
+  track: 2.05,
+  wheel_diameter: 0.9,
+  wheel_width: 0.3,
+  max_angle: TURNTABLE,
+};
+
+const DRAWBAR_RIG: VehicleSpec = { ...RIGID_TRUCK, hitches: [DOLLY, DRAWBAR_BODY] };
+
+// An A-double: a short semi-trailer, a converter dolly hooked behind it, and a second semi on the dolly's fifth wheel.
+const LEAD_SEMI: TrailerSpec = { ...SEMI_TRAILER, axle: 6.3, drawbar: -1.4, box_length: 9.5 };
+const CONVERTER_DOLLY: TrailerSpec = { ...DOLLY, hitch: 2.3, axle: 2.6, drawbar: 1.9, box_length: 1.4 };
+const REAR_SEMI: TrailerSpec = { ...LEAD_SEMI, hitch: -0.1 };
+
+const ROAD_TRAIN: VehicleSpec = {
+  ...CAB_OVER,
+  max_forward: 5,
+  max_reverse: 1.6,
+  accel: 0.8,
+  hitches: [LEAD_SEMI, CONVERTER_DOLLY, REAR_SEMI],
+};
+
+const TUG: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 2.8,
+  width: 1.4,
+  wheelbase: 1.6,
+  rear_overhang: 0.55,
+  track: 1.15,
+  wheel_diameter: 0.55,
+  wheel_width: 0.2,
+  turning_radius: 3.3,
+  steer_time: 0.95,
+  creep_speed: 1.4,
+  creep_accel: 1,
+  max_forward: 5,
+  max_reverse: 1.8,
+  accel: 1.8,
+  brake: 6,
+  rolling: 0.35,
+  park_speed: 0.3,
+  hitches: [],
+};
+
+const BAGGAGE_CART: TrailerSpec = {
+  hitch: 1.7,
+  axle: 2.4,
+  drawbar: 0.9,
+  box_length: 2.9,
+  width: 1.45,
+  track: 1.2,
+  wheel_diameter: 0.42,
+  wheel_width: 0.14,
+  max_angle: CART,
+};
+
+const BAGGAGE_TRAIN: VehicleSpec = { ...TUG, hitches: [{ ...BAGGAGE_CART, hitch: 0.75 }, BAGGAGE_CART, BAGGAGE_CART] };
+
+// The second trailer hitches to the first one's tail, 0.4 m behind its box.
+const TRACTOR_TWO: VehicleSpec = {
+  ...TRACTOR,
+  max_forward: 4.5,
+  accel: 1.2,
+  hitches: [FARM_TRAILER, { ...FARM_TRAILER, hitch: 2.7 }],
+};
+
 // Three wheels: the model's front pair stands in for the one front wheel on the centre line, which steers the same
 // bicycle; only the drawing shows one.
 export const TUK_TUK: VehicleSpec = {
@@ -607,6 +754,12 @@ export const Vehicle = {
   RESURFACER: "resurfacer",
   TROLLEY: "trolley",
   F1: "f1",
+  SEMI: "semi",
+  BOX_TRUCK: "box-truck",
+  DRAWBAR: "drawbar",
+  ROAD_TRAIN: "road-train",
+  BAGGAGE: "baggage",
+  TRACTOR_TWO: "tractor-two",
 } as const;
 export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
 
@@ -640,6 +793,12 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   resurfacer: ICE_RESURFACER,
   trolley: SHOPPING_TROLLEY,
   f1: F1_CAR,
+  semi: SEMI,
+  "box-truck": BOX_TRUCK,
+  drawbar: DRAWBAR_RIG,
+  "road-train": ROAD_TRAIN,
+  baggage: BAGGAGE_TRAIN,
+  "tractor-two": TRACTOR_TWO,
 };
 
 export const VEHICLE_NAMES: Record<Vehicle, string> = {
@@ -671,6 +830,12 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   resurfacer: "Ice resurfacer",
   trolley: "Shopping trolley",
   f1: "F1 car",
+  semi: "Truck and semi-trailer",
+  "box-truck": "Box truck",
+  drawbar: "Truck and drawbar trailer",
+  "road-train": "Road train",
+  baggage: "Baggage train",
+  "tractor-two": "Tractor and two trailers",
 };
 
 const coasting = new WeakMap<VehicleSpec, VehicleSpec>();

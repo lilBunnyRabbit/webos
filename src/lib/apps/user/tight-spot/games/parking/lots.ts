@@ -1,6 +1,6 @@
 import type { Rng } from "$lib/core/utils/random";
 import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
-import { BUS, CARAVAN_TRAILER, HATCHBACK, rig_ends, rig_length, Vehicle, type VehicleSpec } from "../../core/vehicle";
+import { BOX_TRUCK, BUS, CARAVAN_TRAILER, HATCHBACK, rig_ends, rig_length, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import {
   MarkKind,
   Scenario,
@@ -25,6 +25,7 @@ const BUS_LENGTH = BUS.length;
 const BUS_WIDTH = BUS.width;
 const CARAVAN_LENGTH = CARAVAN_TRAILER.box_length + CARAVAN_TRAILER.drawbar;
 const CARAVAN_WIDTH = CARAVAN_TRAILER.width;
+const DROPPED_TRAILER = { length: 13.6, width: 2.55 };
 
 class Builder implements Layout {
   surfaces: Surface[] = [];
@@ -73,6 +74,14 @@ class Builder implements Layout {
     const paint = Math.floor(this.rng() * PAINTS);
     const car = { pose, length: BUS_LENGTH, width: BUS_WIDTH, paint, vehicle: Vehicle.BUS };
     this.solids.push({ kind: SolidKind.CAR, shape: oriented_box(x, y, heading, BUS_LENGTH, BUS_WIDTH), car });
+  }
+
+  truck(x: number, y: number, heading: number, vehicle: typeof Vehicle.SEMI | typeof Vehicle.BOX_TRUCK) {
+    const { length, width } = vehicle === Vehicle.SEMI ? DROPPED_TRAILER : BOX_TRUCK;
+    const pose = { x, y, heading };
+    const paint = Math.floor(this.rng() * PAINTS);
+    this.solids.push({ kind: SolidKind.CAR, shape: oriented_box(x, y, heading, length, width), car: { pose, length, width, paint, vehicle } });
+    return length;
   }
 
   caravan(x: number, y: number, heading: number) {
@@ -495,6 +504,7 @@ interface Fit {
   depth: number;
   /** From the pose back to the rig's tail. */
   rear: number;
+  links: number;
 }
 
 // Never smaller than the hatchback's layout: a smaller vehicle gets the same room, not a shrunk copy of it.
@@ -506,7 +516,8 @@ function fit_for(spec: VehicleSpec): Fit {
     wider: Math.max(0, spec.width - HATCHBACK.width, ...spec.hitches.map((link) => link.width - HATCHBACK.width)),
     turn: Math.max(1, spec.turning_radius / HATCHBACK.turning_radius),
     depth: length + 0.7,
-    rear: -rig_ends(spec).rear,
+    rear: rig_length(spec) < HATCHBACK.length ? -rig_ends(HATCHBACK).rear : -rig_ends(spec).rear,
+    links: spec.hitches.length,
   };
 }
 
@@ -794,6 +805,86 @@ function camping(d: number, rng: Rng, fit: Fit): Layout {
   return chance(rng, 0.5) ? mirror(b) : b;
 }
 
+// Dock doors along the north wall, each with a bumper either side; the rest of the doors have a truck or a dropped
+// semi-trailer backed onto them. A semi or a box truck reverses square onto the free door, nose out; it waits set up on
+// the apron past the door, swung away from it, the way a driver lines up a blind-side reverse.
+function loading_dock(d: number, rng: Rng, fit: Fit): Layout {
+  if (fit.links >= 2) return dock_lanes(d, rng, fit);
+  const b = new Builder(rng);
+  const width = lerp(4.2, 3.6, d) + fit.wider;
+  const front = EDGE + fit.depth;
+  b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
+  b.perimeter(SolidKind.WALL);
+  const doors = row(EDGE + 1, SIZE - EDGE - 1, width, front, EDGE, "centre");
+  draw_row(b, doors);
+  const count = doors.xs.length;
+  const swing = lerp(0.55, 0.45, d);
+  // Only doors with room on the apron for the whole rig, set up to one side of them.
+  const span = (fit.length + 1) * Math.cos(swing) + 2.5;
+  const fits = (i: number) => {
+    const door = doors.xs[i] + width / 2;
+    return door < SIZE / 2 ? door + span <= SIZE - EDGE : door - span >= EDGE;
+  };
+  const choices = Array.from({ length: count - 2 }, (_, k) => k + 1).filter(fits);
+  const target = choices[Math.floor(rng() * choices.length)];
+  const fill = lerp(0.55, 1, d);
+  doors.xs.forEach((x, i) => {
+    b.line({ x: x + 0.45, y: EDGE + 0.06 }, { x: x + width - 0.45, y: EDGE + 0.06 }, MarkKind.STOP);
+    for (const at of [x + 0.2, x + width - 0.45]) b.block(SolidKind.POST, at, EDGE, at + 0.25, EDGE + 0.2);
+    if (i === target) {
+      b.bay(rect(x, EDGE, x + width, front), SOUTH, false);
+      return;
+    }
+    const near = Math.abs(i - target) === 1;
+    if (!near && !chance(rng, fill)) return;
+    const vehicle = chance(rng, lerp(0.3, 0.75, d)) ? Vehicle.SEMI : Vehicle.BOX_TRUCK;
+    const length = vehicle === Vehicle.SEMI ? DROPPED_TRAILER.length : BOX_TRUCK.length;
+    const room = (width - 2.55) / 2 - 0.08;
+    b.truck(x + width / 2 + Math.max(-room, Math.min(room, (rng() * 2 - 1) * 0.2)), EDGE + 0.3 + length / 2, SOUTH, vehicle);
+  });
+  const door = doors.xs[target] + width / 2;
+  const toward = door < SIZE / 2 ? 1 : -1;
+  // The tail already at the mouth, clear of the dropped trailers either side, the rig angled away down the apron.
+  const tail = { x: door + toward * between(rng, 0.3, 1.5), y: Math.max(front - lerp(1, 2, d), EDGE + 0.3 + DROPPED_TRAILER.length + 1.4) };
+  const heading = toward > 0 ? swing : Math.PI - swing;
+  b.start = { x: tail.x + Math.cos(heading) * fit.rear, y: tail.y + Math.sin(heading) * fit.rear, heading };
+  return b;
+}
+
+// A rig of two or more hinges can't be backed in, so its dock is drive-through: lanes run north from the gate along
+// the dock, and it pulls nose first into the free one, a metre or two to the side of the road's lane.
+function dock_lanes(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const width = lerp(4.2, 3.7, d);
+  const front = EDGE + fit.depth;
+  b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
+  b.perimeter(SolidKind.WALL);
+  // The lanes are laid out from the free one, so it sits exactly the seed's offset from the road's lane.
+  // A road train's tail takes longer to follow it across, so its lane is nearer.
+  const reach = fit.length > 20 ? 0.7 : 1;
+  const centre = 18 + (chance(rng, 0.5) ? -1 : 1) * reach * between(rng, lerp(1.1, 1.5, d), lerp(1.9, 2.4, d));
+  const first = centre - width / 2 - Math.floor((centre - width / 2 - EDGE) / width) * width;
+  const lanes = row(first, SIZE - EDGE, width, front, EDGE, "start");
+  draw_row(b, lanes);
+  const target = Math.round((centre - width / 2 - first) / width);
+  const swing = [Math.min(18, centre) - 1.5, Math.max(18, centre) + 1.5];
+  const fill = lerp(0.6, 1, d);
+  lanes.xs.forEach((x, i) => {
+    b.line({ x: x + 0.45, y: EDGE + 0.06 }, { x: x + width - 0.45, y: EDGE + 0.06 }, MarkKind.STOP);
+    if (i === target) {
+      b.bay(rect(x, EDGE, x + width, front), NORTH, false);
+      return;
+    }
+    if ((x < swing[1] && x + width > swing[0]) || !chance(rng, fill)) return;
+    const vehicle = chance(rng, 0.5) ? Vehicle.SEMI : Vehicle.BOX_TRUCK;
+    const length = vehicle === Vehicle.SEMI ? DROPPED_TRAILER.length : BOX_TRUCK.length;
+    b.truck(x + width / 2, EDGE + 0.3 + length / 2, SOUTH, vehicle);
+  });
+  return b;
+}
+
 /** A lot laid out in its own frame: 32 m square, the way in through the south edge between x 12 and 20. */
 export function build_lot(
   scenario: Scenario,
@@ -834,5 +925,7 @@ export function build_lot(
       return end_bay(difficulty, rng, fit);
     case Scenario.CAMPING:
       return camping(difficulty, rng, fit);
+    case Scenario.LOADING_DOCK:
+      return loading_dock(difficulty, rng, fit);
   }
 }

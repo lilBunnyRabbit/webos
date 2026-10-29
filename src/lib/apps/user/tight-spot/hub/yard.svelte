@@ -400,7 +400,7 @@
         <p class="text-base font-semibold">Garage</p>
         <p class="text-ui text-foreground/80">Try any vehicle. It waits here, ready to drive off.</p>
       </div>
-      <Segmented size="sm" class="basis-full overflow-x-auto [&>label]:flex-1" label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={shelf} />
+      <Segmented size="sm" class="grid basis-full grid-cols-3 [&>label]:justify-center" label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={shelf} />
       <div class="flex basis-full flex-wrap gap-1.5" role="group" aria-label="Vehicle">
         {#each shelf_vehicles as each (each)}
           <Button size="sm" variant={each === vehicle ? "primary" : "quiet"} aria-pressed={each === vehicle} onclick={() => swap(each)}>{VEHICLE_NAMES[each]}</Button>

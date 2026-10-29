@@ -1,6 +1,6 @@
 import type { Paint, Palette } from "./draw";
 import { tread } from "./draw-math";
-import { wrap_angle, type Vec } from "./geometry";
+import { wrap_angle, type Pose, type Vec } from "./geometry";
 import type { Solid } from "./scene";
 import {
   body_centre,
@@ -14,6 +14,7 @@ import {
   Vehicle,
   wheels,
   type Car,
+  type TrailerSpec,
   type VehicleSpec,
 } from "./vehicle";
 
@@ -65,13 +66,27 @@ const Style = {
   RESURFACER: "resurfacer",
   TROLLEY: "trolley",
   F1: "f1",
+  CAB: "cab",
+  BOX_TRUCK: "box-truck",
+  TUG: "tug",
 } as const;
 type Style = (typeof Style)[keyof typeof Style];
 
 const Livery = { TAXI: "taxi", POLICE: "police", AMBULANCE: "ambulance" } as const;
 type Livery = (typeof Livery)[keyof typeof Livery];
 
-const Load = { BOX: "box", HORSE: "horse", FARM: "farm", BOAT: "boat", CARAVAN: "caravan", BUS: "bus" } as const;
+const Load = {
+  BOX: "box",
+  HORSE: "horse",
+  FARM: "farm",
+  BOAT: "boat",
+  CARAVAN: "caravan",
+  BUS: "bus",
+  SEMI: "semi",
+  DOLLY: "dolly",
+  BODY: "body",
+  CART: "cart",
+} as const;
 type Load = (typeof Load)[keyof typeof Load];
 
 interface Look {
@@ -110,7 +125,29 @@ const LOOKS: Record<Vehicle, Look> = {
   resurfacer: { style: Style.RESURFACER },
   trolley: { style: Style.TROLLEY },
   f1: { style: Style.F1 },
+  semi: { style: Style.CAB, loads: [Load.SEMI] },
+  "box-truck": { style: Style.BOX_TRUCK },
+  drawbar: { style: Style.BOX_TRUCK, loads: [Load.DOLLY, Load.BODY] },
+  "road-train": { style: Style.CAB, loads: [Load.SEMI, Load.DOLLY, Load.SEMI] },
+  baggage: { style: Style.TUG, loads: [Load.CART, Load.CART, Load.CART] },
+  "tractor-two": { style: Style.TRACTOR, loads: [Load.FARM, Load.FARM] },
 };
+
+/** A semi-trailer sits on a fifth wheel and a drawbar trailer's body on its dolly: drawn over what they ride on. */
+function rides(load: Load): boolean {
+  return load === Load.SEMI || load === Load.BODY;
+}
+
+/** Back to front, each riding link straight after the body it rides on; −1 is the vehicle itself. */
+function draw_order(loads: readonly Load[]): number[] {
+  const order: number[] = [];
+  for (let i = loads.length - 1; i >= -1; i--) {
+    if (i >= 0 && rides(loads[i])) continue;
+    order.push(i);
+    for (let j = i + 1; j < loads.length && rides(loads[j]); j++) order.push(j);
+  }
+  return order;
+}
 
 function look_of(vehicle: Vehicle | undefined): Look {
   return vehicle ? LOOKS[vehicle] : LOOKS.hatch;
@@ -140,6 +177,9 @@ const CORNERS: Record<Style, number[]> = {
   resurfacer: [0.12, 0.35, 0.35, 0.12],
   trolley: [0.04, 0.04, 0.04, 0.04],
   f1: [0.2, 0.3, 0.3, 0.2],
+  cab: [0.1, 0.35, 0.35, 0.1],
+  "box-truck": [0.1, 0.35, 0.35, 0.1],
+  tug: [0.2, 0.25, 0.25, 0.2],
 };
 
 // Taller vehicles throw a longer shadow: the sun is fixed, so the offset only grows with the roof.
@@ -166,10 +206,17 @@ const HEIGHT: Record<Style | Load, number> = {
   resurfacer: 1.4,
   trolley: 0.5,
   f1: 0.4,
+  cab: 2,
+  "box-truck": 1.9,
+  tug: 0.8,
   box: 0.5,
   horse: 1.4,
   farm: 0.9,
   boat: 0.9,
+  semi: 2,
+  dolly: 0.5,
+  body: 1.9,
+  cart: 0.7,
 };
 
 // A tractor and a quad are narrower than their wheels: the body is the bonnet and cab, or the frame under the seat.
@@ -182,6 +229,13 @@ function outline(ctx: CanvasRenderingContext2D, l: number, half: number, style: 
   }
   if (style === Style.QUAD) {
     ctx.roundRect(-l / 2, -0.4, l, 0.8, 0.3);
+    return;
+  }
+  // A tractor unit is its cab and the chassis behind it, the mudguards over the drive axle the widest part.
+  if (style === Style.CAB) {
+    ctx.roundRect(l / 2 - CAB_DEPTH, -half, CAB_DEPTH, half * 2, [0.1, 0.35, 0.35, 0.1]);
+    ctx.roundRect(-l / 2, -0.55, l - CAB_DEPTH + 0.1, 1.1, 0.08);
+    ctx.roundRect(-l / 2 + 0.15, -half + 0.08, 1.3, half * 2 - 0.16, 0.2);
     return;
   }
   const corners = CORNERS[style].map((r) => Math.min(r, half));
@@ -509,6 +563,46 @@ const PAINTERS: Record<Style, (ctx: CanvasRenderingContext2D, f: Frame) => void>
     ctx.stroke();
   },
   caravan: (ctx, f) => caravan_top(ctx, f),
+  cab: (ctx, f) => {
+    const { l, half, roof, paint, palette } = f;
+    const back = l / 2 - CAB_DEPTH;
+    pill(ctx, back + 0.12, -roof, CAB_DEPTH - 0.55, roof * 2, 0.2, paint.roof);
+    // The air deflector over the cab roof.
+    pill(ctx, back + 0.55, -roof + 0.18, 1.1, (roof - 0.18) * 2, 0.45, paint.glass);
+    glass(ctx, paint);
+    pane(ctx, l / 2 - 0.42, l / 2 - 0.1, roof, half - 0.1);
+    for (const side of [-1, 1]) pill(ctx, back - 0.32, side * 0.68 - 0.09, 0.18, 0.18, 0.09, palette.ink);
+    seams(ctx, [[back + 0.05, -half + 0.1, back + 0.05, half - 0.1]], f.scale, palette);
+    // The fifth wheel: a plate with the slot the kingpin drops into.
+    ctx.beginPath();
+    ctx.arc(-l / 2 + 1.25, 0, 0.6, 0, Math.PI * 2);
+    ctx.fillStyle = palette.ink;
+    ctx.fill();
+    pill(ctx, -l / 2 + 0.6, -0.08, 0.65, 0.16, 0.06, paint.roof);
+    for (const side of [-1, 1]) pill(ctx, -l / 2 + 2.1, side * 0.82 - 0.2, 1.1, 0.4, 0.15, paint.glass);
+  },
+  "box-truck": (ctx, f) => {
+    const { l, half, roof, paint, palette } = f;
+    const cab = l / 2 - 1.85;
+    pill(ctx, cab + 0.1, -roof, 1.3, roof * 2, 0.16, paint.roof);
+    glass(ctx, paint);
+    pane(ctx, l / 2 - 0.42, l / 2 - 0.1, roof, half - 0.1);
+    box_roof(ctx, f, -l / 2 + 0.06, cab - 0.12);
+    pill(ctx, -l / 2 + 0.02, -0.25, 0.14, 0.5, 0.05, palette.ink);
+  },
+  tug: (ctx, f) => {
+    const { l, half, paint, palette } = f;
+    pill(ctx, -l / 2 + 0.25, -half + 0.12, 1.3, (half - 0.12) * 2, 0.12, paint.roof);
+    pill(ctx, -l / 2 + 0.45, -0.32, 0.55, 0.64, 0.12, paint.glass);
+    ctx.beginPath();
+    ctx.arc(0.2, -0.12, 0.13, 0, Math.PI * 2);
+    ctx.strokeStyle = palette.ink;
+    ctx.lineWidth = 0.05;
+    ctx.stroke();
+    pill(ctx, l / 2 - 0.16, -half + 0.05, 0.14, half * 2 - 0.1, 0.05, palette.ink);
+    pill(ctx, -l / 2 + 0.02, -half + 0.05, 0.12, half * 2 - 0.1, 0.05, palette.ink);
+    seams(ctx, [[0.55, -half + 0.12, 0.55, half - 0.12]], f.scale, palette);
+  },
   forklift: () => {},
   "tuk-tuk": () => {},
   "golf-cart": () => {},
@@ -516,6 +610,27 @@ const PAINTERS: Record<Style, (ctx: CanvasRenderingContext2D, f: Frame) => void>
   trolley: () => {},
   f1: () => {},
 };
+
+const CAB_DEPTH = 2.3;
+
+// A box body's roof: a lighter panel inside the rim, ribbed across, with a rub rail down each side.
+function box_roof(ctx: CanvasRenderingContext2D, f: Frame, from: number, to: number) {
+  const { half, paint, palette } = f;
+  pill(ctx, from + 0.08, -half + 0.1, to - from - 0.16, (half - 0.1) * 2, 0.08, paint.roof);
+  const ribs: [number, number, number, number][] = [];
+  for (let x = from + 0.6; x < to - 0.3; x += 0.6) ribs.push([x, -half + 0.16, x, half - 0.16]);
+  seams(ctx, ribs, f.scale, palette);
+  ctx.strokeStyle = palette.ink;
+  ctx.globalAlpha = 0.5;
+  ctx.lineWidth = 0.05;
+  ctx.beginPath();
+  for (const side of [-1, 1]) {
+    ctx.moveTo(from + 0.1, side * (half - 0.05));
+    ctx.lineTo(to - 0.1, side * (half - 0.05));
+  }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
 
 function caravan_top(ctx: CanvasRenderingContext2D, f: Frame) {
   const { l, roof, half, paint } = f;
@@ -636,6 +751,7 @@ function bellows(ctx: CanvasRenderingContext2D, at: Vec, heading: number, width:
 export function parked_vehicle(ctx: CanvasRenderingContext2D, solid: Solid, scale: number, palette: Palette) {
   const car = solid.car!;
   if (car.vehicle === Vehicle.CARAVAN) return parked_caravan(ctx, solid, scale, palette);
+  if (car.vehicle === Vehicle.SEMI) return parked_trailer(ctx, solid, scale, palette);
   const { style } = look_of(car.vehicle);
   const paint = palette.cars[car.paint % palette.cars.length];
   shadow(ctx, car.pose, car.pose.heading, car.length, car.width, style, HEIGHT[style], palette);
@@ -644,13 +760,37 @@ export function parked_vehicle(ctx: CanvasRenderingContext2D, solid: Solid, scal
   ctx.rotate(car.pose.heading);
   const l = car.length / 2;
   const w = car.width / 2;
-  const big = car.length > 9;
-  const axles = big ? [l - 2.5, -l + 3.6] : [l - 0.85, -l + 0.75];
-  const tyre = big ? 1 : 0.6;
+  const big = car.length > 6.5;
+  const axles = car.length > 9 ? [l - 2.5, -l + 3.6] : big ? [l - 1.45, -l + 1.9] : [l - 0.85, -l + 0.75];
+  const tyre = car.length > 9 ? 1 : big ? 0.95 : 0.6;
   for (const x of axles)
     for (const side of [-1, 1]) pill(ctx, x - tyre / 2, side * (w - 0.1) - 0.11, tyre, 0.22, 0.06, palette.ink);
   body(ctx, style, car.length, car.width, paint, scale, palette);
   head_lamps(ctx, l, w, style, palette, 0.6);
+  tail_lamps(ctx, l, w, palette, { braking: false, reversing: false, lit: 0.6 });
+  ctx.restore();
+}
+
+// A semi-trailer left at a dock door without its tractor: the box on its tri-axle, the landing legs down at the front.
+function parked_trailer(ctx: CanvasRenderingContext2D, solid: Solid, scale: number, palette: Palette) {
+  const car = solid.car!;
+  const paint = palette.cars[car.paint % palette.cars.length];
+  shadow(ctx, car.pose, car.pose.heading, car.length, car.width, Style.VAN, HEIGHT.semi, palette);
+  ctx.save();
+  ctx.translate(car.pose.x, car.pose.y);
+  ctx.rotate(car.pose.heading);
+  const l = car.length / 2;
+  const w = car.width / 2;
+  for (const x of [-l + 3, -l + 4.3, -l + 5.6])
+    for (const side of [-1, 1]) pill(ctx, x - 0.45, side * (w - 0.12) - 0.15, 0.9, 0.3, 0.06, palette.ink);
+  for (const side of [-1, 1]) pill(ctx, l - 2.6, side * (w - 0.35) - 0.1, 0.2, 0.2, 0.04, palette.ink);
+  outline(ctx, car.length, w, Style.VAN);
+  ctx.fillStyle = paint.body;
+  ctx.fill();
+  ctx.strokeStyle = palette.edge;
+  ctx.lineWidth = 1 / scale;
+  ctx.stroke();
+  box_roof(ctx, { l: car.length, half: w, roof: w - 0.22, paint, scale, palette }, -l, l);
   tail_lamps(ctx, l, w, palette, { braking: false, reversing: false, lit: 0.6 });
   ctx.restore();
 }
@@ -767,6 +907,20 @@ function load_top(ctx: CanvasRenderingContext2D, load: Load, f: Frame) {
     return;
   }
   if (load === Load.CARAVAN) return caravan_top(ctx, f);
+  if (load === Load.SEMI || load === Load.BODY) return box_roof(ctx, f, x0, l / 2);
+  if (load === Load.CART) {
+    pill(ctx, x0 + 0.08, -half + 0.08, l - 0.16, (half - 0.08) * 2, 0.05, paint.glass);
+    const bags: [number, number, number, number][] = [
+      [x0 + 0.2, -half + 0.18, 0.9, 0.6],
+      [x0 + 0.25, 0.08, 0.7, 0.5],
+      [x0 + 1.25, -half + 0.2, 0.6, 0.55],
+      [x0 + 1.2, 0.02, 1.05, 0.52],
+      [x0 + 2, -half + 0.16, 0.6, 0.62],
+    ];
+    bags.forEach(([x, y, w, h], i) => pill(ctx, x, y, w, h, 0.08, i % 2 ? paint.roof : paint.body));
+    seams(ctx, bags.map(([x, y, w, h]) => [x, y + h / 2, x + w, y + h / 2]), f.scale, palette);
+    return;
+  }
   if (load === Load.BUS) {
     pill(ctx, x0 + 0.3, -f.roof - 0.08, l - 0.5, (f.roof + 0.08) * 2, 0.16, paint.roof);
     bus_flanks(ctx, f, x0 + 0.5, l / 2 - 0.4, [l / 2 - 2.6]);
@@ -839,23 +993,29 @@ function trailer(
   const half = t.width / 2;
   const paint = palette.player;
   const style = load === Load.CARAVAN ? Style.CARAVAN : load === Load.BUS ? Style.ARTIC : Style.VAN;
-  shadow(ctx, centre, pose.heading, t.box_length, t.width, style, HEIGHT[load], palette);
+  if (load !== Load.DOLLY) shadow(ctx, centre, pose.heading, t.box_length, t.width, style, HEIGHT[load], palette);
 
   const size = { length: t.wheel_diameter + 0.04, width: t.wheel_width + 0.05 };
   const blur = blur_of(car);
-  // A bus section shows its tyres like the front one does; a caravan's sit under its body.
-  const out = load === Load.BUS ? TYRE_SHOW : load === Load.CARAVAN ? 0.04 : 0.1;
-  const wheels_of = () =>
-    trailer_wheels(car, spec, index).forEach((at, i) =>
-      tyre(ctx, at, pose.heading, towed.roll[i], (i ? 1 : -1) * out, size, blur, scale, palette)
-    );
+  // A bus section shows its tyres like the front one does; a caravan's and a box body's sit under it.
+  const out = load === Load.BUS ? TYRE_SHOW : load === Load.CARAVAN || rides(load) ? 0.04 : 0.1;
+  const wheels_of = () => {
+    for (const shift of AXLE_SETS[load] ?? [0]) {
+      const along = { x: Math.cos(pose.heading) * shift, y: Math.sin(pose.heading) * shift };
+      trailer_wheels(car, spec, index).forEach((at, i) =>
+        tyre(ctx, { x: at.x + along.x, y: at.y + along.y }, pose.heading, towed.roll[i], (i ? 1 : -1) * out, size, blur, scale, palette)
+      );
+    }
+  };
   if (load !== Load.BUS) wheels_of();
 
   const ball = hitch_point(car, spec, index);
   const ahead = index === 0 ? car.heading : car.trailers![index - 1].heading;
-  if (load !== Load.BUS) {
+  if (load === Load.DOLLY) return dolly(ctx, pose, t, ball, scale, palette);
+  if (load !== Load.BUS && !rides(load)) {
     const spread = load === Load.BOAT ? 0.35 : Math.min(half - 0.25, 0.75);
-    a_frame(ctx, to_world(pose, { x: front, y: -spread }), to_world(pose, { x: front, y: spread }), ball, palette);
+    const bar = load === Load.CART ? 0.08 : spread;
+    a_frame(ctx, to_world(pose, { x: front, y: -bar }), to_world(pose, { x: front, y: bar }), ball, palette);
     if (load === Load.BOAT) a_frame(ctx, to_world(pose, { x: 0.3, y: -0.35 }), to_world(pose, { x: 0.3, y: 0.35 }), to_world(pose, { x: front, y: 0 }), palette);
     if (load === Load.CARAVAN) {
       ctx.save();
@@ -875,7 +1035,10 @@ function trailer(
     if (load === Load.HORSE) {
       ctx.beginPath();
       ctx.roundRect(-l, -half, l * 2, half * 2, [0.15, 0.7, 0.7, 0.15]);
-    } else outline(ctx, t.box_length, half, load === Load.BOX || load === Load.FARM ? Style.VAN : style);
+    } else if (load === Load.CART) {
+      ctx.beginPath();
+      ctx.roundRect(-l, -half, l * 2, half * 2, 0.08);
+    } else outline(ctx, t.box_length, half, load === Load.BOX || load === Load.FARM || rides(load) ? Style.VAN : style);
     ctx.fillStyle = paint.body;
     ctx.fill();
     ctx.strokeStyle = palette.edge;
@@ -886,6 +1049,7 @@ function trailer(
   tail_lamps(ctx, l, half, palette, lamps, load === Load.BOAT || half < 0.6);
   ctx.restore();
 
+  if (rides(load)) return;
   if (load === Load.BUS) {
     bellows(ctx, ball, pose.heading + wrap_angle(ahead - pose.heading) / 2, t.width, scale, palette);
     return wheels_of();
@@ -897,6 +1061,29 @@ function trailer(
   ctx.strokeStyle = palette.tread;
   ctx.lineWidth = 1.25 / scale;
   ctx.stroke();
+}
+
+// A semi-trailer's tri-axle group and a drawbar body's tandem straddle the axle the model turns them about.
+const AXLE_SETS: Partial<Record<Load, number[]>> = { semi: [-1.3, 0, 1.3], body: [-0.65, 0.65] };
+
+// Seen from above a dolly is its drawbar out to the coupling, a short frame over its axle and the turntable on top.
+function dolly(ctx: CanvasRenderingContext2D, pose: Pose, t: TrailerSpec, ball: Vec, scale: number, palette: Palette) {
+  const front = t.axle - t.drawbar;
+  a_frame(ctx, to_world(pose, { x: front, y: -0.45 }), to_world(pose, { x: front, y: 0.45 }), ball, palette);
+  ctx.save();
+  ctx.translate(pose.x, pose.y);
+  ctx.rotate(pose.heading);
+  pill(ctx, front - t.box_length, -t.width / 2 + 0.25, t.box_length, t.width - 0.5, 0.1, palette.ink);
+  ctx.beginPath();
+  ctx.arc(0, 0, 0.62, 0, Math.PI * 2);
+  ctx.strokeStyle = palette.tread;
+  ctx.lineWidth = 1.5 / scale;
+  ctx.stroke();
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, 0.11, 0, Math.PI * 2);
+  ctx.fillStyle = palette.ink;
+  ctx.fill();
 }
 
 const BEACON_TURN = 5;
@@ -1414,7 +1601,23 @@ export function player(
   }
   const loads = look.loads ?? [];
   const dim = { braking: false, reversing: false, lit: 0.6 };
-  loads.forEach((load, i) => trailer(ctx, car, spec, i, load, i === loads.length - 1 ? lamps : dim, scale, palette));
+  for (const i of draw_order(loads)) {
+    if (i >= 0) trailer(ctx, car, spec, i, loads[i], i === loads.length - 1 ? lamps : dim, scale, palette);
+    else vehicle_body(ctx, car, spec, look, lamps, dim, scale, palette, time);
+  }
+}
+
+function vehicle_body(
+  ctx: CanvasRenderingContext2D,
+  car: Car,
+  spec: VehicleSpec,
+  look: Look,
+  lamps: Lamps,
+  dim: Lamps,
+  scale: number,
+  palette: Palette,
+  time: number
+) {
   const style = look.style;
   const centre = body_centre(car, spec);
   shadow(ctx, centre, car.heading, spec.length, spec.width, style, HEIGHT[style], palette);

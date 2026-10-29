@@ -19,6 +19,7 @@ export const Scenario = {
   DRIVEWAY: "driveway",
   SLIPWAY: "slipway",
   CAMPING: "camping",
+  LOADING_DOCK: "loading-dock",
 } as const;
 export type Scenario = (typeof Scenario)[keyof typeof Scenario];
 export const SCENARIOS: readonly Scenario[] = Object.values(Scenario);
