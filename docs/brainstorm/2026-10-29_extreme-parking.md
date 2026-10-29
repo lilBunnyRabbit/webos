@@ -35,3 +35,13 @@ Owner: "with parking im really looking for difficulty", then "For the parking i 
 
 ## Not yet built (backlog from earlier brainstorms)
 Boat with a dynamic model; F1 slip and drift; tilted 3D view; infinite seeded world; weather; AI cars in the way; caravan and boat trailers; rear-steer bus.
+
+## Next session topics
+State after 3.89.0 (2026-10-29), so the next session starts here.
+
+- **Extreme round 2, moving parts** (owner: later round). Turntable, car lift, barrier arms, closing doors, rolling trolleys, the two-deck transporter through a portal. Grill first: the world has no time today and the planner can't prove a course whose obstacles move. Proposed start: the car lift, a portal that opens on a timer, built from the multi-floor pieces.
+- **Owner playtest of 3.89.0:** Extreme pars (Dogleg 5, Quay 8, Offset planks 9), the town car park's helix, Hot Lap's turn rate (`TURN_RATE` 2.5 in `games/f1/turn.ts`), the hardest levels 49–66.
+- **Small open items:** the console's `Service "windows" not found` on pagehide (older than Drive Hub, from the OS); Extreme course names truncated in the phone toolbar; the plank colour under Brand Light.
+- **Suggested, not decided:** ghost replays (Hot Lap has one; Levels and Extreme don't); more Driving Test towns with roundabouts and traffic lights; a forklift jobs ladder with trucks arriving; Mow Day stripe patterns; an Airport combined shift; best scores shown on the town's buildings.
+- **Older open calls:** keep the `daily` prop; does P at ≤ 0.3 m/s count as stopped; a test on a real phone; vehicle-specific spots (ambulance bay, taxi rank); weight per vehicle; the dumper is frame-steered, so its wheels don't turn (explained, may revisit).
+- The CI test `kit/utils/video/capture.browser.test.ts` flaked once on the 3.89.0 deploy (29 frames for 30); a rerun passed.
