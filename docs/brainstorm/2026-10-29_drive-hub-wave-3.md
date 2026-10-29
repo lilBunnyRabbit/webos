@@ -73,6 +73,12 @@ Owner: "don't overdo the tests. that goes in general." A few representative seed
 ### Shell
 Unchanged hub-wide rule: no commands; the `game` prop takes the new ids.
 
+### Review round (decided)
+- **Pushback's proof:** the core planner found no push for the 40 m chain in 120,000 expansions, so the build proves and pars with a game-owned push driver (`games/pushback/plan.ts`) that re-derives the fold maths; its moves replay through core `drive()` with the real bodies. Accepted, replacing the "core planner" part of "Pushback model".
+- **Mow Day:** when 90 % can no longer be reached (flattened flowers cost too much), the round ends: "Too many flowers flattened".
+- **Rodeo chains:** rigs of two or more links appear in the picker under an Experimental group, noted "course not proven"; no daily, no achievement progress. The daily keeps to rigs of at most one link (now decided).
+- **Parking and Forklift saved data move to the app data folder** like the new games: on first load copy the old localStorage bests and levels into the file, then remove those keys. Last choices stay in localStorage.
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.

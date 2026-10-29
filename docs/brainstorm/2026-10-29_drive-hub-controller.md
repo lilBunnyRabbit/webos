@@ -12,5 +12,10 @@ Owner: "can we have controller support?" No gamepad code exists in the repo. Dri
 - **Rumble:** a short strong pulse on a hit, light ticks with the parking sensor when close; a setting next to Sound; `vibrationActuator` is Chrome-only, so it gets a `compat/features.ts` entry.
 - **Shell:** nothing (Drive Hub's rule: no commands).
 
+## Later decisions (same day)
+- **Sounds owns the settings:** games create `new Sounds(() => settings)` and call it unguarded; Sound gates the audio and Rumble the pad, independently, so a muted game still rumbles. No module-level state in `rumble.ts`.
+- **RB sends Enter** (start, a card's main button, a doorway).
+- **View sends Escape (pause)** instead of R: no game has a mid-round restart, and R mid-round is Reverse. After a round the card's retry stays on the keyboard, RB and touch.
+
 ## Action items
 1. [x] One build: `core/gamepad.ts`, `DriveInput` and `drive-frame` polling, the rumble setting, a "controller connected" hint, docs in `docs/apps/tight-spot.md` "Controls".
