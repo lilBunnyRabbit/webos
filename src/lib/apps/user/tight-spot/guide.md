@@ -172,6 +172,8 @@ Run a valet stand on the open lot. Cars pull up at the stand on the south road, 
 - Each owner comes back a while later; their car's chip counts down, then shows how long they've waited. **F** (or **Fetch**) walks out to the car of the owner who has waited longest; drive it into the box by the stand and press **P**.
 - **Tips** are paid when you hand a car back: 10, up to 10 more for a quick return (gone after a minute's wait), up to 5 for how neatly you parked it. The bus pays double; it only fits a coach bay up the north road, straight on from the stand, and you back it out again.
 - **A touch is a dent:** the car stops short, you lose 5 and that car's whole tip, and the shift goes on. Pressing on against the same thing is one dent.
+- **Switch cars:** stuck behind the queue with a fetched car? Stop it in any free bay (a kerb bay counts) in **P** and press **L** (or **Leave it here**). It's parked again with its owner still waiting; walk back and take the next car, or fetch another.
+- A new car never pulls up on top of you: it waits at the end of the street until its place is clear.
 - **Enter** at the stand fetches if an owner is back, else takes the next car. Fetching while three wait is risky: the walk can let the fourth arrive.
 - **New** starts a random shift. **Daily** is the same lot and arrivals for everyone today, ranked by score; Game Hub lists it as Drive Hub · Valet.
 

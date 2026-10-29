@@ -37,6 +37,8 @@
     fetch,
     final_score,
     hint,
+    can_leave,
+    leave,
     JobKind,
     pause,
     QUEUE_LIMIT,
@@ -107,10 +109,12 @@
   );
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
   const time = $derived(format_time(game.ms));
+  const leavable = $derived(can_leave(game));
   const job_line = $derived.by(() => {
     const job = game.job;
     if (!job) return null;
     const name = vehicle_noun(job.ticket.vehicle);
+    if (leavable) return `Leave the ${name} here, or bring it to the box`;
     if (job.kind === JobKind.RETURN) return `Bring the ${name} to the box by the stand`;
     return job.ticket.vehicle === Vehicle.BUS ? "Park the bus in a coach bay up the north road" : `Park the ${name} in any free bay`;
   });
@@ -324,6 +328,16 @@
     focus_board();
   }
 
+  function leave_car() {
+    if (!can_leave(game)) return;
+    game = leave(game);
+    input.reset();
+    camera = null;
+    if (game.status === Status.OVER) finish(game);
+    else sounds.shift();
+    focus_board();
+  }
+
   function stand_action() {
     if (can_fetch(game)) fetch_next();
     else take_next();
@@ -333,6 +347,7 @@
     if (game.status === Status.READY) take_next();
     else if (game.status === Status.PAUSED) begin();
     else if (game.status === Status.STAND) stand_action();
+    else if (leavable) leave_car();
     else if (driving && game.car.gear !== Gear.PARK && Math.abs(game.car.speed) < STANDING) shift(Gear.PARK);
     else if (over) {
       if (game.shift.daily) retry();
@@ -444,6 +459,11 @@
       event.preventDefault();
       input.keys.add(code);
       if (!event.repeat) choose_direction(key_direction(code));
+      return;
+    }
+    if (code === "KeyL" && !event.repeat) {
+      event.preventDefault();
+      leave_car();
       return;
     }
     if (code === "KeyC") {
@@ -562,7 +582,12 @@
       </div>
     </div>
   {/if}
-  {#if (line || note) && live}
+  {#if leavable && game.status === Status.DRIVING}
+    <div class="pointer-events-auto absolute inset-x-0 bottom-2 mx-auto flex w-fit animate-pop-in items-center gap-2 rounded-md bg-background/85 p-1 pl-2 text-ui backdrop-blur-[2px]">
+      <span class="hidden items-center gap-2 text-2xs text-foreground/65 pointer-fine:flex"><KeyHint key_name="L" text="leave" /></span>
+      <Button size="sm" variant="primary" class="pointer-coarse:h-11" onclick={leave_car}>Leave it here</Button>
+    </div>
+  {:else if (line || note) && live}
     <p
       class={cn(
         "pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit animate-pop-in rounded-md bg-background/85 px-2 py-1 text-ui backdrop-blur-[2px]",
@@ -588,7 +613,7 @@
         <Button variant="primary" onclick={take_next}>Start</Button>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="T" text="take a car" /><KeyHint key_name="F" text="fetch one" /><KeyHint key_name="↑ ↓ ← →" text="drive" /><KeyHint key_name="P" text="park" />
+        <KeyHint key_name="T" text="take a car" /><KeyHint key_name="F" text="fetch one" /><KeyHint key_name="↑ ↓ ← →" text="drive" /><KeyHint key_name="P" text="park" /><KeyHint key_name="L" text="leave a fetched car" />
       </p>
     </RoundCard>
   {:else if game.status === Status.STAND}
@@ -646,11 +671,11 @@
   <span class="tabular-nums">{time}</span>
   <span class="tabular-nums">{game.score} pts</span>
   <span class="tabular-nums">Handed back {game.handed}</span>
-  <span class="hidden @5xl:inline">T takes a car · F fetches one · P or Space parks · Esc pauses · + − zoom</span>
+  <span class="hidden @5xl:inline">T takes a car · F fetches one · P or Space parks · L leaves a fetched car in its bay · Esc pauses · + − zoom</span>
 {/snippet}
 
 <DriveFrame
-  label="Valet Rush. At the stand T takes the next car and F fetches an owner's. Arrows steer and drive, P or Space parks, E drive, R reverse, Escape pauses, Enter starts."
+  label="Valet Rush. At the stand T takes the next car and F fetches an owner's. L leaves a fetched car stopped in a bay. Arrows steer and drive, P or Space parks, E drive, R reverse, Escape pauses, Enter starts."
   {input}
   {settings}
   wheel_idle={!driving}

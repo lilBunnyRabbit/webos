@@ -13,7 +13,10 @@ const QUEUE_GAP = 1.2;
 const LANE_X = (ROAD_MID + ROAD_HI) / 2;
 // The next car only pulls up into the east lane once the valet's car is out of it.
 export const ARRIVAL_LANE: Polygon = rect(ROAD_MID, CHUNK, ROAD_HI, 2 * CHUNK);
-const QUEUE_END = 2 * CHUNK - 0.8;
+export const STREET_END = 2 * CHUNK;
+const QUEUE_END = STREET_END - 0.8;
+export const LANE_LO = ROAD_MID;
+export const LANE_HI = ROAD_HI;
 
 export const STAND: Vec = { x: ROAD_HI + 1.3, y: CHUNK + 3 };
 export const BOOTH: Polygon = rect(ROAD_HI + 0.4, CHUNK + 1.6, ROAD_HI + 2.2, CHUNK + 4.4);

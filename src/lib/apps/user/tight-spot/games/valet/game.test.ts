@@ -1,11 +1,13 @@
 import { describe, expect, test } from "vitest";
 import { centroid, type Pose, type Vec } from "../../core/geometry";
+import { overlaps } from "../../core/collision";
 import { collide, obstacles } from "../../core/obstacles";
 import type { Bay } from "../../core/scene";
-import { create_car, Gear, pose_from_centre, Vehicle, VEHICLES, type Input } from "../../core/vehicle";
+import { bodies, create_car, Gear, pose_from_centre, Vehicle, VEHICLES, type Input } from "../../core/vehicle";
 import {
   advance,
   bays_for,
+  can_leave,
   better,
   can_fetch,
   change_gear,
@@ -13,6 +15,7 @@ import {
   DENT_COST,
   fetch,
   JobKind,
+  leave,
   parked_in,
   QUEUE_LIMIT,
   schedule,
@@ -141,6 +144,76 @@ describe("a shift", () => {
     expect(state.held).toBe(true);
     expect(state.out).toEqual([]);
     expect(state.scene.solids.length).toBeGreaterThan(before);
+  });
+
+  test("a car arriving while the valet stands in the way to the box waits off the street, then pulls up behind", () => {
+    let state = take(start(create_game({ seed: 3 })));
+    const mine = state.job!.ticket.vehicle;
+    const spec = VEHICLES[mine];
+    // Crossing the queue's lane a few metres behind the stand, on the way across to the box.
+    state = put(state, { x: 18, y: queue_poses([mine], null)[0]!.y + 9, heading: Math.PI });
+    const before = state.scene.solids.length;
+    for (const at of [state.schedule[1].at, state.schedule[2].at]) {
+      state = tick(state, at);
+      state = advance(state, { steer: 0, throttle: 0, brake: 1 }, 1 / 120);
+      expect(state.dents).toBe(0);
+      expect(state.scene.solids).toHaveLength(before);
+      const queued = state.scene.solids.slice(state.street.world.solids.length);
+      expect(queued.some((solid) => bodies(state.car, spec).some((body) => overlaps(body, solid.shape)))).toBe(false);
+    }
+    expect(state.out).toEqual([1, 2]);
+    state = advance(put(state, centred(state.street.returns, mine)), { steer: 0, throttle: 0, brake: 1 }, 1 / 120);
+    expect(state.out).toEqual([]);
+    expect(state.scene.solids.length).toBeGreaterThan(before);
+  });
+
+  test("a waiting car stays where it pulled up, however close the valet drives", () => {
+    let state = take(start(create_game({ seed: 3 })));
+    const mine = state.job!.ticket.vehicle;
+    state = advance(put(state, centred(state.street.returns, mine)), { steer: 0, throttle: 0, brake: 1 }, 1 / 120);
+    state = put(state, { x: 18, y: 10, heading: -Math.PI / 2 });
+    state = tick(state, state.schedule[1].at);
+    state = advance(state, { steer: 0, throttle: 0, brake: 1 }, 1 / 120);
+    const standing = state.lined;
+    expect(standing).toHaveLength(1);
+    state = advance(put(state, { ...standing[0].pose, x: standing[0].pose.x - 3.6 }), { steer: 0, throttle: 0, brake: 1 }, 1 / 120);
+    expect(state.lined).toEqual(standing);
+    expect(state.out).toEqual([]);
+  });
+
+  test("a fetched car left in a bay is parked again, its owner still waiting, and the valet takes the next car", () => {
+    let state = start(create_game({ seed: 3 }));
+    state = take(state);
+    const vehicle = state.job!.ticket.vehicle;
+    const [first, second] = free_bays(state, vehicle);
+    state = change_gear(put(state, centred(first, vehicle)), Gear.PARK);
+    const ticket = state.tickets[0];
+    state = fetch(tick(state, ticket.back));
+    expect(state.job?.kind).toBe(JobKind.RETURN);
+    expect(can_leave(state)).toBe(false);
+    state = change_gear(put(state, centred(second, vehicle)), Gear.PARK);
+    expect(state.status).toBe(Status.DRIVING);
+    expect(can_leave(state)).toBe(true);
+    const served = state.served;
+    const left = leave(state);
+    expect(left.status).toBe(Status.STAND);
+    expect(left.served).toBe(served);
+    expect(left.handed).toBe(0);
+    expect(left.tickets[0].bay).toBe(second);
+    expect(left.tickets[0].back).toBe(ticket.back);
+    expect(waiting(left).map((each) => each.id)).toEqual([ticket.id]);
+    expect(left.ms).toBeGreaterThan(state.ms);
+
+    expect(left.queue.length).toBeGreaterThan(0);
+    const next = take(left);
+    expect(next.job?.kind).toBe(JobKind.PARK);
+    expect(next.job?.ticket.id).toBe(left.queue[0]);
+    expect(collide(next.car, obstacles(next.scene), VEHICLES[next.job!.ticket.vehicle])).toBeNull();
+
+    const again = fetch(left);
+    expect(again.job?.kind).toBe(JobKind.RETURN);
+    expect(again.job?.ticket.id).toBe(ticket.id);
+    expect(again.car.x).toBeCloseTo(left.tickets[0].parked!.x);
   });
 
   test("a dent starts the clean run again", () => {

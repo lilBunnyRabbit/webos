@@ -77,7 +77,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
-        text: "Drive Hub gains Valet Rush: park customers' cars in any free bay, fetch them back when their owners return for a tip, and keep the queue at the stand from reaching four, where every bump is a dent off your score, with a daily shift.",
+        text: "Drive Hub gains Valet Rush: park customers' cars in any free bay, fetch them back when their owners return for a tip, and keep the queue at the stand from reaching four, where every bump is a dent off your score; a fetched car can be left in any free bay to take another, and new arrivals wait until there's room to pull up, with a daily shift.",
       },
       {
         kind: NEW,

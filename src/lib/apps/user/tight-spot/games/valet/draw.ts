@@ -62,6 +62,9 @@ function tags(ctx: CanvasRenderingContext2D, items: Tag[], view: View, palette: 
   ctx.restore();
 }
 
+// Only drawn sliding: the car is solid at its place from the start, which it only takes once the car in hand is clear of it.
+const SLIDE_MS = 900;
+
 function clock(ms: number): string {
   const seconds = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
@@ -123,7 +126,17 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   const driving = job !== null && state.status !== Status.READY && state.status !== Status.OVER;
   const spec = spec_of(state);
   if (driving && palette.beams) beams(ctx, state.car, spec, palette);
-  solids(ctx, state.scene.solids, scale, palette);
+  const sliding = state.lined.filter((each) => state.ms - each.since < SLIDE_MS);
+  const moving = new Set(sliding.flatMap((each) => each.solids));
+  solids(ctx, moving.size ? state.scene.solids.filter((solid) => !moving.has(solid)) : state.scene.solids, scale, palette);
+  for (const each of sliding) {
+    const left = 1 - (state.ms - each.since) / SLIDE_MS;
+    const eased = left * left * left;
+    ctx.save();
+    ctx.translate((each.from.x - each.pose.x) * eased, (each.from.y - each.pose.y) * eased);
+    solids(ctx, each.solids, scale, palette);
+    ctx.restore();
+  }
 
   if (driving) {
     if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, spec, scale, palette);
