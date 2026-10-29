@@ -9,7 +9,7 @@ Owner asked what vehicles to add; after the list: "tbh i would want all of them"
 - **Spec only:** city car, SUV, limo, camper van, garbage truck, fire engine; taxi, police car and ambulance as looks.
 - **One hinge (today's trailer model):** car + horse box, tractor + farm trailer, quad + small trailer; airport tug + plane (with the pushback game); plus the decided rigs (boat trailer, caravan, articulated bus, coach, double-decker).
 - **New steering models:** rear steer (forklift, telehandler, combine harvester); a chain of hinges (airport baggage train, road train, truck + drawbar trailer, tractor + two trailers, the semi from the trucks topic); skid steer (bobcat, zero-turn mower, tank); frame steer (wheel loader, articulated dump truck); all-wheel and crab steer (fire-truck ladder with a rear driver, some buses).
-- **For fun:** tuk-tuk, golf cart, ice resurfacer, shopping trolley.
+- **For fun:** tuk-tuk, golf cart, ice resurfacer, shopping trolley, and an F1 car (owner: "we MUST include f1 car"): a huge turning circle, fierce acceleration and brakes, open wheels.
 
 ## Decisions
 - **Model shape:** one `VehicleSpec` with a tagged `drive` union and a hitch chain; `step()` dispatches on the drive kind; collision, sensors, drawing and the planner work on `bodies()` whatever the drive. Rejected: a model module per drive behind an interface (more indirection for one function each).
