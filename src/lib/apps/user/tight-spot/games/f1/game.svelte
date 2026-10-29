@@ -241,7 +241,7 @@
       achievements.progress("f1-tracks", TRACK_IDS.filter((each) => ghosts[each].value).length);
       new_best = true;
     }
-    sounds.parked(improved);
+    if (lap.clean) sounds.parked(improved);
     if (state.status === Status.DONE) {
       release_all();
       if (state.laps.every((each) => each.clean)) achievements.achieve("f1-clean-session");

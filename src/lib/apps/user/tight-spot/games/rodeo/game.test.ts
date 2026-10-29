@@ -9,6 +9,8 @@ import {
   crossed,
   daily_round,
   DAILY_VEHICLES,
+  experimental,
+  SHELVES,
   knocked,
   PENALTY_MS,
   record_best,
@@ -132,5 +134,15 @@ describe("bests", () => {
 
   test("the shelves a finished vehicle is on", () => {
     expect(shelves_done({ "hatch:1": { ms: 1, cones: 0 }, "van:2": { ms: 1, cones: 0 }, "bobcat:1": { ms: 1, cones: 0 }, "daily:2026-10-29": { ms: 1, cones: 0 } })).toBe(2);
+    const daily = record_best({}, { ...daily_round("2026-10-29", 1), vehicle: Vehicle.BUS }, { ms: 1, cones: 0 });
+    expect(shelves_done(daily.bests)).toBe(1);
+    expect(shelves_done({ "road-train:1": { ms: 1, cones: 0 } })).toBe(0);
+  });
+
+  test("chains of two or more links sit on the experimental shelf only", () => {
+    const chains = SHELVES[SHELVES.length - 1].vehicles;
+    expect(chains.length).toBeGreaterThan(0);
+    expect(chains.every(experimental)).toBe(true);
+    expect(SHELVES.slice(0, -1).every((shelf) => !shelf.vehicles.some(experimental))).toBe(true);
   });
 });

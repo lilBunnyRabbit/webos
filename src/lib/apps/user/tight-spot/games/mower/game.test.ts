@@ -15,6 +15,8 @@ import {
   LEVEL_COUNT,
   level_round,
   measure,
+  measure_fallback,
+  out_of_reach,
   record,
   set_status,
   stars,
@@ -96,5 +98,21 @@ describe("mow day", () => {
     expect(better.saved.levels[3]).toBe(3);
     expect(unlocked(better.saved.levels)).toBe(4);
     expect(unlocked({})).toBe(1);
+  });
+
+  test("the round is lost once the flowers put the finish line out of reach", () => {
+    const tally = { coverable: 1000, mown: 0, overlapped: 0, trampled: 33 };
+    expect(out_of_reach(tally)).toBe(false);
+    expect(out_of_reach({ ...tally, trampled: 34 })).toBe(true);
+    expect(out_of_reach({ ...tally, coverable: 0, trampled: 50 })).toBe(false);
+  });
+
+  test("without the worker the whole lawn counts", () => {
+    const round = level_round(3);
+    const fallback = measure_fallback(round);
+    const state = create_game(round);
+    const lawn = state.grid.ground.filter((ground) => ground === Ground.LAWN).length;
+    expect(fallback.count).toBe(lawn);
+    expect(fallback.par_ms).toBeGreaterThan(0);
   });
 });

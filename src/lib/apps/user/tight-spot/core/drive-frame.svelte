@@ -7,7 +7,7 @@
   import type { Snippet } from "svelte";
   import { clamp_zoom } from "./camera";
   import { read_palette, type Palette } from "./draw";
-  import { BUTTON_KEYS, first_pad, PadButton, pressed, read_pad } from "./gamepad";
+  import { BUTTON_KEYS, first_pad, key_event, PadButton, pressed, read_pad } from "./gamepad";
   import type { DriveInput, Hold } from "./drive-input.svelte";
   import { SteeringMode, WheelMode, type DriveSettings } from "./settings.svelte";
   import SteeringWheel from "./steering-wheel.svelte";
@@ -118,9 +118,10 @@
     function poll() {
       frame_id = 0;
       const pad = first_pad(navigator.getGamepads());
-      const front = win.is_focused && document.visibilityState === "visible";
+      const front = win.is_focused && document.visibilityState === "visible" && document.hasFocus();
       if (!pad || !front) {
         input.set_pad(0, 0);
+        release_stick();
         before = pad ? read_pad(pad).buttons : [];
         if (pad) frame_id = requestAnimationFrame(poll);
         return;
@@ -132,19 +133,22 @@
       if (state.steer !== null) {
         if (!steering || Math.abs(input.wheel - state.steer) > 1e-3) onsteer(state.steer);
         steering = true;
-      } else if (steering) {
-        steering = false;
-        if (settings.wheel === WheelMode.CENTRES) input.let_go();
-      }
+      } else release_stick();
       for (const index of edges) {
         if (index === PadButton.RT || index === PadButton.LT) {
           if (engage()) onpress(index === PadButton.RT ? "gas" : "brake");
           continue;
         }
         const code = BUTTON_KEYS[index];
-        if (code) onkeydown(new KeyboardEvent("keydown", { code, key: code === "Space" ? " " : code === "Enter" ? code : code.slice(3).toLowerCase() }));
+        if (code) onkeydown(key_event(code));
       }
       frame_id = requestAnimationFrame(poll);
+    }
+
+    function release_stick() {
+      if (!steering) return;
+      steering = false;
+      if (settings.wheel === WheelMode.CENTRES) input.let_go();
     }
 
     function start() {

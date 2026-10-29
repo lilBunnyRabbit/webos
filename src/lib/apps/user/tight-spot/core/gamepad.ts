@@ -8,10 +8,15 @@ export const BUTTON_KEYS: Partial<Record<number, string>> = {
   [PadButton.B]: "KeyR",
   [PadButton.X]: CRAB_KEY,
   [PadButton.Y]: "KeyN",
-  [PadButton.VIEW]: "KeyR",
+  [PadButton.VIEW]: "Escape",
   [PadButton.MENU]: "Space",
   [PadButton.RB]: "Enter",
 };
+
+export function key_event(code: string): KeyboardEvent {
+  const key = code === "Space" ? " " : code.startsWith("Key") ? code.slice(3).toLowerCase() : code;
+  return new KeyboardEvent("keydown", { code, key });
+}
 
 export const STICK_DEADZONE = 0.2;
 export const TRIGGER_DEADZONE = 0.05;

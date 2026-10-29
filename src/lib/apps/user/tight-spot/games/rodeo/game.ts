@@ -21,7 +21,7 @@ import {
   type Placement,
   type VehicleSpec,
 } from "../../core/vehicle";
-import { GARAGE } from "../../hub/yard";
+import { GARAGE, type Shelf } from "../../hub/yard";
 import { build_course, CONE, StepKind, type Course, type Gate, type Step } from "./course";
 
 export const Status = {
@@ -77,8 +77,24 @@ export function course_round(vehicle: Vehicle, course: number): Round {
   return { vehicle, course: at, seed: course_seed(at) };
 }
 
-// A chain of two or more links can't be reversed through a gate with any fairness, so the daily never deals one.
-export const DAILY_VEHICLES: readonly Vehicle[] = GARAGE.flatMap((shelf) => shelf.vehicles).filter((each) => VEHICLES[each].hitches.length <= 1);
+export const vehicle_schema = z.enum(Object.values(Vehicle) as [Vehicle, ...Vehicle[]]);
+
+/** A chain of two or more links: no course is proven for one, so it's offered apart, with no daily and no achievements. */
+export function experimental(vehicle: Vehicle): boolean {
+  return VEHICLES[vehicle].hitches.length > 1;
+}
+
+/** The garage's shelves without the chains, then the chains on a shelf of their own. */
+export const SHELVES: readonly Shelf[] = [
+  ...GARAGE.map((shelf) => ({ ...shelf, vehicles: shelf.vehicles.filter((each) => !experimental(each)) })).filter((shelf) => shelf.vehicles.length > 0),
+  { id: "experimental", name: "Experimental", vehicles: GARAGE.flatMap((shelf) => shelf.vehicles).filter(experimental) },
+];
+
+export function rodeo_shelf(vehicle: Vehicle): Shelf {
+  return SHELVES.find((shelf) => shelf.vehicles.includes(vehicle)) ?? SHELVES[0];
+}
+
+export const DAILY_VEHICLES: readonly Vehicle[] = GARAGE.flatMap((shelf) => shelf.vehicles).filter((each) => !experimental(each));
 
 export function daily_round(day: string, seed: number): Round {
   return { vehicle: DAILY_VEHICLES[hash(seed, 3) % DAILY_VEHICLES.length], course: null, seed, daily: day };
@@ -242,6 +258,8 @@ export function crash_title(crash: Crash | null): string {
 export const result_schema = z.object({
   ms: z.number().nonnegative(),
   cones: z.number().int().nonnegative(),
+  /** On a daily's best only: its key doesn't name the vehicle. */
+  vehicle: vehicle_schema.optional(),
 });
 export type Result = z.infer<typeof result_schema>;
 export const bests_schema = z.record(z.string(), result_schema);
@@ -263,12 +281,15 @@ export function record_best(bests: Bests, round: Round, result: Result): Recorde
   const key = round_key(round);
   const old = bests[key];
   const improved = !old || result.ms < old.ms;
-  return { bests: improved ? { ...bests, [key]: result } : bests, improved, first: !old };
+  const run = round.daily ? { ...result, vehicle: round.vehicle } : result;
+  return { bests: improved ? { ...bests, [key]: run } : bests, improved, first: !old };
 }
 
+/** Garage shelves with a run by one of their vehicles, dailies included; the experimental chains don't count. */
 export function shelves_done(bests: Bests): number {
-  const vehicles = new Set(Object.keys(bests).map((key) => key.split(":")[0]));
-  return GARAGE.filter((shelf) => shelf.vehicles.some((each) => vehicles.has(each))).length;
+  const vehicles = new Set<string>();
+  for (const [key, best] of Object.entries(bests)) vehicles.add(key.startsWith("daily:") ? (best.vehicle ?? "") : key.split(":")[0]);
+  return GARAGE.filter((shelf) => shelf.vehicles.some((each) => !experimental(each) && vehicles.has(each))).length;
 }
 
 export function round_title(round: Round): string {

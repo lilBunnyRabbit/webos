@@ -19,7 +19,6 @@
   import { Sounds } from "../../core/sound";
   import SpeedChip from "../../core/speed-chip.svelte";
   import { body_centre, can_crab, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, VEHICLES, without_creep } from "../../core/vehicle";
-  import { GARAGE, shelf_of } from "../../hub/yard";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
   import {
@@ -31,28 +30,31 @@
     create_game,
     daily_round,
     data_schema,
+    experimental,
     knocked,
     PENALTY_MS,
     record_best,
+    rodeo_shelf,
     round_key,
     round_title,
     set_status,
     shelves_done,
+    SHELVES,
     spec_of,
     Status,
     step_line,
     toggle_crab,
     total_ms,
+    vehicle_schema,
     type Data,
     type GameState,
     type Round,
   } from "./game";
 
   const COURSE_OPTIONS = Array.from({ length: COURSE_COUNT }, (_, i) => ({ value: String(i + 1), label: `Course ${i + 1}` }));
-  const SHELF_OPTIONS = GARAGE.map((shelf) => ({ value: shelf.id, label: shelf.name }));
+  const SHELF_OPTIONS = SHELVES.map((shelf) => ({ value: shelf.id, label: shelf.name }));
   const OVERVIEW_MARGIN = 1;
   const DAILY_MODE = "rodeo";
-  const vehicle_schema = z.enum(Object.values(Vehicle) as [Vehicle, ...Vehicle[]]);
 
   const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
@@ -97,7 +99,8 @@
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
   const time = $derived(format_time(total_ms(game), { tenths: true }));
   const note = $derived(drive_note(spec));
-  const shelf = $derived(shelf_of(vehicle));
+  const shelf = $derived(rodeo_shelf(vehicle));
+  const trial = $derived(experimental(game.round.vehicle));
   const vehicle_options = $derived(shelf.vehicles.map((each) => ({ value: each, label: VEHICLE_NAMES[each] })));
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
 
@@ -228,6 +231,7 @@
     new_best = done.improved;
     first_run = done.first;
     sounds.parked(new_best && !first_run);
+    if (experimental(state.round.vehicle)) return;
     achievements.achieve("rodeo-first");
     if (cones === 0) achievements.achieve("rodeo-clean");
     if (spec_of(state.round).hitches.length > 0) achievements.achieve("rodeo-rig");
@@ -302,7 +306,7 @@
   }
 
   function set_shelf(id: string) {
-    const found = GARAGE.find((each) => each.id === id);
+    const found = SHELVES.find((each) => each.id === id);
     if (found && found !== shelf) set_vehicle(found.vehicles[0]);
   }
 
@@ -415,7 +419,7 @@
 
 {#snippet vehicle_picker()}
   <div class="flex basis-full flex-wrap items-center gap-2">
-    <Select class="w-[7.5rem] min-w-0" size="sm" aria-label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={() => shelf.id, set_shelf} />
+    <Select class="w-36 min-w-0" size="sm" aria-label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={() => shelf.id, set_shelf} />
     <Select class="w-40 min-w-0 flex-1" size="sm" aria-label="Vehicle" options={vehicle_options} bind:value={() => vehicle, set_vehicle} />
   </div>
 {/snippet}
@@ -487,10 +491,15 @@
         </p>
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
-        {#if !daily}<Button variant="quiet" class="@lg:hidden" onclick={open_daily}>Daily</Button>{/if}
+        {#if daily}
+          <Button variant="quiet" class="@md:hidden" onclick={leave_daily}>Courses</Button>
+        {:else}
+          <Button variant="quiet" class="@lg:hidden" onclick={open_daily}>Daily</Button>
+        {/if}
         <Button variant="primary" onclick={start}>Start</Button>
       </div>
       {#if !daily}{@render vehicle_picker()}{/if}
+      {#if trial}<p class="basis-full text-2xs text-warning">Experimental: no course is proven for a chain of trailers, so this one may be impossible. Runs count for bests only.</p>{/if}
       {#if note}<p class="basis-full text-2xs text-foreground/65">{note}</p>{/if}
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
         <KeyHint key_name="↑" text="forward" /><KeyHint key_name="↓" text="back" />{#each steer_hints(spec) as hint (hint.key_name)}<KeyHint {...hint} />{/each}<KeyHint key_name="Esc" text="pause" />

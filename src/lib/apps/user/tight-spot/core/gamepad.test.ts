@@ -58,4 +58,5 @@ test("buttons send the keys the games handle", () => {
   expect(BUTTON_KEYS[PadButton.Y]).toBe("KeyN");
   expect(BUTTON_KEYS[PadButton.X]).toBe("KeyX");
   expect(BUTTON_KEYS[PadButton.MENU]).toBe("Space");
+  expect(BUTTON_KEYS[PadButton.VIEW]).toBe("Escape");
 });

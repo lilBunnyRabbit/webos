@@ -106,9 +106,10 @@
   let camera: Camera | null = null;
   let par_job: ParJob | null = null;
   let par_round: Round | null = null;
-  let orphan: ParJob | null = null;
-  // A sailing recorded before its par was known: the par, when it lands, may still earn it the time star.
-  let awaiting: Finished | null = null;
+  // Par jobs of earlier rounds kept running for their pending sailings.
+  const orphans = new Set<ParJob>();
+  // Sailings recorded before their par was known: the par, when it lands, may still earn each the time star.
+  let pending: Finished[] = [];
   const sounds = new Sounds(() => settings);
 
   // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its par).
@@ -163,10 +164,8 @@
   $effect(() => {
     const current = round;
     untrack(() => {
-      if (par_job && awaiting?.state.round === par_round) {
-        orphan?.cancel();
-        orphan = par_job;
-      } else par_job?.cancel();
+      if (par_job && pending.some((run) => run.state.round === par_round)) orphans.add(par_job);
+      else par_job?.cancel();
       par = null;
       par_failed = false;
       const job = work_out_par(current);
@@ -174,13 +173,15 @@
       par_round = current;
       job.result.then(
         (found) => {
+          orphans.delete(job);
           settle(current, found);
           if (par_job !== job) return;
           par = found;
           par_failed = found === null;
         },
         (reason: unknown) => {
-          if (awaiting?.state.round === current) awaiting = null;
+          orphans.delete(job);
+          pending = pending.filter((run) => run.state.round !== current);
           if (par_job !== job) return;
           par_failed = true;
           report_error(app_id, "Couldn't work out the par", reason);
@@ -189,9 +190,19 @@
     });
   });
 
+  // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
+  $effect(() => {
+    if (!data.ready || level <= max_level) return;
+    untrack(() => {
+      level = max_level;
+      storage.set("ferry.level", level);
+      if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
+    });
+  });
+
   $effect(() => () => {
     par_job?.cancel();
-    orphan?.cancel();
+    for (const job of orphans) job.cancel();
   });
 
   $effect(() => {
@@ -304,19 +315,21 @@
     new_best = result.improved;
     first_run = result.first;
     sounds.parked(new_best && !first_run);
-    awaiting = !par && !par_failed && result.stars < 3 ? { state, stars: result.stars } : null;
+    if (!par && !par_failed && result.stars < 3) pending = [...pending, { state, stars: result.stars }];
   }
 
   // The time star arrives with the par: the run is recorded again with it, as a better result.
   function settle(for_round: Round, found: Par | null) {
-    const waiting = awaiting;
-    if (!waiting || waiting.state.round !== for_round) return;
-    awaiting = null;
+    const settled = pending.filter((run) => run.state.round === for_round);
+    if (settled.length === 0) return;
+    pending = pending.filter((run) => run.state.round !== for_round);
     if (!found) return;
-    const score = stars(waiting.state, found.ms);
-    if (score <= waiting.stars) return;
-    const result = save(waiting.state, score);
-    if (game.round === for_round && game.status === Status.DONE) new_best ||= result.improved;
+    for (const run of settled) {
+      const score = stars(run.state, found.ms);
+      if (score <= run.stars) continue;
+      const result = save(run.state, score);
+      if (game.round === for_round && game.status === Status.DONE) new_best ||= result.improved;
+    }
   }
 
   function save(state: GameState, score: number): Recorded & { stars: number } {
@@ -654,7 +667,7 @@
           {round_title(game.round)}
           {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
-        <p class="text-ui text-foreground/80">Drive each one aboard and park it in any lane, 0.3–1 m behind the one ahead. Keep her level.</p>
+        <p class="text-ui text-foreground/80">Drive each one aboard and park it in any lane, 0.3–1 m behind the one ahead. Keep her level. Touching anything ends the sailing.</p>
         <ol class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-2xs text-foreground/80 tabular-nums">
           {#each game.deck.queue as vehicle, i (i)}
             <li><span class="text-primary">{i + 1}</span> {vehicle_name(vehicle)}</li>
@@ -671,7 +684,7 @@
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
         <KeyHint key_name="↑" text="forward" /><KeyHint key_name="↓" text="back" /><KeyHint key_name="← →" text="steer" /><KeyHint key_name="P" text="stow" /><KeyHint key_name="U" text="undo" />
       </p>
-      <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">Gas and Brake drive, P stows it. Undo over the pedals takes the last one back. Touching anything ends the sailing.</p>
+      <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">Gas and Brake drive, P stows it. Undo over the pedals takes the last one back.</p>
     </RoundCard>
   {:else if game.status === Status.PAUSED}
     <BoardOverlay title="Paused" detail="{time} · {game.stowed.length} of {game.deck.queue.length} aboard">

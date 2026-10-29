@@ -41,6 +41,7 @@
     lawn_round,
     LEVEL_COUNT,
     level_round,
+    measure_fallback,
     Mode,
     mode_schema,
     nearest_uncut,
@@ -114,7 +115,7 @@
   const lock = $derived(max_steer(SPEC));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
-  const over = $derived(game.status === Status.DONE || game.status === Status.CRASHED);
+  const over = $derived(game.status === Status.DONE || game.status === Status.CRASHED || game.status === Status.FLATTENED);
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(saved.value.best[round_key(game.round)]);
@@ -163,18 +164,26 @@
         (found) => {
           if (job !== next) return;
           measured = found;
-          if (game.round === current) game = apply_mask(game, found.coverable);
+          if (game.round === current) take_mask(found.coverable);
         },
         (reason: unknown) => {
           if (job !== next) return;
           measure_failed = true;
           report_error(app_id, "Couldn't measure the lawn", reason);
+          measured = measure_fallback(current);
+          if (game.round === current) take_mask(measured.coverable);
         }
       );
     });
   });
 
   $effect(() => () => job?.cancel());
+
+  function take_mask(coverable: Uint8Array) {
+    const before = game.status;
+    game = apply_mask(game, coverable);
+    if (game.status === Status.FLATTENED && before !== Status.FLATTENED) release_all();
+  }
 
   $effect(() => {
     if (!blocked) return;
@@ -289,6 +298,7 @@
     game = next;
     if (before === Status.DRIVING && next.status === Status.CRASHED) crashed();
     if (before === Status.DRIVING && next.status === Status.DONE) done(next);
+    if (before === Status.DRIVING && next.status === Status.FLATTENED) release_all();
   }
 
   function crashed() {
@@ -355,7 +365,7 @@
 
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
-    else if (game.status === Status.CRASHED) retry();
+    else if (game.status === Status.CRASHED || game.status === Status.FLATTENED) retry();
     else if (game.status === Status.DONE) {
       if (game.round.daily) retry();
       else if (game.round.level === undefined) new_lawn();
@@ -604,7 +614,9 @@
           {round_title(game.round)} · {area} m²
           {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
-        <p class="text-ui text-foreground/80">Mow {Math.round(FINISH * 100)}% of the lawn. Keep off the flowers; a tree, the pond or the hedge ends it.</p>
+        <p class="text-ui text-foreground/80">
+          Mow {Math.round(FINISH * 100)}% of the lawn. Keep off the flowers: they cost lawn, and too many end it. A tree, the shed, the pond or the hedge ends it too.
+        </p>
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
           Par {par_time ?? (measure_failed ? "–" : "…")} · overlap under {Math.round(OVERLAP_LIMIT * 100)}%{best ? ` · Best ${"★".repeat(best.stars)} ${format_time(best.ms, { tenths: true })}` : ""}
         </p>
@@ -649,6 +661,23 @@
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
         {#if !game.round.daily && (game.round.level === undefined || has_next_level)}<KeyHint key_name="Enter" text={game.round.level === undefined ? "new lawn" : "next level"} />{/if}
         <KeyHint key_name="R" text="again" />
+      </p>
+    </RoundCard>
+  {:else if game.status === Status.FLATTENED}
+    <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
+      <div class="min-w-0 flex-1 basis-52">
+        <p class="text-base font-semibold">Too many flowers flattened</p>
+        <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · mown {mown_text}</p>
+        <p class="text-2xs text-warning">
+          They took {Math.round(percent((game.tally.trampled * BED_COST) / Math.max(1, game.tally.coverable)))}% off, so {Math.round(FINISH * 100)}% can't be reached any more.
+        </p>
+      </div>
+      <div class="ml-auto flex shrink-0 gap-2">
+        {#if game.round.level === undefined && !game.round.daily}<Button variant="quiet" onclick={new_lawn}>New lawn</Button>{/if}
+        <Button variant="primary" onclick={retry}>Try again</Button>
+      </div>
+      <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
+        <KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="tries again" />
       </p>
     </RoundCard>
   {:else if game.status === Status.CRASHED}

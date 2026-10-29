@@ -4,7 +4,7 @@ import { collide, obstacles } from "../../core/obstacles";
 import { SolidKind } from "../../core/scene";
 import { hash } from "../../core/seed";
 import { bodies, create_car, Gear, MOWER, shift, step, Vehicle, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
-import { CELL, coverage, create_grid, Cut, Ground, mow, overlap, trample, type Grid, type Tally } from "./coverage";
+import { BED_COST, CELL, coverage, create_grid, Cut, Ground, mow, overlap, trample, type Grid, type Tally } from "./coverage";
 import { deck_centre, deck_of, swept } from "./deck";
 import { build_garden, type Garden } from "./garden";
 import { flood } from "./reach";
@@ -19,6 +19,8 @@ export const Status = {
   PAUSED: "paused",
   DONE: "done",
   CRASHED: "crashed",
+  /** So many flowers flattened that the finish line can't be reached any more. */
+  FLATTENED: "flattened",
 } as const;
 export type Status = (typeof Status)[keyof typeof Status];
 
@@ -84,6 +86,25 @@ export function measure_round(round: Round): Measured {
   return { coverable: grid.coverable, count: reach.coverable, par_ms: par_time(garden, reach.coverable) };
 }
 
+/** When the worker fails: the whole lawn counts as coverable, so the round can still be finished. */
+export function measure_fallback(round: Round): Measured {
+  const garden = build_garden(round.seed, round.difficulty);
+  const grid = create_grid(garden);
+  const coverable = new Uint8Array(grid.ground.length);
+  let count = 0;
+  for (let i = 0; i < grid.ground.length; i++) {
+    if (grid.ground[i] !== Ground.LAWN) continue;
+    coverable[i] = 1;
+    count++;
+  }
+  return { coverable, count, par_ms: par_time(garden, count) };
+}
+
+/** Everything left mown at best, less the flowers: once that's under the finish line, the round is lost. */
+export function out_of_reach(tally: Tally): boolean {
+  return tally.coverable > 0 && tally.trampled > 0 && (tally.coverable - tally.trampled * BED_COST) / tally.coverable < FINISH;
+}
+
 /** Takes the coverable lawn in and counts what's been mown of it so far: the round may have started without it. */
 export function apply_mask(state: GameState, coverable: Uint8Array): GameState {
   const { grid } = state;
@@ -97,7 +118,9 @@ export function apply_mask(state: GameState, coverable: Uint8Array): GameState {
     if (grid.cut[i] !== Cut.LONG) mown++;
     if (grid.overlapped[i]) overlapped++;
   }
-  return { ...state, measured: true, tally: { ...state.tally, coverable: count, mown, overlapped } };
+  const tally = { ...state.tally, coverable: count, mown, overlapped };
+  const lost = state.status === Status.DRIVING || state.status === Status.PAUSED ? out_of_reach(tally) : false;
+  return { ...state, measured: true, tally, status: lost ? Status.FLATTENED : state.status, car: lost ? { ...state.car, speed: 0 } : state.car };
 }
 
 export function measure(state: GameState): GameState {
@@ -122,6 +145,9 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
   const odometer = state.odometer + moved;
   let tally = mow(state.grid, swept(state.car, car, DECK), motion, odometer, state.tally);
   if (state.garden.beds.length > 0) tally = trample(state.grid, bodies(car, spec), tally);
+  if (state.measured && tally.trampled > state.tally.trampled && out_of_reach(tally)) {
+    return { ...state, car: { ...car, speed: 0 }, ms, odometer, tally, status: Status.FLATTENED };
+  }
   const all = state.measured && tally.mown >= tally.coverable && tally.trampled === 0;
   return { ...state, car, ms, odometer, tally, status: all ? Status.DONE : state.status };
 }
