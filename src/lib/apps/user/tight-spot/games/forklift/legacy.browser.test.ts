@@ -17,7 +17,7 @@ afterAll(() => {
   kernel.services.delete("files");
 });
 
-test("old localStorage keys fold in where the file has nothing, and are removed", async () => {
+test("old localStorage keys fold in where the file has nothing, and go once the file holds them", async () => {
   localStorage.setItem("app.tight-spot.forklift.best", JSON.stringify({ "level:1": { stars: 2, ms: 50000 }, "jobs:2": { stars: 1, ms: 9 } }));
   localStorage.setItem("app.tight-spot.forklift.levels", JSON.stringify({ "1": 2, "3": 3 }));
   const storage = create_storage_handle("tight-spot", {});
@@ -27,6 +27,8 @@ test("old localStorage keys fold in where the file has nothing, and are removed"
   data.value = { bests: { "level:1": { stars: 3, ms: 40000 } }, levels: { "1": 3 } };
   adopt_legacy(storage, data);
   expect(data.value).toEqual({ bests: { "level:1": { stars: 3, ms: 40000 }, "jobs:2": { stars: 1, ms: 9 } }, levels: { "1": 3, "3": 3 } });
+  expect(localStorage.getItem("app.tight-spot.forklift.best")).not.toBeNull();
+  adopt_legacy(storage, data);
   expect(localStorage.getItem("app.tight-spot.forklift.best")).toBeNull();
   expect(localStorage.getItem("app.tight-spot.forklift.levels")).toBeNull();
   data.release();

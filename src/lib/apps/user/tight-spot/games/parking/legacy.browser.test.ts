@@ -18,7 +18,7 @@ afterAll(() => {
   kernel.services.delete("files");
 });
 
-test("old localStorage bests, levels and kinds move into parking.json and the keys go", async () => {
+test("old localStorage bests, levels and kinds move into parking.json; the keys go once a later load finds them there", async () => {
   localStorage.setItem("app.tight-spot.parking.best", JSON.stringify({ "garage:hatch": { moves: 3, ms: 9000, precision: 88 } }));
   localStorage.setItem("app.tight-spot.parking.levels", JSON.stringify({ "1": 3, "2": 1 }));
   localStorage.setItem("app.tight-spot.parking.kinds", JSON.stringify(["garage"]));
@@ -30,10 +30,7 @@ test("old localStorage bests, levels and kinds move into parking.json and the ke
   adopt_legacy(storage, first);
   const expected = { bests: { "garage:hatch": { moves: 3, ms: 9000, precision: 88 } }, levels: { "1": 3, "2": 1 }, kinds: ["garage"] };
   expect(first.value).toEqual(expected);
-  expect(localStorage.getItem("app.tight-spot.parking.best")).toBeNull();
-  expect(localStorage.getItem("app.tight-spot.parking.levels")).toBeNull();
-  expect(localStorage.getItem("app.tight-spot.parking.kinds")).toBeNull();
-  expect(localStorage.getItem("app.tight-spot.parking.level")).toBe("2");
+  expect(localStorage.getItem("app.tight-spot.parking.best")).not.toBeNull();
   first.release();
   await vi.waitFor(async () => expect(await (await files.get_file(PATH))?.text()).toContain("garage:hatch"));
 
@@ -41,5 +38,9 @@ test("old localStorage bests, levels and kinds move into parking.json and the ke
   await vi.waitFor(() => expect(second.ready).toBe(true));
   adopt_legacy(storage, second);
   expect(second.value).toEqual(expected);
+  expect(localStorage.getItem("app.tight-spot.parking.best")).toBeNull();
+  expect(localStorage.getItem("app.tight-spot.parking.levels")).toBeNull();
+  expect(localStorage.getItem("app.tight-spot.parking.kinds")).toBeNull();
+  expect(localStorage.getItem("app.tight-spot.parking.level")).toBe("2");
   second.release();
 });
