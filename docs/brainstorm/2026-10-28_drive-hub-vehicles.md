@@ -30,6 +30,9 @@ Owner asked what vehicles to add; after the list: "tbh i would want all of them"
 - **Reversing:** the one-hinge semi reverses square to a dock door, proven like today's trailers; rigs with two or more hinges get pull-through dock lanes, proven by a forward-only search from the real start. Reversing them is allowed, never required. Rejected: every chain must reverse in.
 - **Trucks now:** the parked trucks topic joins wave 2: a cab-over tractor with a 13.6 m semi-trailer, a box truck, and a truck with a drawbar trailer, all with the loading dock.
 
+## Feel over size (2026-10-29)
+Owner: "start working on the other ones when you can - the ones that actually have different feel". Most wave 1 vehicles differ only in size; the next work favours vehicles that drive differently: wave 2 (hitch chains, the trucks) and wave 3 (skid, frame, all-wheel and crab steer), before more size variants. Ideas kept for later: spots or jobs that need a given vehicle (ambulance bay, taxi rank, hydrant, bin points), weight and acceleration per vehicle, sight lines.
+
 ## Action items
 - [x] ADR-088 (accepted)
 - [ ] W1 agent alongside the forklift after Drive Hub ships
