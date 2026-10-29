@@ -445,7 +445,7 @@ const LATER_SEEDS: Partial<Record<Scenario, number>> = { camping: 200, "loading-
 const LAPS = 3;
 const PER_LAP = LAP.length + BIG_LAP.length;
 const CAR_LEVELS = LAP.length * LAPS;
-const LAP_LEVELS = PER_LAP * LAPS;
+export const LAP_LEVELS = PER_LAP * LAPS;
 // The last lap: every kind at its tightest, the two garages last.
 const HARDEST: readonly Scenario[] = [
   Scenario.PARALLEL,

@@ -19,6 +19,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Tight Spot has 18 new levels after the ladder: every kind of spot at its tightest, ending in the underground and multi-storey garages.",
       },
+      {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Tight Spot's level and spot achievements count the right number, and the hardest levels have an achievement of their own.",
+      },
     ],
   },
   {

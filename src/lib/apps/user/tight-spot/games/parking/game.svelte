@@ -35,6 +35,7 @@
     create_game,
     data_schema,
     EMPTY_DATA,
+    LAP_LEVELS,
     LEVEL_COUNT,
     level_round,
     Mode,
@@ -354,7 +355,9 @@
     if (state.round.level !== undefined) {
       const at = state.round.level;
       data.value.levels[at] = Math.max(data.value.levels[at] ?? 0, earned);
-      achievements.progress("licensed", Object.keys(data.value.levels).length);
+      const done = Object.keys(data.value.levels).map(Number);
+      achievements.progress("licensed", done.filter((level) => level <= LAP_LEVELS).length);
+      achievements.progress("hardest-lap", done.filter((level) => level > LAP_LEVELS).length);
     }
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, result.moves, "parking");
