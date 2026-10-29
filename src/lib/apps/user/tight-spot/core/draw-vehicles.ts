@@ -77,7 +77,8 @@ type Load = (typeof Load)[keyof typeof Load];
 interface Look {
   style: Style;
   livery?: Livery;
-  load?: Load;
+  /** One per hitch, down the chain. */
+  loads?: Load[];
 }
 
 const LOOKS: Record<Vehicle, Look> = {
@@ -85,7 +86,7 @@ const LOOKS: Record<Vehicle, Look> = {
   van: { style: Style.VAN },
   pickup: { style: Style.PICKUP },
   bus: { style: Style.BUS },
-  towing: { style: Style.HATCH, load: Load.BOX },
+  towing: { style: Style.HATCH, loads: [Load.BOX] },
   city: { style: Style.CITY },
   suv: { style: Style.SUV },
   limo: { style: Style.LIMO },
@@ -97,12 +98,12 @@ const LOOKS: Record<Vehicle, Look> = {
   fire: { style: Style.FIRE },
   coach: { style: Style.COACH },
   decker: { style: Style.DECKER },
-  artic: { style: Style.ARTIC, load: Load.BUS },
-  "horse-box": { style: Style.SUV, load: Load.HORSE },
-  tractor: { style: Style.TRACTOR, load: Load.FARM },
-  quad: { style: Style.QUAD, load: Load.BOX },
-  boat: { style: Style.PICKUP, load: Load.BOAT },
-  caravan: { style: Style.HATCH, load: Load.CARAVAN },
+  artic: { style: Style.ARTIC, loads: [Load.BUS] },
+  "horse-box": { style: Style.SUV, loads: [Load.HORSE] },
+  tractor: { style: Style.TRACTOR, loads: [Load.FARM] },
+  quad: { style: Style.QUAD, loads: [Load.BOX] },
+  boat: { style: Style.PICKUP, loads: [Load.BOAT] },
+  caravan: { style: Style.HATCH, loads: [Load.CARAVAN] },
   forklift: { style: Style.FORKLIFT },
   "tuk-tuk": { style: Style.TUK_TUK },
   "golf-cart": { style: Style.GOLF_CART },
@@ -823,14 +824,16 @@ function trailer(
   ctx: CanvasRenderingContext2D,
   car: Car,
   spec: VehicleSpec,
+  index: number,
   load: Load,
   lamps: Lamps,
   scale: number,
   palette: Palette
 ) {
-  const t = spec.trailer;
-  if (!t || !car.trailer) return;
-  const pose = trailer_pose(car, t);
+  const t = spec.hitches[index];
+  const towed = car.trailers?.[index];
+  if (!t || !towed) return;
+  const pose = trailer_pose(car, spec, index);
   const front = t.axle - t.drawbar;
   const centre = to_world(pose, { x: front - t.box_length / 2, y: 0 });
   const half = t.width / 2;
@@ -843,12 +846,13 @@ function trailer(
   // A bus section shows its tyres like the front one does; a caravan's sit under its body.
   const out = load === Load.BUS ? TYRE_SHOW : load === Load.CARAVAN ? 0.04 : 0.1;
   const wheels_of = () =>
-    trailer_wheels(car, t).forEach((at, i) =>
-      tyre(ctx, at, pose.heading, car.trailer!.roll[i], (i ? 1 : -1) * out, size, blur, scale, palette)
+    trailer_wheels(car, spec, index).forEach((at, i) =>
+      tyre(ctx, at, pose.heading, towed.roll[i], (i ? 1 : -1) * out, size, blur, scale, palette)
     );
   if (load !== Load.BUS) wheels_of();
 
-  const ball = hitch_point(car, t);
+  const ball = hitch_point(car, spec, index);
+  const ahead = index === 0 ? car.heading : car.trailers![index - 1].heading;
   if (load !== Load.BUS) {
     const spread = load === Load.BOAT ? 0.35 : Math.min(half - 0.25, 0.75);
     a_frame(ctx, to_world(pose, { x: front, y: -spread }), to_world(pose, { x: front, y: spread }), ball, palette);
@@ -883,7 +887,7 @@ function trailer(
   ctx.restore();
 
   if (load === Load.BUS) {
-    bellows(ctx, ball, pose.heading + wrap_angle(car.heading - pose.heading) / 2, t.width, scale, palette);
+    bellows(ctx, ball, pose.heading + wrap_angle(ahead - pose.heading) / 2, t.width, scale, palette);
     return wheels_of();
   }
   ctx.beginPath();
@@ -1408,7 +1412,9 @@ export function player(
     fun({ ctx, car, spec, lamps, scale, palette, l: spec.length / 2, half: spec.width / 2, line: 1 / scale, height: HEIGHT[look.style] });
     return;
   }
-  if (look.load) trailer(ctx, car, spec, look.load, lamps, scale, palette);
+  const loads = look.loads ?? [];
+  const dim = { braking: false, reversing: false, lit: 0.6 };
+  loads.forEach((load, i) => trailer(ctx, car, spec, i, load, i === loads.length - 1 ? lamps : dim, scale, palette));
   const style = look.style;
   const centre = body_centre(car, spec);
   shadow(ctx, centre, car.heading, spec.length, spec.width, style, HEIGHT[style], palette);
@@ -1427,9 +1433,8 @@ export function player(
   }
   if (style === Style.GARBAGE) beacon(ctx, l - 1.85, 0, palette.warning, palette.warning_glow, Math.max(lights[0], 0.35), palette);
   head_lamps(ctx, l, w, style, palette, 1);
-  // Towing, the trailer's lamps take over at the back; an articulated bus's front section has none of its own.
-  const dim = { braking: false, reversing: false, lit: 0.6 };
-  if (style !== Style.ARTIC) tail_lamps(ctx, l, w, palette, spec.trailer ? dim : lamps, style === Style.TRACTOR || style === Style.QUAD);
+  // Towing, the last trailer's lamps take over at the back; an articulated bus's front section has none of its own.
+  if (style !== Style.ARTIC) tail_lamps(ctx, l, w, palette, spec.hitches.length > 0 ? dim : lamps, style === Style.TRACTOR || style === Style.QUAD);
   ctx.restore();
   tyres(ctx, car, spec, style, scale, palette);
 }

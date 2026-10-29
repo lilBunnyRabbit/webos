@@ -241,16 +241,29 @@ describe("vehicles", () => {
     expect(scenario_round(ANY, 31, "2026-10-28", Vehicle.VAN)).toEqual(scenario_round(ANY, 31, "2026-10-28"));
     expect(open_round(4, Vehicle.TOWING).vehicle).toBe(Vehicle.TOWING);
     expect(open_round(4, Vehicle.BUS).vehicle).toBe(Vehicle.HATCH);
-    expect(create_game(open_round(4, Vehicle.TOWING)).car.trailer).toBeDefined();
+    expect(create_game(open_round(4, Vehicle.TOWING)).car.trailers).toBeDefined();
   });
 
   test("a trailer folded past 70° ends the round at the coupling", () => {
     const state = driving(scenario_round(Scenario.SLIPWAY, 3));
-    const car = { ...state.car, gear: Gear.REVERSE, trailer: { heading: state.car.heading - 1.3, roll: [0, 0] as [number, number] } };
+    const car = { ...state.car, gear: Gear.REVERSE, trailers: [{ heading: state.car.heading - 1.3, roll: [0, 0] as [number, number] }] };
     const next = advance({ ...state, car }, NO_INPUT, DT);
     expect(next.status).toBe(Status.CRASHED);
     expect(next.hit?.kind).toBe(JACKKNIFE);
     expect(crash_title(next.hit)).toBe("Jackknifed the trailer");
+  });
+
+  test("a chain jackknifes at the hinge that folded too far, and the card names it", () => {
+    const state = driving(scenario_round(Scenario.SLIPWAY, 3));
+    const single = spec_of(state.round);
+    const chain = { ...single, hitches: [single.hitches[0], { ...single.hitches[0], hitch: 1.4 }] };
+    const h = state.car.heading;
+    const roll: [number, number] = [0, 0];
+    const car = { ...state.car, gear: Gear.REVERSE, trailers: [{ heading: h, roll }, { heading: h - 1.3, roll }] };
+    const next = advance({ ...state, car }, NO_INPUT, DT, chain);
+    expect(next.status).toBe(Status.CRASHED);
+    expect(next.hit).toEqual({ kind: JACKKNIFE, hinge: 1 });
+    expect(crash_title(next.hit)).toBe("Jackknifed at the second hinge");
   });
 
   test("parked with a trailer needs the trailer lined up too", () => {
@@ -259,7 +272,7 @@ describe("vehicles", () => {
     const bay = state.world.bays[0];
     const pose = parked_poses(bay, obstacles(state.world), 0.05, spec)[0];
     expect(parked_in(pose, bay, spec)).toBe(true);
-    expect(parked_in({ ...pose, trailer: { heading: pose.heading + 0.15, roll: [0, 0] } }, bay, spec)).toBe(false);
+    expect(parked_in({ ...pose, trailers: [{ heading: pose.heading + 0.15, roll: [0, 0] }] }, bay, spec)).toBe(false);
   });
 });
 
@@ -316,7 +329,7 @@ describe("precision", () => {
     const rig_bay = state.world.bays[0];
     const pose = parked_poses(rig_bay, obstacles(state.world), 0.05, spec)[0];
     const straight = precision(pose, rig_bay, spec);
-    const bent = precision({ ...pose, trailer: { heading: pose.heading + 0.03, roll: [0, 0] } }, rig_bay, spec);
+    const bent = precision({ ...pose, trailers: [{ heading: pose.heading + 0.03, roll: [0, 0] }] }, rig_bay, spec);
     expect(bent.angle).toBeCloseTo(Math.max(0.03, straight.angle), 6);
     expect(bent.score).toBeLessThan(straight.score);
   });

@@ -23,8 +23,8 @@ function gate_pose(cx: number, cy: number, side: Side): Pose {
   return { x: mid.x + out.x * (CHUNK / 2 + 4), y: mid.y + out.y * (CHUNK / 2 + 4), heading: Math.atan2(out.y, out.x) };
 }
 
-function straight(pose: Pose): Placement {
-  return { x: pose.x, y: pose.y, heading: pose.heading, trailer: { heading: pose.heading, roll: [0, 0] } };
+function straight(pose: Pose, spec: VehicleSpec): Placement {
+  return { x: pose.x, y: pose.y, heading: pose.heading, trailers: spec.hitches.map(() => ({ heading: pose.heading, roll: [0, 0] })) };
 }
 
 function drives_into(from: Placement, moves: readonly Move[], bay: Bay, world: World, spec: VehicleSpec): boolean {
@@ -34,7 +34,7 @@ function drives_into(from: Placement, moves: readonly Move[], bay: Bay, world: W
     const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
     for (let k = 0; k < pieces; k++) {
       at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, spec);
-      if (jackknifed(at) || collide(at, near, spec)) return false;
+      if (jackknifed(at, spec) || collide(at, near, spec)) return false;
     }
   }
   return parked_in(at, bay, spec);
@@ -47,10 +47,10 @@ function towed_in(bay: Bay, gate: Pose, world: World, spec: VehicleSpec): boolea
     const out = plan(pose, gate, near, { spec, directions: [-1], heading_tolerance: Math.PI, max_expansions: 60_000 });
     if (!out) return false;
     const moves = [...out.moves].reverse().map((move) => ({ ...move, distance: -move.distance }));
-    return drives_into(straight(out.path[out.path.length - 1]), moves, bay, world, spec);
+    return drives_into(straight(out.path[out.path.length - 1], spec), moves, bay, world, spec);
   });
   if (forward) return true;
-  const inward = straight({ ...gate, heading: gate.heading + Math.PI });
+  const inward = straight({ ...gate, heading: gate.heading + Math.PI }, spec);
   return poses.slice(0, 3).some((pose) => {
     const found = plan(inward, pose, near, { spec, arrive: (at) => parked_in(at, bay, spec) });
     return found !== null && drives_into(inward, found.moves, bay, world, spec);
@@ -70,7 +70,7 @@ function facing(bay: Bay): number {
 describe("free bays in the open lot can be reached through their lot's gate", () => {
   for (const vehicle of vehicles_for(null)) {
     for (const seed of [42, 7]) {
-      test(`${VEHICLES[vehicle].trailer ? "a sample" : "every bay"} in a ${vehicle}, seed ${seed}`, { timeout: 60_000 }, () => {
+      test(`${VEHICLES[vehicle].hitches.length > 0 ? "a sample" : "every bay"} in a ${vehicle}, seed ${seed}`, { timeout: 60_000 }, () => {
         const spec = VEHICLES[vehicle];
         const { world, car } = create_game(open_round(seed, vehicle));
         const near = obstacles(world);
@@ -82,13 +82,13 @@ describe("free bays in the open lot can be reached through their lot's gate", ()
           expect(plan(car, gate, near, { spec, heading_tolerance: Math.PI }), `gate ${lot.cx},${lot.cy}`).not.toBeNull();
           expect(lot.bays.length).toBeGreaterThan(0);
           let bays = lot.bays;
-          if (spec.trailer) {
+          if (spec.hitches.length > 0) {
             bays = TOWING_SAMPLE[seed][`${lot.cx},${lot.cy}`].map((index) => lot.bays[index]);
             const sides = new Set(bays.map(facing));
             expect([...new Set(lot.bays.map(facing))].every((each) => sides.has(each)), `sample at ${lot.cx},${lot.cy}`).toBe(true);
           }
           for (const bay of bays) {
-            const ok = spec.trailer
+            const ok = spec.hitches.length > 0
               ? towed_in(bay, gate, world, spec)
               : parked_poses(bay, near, 0.05, spec).some(
                   (pose) => plan(pose, gate, near, { spec, heading_tolerance: Math.PI }) !== null

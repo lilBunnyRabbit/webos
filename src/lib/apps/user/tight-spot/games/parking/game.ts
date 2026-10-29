@@ -8,7 +8,7 @@ import {
   create_car,
   Gear,
   hitch_point,
-  jackknifed,
+  jackknife,
   shift,
   step,
   Vehicle,
@@ -160,6 +160,12 @@ export interface Round {
 export const JACKKNIFE = "jackknife";
 type HitKind = SolidKind | typeof JACKKNIFE;
 
+export interface Hit {
+  kind: HitKind;
+  /** Which hinge folded too far, on a rig with more than one. */
+  hinge?: number;
+}
+
 export interface GameState {
   round: Round;
   world: World;
@@ -170,7 +176,7 @@ export interface GameState {
   last_drive: Gear | null;
   ms: number;
   contact: Vec | null;
-  hit: { kind: HitKind } | null;
+  hit: Hit | null;
   bay: Bay | null;
 }
 
@@ -228,7 +234,7 @@ function inside(car: Placement, bay: Bay, spec: VehicleSpec): boolean {
 /** A trailer must be lined up with the bay too, not only the car in front of it. */
 export function parked_in(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES.hatch): boolean {
   if (!inside(car, bay, spec)) return false;
-  return lined_up(car.heading, bay) && (!car.trailer || lined_up(car.trailer.heading, bay));
+  return lined_up(car.heading, bay) && (car.trailers ?? []).every((trailer) => lined_up(trailer.heading, bay));
 }
 
 export function bay_for(car: Placement, world: World, spec: VehicleSpec = VEHICLES.hatch): Bay | null {
@@ -255,14 +261,15 @@ export function advance(
   if (state.status !== Status.DRIVING) return state;
   const car = step(state.car, input, dt, spec);
   const ms = state.ms + dt * 1000;
-  if (spec.trailer && jackknifed(car)) {
+  const folded = jackknife(car, spec);
+  if (folded >= 0) {
     return {
       ...state,
       car: { ...car, speed: 0 },
       ms,
       status: Status.CRASHED,
-      contact: hitch_point(car, spec.trailer),
-      hit: { kind: JACKKNIFE },
+      contact: hitch_point(car, spec, folded),
+      hit: spec.hitches.length > 1 ? { kind: JACKKNIFE, hinge: folded } : { kind: JACKKNIFE },
     };
   }
   const hit = collide(car, obstacles(state.world), spec);
@@ -347,9 +354,9 @@ export function record_best(bests: Bests, round: Round, result: Result): Recorde
 
 export { PERFECT, type Precision } from "../../core/precision";
 
-/** How well a parked rig sits in its bay: every corner of the car and a trailer's box, the worse of their headings. */
+/** How well a parked rig sits in its bay: every corner of the car and its trailers' boxes, the worst of their headings. */
 export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES.hatch): Precision {
-  const headings = car.trailer ? [car.heading, car.trailer.heading] : [car.heading];
+  const headings = [car.heading, ...(car.trailers ?? []).map((trailer) => trailer.heading)];
   return fit(bodies(car, spec).flat(), headings, bay);
 }
 
@@ -449,9 +456,11 @@ export const HIT_NAMES: Record<SolidKind, string> = {
   hedge: "a hedge",
 };
 
+const ORDINALS = ["first", "second", "third", "fourth", "fifth"];
+
 export function crash_title(hit: GameState["hit"]): string {
   if (!hit) return "Touched something";
-  if (hit.kind === JACKKNIFE) return "Jackknifed the trailer";
+  if (hit.kind === JACKKNIFE) return hit.hinge === undefined ? "Jackknifed the trailer" : `Jackknifed at the ${ORDINALS[hit.hinge]} hinge`;
   return `Touched ${HIT_NAMES[hit.kind]}`;
 }
 

@@ -8,7 +8,7 @@ import {
   create_car,
   Gear,
   hitch_point,
-  jackknifed,
+  jackknife,
   pose_from_centre,
   rig_length,
   step,
@@ -204,7 +204,8 @@ export interface Bumped {
 /** A step that would run into something, or jackknife, doesn't happen: the vehicle stops where it was. */
 export function drive(yard: Yard, car: Car, input: Input, dt: number, spec: VehicleSpec): Bumped {
   const next = step(car, input, dt, spec);
-  if (spec.trailer && jackknifed(next)) return { car: stopped(car, next), hit: hitch_point(car, spec.trailer) };
+  const folded = jackknife(next, spec);
+  if (folded >= 0) return { car: stopped(car, next), hit: hitch_point(car, spec, folded) };
   const hit = collide(next, obstacles(yard), spec);
   return hit ? { car: stopped(car, next), hit: hit.at } : { car: next, hit: null };
 }

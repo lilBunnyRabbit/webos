@@ -3,7 +3,7 @@ import { collide, type Obstacles } from "./obstacles";
 import {
   arc,
   HATCHBACK,
-  hitch_angle,
+  hitch_angles,
   jackknifed,
   max_steer,
   tow,
@@ -19,11 +19,15 @@ export function inflate(spec: VehicleSpec, margin: number): VehicleSpec {
     rear_overhang: spec.rear_overhang + margin,
     ...(spec.forks ? { forks: { length: spec.forks.length, width: spec.forks.width + margin * 2 } } : {}),
   };
-  const t = spec.trailer;
-  if (!t) return grown;
+  if (spec.hitches.length === 0) return grown;
   return {
     ...grown,
-    trailer: { ...t, width: t.width + margin * 2, box_length: t.box_length + margin * 2, drawbar: t.drawbar - margin },
+    hitches: spec.hitches.map((t) => ({
+      ...t,
+      width: t.width + margin * 2,
+      box_length: t.box_length + margin * 2,
+      drawbar: t.drawbar - margin,
+    })),
   };
 }
 
@@ -118,18 +122,23 @@ const TURN_WEIGHT = 3;
 const GREED = 4;
 const HITCHES = 16;
 
-function cell_key(pose: Placement, direction: number): number {
+const hitch_bin = (angle: number) => Math.round((angle / Math.PI) * HITCHES) + HITCHES;
+
+// One hinge keeps the closed set's number; a chain's further hinges would overflow a safe integer, so it goes by string.
+function cell_key(pose: Placement, direction: number): number | string {
   const ix = Math.round(pose.x / CELL) + 4096;
   const iy = Math.round(pose.y / CELL) + 4096;
   const turn = ((Math.round((pose.heading / (2 * Math.PI)) * HEADINGS) % HEADINGS) + HEADINGS) % HEADINGS;
-  const hitch = Math.round((hitch_angle(pose) / Math.PI) * HITCHES) + HITCHES;
-  return (((ix * 8192 + iy) * HEADINGS + turn) * (HITCHES * 2 + 1) + hitch) * 2 + (direction > 0 ? 1 : 0);
+  const angles = hitch_angles(pose);
+  const hitch = hitch_bin(angles[0] ?? 0);
+  const key = (((ix * 8192 + iy) * HEADINGS + turn) * (HITCHES * 2 + 1) + hitch) * 2 + (direction > 0 ? 1 : 0);
+  return angles.length > 1 ? `${key}:${angles.slice(1).map(hitch_bin).join(",")}` : key;
 }
 
 export function drive(from: Placement, move: Move, spec: VehicleSpec): Placement {
   const pose = arc(from, move.curvature, move.distance);
-  if (!spec.trailer || !from.trailer) return pose;
-  return { ...pose, trailer: tow(from, from.trailer, move.curvature, move.distance, spec.trailer) };
+  if (spec.hitches.length === 0 || !from.trailers) return pose;
+  return { ...pose, trailers: tow(from, from.trailers, move.curvature, move.distance, spec.hitches) };
 }
 
 /**
@@ -149,17 +158,18 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   const switch_cost = options.switch_cost ?? SWITCH_COST;
   const distance = (pose: Placement) => Math.hypot(pose.x - to.x, pose.y - to.y);
   const turn_weight = tolerance < Math.PI ? TURN_WEIGHT : 0;
-  const folded = (pose: Placement) => (pose.trailer ? angle_between(pose.trailer.heading, to.heading) : 0);
+  const folded = (pose: Placement) =>
+    pose.trailers ? pose.trailers.reduce((sum, trailer) => sum + angle_between(trailer.heading, to.heading), 0) : 0;
   const heuristic = (pose: Placement) =>
     distance(pose) + turn_weight * (angle_between(pose.heading, to.heading) + folded(pose));
   const arrived =
     options.arrive ??
     ((pose: Placement) => distance(pose) <= reach && angle_between(pose.heading, to.heading) <= tolerance);
-  const blocked = options.blocked ?? ((pose: Placement) => jackknifed(pose) || collide(pose, near, body) !== null);
+  const blocked = options.blocked ?? ((pose: Placement) => jackknifed(pose, spec) || collide(pose, near, body) !== null);
 
   if (blocked(from)) return null;
   const open = new Heap();
-  const closed = new Set<number>();
+  const closed = new Set<number | string>();
   open.push({ pose: from, cost: 0, score: heuristic(from), direction: 0, reversals: 0, move: null, parent: null });
   let expansions = 0;
   while (open.size > 0 && expansions < limit) {

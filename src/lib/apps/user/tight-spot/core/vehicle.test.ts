@@ -10,10 +10,14 @@ import {
   HATCHBACK,
   HATCH_TRAILER,
   hitch_angle,
+  hitch_angles,
+  hitch_point,
+  jackknife,
   jackknifed,
   max_steer,
   NO_INPUT,
   REAR_STEER,
+  rig_ends,
   rig_length,
   shift,
   SteerAxle,
@@ -277,12 +281,12 @@ describe("trailer", () => {
 
   function towing(hitch: number, gear: Gear): Car {
     const car = create_car(START, gear, spec);
-    return { ...car, trailer: { ...car.trailer!, heading: -hitch } };
+    return { ...car, trailers: [{ ...car.trailers![0], heading: -hitch }] };
   }
 
   test("starts straight behind the car", () => {
     const car = create_car(START, Gear.PARK, spec);
-    expect(car.trailer?.heading).toBe(START.heading);
+    expect(car.trailers?.[0].heading).toBe(START.heading);
     expect(hitch_angle(car)).toBe(0);
   });
 
@@ -302,17 +306,17 @@ describe("trailer", () => {
       previous = Math.abs(hitch_angle(car));
     }
     expect(Math.abs(hitch_angle(car))).toBeGreaterThan(10 * DEG);
-    for (let i = 0; i < 120 * 20 && !jackknifed(car); i++)
+    for (let i = 0; i < 120 * 20 && !jackknifed(car, spec); i++)
       car = step(car, { steer: 0, throttle: 0.5, brake: 0 }, DT, spec);
-    expect(jackknifed(car)).toBe(true);
+    expect(jackknifed(car, spec)).toBe(true);
   });
 
   test("the trailer's axle never slides sideways", () => {
     let car = run(towing(0, Gear.DRIVE), { steer: 0.8, throttle: 0.5, brake: 0 }, 1, spec);
     for (let i = 0; i < 300; i++) {
       const next = step(car, { steer: Math.sin(i / 30), throttle: 0.5, brake: 0 }, DT, spec);
-      const a = trailer_pose(car, spec.trailer!);
-      const b = trailer_pose(next, spec.trailer!);
+      const a = trailer_pose(car, spec);
+      const b = trailer_pose(next, spec);
       const moved = Math.hypot(b.x - a.x, b.y - a.y);
       const sideways = Math.abs(
         -(b.x - a.x) * Math.sin((a.heading + b.heading) / 2) + (b.y - a.y) * Math.cos((a.heading + b.heading) / 2)
@@ -324,9 +328,9 @@ describe("trailer", () => {
 
   test("its wheels roll the distance straight on, the outer one more round a turn", () => {
     const straight = run(towing(0, Gear.DRIVE), { steer: 0, throttle: 0.6, brake: 0 }, 2, spec);
-    for (const rolled of straight.trailer!.roll) expect(rolled).toBeCloseTo(straight.x, 6);
+    for (const rolled of straight.trailers![0].roll) expect(rolled).toBeCloseTo(straight.x, 6);
     const turning = run(towing(0, Gear.DRIVE), { steer: 1, throttle: 0.4, brake: 0 }, 6, spec);
-    const [left, right] = turning.trailer!.roll;
+    const [left, right] = turning.trailers![0].roll;
     expect(left).toBeGreaterThan(right);
   });
 
@@ -336,6 +340,86 @@ describe("trailer", () => {
     const b = run(towing(10 * DEG, Gear.REVERSE), input, 2, spec);
     expect(a).toEqual(b);
     expect(step(a, input, 0, spec)).toBe(a);
+  });
+});
+
+describe("hitch chain", () => {
+  const DEG = Math.PI / 180;
+  const box = HATCH_TRAILER.hitches[0];
+  const spec: VehicleSpec = {
+    ...HATCH_TRAILER,
+    hitches: [box, { ...box, hitch: 1.4, max_angle: 60 * DEG }, { ...box, hitch: 1.4, axle: 3, max_angle: 50 * DEG }],
+  };
+
+  function bent(angles: number[], gear: Gear): Car {
+    const car = create_car(START, gear, spec);
+    let heading = START.heading;
+    return { ...car, trailers: car.trailers!.map((trailer, i) => ({ ...trailer, heading: (heading -= angles[i]) })) };
+  }
+
+  test("starts straight behind the vehicle, every link a body", () => {
+    const car = create_car(START, Gear.PARK, spec);
+    expect(car.trailers).toHaveLength(3);
+    expect(hitch_angles(car)).toEqual([0, 0, 0]);
+    expect(bodies(car, spec)).toHaveLength(4);
+    const tail = Math.min(...bodies(car, spec)[3].map((p) => p.x));
+    expect(rig_ends(spec).rear).toBeCloseTo(tail, 9);
+  });
+
+  test("the first link moves exactly as a lone trailer does", () => {
+    const input = { steer: 0.7, throttle: 0.5, brake: 0 };
+    const single = create_car(START, Gear.REVERSE, HATCH_TRAILER);
+    const lone = run({ ...single, trailers: [{ ...single.trailers![0], heading: -10 * DEG }] }, input, 3, HATCH_TRAILER);
+    const chain = run(bent([10 * DEG, 0, 0], Gear.REVERSE), input, 3, spec);
+    expect(chain.trailers![0]).toEqual(lone.trailers![0]);
+  });
+
+  test("towing forwards straightens every link", () => {
+    const car = run(bent([25 * DEG, -30 * DEG, 20 * DEG], Gear.DRIVE), { steer: 0, throttle: 0.5, brake: 0 }, 10, spec);
+    expect(car.x).toBeGreaterThan(15);
+    for (const angle of hitch_angles(car)) expect(Math.abs(angle)).toBeLessThan(2 * DEG);
+  });
+
+  test("reversing makes the hinges diverge until one folds past its limit", () => {
+    let car = bent([1 * DEG, -1 * DEG, 1 * DEG], Gear.REVERSE);
+    const start = Math.max(...hitch_angles(car).map(Math.abs));
+    for (let i = 0; i < 120 * 3; i++) car = step(car, { steer: 0, throttle: 0.5, brake: 0 }, DT, spec);
+    expect(Math.max(...hitch_angles(car).map(Math.abs))).toBeGreaterThan(start * 3);
+    for (let i = 0; i < 120 * 30 && !jackknifed(car, spec); i++) car = step(car, { steer: 0, throttle: 0.5, brake: 0 }, DT, spec);
+    expect(jackknife(car, spec)).toBeGreaterThanOrEqual(0);
+  });
+
+  test("every link's axle only moves along its heading", () => {
+    let car = run(bent([0, 0, 0], Gear.DRIVE), { steer: 0.8, throttle: 0.5, brake: 0 }, 1, spec);
+    for (let i = 0; i < 400; i++) {
+      const next = step(car, { steer: Math.sin(i / 30), throttle: 0.5, brake: 0 }, DT, spec);
+      for (let k = 0; k < 3; k++) {
+        const a = trailer_pose(car, spec, k);
+        const b = trailer_pose(next, spec, k);
+        const moved = Math.hypot(b.x - a.x, b.y - a.y);
+        const mid = (a.heading + b.heading) / 2;
+        const sideways = Math.abs(-(b.x - a.x) * Math.sin(mid) + (b.y - a.y) * Math.cos(mid));
+        expect(sideways, `link ${k}`).toBeLessThan(moved * 2e-3 + 1e-9);
+      }
+      car = next;
+    }
+  });
+
+  test("each hinge has its own limit, and the first one past it is the one that jackknifed", () => {
+    expect(jackknife(bent([65 * DEG, 0, 0], Gear.PARK), spec)).toBe(-1);
+    expect(jackknife(bent([0, 65 * DEG, 0], Gear.PARK), spec)).toBe(1);
+    expect(jackknife(bent([0, 0, -55 * DEG], Gear.PARK), spec)).toBe(2);
+    expect(jackknife(bent([75 * DEG, 65 * DEG, 0], Gear.PARK), spec)).toBe(0);
+    expect(hitch_point(bent([0, 0, 0], Gear.PARK), spec, 1).x).toBeCloseTo(-(box.hitch + box.axle + 1.4), 9);
+  });
+
+  test("is deterministic, and a step of no time changes nothing", () => {
+    const input = { steer: -0.6, throttle: 0.5, brake: 0 };
+    const a = run(bent([5 * DEG, -5 * DEG, 5 * DEG], Gear.REVERSE), input, 2, spec);
+    const b = run(bent([5 * DEG, -5 * DEG, 5 * DEG], Gear.REVERSE), input, 2, spec);
+    expect(a).toEqual(b);
+    expect(step(a, input, 0, spec)).toBe(a);
+    expect(step(a, input, -0.01, spec)).toBe(a);
   });
 });
 

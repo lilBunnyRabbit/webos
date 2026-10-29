@@ -46,3 +46,9 @@ Owner: "yes make the articulated bus parkable too". It failed every bus stop and
 - One optional spec field, `unlit` (no headlight beams), for the trolley and the F1 car.
 - Parking: the planner proves the F1 car in the open lot, and the tuk-tuk and the golf cart in every car kind and the open lot. They first failed because the lot builders shrank for vehicles smaller than the hatchback; `Fit` now never goes below the hatchback's layout (length, width and turning circle), and levels keep their vehicles through `ladder`. The resurfacer and the trolley are garage-only.
 - Camera: `view_span` zooms by vehicle length both ways (0.6–1.6× the hatchback's view), so small vehicles are zoomed in, in rounds and in the yard.
+
+## Revision 2026-10-29 (W2: the hitch chain)
+- `VehicleSpec.trailer?` became `hitches: TrailerSpec[]`, empty for a solo vehicle; `Car.trailer` became `trailers`, one `{ heading, roll }` per link. Each link pivots on the body ahead of it: `hitch` runs from that body's axle (the vehicle's pose for the first) to the hinge, negative ahead of it for a kingpin over the drive axle, and `drawbar` goes negative when the box reaches past the hinge (a semi-trailer).
+- `tow()` integrates the whole chain in one RK4 pass, each link with the one-trailer formula against the axle speed and turn of the body ahead. The first link's arithmetic is unchanged, so every one-trailer rig moves, plans and proves bit for bit as before (checked against the previous code over every vehicle and the trailer kinds' searches).
+- **Jackknife per hinge:** `TrailerSpec.max_angle`, every existing trailer 70°. `jackknife(car, spec)` names the first hinge past its limit; the round ends with the ring at that hinge and the card names it on a chain.
+- The planner bins every hinge's angle (a chain's closed-set key is a string past one hinge), its heuristic adds every link's heading error, and `inflate` grows every link.

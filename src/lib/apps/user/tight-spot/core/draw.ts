@@ -291,12 +291,13 @@ const BEAM = 7;
 export function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, palette: Palette) {
   const direction = gear_direction(car.gear);
   if (direction === 0 || spec.unlit) return;
-  const t = direction < 0 ? spec.trailer : undefined;
-  // Reversing with a trailer, the light comes off the trailer's tail.
+  const last = spec.hitches.length - 1;
+  const t = direction < 0 && last >= 0 ? spec.hitches[last] : undefined;
+  // Reversing with a trailer, the light comes off the last trailer's tail.
   const frame: Pose = t
     ? {
-        ...to_world(trailer_pose(car, t), { x: t.axle - t.drawbar - t.box_length / 2, y: 0 }),
-        heading: trailer_pose(car, t).heading,
+        ...to_world(trailer_pose(car, spec, last), { x: t.axle - t.drawbar - t.box_length / 2, y: 0 }),
+        heading: trailer_pose(car, spec, last).heading,
       }
     : { ...body_centre(car, spec), heading: car.heading };
   const l = (t ? t.box_length : spec.length) / 2;
@@ -329,7 +330,7 @@ export function guides(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpe
   if (direction === 0) return;
   // Front corners going forwards, rear corners backwards: the corners that lead, where a reversing camera draws its lines.
   let leading: Vec[][];
-  if (direction < 0 && spec.trailer) leading = trailer_sweep(car, -5, 40, spec);
+  if (direction < 0 && spec.hitches.length > 0) leading = trailer_sweep(car, -5, 40, spec);
   else {
     const paths = sweep(car, direction * 5, 40, spec);
     leading = direction > 0 ? [paths[0], paths[1]] : [paths[2], paths[3]];

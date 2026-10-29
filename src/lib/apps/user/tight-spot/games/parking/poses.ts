@@ -16,7 +16,8 @@ export function parked_poses(bay: Bay, near: Obstacles, margin = 0.05, spec: Veh
       for (let s = -0.4; s <= 0.4 + 1e-9; s += 0.1) {
         const at = { x: centre.x + along.x * a - along.y * s, y: centre.y + along.y * a + along.x * s, heading };
         const axle = pose_from_centre(at, spec);
-        const pose: Placement = spec.trailer ? { ...axle, trailer: { heading, roll: [0, 0] } } : axle;
+        const pose: Placement =
+          spec.hitches.length > 0 ? { ...axle, trailers: spec.hitches.map(() => ({ heading, roll: [0, 0] })) } : axle;
         if (!parked_in(pose, bay, spec) || collide(pose, near, body)) continue;
         found.push({ pose, off: Math.abs(a) + Math.abs(s) * 2 });
       }

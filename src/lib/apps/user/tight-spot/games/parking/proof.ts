@@ -59,8 +59,8 @@ export function reachable(state: GameState, from_start: boolean): boolean {
   const spec = spec_of(state.round);
   const near = obstacles(world);
   const bay = world.bays[0];
-  const start: Placement = { x: car.x, y: car.y, heading: car.heading, trailer: car.trailer };
-  const straight = spec.trailer !== undefined && state.round.scenario !== null && PULL_UP.has(state.round.scenario);
+  const start: Placement = { x: car.x, y: car.y, heading: car.heading, trailers: car.trailers };
+  const straight = spec.hitches.length > 0 && state.round.scenario !== null && PULL_UP.has(state.round.scenario);
   const body = inflate(spec, 0.05);
   const arrive = straight
     ? (at: Placement) => pull_up(at, bay, near, spec, body) !== null
@@ -71,7 +71,7 @@ export function reachable(state: GameState, from_start: boolean): boolean {
     const count = tried.get(pose.heading) ?? 0;
     if (count >= 3) return false;
     tried.set(pose.heading, count + 1);
-    if (!from_start && !spec.trailer) return plan(pose, world.start, near, { spec }) !== null;
+    if (!from_start && spec.hitches.length === 0) return plan(pose, world.start, near, { spec }) !== null;
     const found = plan(start, pose, near, { spec, arrive, directions: straight ? [1] : undefined });
     if (!found) return false;
     const end = straight ? pull_up(found.path.at(-1)!, bay, near, spec, body) : null;
@@ -92,7 +92,7 @@ function parks(state: GameState, moves: readonly Move[]): boolean {
     const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
     for (let k = 0; k < pieces; k++) {
       at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, spec);
-      if (jackknifed(at) || collide(at, near, spec)) return false;
+      if (jackknifed(at, spec) || collide(at, near, spec)) return false;
     }
   }
   return verdict({ ...state, car: { ...state.car, ...at } }) === "inside";

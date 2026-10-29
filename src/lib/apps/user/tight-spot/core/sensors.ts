@@ -45,12 +45,13 @@ export interface SensorFrame {
   body: Vec[];
 }
 
-/** Towing, the rear sensors are the trailer's: its tail is what reverses into things. */
+/** Towing, the rear sensors are the last trailer's: its tail is what reverses into things. */
 export function sensor_frame(car: Placement, end: End, spec: VehicleSpec = HATCHBACK): SensorFrame {
-  const t = spec.trailer;
-  if (end === End.REAR && t) {
-    const pose = trailer_pose(car, t);
-    return { pose, bumper: t.drawbar + t.box_length - t.axle, width: t.width, body: trailer_corners(car, t) };
+  const last = spec.hitches.length - 1;
+  if (end === End.REAR && last >= 0) {
+    const t = spec.hitches[last];
+    const pose = trailer_pose(car, spec, last);
+    return { pose, bumper: t.drawbar + t.box_length - t.axle, width: t.width, body: trailer_corners(car, spec, last) };
   }
   const ends = body_ends(spec);
   const bumper = end === End.FRONT ? rig_ends(spec).front : -ends.rear;

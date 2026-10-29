@@ -503,7 +503,7 @@ function fit_for(spec: VehicleSpec): Fit {
   return {
     length,
     longer: length - HATCHBACK.length,
-    wider: Math.max(0, spec.width - HATCHBACK.width, (spec.trailer?.width ?? 0) - HATCHBACK.width),
+    wider: Math.max(0, spec.width - HATCHBACK.width, ...spec.hitches.map((link) => link.width - HATCHBACK.width)),
     turn: Math.max(1, spec.turning_radius / HATCHBACK.turning_radius),
     depth: length + 0.7,
     rear: -rig_ends(spec).rear,
