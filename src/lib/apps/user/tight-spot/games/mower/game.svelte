@@ -28,10 +28,11 @@
   import {
     advance,
     apply_mask,
+    BUMP_COST_MS,
+    bump_hint,
     can_finish,
     change_gear,
     coverage,
-    crash_title,
     create_game,
     daily_round,
     DECK,
@@ -115,7 +116,7 @@
   const lock = $derived(max_steer(SPEC));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
-  const over = $derived(game.status === Status.DONE || game.status === Status.CRASHED || game.status === Status.FLATTENED);
+  const over = $derived(game.status === Status.DONE || game.status === Status.FLATTENED);
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(saved.value.best[round_key(game.round)]);
@@ -138,7 +139,11 @@
   const time = $derived(format_time(game.ms, { tenths: true }));
   const par_time = $derived(measured ? format_time(measured.par_ms) : null);
   const area = $derived(Math.round(game.garden.lawn.reduce((sum, piece) => sum + (piece[2].x - piece[0].x) * (piece[2].y - piece[0].y), 0)));
-  const hint = $derived(on_flowers && game.status === Status.DRIVING ? "Off the flowers: each one costs lawn" : null);
+  const hint = $derived(bump_hint(game) ?? (on_flowers && game.status === Status.DRIVING ? "Off the flowers: each one costs lawn" : null));
+
+  function bumps_text(count: number): string {
+    return `${count} ${count === 1 ? "bump" : "bumps"}`;
+  }
 
   function make_round(): Round {
     if (daily) return daily_round(daily, daily_seed(daily, `${app_id}/${DAILY_MODE}`));
@@ -296,15 +301,11 @@
     if (next.tally.trampled > game.tally.trampled) flowers_at = now;
     const crushing = now - flowers_at < 1500;
     if (crushing !== on_flowers) on_flowers = crushing;
+    const bumps = game.bumps;
     game = next;
-    if (before === Status.DRIVING && next.status === Status.CRASHED) crashed();
+    if (next.bumps > bumps) sounds.crash();
     if (before === Status.DRIVING && next.status === Status.DONE) done(next);
     if (before === Status.DRIVING && next.status === Status.FLATTENED) release_all();
-  }
-
-  function crashed() {
-    release_all();
-    sounds.crash();
   }
 
   function done(state: GameState) {
@@ -366,7 +367,7 @@
 
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
-    else if (game.status === Status.CRASHED || game.status === Status.FLATTENED) retry();
+    else if (game.status === Status.FLATTENED) retry();
     else if (game.status === Status.DONE) {
       if (game.round.daily) retry();
       else if (game.round.level === undefined) new_lawn();
@@ -589,6 +590,7 @@
               <span class="absolute inset-y-0 left-0 rounded-full bg-success" style:width="{Math.min(100, (mown / FINISH) * 100)}%"></span>
             </span>
             <span class={cn(lapped > OVERLAP_LIMIT ? "text-warning" : "text-foreground/65")}>overlap {Math.round(lapped * 100)}%</span>
+            {#if game.bumps > 0}<span class="text-warning">{bumps_text(game.bumps)}</span>{/if}
           </div>
         {/if}
       </div>
@@ -616,7 +618,7 @@
           {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
         <p class="text-ui text-foreground/80">
-          Mow {Math.round(FINISH * 100)}% of the lawn. Keep off the flowers: they cost lawn, and too many end it. A tree, the shed, the pond or the hedge ends it too.
+          Mow {Math.round(FINISH * 100)}% of the lawn. Keep off the flowers: they cost lawn, and too many end it. A bump stops you: back off and carry on. Each one adds {BUMP_COST_MS / 1000} s.
         </p>
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
           Par {par_time ?? (measure_failed ? "–" : "…")} · overlap under {Math.round(OVERLAP_LIMIT * 100)}%{best ? ` · Best ${"★".repeat(best.stars)} ${format_time(best.ms, { tenths: true })}` : ""}
@@ -647,6 +649,7 @@
         <p class="font-mono text-2xs text-foreground/80 tabular-nums">
           {time}{par_time ? ` (par ${par_time})` : ""} · mown {Math.floor(percent(mown))}% · overlap {Math.round(lapped * 100)}% (under {Math.round(OVERLAP_LIMIT * 100)})
         </p>
+        {#if game.bumps > 0}<p class="font-mono text-2xs text-warning tabular-nums">{bumps_text(game.bumps)}, +{(game.bumps * BUMP_COST_MS) / 1000} s on the time</p>{/if}
         {#if game.tally.trampled > 0}<p class="text-2xs text-warning">Flowers flattened: they took {Math.round(percent((game.tally.trampled * BED_COST) / Math.max(1, game.tally.coverable)))}% off.</p>{/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
@@ -681,20 +684,6 @@
         <KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="tries again" />
       </p>
     </RoundCard>
-  {:else if game.status === Status.CRASHED}
-    <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
-      <div class="min-w-0 flex-1 basis-52">
-        <p class="text-base font-semibold">{crash_title(game.hit)}</p>
-        <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · mown {mown_text}</p>
-      </div>
-      <div class="ml-auto flex shrink-0 gap-2">
-        {#if game.round.level === undefined && !game.round.daily}<Button variant="quiet" onclick={new_lawn}>New lawn</Button>{/if}
-        <Button variant="primary" onclick={retry}>Try again</Button>
-      </div>
-      <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="tries again" />
-      </p>
-    </RoundCard>
   {/if}
 {/snippet}
 
@@ -702,6 +691,7 @@
   <span>{round_title(game.round)}</span>
   <span class="tabular-nums">{time}</span>
   <span class="tabular-nums">Mown {mown_text}</span>
+  {#if game.bumps > 0}<span class="tabular-nums">Bumps {game.bumps}</span>{/if}
   <span class="tabular-nums pointer-coarse:hidden">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 2 ? " R" : wheel_degrees < -2 ? " L" : ""}</span>
   {#if par_time}<span class="hidden tabular-nums @lg:inline">Par {par_time}</span>{/if}
   <span class="hidden @5xl:inline">F or Space finishes · Esc pauses · C centres the wheel · + − zoom</span>

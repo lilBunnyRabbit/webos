@@ -6,7 +6,7 @@ import { SolidKind } from "../../core/scene";
 import { hash } from "../../core/seed";
 import { Gear } from "../../core/vehicle";
 import { CELL, Cut, type Grid } from "./coverage";
-import { SPEC, Status, VEHICLE, type GameState } from "./game";
+import { bump_flash, SPEC, Status, VEHICLE, type GameState } from "./game";
 import type { Garden } from "./garden";
 
 export interface Lawn {
@@ -342,7 +342,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, SPEC, scale, palette);
   player(ctx, state.car, VEHICLE, SPEC, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
   crowns(ctx, garden, scale, lawn);
-  if (state.status === Status.CRASHED && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
+  if (bump_flash(state) && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
 
   if (extras.uncut && state.status === Status.DRIVING) {
     const { x, y } = extras.uncut;

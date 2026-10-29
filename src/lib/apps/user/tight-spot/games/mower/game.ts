@@ -18,7 +18,6 @@ export const Status = {
   DRIVING: "driving",
   PAUSED: "paused",
   DONE: "done",
-  CRASHED: "crashed",
   /** So many flowers flattened that the finish line can't be reached any more. */
   FLATTENED: "flattened",
 } as const;
@@ -30,6 +29,12 @@ export const DECK = deck_of(VEHICLE);
 
 export const FINISH = 0.9;
 export const OVERLAP_LIMIT = 0.25;
+/** A bump holds the mower where it was; pressing on is the same bump until it has backed off this far. */
+export const BUMP_CLEAR = 0.3;
+/** How long the contact rings flash after a bump, ms. */
+export const BUMP_FLASH_MS = 1200;
+/** What a bump adds to the round's time, ms. */
+export const BUMP_COST_MS = 5000;
 
 export interface Round {
   mode: Mode;
@@ -51,8 +56,20 @@ export interface GameState {
   tally: Tally;
   /** False until the coverable lawn is known (`measure`, or a worker's mask through `apply_mask`). */
   measured: boolean;
+  /** Where the last bump touched. */
   contact: Vec | null;
-  hit: SolidKind | null;
+  /** The bump the mower is still up against, until it has backed off `BUMP_CLEAR`. */
+  bumped: Bump | null;
+  /** Bumps this round, each `BUMP_COST_MS` on the clock. */
+  bumps: number;
+  /** The round's clock just after the last bump, for the flash. */
+  bump_ms: number;
+}
+
+export interface Bump {
+  kind: SolidKind;
+  /** Where the mower stood when it bumped. */
+  from: Vec;
 }
 
 export function create_game(round: Round): GameState {
@@ -68,7 +85,9 @@ export function create_game(round: Round): GameState {
     tally: { coverable: 0, mown: 0, overlapped: 0, trampled: 0 },
     measured: false,
     contact: null,
-    hit: null,
+    bumped: null,
+    bumps: 0,
+    bump_ms: 0,
   };
 }
 
@@ -136,21 +155,38 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
   const car = step(state.car, input, dt, spec);
   const ms = state.ms + dt * 1000;
   const hit = collide(car, obstacles(state.garden), spec);
-  if (hit) return { ...state, car: { ...car, speed: 0 }, ms, status: Status.CRASHED, contact: hit.at, hit: hit.solid.kind };
+  if (hit) return bump(state, ms, hit.solid.kind, hit.at);
+  const bumped = state.bumped && Math.hypot(car.x - state.bumped.from.x, car.y - state.bumped.from.y) <= BUMP_CLEAR ? state.bumped : null;
   const was = deck_centre(state.car, DECK);
   const now = deck_centre(car, DECK);
   const motion = { x: now.x - was.x, y: now.y - was.y };
   const moved = Math.hypot(motion.x, motion.y);
-  if (moved < 1e-6 && car.heading === state.car.heading) return { ...state, car, ms };
+  if (moved < 1e-6 && car.heading === state.car.heading) return { ...state, car, ms, bumped };
   const odometer = state.odometer + moved;
   let tally = mow(state.grid, swept(state.car, car, DECK), motion, odometer, state.tally);
   mark_cut(state.grid.marks, state.car, car, DECK, stripe(motion));
   if (state.garden.beds.length > 0) tally = trample(state.grid, bodies(car, spec), tally);
   if (state.measured && tally.trampled > state.tally.trampled && out_of_reach(tally)) {
-    return { ...state, car: { ...car, speed: 0 }, ms, odometer, tally, status: Status.FLATTENED };
+    return { ...state, car: { ...car, speed: 0 }, ms, odometer, tally, bumped, status: Status.FLATTENED };
   }
   const all = state.measured && tally.mown >= tally.coverable && tally.trampled === 0;
-  return { ...state, car, ms, odometer, tally, status: all ? Status.DONE : state.status };
+  return { ...state, car, ms, odometer, tally, bumped, status: all ? Status.DONE : state.status };
+}
+
+/**
+ * Nothing solid ends a round: a hit is a bump. The step is undone (the mower stays where it was, stopped, in gear) and
+ * the first bump against something costs `BUMP_COST_MS`; pressing on is the same bump.
+ */
+export function bump(state: GameState, ms: number, kind: SolidKind, at: Vec): GameState {
+  const car = { ...state.car, speed: 0 };
+  if (state.bumped) return { ...state, car, ms, contact: at };
+  const cost = ms + BUMP_COST_MS;
+  return { ...state, car, ms: cost, contact: at, bumped: { kind, from: { x: car.x, y: car.y } }, bumps: state.bumps + 1, bump_ms: cost };
+}
+
+/** The contact rings flash for a moment after a bump. */
+export function bump_flash(state: Pick<GameState, "bumps" | "bump_ms" | "ms" | "contact">): boolean {
+  return state.bumps > 0 && state.contact !== null && state.ms - state.bump_ms < BUMP_FLASH_MS;
 }
 
 export function change_gear(state: GameState, gear: Gear): GameState {
@@ -278,14 +314,17 @@ export function daily_round(day: string, seed: number): Round {
 }
 
 const HIT_NAMES: Partial<Record<SolidKind, string>> = {
-  hedge: "Into the hedge",
-  wall: "Hit the shed",
-  post: "Hit a tree",
-  water: "Into the pond",
+  hedge: "the hedge",
+  wall: "the shed",
+  post: "a tree",
+  water: "the pond",
 };
 
-export function crash_title(hit: SolidKind | null): string {
-  return (hit && HIT_NAMES[hit]) ?? "Hit something";
+/** What the mower is up against and how to get off it: "Bumped the shed: back off". */
+export function bump_hint(state: Pick<GameState, "bumped" | "status">): string | null {
+  const hit = state.bumped;
+  if (!hit || state.status !== Status.DRIVING) return null;
+  return `Bumped ${HIT_NAMES[hit.kind] ?? "something"}: back off`;
 }
 
 export function round_title(round: Round): string {

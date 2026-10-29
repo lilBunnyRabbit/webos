@@ -32,6 +32,11 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["tight-spot"],
+        text: "Mow Day bumps don't end the round: hitting a tree, the shed, the pond or the hedge stops the mower and adds 5 seconds.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
         text: "Drive Hub's yard is now a street with a building for every game, and it grows longer as new games arrive.",
       },
       {

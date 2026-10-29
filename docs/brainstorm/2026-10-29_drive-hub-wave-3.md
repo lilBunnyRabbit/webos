@@ -116,6 +116,7 @@ Supersedes the straight street in "Yard (decided)".
 5. Each game: review, visual pass, then pushed in groups.
 6. [x] Review round: Parking and Forklift saved data moved to `parking.json` and `forklift.json` in the app data folder, old keys folded in and removed.
 7. [x] Forklift: every contact a bump (5 s, never a fail), forgiving pockets (10°, 15 cm), the face stop on the floor stock under an upper slot.
+8. [x] Mow Day: a tree, the shed, the pond or the hedge is a bump (5 s, never a fail); flowers keep their cost and the flattened end.
 
 ## Next session topics
 - The boat: where a dynamic (non-kinematic) model lives, shared with F1's later slip model.

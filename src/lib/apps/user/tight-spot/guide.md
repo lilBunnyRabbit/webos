@@ -152,13 +152,14 @@ Mow a garden with the zero-turn mower. It starts on the patio by the shed; mow a
 
 - **It steers like a skid steer.** The wheel slows one side: a little turns gently, half lock turns about the inner wheel (a neat way to come back down the next stripe), full lock spins it on the spot about its rear wheels, so the deck swings round.
 - **Stripes.** The grass lies the way you mowed it: passes one way come out light, passes back the other way dark. Long grass is the richer green.
-- **Keep off the flowers.** Driving over a flower bed flattens it, and every bit flattened costs three times as much lawn from your score. Trees, the pond, the shed and the hedge end the round.
+- **Keep off the flowers.** Driving over a flower bed flattens it, and every bit flattened costs three times as much lawn from your score; flatten so much that 90% can't be reached and the round ends.
+- **Bumps:** a tree, the pond, the shed or the hedge doesn't end the round. The mower stops where it was, and the line at the bottom says what you hit ("Bumped the shed: back off"). Back off and carry on. Each bump adds 5 seconds to your time; pressing on against the same thing counts once.
 - The chip at the top shows how much is mown (the bar fills at 90%) and the **overlap**: grass you cut a second time. Past 80% an arrow on the edge points to the nearest long grass left.
 - The lawn counted is what the mower can reach without touching the flowers; the thin edge right against a hedge doesn't count.
 
 ## Mow Day scoring
 
-- Three stars: one for finishing, one for an overlap of 25% or less, one for the par time. Par assumes tidy up-and-down passes at a steady speed with a turn at each end.
+- Three stars: one for finishing, one for an overlap of 25% or less, one for the par time (with 5 s per bump). Par assumes tidy up-and-down passes at a steady speed with a turn at each end.
 - A best is more stars, then a quicker time; it's kept per level, per daily, and once for random lawns.
 - **Lawns:** a random garden; **New** deals another. **Levels:** 12 gardens, bigger and fuller as you go. **Daily:** the same garden for everyone today; Game Hub lists it as Drive Hub · Mower.
 

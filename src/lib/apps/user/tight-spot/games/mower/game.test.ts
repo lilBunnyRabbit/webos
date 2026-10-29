@@ -4,6 +4,8 @@ import { Gear } from "../../core/vehicle";
 import { Cut, Ground } from "./coverage";
 import {
   advance,
+  BUMP_COST_MS,
+  bump_hint,
   can_finish,
   change_gear,
   coverage,
@@ -66,11 +68,16 @@ describe("mow day", () => {
     expect(state.tally.overlapped).toBe(0);
   });
 
-  test("a solid ends the round", () => {
-    const state = run(driving(measure(create_game(level_round(1)))), 30);
-    expect(state.status).toBe(Status.CRASHED);
-    expect(state.hit).not.toBeNull();
+  test("a solid is a bump: the mower stops, pressing on counts once, backing off clears it", () => {
+    const state = run(driving(measure(create_game(level_round(1)))), 12);
+    expect(state.status).toBe(Status.DRIVING);
+    expect(state.bumps).toBe(1);
+    expect(state.ms).toBeGreaterThan(12_000 + BUMP_COST_MS - 50);
     expect(state.contact).not.toBeNull();
+    expect(bump_hint(state)).toBe("Bumped the hedge: back off");
+    const backed = run(change_gear(state, Gear.REVERSE), 1);
+    expect(backed.bumped).toBeNull();
+    expect(run(change_gear(backed, Gear.DRIVE), 3).bumps).toBe(2);
   });
 
   test("finishing takes 90% of the coverable lawn, then stars come from overlap and par", () => {
