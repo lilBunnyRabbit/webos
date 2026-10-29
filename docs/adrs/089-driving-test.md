@@ -34,3 +34,6 @@ The owner's favourite planned game: a driving exam in a town. Drive Hub's core i
 - **Give way** is judged by speed alone (under 4.5 m/s in the last 6 m) while there is no traffic; stop signs need a standstill.
 - **Saved data**: `test.json` in the app data folder, the best result per route (a pass, then fewer serious, fewer minors, quicker).
 
+
+## Revision 2026-10-29 (accepted: speed-limited steering for every vehicle)
+Owner: "lets introduce the high speed slower wheel rotation everywhere? gt car in yard is chaos", then "the high speed part wont have any impact on the slow cars so thats fine". Superseding "games opt in" above: `step()` caps the steering by speed for every Ackermann and frame-steer vehicle, from an optional `VehicleSpec.a_lat` (a default of about 7 m/s² when absent); skid steer is exempt. Hot Lap's race spec and the test car carry their own `a_lat`; `core/grip.ts`'s opt-in helper folds into `step()`. Below the speed where full lock is allowed (about 20 km/h for a hatchback) nothing changes, so planner proofs are unaffected (the planner works on geometry).
