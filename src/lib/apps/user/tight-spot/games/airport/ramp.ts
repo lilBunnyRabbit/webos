@@ -160,7 +160,7 @@ export interface BaggageOptions {
  * door. The route is driven by the baggage driver before any kit is placed; kit only goes where the train never comes
  * within the difficulty's clearance, so every run can be driven forward only.
  */
-export function build_baggage(seed: number, difficulty: number, options: BaggageOptions = {}): Apron {
+export function build_baggage(seed: number, difficulty: number, options: BaggageOptions = {}, attempt = 0): Apron {
   const rng = create_rng(hash(seed, 0xba66));
   const t = difficulty;
   const slot = pick(HALL_SLOTS, rng);
@@ -233,7 +233,10 @@ export function build_baggage(seed: number, difficulty: number, options: Baggage
       break;
     }
   }
-  if (!chosen) return build_baggage(hash(seed, 0xfa11), difficulty, options);
+  if (!chosen) {
+    if (attempt >= 20) throw new Error(`No baggage route for seed ${seed}`);
+    return build_baggage(hash(seed, 0xfa11), difficulty, options, attempt + 1);
+  }
 
   const keep = (kit: Kit, margin: number) => {
     if (!clear_of(chosen.sweep, kit.shape, margin)) return false;

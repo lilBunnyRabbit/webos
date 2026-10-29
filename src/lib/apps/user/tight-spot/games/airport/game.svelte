@@ -374,7 +374,8 @@
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
     else if (game.status === Status.DRIVING) {
-      if (change_gear(game, Gear.PARK).status === Status.DONE) shift(Gear.PARK);
+      const next = change_gear(game, Gear.PARK);
+      if (next.status === Status.DONE || (next.loaded && !game.loaded)) shift(Gear.PARK);
     } else if (game.status === Status.CRASHED) retry();
     else if (game.status === Status.DONE) {
       if (game.round.daily) retry();
@@ -448,6 +449,7 @@
     sounds.shift();
     if (swapped) {
       release_all();
+      input.reset();
       sounds.parked(false);
       camera = null;
     }
