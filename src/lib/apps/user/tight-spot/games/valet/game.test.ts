@@ -6,6 +6,7 @@ import { create_car, Gear, pose_from_centre, Vehicle, VEHICLES, type Input } fro
 import {
   advance,
   bays_for,
+  better,
   can_fetch,
   change_gear,
   create_game,
@@ -25,7 +26,7 @@ import {
   type Customer,
   type GameState,
 } from "./game";
-import { arrival_pose, build_street } from "./street";
+import { arrival_pose, build_street, queue_poses } from "./street";
 
 const CUSTOMERS: readonly Customer[] = [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.BUS];
 const GAS: Input = { steer: 0, throttle: 1, brake: 0 };
@@ -124,6 +125,37 @@ describe("a shift", () => {
     expect(Math.abs(state.car.y - stuck.y)).toBeLessThan(0.1);
     expect(state.car.y).toBeLessThan(pose.y);
     expect(tip_for(state.job!.ticket, 0)).toBe(0);
+  });
+
+  test("a waiting car under the car in hand is left out, and back once it's clear", () => {
+    let state = take(start(create_game({ seed: 3 })));
+    const mine = state.job!.ticket.vehicle;
+    const next = state.schedule[1].vehicle;
+    state = { ...put(state, queue_poses([next], mine)[0]!), held: true };
+    const before = state.scene.solids.length;
+    state = tick(state, state.schedule[1].at);
+    expect(state.queue).toEqual([1]);
+    expect(state.out).toEqual([1]);
+    expect(state.scene.solids).toHaveLength(before);
+    state = advance(put(state, arrival_pose(mine)), { steer: 0, throttle: 0, brake: 1 }, 1 / 120);
+    expect(state.held).toBe(true);
+    expect(state.out).toEqual([]);
+    expect(state.scene.solids.length).toBeGreaterThan(before);
+  });
+
+  test("a dent starts the clean run again", () => {
+    let state = change_gear(take(start(create_game({ seed: 3 }))), Gear.DRIVE);
+    state = { ...state, clean: 5 };
+    for (let i = 0; i < 120 * 40 && !state.touched; i++) state = advance(state, GAS, 1 / 120);
+    expect(state.dents).toBe(1);
+    expect(state.clean).toBe(0);
+  });
+
+  test("an equal score ranks the shorter shift first, like Game Hub", () => {
+    const run = { score: 40, ms: 300_000, handed: 4, dents: 0 };
+    expect(better(run, { ...run, ms: 200_000 })).toBe(true);
+    expect(better(run, { ...run, ms: 400_000 })).toBe(false);
+    expect(better(run, { ...run, score: 41, ms: 400_000 })).toBe(true);
   });
 
   test("a quick return tips more, a precise park adds to it, the bus doubles it", () => {

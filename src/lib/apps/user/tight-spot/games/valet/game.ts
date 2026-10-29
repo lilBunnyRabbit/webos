@@ -111,6 +111,8 @@ export interface GameState {
   scene: Scene;
   /** The car in hand is in the queue's lane, so the queue waits a place back. */
   held: boolean;
+  /** Queued cars (schedule indices) left out of the scene because they overlap the car in hand; put back once it's clear. */
+  out: readonly number[];
   status: Status;
   resume: Status;
   ms: number;
@@ -180,19 +182,20 @@ export function queued(state: Pick<GameState, "queue" | "schedule">): Customer[]
   return state.queue.map((index) => state.schedule[index].vehicle);
 }
 
-function queue_solids(state: GameState): Solid[] {
+function queue_solids(state: GameState): { solids: Solid[]; out: number[] } {
   const vehicles = queued(state);
   const poses = queue_poses(vehicles, state.held && state.job ? state.job.ticket.vehicle : null);
   const mine = state.status === Status.DRIVING || state.status === Status.PAUSED ? bodies(state.car, spec_of(state)) : [];
-  const items: Solid[] = [];
+  const solids: Solid[] = [];
+  const out: number[] = [];
   poses.forEach((pose, i) => {
     if (!pose) return;
     const index = state.queue[i];
-    const solids = car_solids(vehicles[i], pose, state.schedule[index].paint);
-    if (solids.some((solid) => mine.some((body) => overlaps(body, solid.shape)))) return;
-    items.push(...solids);
+    const car = car_solids(vehicles[i], pose, state.schedule[index].paint);
+    if (car.some((solid) => mine.some((body) => overlaps(body, solid.shape)))) out.push(index);
+    else solids.push(...car);
   });
-  return items;
+  return { solids, out };
 }
 
 export function car_solids(vehicle: Customer, car: Placement, paint: number): Solid[] {
@@ -208,7 +211,8 @@ export function car_solids(vehicle: Customer, car: Placement, paint: number): So
 /** One scene object per change, so the obstacle cache holds between them. */
 function with_scene(state: GameState): GameState {
   const parked = state.tickets.flatMap((ticket) => ticket.solids);
-  return { ...state, scene: { solids: [...state.street.world.solids, ...parked, ...queue_solids(state)] } };
+  const queue = queue_solids(state);
+  return { ...state, out: queue.out, scene: { solids: [...state.street.world.solids, ...parked, ...queue.solids] } };
 }
 
 function in_lane(car: Placement, spec: VehicleSpec): boolean {
@@ -243,6 +247,7 @@ export function create_game(shift: Shift): GameState {
     car: create_car(street.world.start, Gear.PARK),
     scene: { solids: street.world.solids },
     held: false,
+    out: [],
     status: Status.READY,
     resume: Status.STAND,
     ms: 0,
@@ -409,7 +414,7 @@ function hand_back(state: GameState): GameState {
     score: state.score + amount,
     tips: state.tips + amount,
     handed: state.handed + 1,
-    clean: state.clean + (ticket.dented ? 0 : 1),
+    clean: ticket.dented ? 0 : state.clean + 1,
     tip: { amount, vehicle: ticket.vehicle, at: state.ms },
     walk: null,
   });
@@ -451,6 +456,7 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
       ...(fresh
         ? {
             dents: state.dents + 1,
+            clean: 0,
             score: state.score - DENT_COST,
             job: { ...state.job, ticket },
             tickets: state.tickets.map((each) => (each === state.job!.ticket ? ticket : each)),
@@ -463,6 +469,10 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
   }
   const held = in_lane(next.car, spec);
   if (held !== next.held) next = with_scene({ ...next, held });
+  else if (next.out.length > 0) {
+    const out = queue_solids(next).out;
+    if (out.length !== next.out.length || out.some((index, i) => index !== next.out[i])) next = with_scene(next);
+  }
   return tick(next, state.ms + dt * 1000);
 }
 
@@ -492,7 +502,7 @@ export function shift_key(shift: Shift): string {
 
 export function better(a: Result | undefined, b: Result): boolean {
   if (!a) return true;
-  return b.score !== a.score ? b.score > a.score : b.ms > a.ms;
+  return b.score !== a.score ? b.score > a.score : b.ms < a.ms;
 }
 
 export interface Recorded {
