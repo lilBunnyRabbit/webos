@@ -38,14 +38,14 @@ function placed(state: GameState, s: number, lateral: number, turn: number, spee
 describe("grip", () => {
   it("holds the wheel to what the tyres can take at speed", () => {
     expect(grip_share(0)).toBe(1);
-    expect(grip_share(3)).toBe(1);
-    expect(grip_share(13)).toBeLessThan(0.35);
-    expect(with_grip({ steer: -1, throttle: 1, brake: 0 }, 13).steer).toBeCloseTo(-grip_share(13));
-    expect(with_grip(NO_INPUT, 13)).toBe(NO_INPUT);
+    expect(grip_share(8)).toBe(1);
+    expect(grip_share(40)).toBeLessThan(0.35);
+    expect(with_grip({ steer: -1, throttle: 1, brake: 0 }, 40).steer).toBeCloseTo(-grip_share(40));
+    expect(with_grip(NO_INPUT, 40)).toBe(NO_INPUT);
   });
 
   it("never turns tighter than A_LAT / v² for long", () => {
-    let state = placed(driving(), 40, 0, 0, 12);
+    let state = placed(driving(), 40, 0, 0, 40);
     for (let i = 0; i < 120; i++) state = advance(state, { steer: 1, throttle: 1, brake: 0 }, DT);
     const v = Math.abs(state.car.speed);
     expect((Math.tan(state.car.steer) / steer_base(SPEC)) * v * v).toBeLessThan(A_LAT * 1.02);

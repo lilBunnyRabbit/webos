@@ -45,10 +45,12 @@
   import { track_id_schema, TRACK_IDS, track_name, TrackId } from "./tracks";
 
   const TRACK_OPTIONS = TRACK_IDS.map((value) => ({ value, label: track_name(value) }));
-  // Slow, the view is a parking game's; flat out it pulls back and looks ahead, so a bend shows a few seconds early.
+  // Slow, the view is a parking game's; flat out it pulls back and looks ahead, so about three seconds of track show
+  // ahead even across the shorter side: the focus leads by up to LEAD of the span, the car stays on screen behind it.
   const SPAN_SLOW = view_span(SPEC.length);
-  const SPAN_FAST = 72;
-  const LOOK_AHEAD = 0.9;
+  const SPAN_FAST = 280;
+  const LOOK_AHEAD = 1.2;
+  const LEAD = 0.35;
   const OVERVIEW_MARGIN = 3;
   const DAILY_MODE = "f1";
 
@@ -57,9 +59,9 @@
 
   const { app_id, window: win, storage, achievements } = get_app_context();
   const ghosts: Record<TrackId, { value: Ghost | null }> = {
-    meadow: storage.file<Ghost | null>("f1/ghost-meadow.json", null, ghost_schema.nullable()),
-    harbour: storage.file<Ghost | null>("f1/ghost-harbour.json", null, ghost_schema.nullable()),
-    ridge: storage.file<Ghost | null>("f1/ghost-ridge.json", null, ghost_schema.nullable()),
+    meadow: storage.file<Ghost | null>("f1/ghost-v2-meadow.json", null, ghost_schema.nullable()),
+    harbour: storage.file<Ghost | null>("f1/ghost-v2-harbour.json", null, ghost_schema.nullable()),
+    ridge: storage.file<Ghost | null>("f1/ghost-v2-ridge.json", null, ghost_schema.nullable()),
   };
   const input = new DriveInput();
 
@@ -182,9 +184,10 @@
     }
     const centre = body_centre(game.car, SPEC);
     const pace = Math.min(1, Math.abs(game.car.speed) / top_speed(SPEC));
-    const ahead = game.car.speed * LOOK_AHEAD;
+    const span = SPAN_SLOW + (SPAN_FAST - SPAN_SLOW) * pace;
+    const ahead = Math.sign(game.car.speed) * Math.min(Math.abs(game.car.speed) * LOOK_AHEAD, (span / zoom) * LEAD);
     const focus = { x: centre.x + Math.cos(game.car.heading) * ahead, y: centre.y + Math.sin(game.car.heading) * ahead };
-    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, SPAN_SLOW + (SPAN_FAST - SPAN_SLOW) * pace);
+    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, span);
   }
 
   function render(dt: number) {

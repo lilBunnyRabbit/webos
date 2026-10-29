@@ -2,10 +2,11 @@ import { F1_CAR, max_steer, steer_base, type Input, type VehicleSpec } from "../
 
 // Game-owned and temporary: a kinematic car has no tyres to slide, so Hot Lap caps how hard it can turn at speed
 // (curvature at most A_LAT / v²) until the core gets a slip model.
-export const A_LAT = 6;
+export const A_LAT = 25;
 
-export const SPEC: VehicleSpec = F1_CAR;
-export const GRASS_SPEC: VehicleSpec = { ...F1_CAR, max_forward: 5, rolling: 4 };
+// The race tune of the garage's F1 car, which keeps its parking pace.
+export const SPEC: VehicleSpec = { ...F1_CAR, max_forward: 80, accel: 15, brake: 36, steer_time: 0.6 };
+export const GRASS_SPEC: VehicleSpec = { ...SPEC, max_forward: 25, rolling: 8 };
 
 export function grip_share(speed: number, spec: VehicleSpec = SPEC): number {
   const v2 = speed * speed;

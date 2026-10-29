@@ -114,10 +114,10 @@ Move pallets with a forklift. A job is one to four pallets, each to be taken fro
 
 ## Hot Lap: the race track
 
-Three laps in the F1 car on one of three circuits: **Meadow** (gentle), **Harbour** (a hairpin and a chicane) and **Ridge** (fast and flowing). Pick one at the top. The start card shows the whole track, its length, the par time and your best.
+Three laps in the F1 car, in race trim (up to about 280 km/h), on one of three circuits: **Meadow** (fast sweepers and long straights), **Harbour** (a street circuit: right angles, a hairpin and a chicane between close walls) and **Ridge** (technical: esses and a double-apex right). Pick one at the top. The start card shows the whole track, its length, the par time and your best.
 
 - **The lap.** You start on the grid just behind the chequered line. Crossing it starts lap 1; the clock stops each time you cross it again. The dashed lines across the track split each lap into three sectors.
-- **Grip.** The faster you go, the less the wheels turn: brake before a bend, turn in, and accelerate out. The dashed racing line (shown with **Guides** in settings) is the quickest way round.
+- **Grip.** The faster you go, the less the wheels turn: brake before a bend, turn in, and accelerate out. Flat out the view pulls back to show the track a few seconds ahead, and a ring marks your car. The dashed racing line (shown with **Guides** in settings) is the quickest way round.
 - **Grass slows you** right down, but the lap still counts. The red and white kerbs are part of the track.
 - **A wall voids the lap.** The car stops dead where it touched; back away and carry on. The lap shows **Void** and won't count, but the next one starts clean at the line.
 - **Ghost.** Your best lap on each track is saved and drives with you, faint, on every lap after. Passing a sector line shows how far ahead (green) or behind you are against it.

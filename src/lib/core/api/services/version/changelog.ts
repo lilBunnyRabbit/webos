@@ -27,7 +27,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
-        text: "Drive Hub gains Hot Lap, a race track for the F1 car: three circuits with kerbs, grass and walls, sector and lap times, a ghost of your best lap to chase, a par time from the ideal racing line, and a track of the day.",
+        text: "Drive Hub gains Hot Lap, a race track for the F1 car at up to 280 km/h: a fast circuit, a street circuit and a technical one, with kerbs, grass and walls, sector and lap times, a ghost of your best lap to chase, a par time from the ideal racing line, and a track of the day.",
       },
       {
         kind: NEW,

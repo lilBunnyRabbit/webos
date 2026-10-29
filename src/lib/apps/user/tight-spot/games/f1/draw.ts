@@ -1,6 +1,6 @@
 import { begin_frame, contact_rings, player, union, type Palette, type View } from "../../core/draw";
 import type { Pose, Vec } from "../../core/geometry";
-import { create_car, Gear, Vehicle } from "../../core/vehicle";
+import { body_centre, create_car, Gear, Vehicle } from "../../core/vehicle";
 import type { GameState } from "./game";
 import { SPEC } from "./grip";
 import { racing_line } from "./line";
@@ -14,7 +14,7 @@ export interface DrawExtras {
 }
 
 const CONTACT_FADE_MS = 1200;
-const STRIPE = 2;
+const STRIPE = 4;
 
 function side_point(track: Track, i: number, offset: number): Vec {
   return { x: track.centre[i].x + track.normal[i].x * offset, y: track.centre[i].y + track.normal[i].y * offset };
@@ -107,10 +107,10 @@ function start_line(ctx: CanvasRenderingContext2D, track: Track, palette: Palett
     for (let row = 0; row < 2; row++)
       for (let col = 0; col < cells; col++) {
         const a = -HALF_WIDTH + col * size;
-        const b = row * 0.5;
+        const b = row * size;
         const at = (u: number, v: number): Vec => ({ x: origin.x + normal.x * u + along.x * v, y: origin.y + normal.y * u + along.y * v });
         ctx.beginPath();
-        const corners = [at(a, b), at(a + size, b), at(a + size, b + 0.5), at(a, b + 0.5)];
+        const corners = [at(a, b), at(a + size, b), at(a + size, b + size), at(a, b + size)];
         corners.forEach((p, k) => (k === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
         ctx.closePath();
         ctx.fillStyle = (row + col) % 2 === 0 ? palette.ink : palette.glow;
@@ -122,7 +122,7 @@ function start_line(ctx: CanvasRenderingContext2D, track: Track, palette: Palett
 function sector_lines(ctx: CanvasRenderingContext2D, track: Track, scale: number, palette: Palette) {
   ctx.strokeStyle = palette.faint;
   ctx.lineWidth = Math.max(0.12, 1.25 / scale);
-  ctx.setLineDash([0.8, 0.8]);
+  ctx.setLineDash([3, 3]);
   for (const s of track.sectors)
     across(ctx, track, s, (origin, _, normal) => {
       ctx.beginPath();
@@ -155,12 +155,31 @@ function line_guide(ctx: CanvasRenderingContext2D, track: Track, scale: number, 
   const { points } = racing_line(track);
   ctx.strokeStyle = palette.guide;
   ctx.lineWidth = Math.max(0.12, 1.5 / scale);
-  ctx.setLineDash([1.2, 1.2]);
+  ctx.setLineDash([4, 4]);
   ctx.beginPath();
   points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.closePath();
   ctx.stroke();
   ctx.setLineDash([]);
+}
+
+// Pulled back for speed the car is a few pixels long, so a ring of fixed screen size marks it, fading in as the view widens.
+const MARKER_PX = 12;
+const MARKER_FROM = 6;
+const MARKER_FULL = 3;
+
+function marker(ctx: CanvasRenderingContext2D, at: Vec, scale: number, palette: Palette) {
+  const strength = Math.min(1, Math.max(0, (MARKER_FROM - scale) / (MARKER_FROM - MARKER_FULL)));
+  if (strength === 0) return;
+  ctx.globalAlpha = strength;
+  ctx.beginPath();
+  ctx.arc(at.x, at.y, MARKER_PX / scale, 0, Math.PI * 2);
+  ctx.fillStyle = palette.target_fill;
+  ctx.fill();
+  ctx.lineWidth = 2 / scale;
+  ctx.strokeStyle = palette.target;
+  ctx.stroke();
+  ctx.globalAlpha = 1;
 }
 
 export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view: View, palette: Palette, extras: DrawExtras) {
@@ -180,6 +199,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     player(ctx, create_car(extras.ghost, Gear.DRIVE, SPEC), Vehicle.F1, SPEC, false, scale, palette, extras.time);
     ctx.globalAlpha = 1;
   }
+  marker(ctx, body_centre(car, SPEC), scale, palette);
   player(ctx, car, Vehicle.F1, SPEC, car.brake > 0.05, scale, palette, extras.time);
   const contact = state.contact;
   if (contact && state.ms - contact.ms < CONTACT_FADE_MS) {

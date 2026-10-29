@@ -2,13 +2,13 @@ import type { Bounds, Pose, Vec } from "../../core/geometry";
 import { SolidKind, type Solid } from "../../core/scene";
 
 export const DS = 1;
-export const HALF_WIDTH = 5.5;
-export const KERB = 1;
-/** Grass from the track's edge to the wall, where nothing else is nearer. */
-export const RUNOFF = 7;
+export const HALF_WIDTH = 7.5;
+export const KERB = 1.5;
+/** Grass from the track's edge to the wall, where nothing else is nearer, unless the track sets its own. */
+export const RUNOFF = 15;
 const WALL_THICKNESS = 1;
-const KERB_CURVATURE = 1 / 45;
-const KERB_SPREAD = 4;
+const KERB_CURVATURE = 1 / 220;
+const KERB_SPREAD = 12;
 /** The car's rear axle starts this far behind the line, so its nose sits a few metres short of it. */
 export const GRID = 9;
 
@@ -31,6 +31,8 @@ export interface TrackDef {
   pieces: readonly Piece[];
   /** How far along the pieces the start/finish line sits, on a straight long enough for the grid behind it. */
   line: number;
+  /** At most `RUNOFF`. */
+  runoff?: number;
 }
 
 export interface Track {
@@ -114,16 +116,41 @@ export function curvature_of(a: Vec, b: Vec, c: Vec): number {
   return (2 * cross) / Math.max(1e-9, ab * bc * ca);
 }
 
+// A sample further than CELL from another can't pull its wall in: 0.85 |Δ|² / (2 Δ·n) ≥ 0.85 |Δ| / 2, past any wall's
+// reach. So each sample only looks at the samples in its own cell and the eight round it.
+const CELL = (2 * (HALF_WIDTH + RUNOFF)) / 0.85;
+
+function grid_of(points: Vec[]): { near: (p: Vec) => number[] } {
+  const cells = new Map<string, number[]>();
+  const key = (cx: number, cy: number) => `${cx},${cy}`;
+  points.forEach((p, i) => {
+    const k = key(Math.floor(p.x / CELL), Math.floor(p.y / CELL));
+    const cell = cells.get(k);
+    if (cell) cell.push(i);
+    else cells.set(k, [i]);
+  });
+  return {
+    near(p) {
+      const cx = Math.floor(p.x / CELL);
+      const cy = Math.floor(p.y / CELL);
+      const found: number[] = [];
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) found.push(...(cells.get(key(cx + dx, cy + dy)) ?? []));
+      return found;
+    },
+  };
+}
+
 // The wall goes as far out as the runoff, but never past the point where another part of the track is nearer: between
 // two close straights it runs down the middle, inside a hairpin it closes in.
-function wall_offsets(centre: Vec[], normal: Vec[], side: 1 | -1): number[] {
+function wall_offsets(centre: Vec[], normal: Vec[], side: 1 | -1, runoff: number): number[] {
   const n = centre.length;
   const out: number[] = [];
   const floor = HALF_WIDTH + KERB + 0.5;
+  const cells = grid_of(centre);
   for (let i = 0; i < n; i++) {
-    let reach = HALF_WIDTH + RUNOFF;
+    let reach = HALF_WIDTH + runoff;
     const along = { x: normal[i].x * side, y: normal[i].y * side };
-    for (let j = 0; j < n; j++) {
+    for (const j of cells.near(centre[i])) {
       const gap = Math.abs(((j - i + n + n / 2) % n) - n / 2);
       if (gap * DS < 2) continue;
       const dx = centre[j].x - centre[i].x;
@@ -198,8 +225,9 @@ export function build_track(def: TrackDef): Track {
     return false;
   });
   const edge = kerb.map((on) => HALF_WIDTH + (on ? KERB : 0));
-  const wall_left = wall_offsets(centre, normal, -1);
-  const wall_right = wall_offsets(centre, normal, 1);
+  const runoff = Math.min(RUNOFF, def.runoff ?? RUNOFF);
+  const wall_left = wall_offsets(centre, normal, -1, runoff);
+  const wall_right = wall_offsets(centre, normal, 1, runoff);
   const solids = [...wall_solids(centre, normal, wall_left, -1), ...wall_solids(centre, normal, wall_right, 1)];
 
   let bounds: Bounds = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
