@@ -47,7 +47,7 @@
   } from "../core/vehicle";
   import { draw_yard, StaticLayer } from "./draw";
   import { icon_image } from "./icons";
-  import { Scenario } from "../games/parking/kinds";
+  import { Mode, Scenario } from "../games/parking/kinds";
   import { area_of, at_below_door, below_car, door_at, door_car, drive, floor_of, GARAGE, gate_car, near, on_pad, pad_car, shelf_of, swap_car } from "./yard";
 
   interface Props {
@@ -385,7 +385,7 @@
   function enter() {
     if (!door_game) return;
     if (!below) return onenter(door_game.id);
-    storage.set("parking.mode", "scenario");
+    storage.set("parking.mode", Mode.SCENARIO);
     storage.set("parking.pick", Scenario.MULTI_STOREY);
     onenter(door_game.id, true);
   }

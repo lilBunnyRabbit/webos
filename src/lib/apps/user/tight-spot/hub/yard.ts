@@ -535,7 +535,8 @@ export interface Bumped {
 /** A step that would run into something, or jackknife, doesn't happen: the vehicle stops where it was. */
 export function drive(yard: Yard, car: Car, input: Input, dt: number, spec: VehicleSpec): Bumped {
   const stepped = step(car, input, dt, spec);
-  const next = yard.car_park ? pass_portals(stepped, yard.car_park.portals) : stepped;
+  // The bar is the only way in, but a swap can leave a tall vehicle past it: only what fits under goes down.
+  const next = yard.car_park && under_headroom(spec) ? pass_portals(stepped, yard.car_park.portals) : stepped;
   const folded = jackknife(next, spec);
   if (folded >= 0) return { car: stopped(car, next, spec), hit: hitch_point(car, spec, folded), passed: false };
   const hit = collide(next, near(yard, spec), spec);

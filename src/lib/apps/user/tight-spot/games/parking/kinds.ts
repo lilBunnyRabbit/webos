@@ -24,3 +24,7 @@ export const Scenario = {
 } as const;
 export type Scenario = (typeof Scenario)[keyof typeof Scenario];
 export const SCENARIOS: readonly Scenario[] = Object.values(Scenario);
+
+/** Here rather than in `game.ts` so the yard's doorway can name a mode without loading the game. */
+export const Mode = { SCENARIO: "scenario", LEVELS: "levels", OPEN: "open", EXTREME: "extreme" } as const;
+export type Mode = (typeof Mode)[keyof typeof Mode];

@@ -33,9 +33,9 @@ import {
   SolidKind,
 } from "./world";
 import { course_by_id, course_world, edge_title } from "./extreme/courses";
+import { Mode } from "./kinds";
 
-export const Mode = { SCENARIO: "scenario", LEVELS: "levels", OPEN: "open", EXTREME: "extreme" } as const;
-export type Mode = (typeof Mode)[keyof typeof Mode];
+export { Mode };
 export const MODES: readonly Mode[] = Object.values(Mode);
 
 export const Status = {
