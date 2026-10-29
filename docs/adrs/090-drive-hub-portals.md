@@ -38,3 +38,6 @@ Owner's intent, given during the build: "the point of the garage is to have real
 - **Valet.** The walk back follows the ramps (`walk_length`: straight lines from the car up each mouth to the stand).
 - **Owner confirmed (2026-10-29):** `Portal.lead` stays on the core type (optional, no runtime cost; rejected: proof-only hint map, or dropping it and ~20 s per helix proof). The open lot's garage stays as built, every free bay reachable for Valet, easier than the Multi-storey spot (rejected: restoring the ramp-foot row with sampled proofs, or wider geometry).
 - **Floor labels** sit at the top-left of what shows of each floor, clear of the HUD, so the floor you're on is always labelled; the off-screen bay pointer leads to the next ramp's mouth (`toward()`).
+
+## Revision 2026-10-29 (town building decided)
+The hub's multi-storey building is both: a ramp in the town leads through portals to garage floors drawn beside the town, free roam with nothing scored, and a doorway on −1 starts Tight Spot's Multi-storey kind. Cars and vans only, as elsewhere; other vehicles meet the height bar.
