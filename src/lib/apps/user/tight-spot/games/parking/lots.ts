@@ -33,7 +33,7 @@ const SWING = Math.PI / 6;
 
 function parallel(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const lane = lerp(2.5, 2.3, d) + fit.wider;
+  const lane = lerp(2.5, 2.2, d) + fit.wider;
   const kerb = GATE_HI + lane;
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, EDGE, kerb, SIZE));
   b.block(SolidKind.KERB, 0, 0, GATE_LO, SIZE);
@@ -42,7 +42,7 @@ function parallel(d: number, rng: Rng, fit: Fit): Layout {
   b.line({ x: 16, y: EDGE + 0.5 }, { x: 16, y: SIZE }, MarkKind.DASH);
   b.line({ x: GATE_HI, y: EDGE }, { x: GATE_HI, y: SIZE });
 
-  const gap = fit.length + lerp(2.4, 1.3, d) * fit.turn;
+  const gap = fit.length + lerp(2.4, 1.1, d) * fit.turn;
   const centre = between(rng, 10.5, 22);
   const top = centre - gap / 2;
   const bottom = centre + gap / 2;
@@ -71,7 +71,7 @@ function parallel(d: number, rng: Rng, fit: Fit): Layout {
 
 function garage(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const width = lerp(3.3, 2.55, d) + fit.wider;
+  const width = lerp(3.3, 2.4, d) + fit.wider;
   const depth = 6.2 + fit.longer;
   const back = EDGE + 0.5;
   const door = back + depth;
@@ -98,7 +98,7 @@ function garage(d: number, rng: Rng, fit: Fit): Layout {
     const x = left ? x0 - 2.2 : x1 + 2.2;
     if (x > EDGE + 1.2 && x < SIZE - EDGE - 1.2) b.car(x, door + 3.2, NORTH, 4.8);
   }
-  const slack = lerp(0.8, 0.35, d);
+  const slack = lerp(0.8, 0.2, d);
   const stop = back + fit.length + slack;
   b.line({ x: x0, y: stop }, { x: x1, y: stop }, MarkKind.STOP);
   b.bay(rect(x0, back, x1, stop), NORTH, true);
@@ -107,10 +107,10 @@ function garage(d: number, rng: Rng, fit: Fit): Layout {
 
 function door(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const aisle = lerp(6, 4.6, d) * fit.turn;
+  const aisle = lerp(6, 4.45, d) * fit.turn;
   const lo = 16 - aisle / 2;
   const hi = 16 + aisle / 2;
-  const opening = lerp(2.9, 2.3, d) + fit.wider;
+  const opening = lerp(2.9, 2.2, d) + fit.wider;
   const wall = 0.25;
   const depth = 6.2 + fit.longer;
   const inner = opening + 0.8;
@@ -138,8 +138,8 @@ function door(d: number, rng: Rng, fit: Fit): Layout {
 
 function narrow(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const aisle = lerp(6, 4.9, d) * fit.turn;
-  const width = lerp(2.6, 2.35, d) + fit.wider;
+  const aisle = lerp(6, 3.6, d) * fit.turn;
+  const width = lerp(2.6, 2.1, d) + fit.wider;
   const depth = fit.depth;
   const lo = 16 - aisle / 2;
   const hi = 16 + aisle / 2;
@@ -185,7 +185,7 @@ function narrow(d: number, rng: Rng, fit: Fit): Layout {
 
 function dead_end(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const street = lerp(7, 5.4, d) * fit.turn;
+  const street = lerp(7, 5.1, d) * fit.turn + d * 0.25 * fit.longer;
   const lo = 16 - street / 2;
   const hi = 16 + street / 2;
   b.ground(SurfaceKind.ASPHALT, rect(lo, EDGE, hi, SIZE));
@@ -241,13 +241,13 @@ function mirror(layout: Layout): Layout {
 function bus_stop(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
   // The bus comes up from the road, so the stop runs to the lot's edge; the parked cars are ahead of it and across.
-  const stop = fit.length + lerp(8, 6.2, d);
   const length = 4 + rng() * 0.6;
   // An articulated bus's stop takes the whole street: no car ahead of it, and a wide kerbside bay that starts in the
   // road's right lane, since its rear section can't swing out of the road and straighten again in one street.
-  const long = SIZE - EDGE - 0.1 - (EDGE + 0.7 + length) - stop < 0;
+  const long = SIZE - EDGE - 0.1 - (EDGE + 0.7 + length) - (fit.length + lerp(8, 6.2, d)) < 0;
+  const stop = fit.length + lerp(8, long ? 6.2 : 1.5, d);
   const inner = long ? 17.6 : GATE_HI;
-  const lane = long ? lerp(3.9, 3.7, d) : lerp(3.3, 3.1, d);
+  const lane = long ? lerp(3.9, 3.7, d) : lerp(3.3, 3.0, d);
   const kerb = inner + lane;
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, EDGE, kerb, SIZE));
   b.block(SolidKind.KERB, 0, 0, GATE_LO, SIZE);
@@ -307,7 +307,7 @@ function depot_through(d: number, rng: Rng, fit: Fit): Layout {
 function depot(d: number, rng: Rng, fit: Fit): Layout {
   if (fit.length > 16) return depot_through(d, rng, fit);
   const b = new Builder(rng);
-  const width = lerp(3.8, 3.25, d);
+  const width = lerp(3.8, 3.0, d);
   const front = EDGE + Math.max(fit.depth, BUS_LENGTH + 0.7) + 0.5;
   b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
@@ -338,12 +338,12 @@ function depot(d: number, rng: Rng, fit: Fit): Layout {
 
 function driveway(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const street = lerp(8, 6.6, d) + between(rng, 0, 0.8);
+  const street = lerp(8, 6.0, d) + between(rng, 0, 0.8);
   const north = 14 + between(rng, -1.5, 1.5);
   const south = north + street;
-  const inner = lerp(3.9, 3.1, d);
+  const inner = lerp(3.9, 2.9, d);
   const post = lerp(0.12, 0.3, d);
-  const long = fit.length + lerp(1.6, 0.9, d) + between(rng, 0, 0.5);
+  const long = fit.length + lerp(1.6, 0.8, d) + between(rng, 0, 0.5);
   const wall = 0.3;
   const c = between(rng, 8.5, 13.5);
   const x0 = c - inner / 2;
@@ -377,9 +377,9 @@ function driveway(d: number, rng: Rng, fit: Fit): Layout {
 function slipway(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
   const quay = 15 + between(rng, -1, 1.5);
-  const ramp = lerp(3.6, 2.7, d);
+  const ramp = lerp(3.6, 2.3, d);
   const toe = quay - 6.5;
-  const bay_end = toe + fit.length + lerp(1.4, 0.7, d);
+  const bay_end = toe + fit.length + lerp(1.4, 0.3, d);
   const c = between(rng, 8.5, 14);
   const x0 = c - ramp / 2;
   const x1 = c + ramp / 2;
@@ -410,8 +410,8 @@ function slipway(d: number, rng: Rng, fit: Fit): Layout {
 // wall, and the one opposite taken too, so there's no room to swing wide.
 function end_bay(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const aisle = lerp(5.7, 4.9, d) * fit.turn;
-  const width = lerp(2.65, 2.4, d) + fit.wider;
+  const aisle = lerp(5.7, 4.7, d) * fit.turn;
+  const width = lerp(2.65, 2.2, d) + fit.wider;
   const depth = fit.depth;
   const lo = 16 - aisle / 2;
   const hi = 16 + aisle / 2;
@@ -467,10 +467,10 @@ function end_bay(d: number, rng: Rng, fit: Fit): Layout {
 function camping(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
   const hedge = 0.7;
-  const pitch = lerp(4.6, 3.6, d) + fit.wider;
+  const pitch = lerp(4.6, 3.0, d) + fit.wider;
   const depth = fit.depth;
   const front = EDGE + depth;
-  const track = lerp(8.6, 7.8, d) * fit.turn;
+  const track = lerp(8.6, 7.0, d) * fit.turn;
   const verge = front + track;
   b.ground(SurfaceKind.GRASS, rect(0, 0, SIZE, SIZE));
   b.ground(SurfaceKind.ASPHALT, rect(EDGE, front, SIZE - EDGE, verge));
@@ -496,7 +496,7 @@ function camping(d: number, rng: Rng, fit: Fit): Layout {
   for (let i = 1; i < count - 1; i++) if (start_at(i) + 0.8 + (fit.length - fit.rear) * cos + 1.2 <= SIZE - EDGE - 0.3) last = i;
   const target = 1 + Math.floor(rng() * last);
   const fill = lerp(0.6, 0.95, d);
-  const stub = front - lerp(1.2, 0.4, d);
+  const stub = front - lerp(1.2, 0.1, d);
   for (let i = 0; i < count; i++) {
     const x = left(i);
     b.block(SolidKind.HEDGE, x - hedge, EDGE, x, stub);
@@ -528,7 +528,7 @@ function camping(d: number, rng: Rng, fit: Fit): Layout {
 function loading_dock(d: number, rng: Rng, fit: Fit): Layout {
   if (fit.links >= 2) return dock_lanes(d, rng, fit);
   const b = new Builder(rng);
-  const width = lerp(4.2, 3.6, d) + fit.wider;
+  const width = lerp(4.2, 3.0, d) + fit.wider;
   const front = EDGE + fit.depth;
   b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
@@ -573,7 +573,7 @@ function loading_dock(d: number, rng: Rng, fit: Fit): Layout {
 // the dock, and it pulls nose first into the free one, a metre or two to the side of the road's lane.
 function dock_lanes(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const width = lerp(4.2, 3.7, d);
+  const width = lerp(4.2, 3.0, d);
   const front = EDGE + fit.depth;
   b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));

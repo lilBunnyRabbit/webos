@@ -101,7 +101,7 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
     vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV],
   },
   narrow: { name: "Narrow aisle", brief: "Cars on both sides and little room to swing.", par: 2, vehicles: [...ROOMY, ...WIDE_MACHINES], ladder: CARS },
-  door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: [...CAR_LIKES, Vehicle.CAMPER, ...SKIDS], ladder: CARS },
+  door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: [...CAR_LIKES, ...SKIDS], ladder: CARS },
   "dead-end": {
     name: "Dead end",
     brief: "Turn round in the street and stop in the box facing out.",
@@ -445,14 +445,42 @@ const LATER_SEEDS: Partial<Record<Scenario, number>> = { camping: 200, "loading-
 const LAPS = 3;
 const PER_LAP = LAP.length + BIG_LAP.length;
 const CAR_LEVELS = LAP.length * LAPS;
-export const LEVEL_COUNT = PER_LAP * LAPS;
+const LAP_LEVELS = PER_LAP * LAPS;
+// The last lap: every kind at its tightest, the two garages last.
+const HARDEST: readonly Scenario[] = [
+  Scenario.PARALLEL,
+  Scenario.GARAGE,
+  Scenario.ANGLED,
+  Scenario.REVERSE,
+  Scenario.FORWARD,
+  Scenario.PILLARS,
+  Scenario.NARROW,
+  Scenario.DOOR,
+  Scenario.DEAD_END,
+  Scenario.END_BAY,
+  Scenario.BUS_STOP,
+  Scenario.DEPOT,
+  Scenario.DRIVEWAY,
+  Scenario.SLIPWAY,
+  Scenario.CAMPING,
+  Scenario.LOADING_DOCK,
+  Scenario.UNDERGROUND,
+  Scenario.MULTI_STOREY,
+];
+export const LEVEL_COUNT = LAP_LEVELS + HARDEST.length;
 
 /**
  * Three laps, each tighter and busier than the last: the nine original car spots, then the newer ones. A car spot
- * keeps the difficulty and seed it had when the ladder was 27 car levels long.
+ * keeps the difficulty and seed it had when the ladder was 27 car levels long. Then the hardest lap, every kind at
+ * difficulty 1, appended so the levels before it keep their numbers.
  */
 export function level_round(level: number): Round {
   const index = Math.max(0, Math.min(LEVEL_COUNT - 1, level - 1));
+  if (index >= LAP_LEVELS) {
+    const scenario = HARDEST[index - LAP_LEVELS];
+    const seed = hash(0x7195, 900 + index - LAP_LEVELS);
+    return { mode: Mode.LEVELS, level: index + 1, scenario, difficulty: 1, seed, vehicle: ladder_vehicle(scenario, seed) };
+  }
   const lap = Math.floor(index / PER_LAP);
   const at = index % PER_LAP;
   const base = { mode: Mode.LEVELS, level: index + 1 };
@@ -480,7 +508,7 @@ export function unlocked(levels: LevelStars): number {
 
 export function scenario_round(pick: ScenarioPick, seed: number, daily?: string, vehicle: VehiclePick = ANY): Round {
   const scenario = pick === ANY ? SCENARIOS[hash(seed, 3) % SCENARIOS.length] : pick;
-  const difficulty = ((hash(seed, 5) % 1000) / 1000) * 0.7 + 0.15;
+  const difficulty = ((hash(seed, 5) % 1000) / 1000) * 0.85 + 0.15;
   return {
     mode: Mode.SCENARIO,
     scenario,

@@ -237,18 +237,20 @@ export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fi
   const b = new Builder(rng);
   const garage = kind === RowsKind.GARAGE;
   const indoor = kind === RowsKind.PILLARS || garage;
+  // The open lot keeps the tight ends it was proven at (every free bay a target for Valet); a spot goes tighter.
+  const to = (lot: number, spot: number) => (open ? lot : spot);
   const aisle =
     (kind === RowsKind.FORWARD
-      ? lerp(7, 5.8, d)
+      ? lerp(7, to(5.8, 4.9), d)
       : kind === RowsKind.REVERSE
-        ? lerp(6.6, 5.4, d)
+        ? lerp(6.6, 3.9, d)
         : garage
           ? open
             ? lerp(6.6, 5.6, d)
             : lerp(6.2, 4.8, d)
-          : lerp(6.8, 5.8, d)) * fit.turn;
+          : lerp(6.8, to(5.8, 4.6), d)) * fit.turn;
   // A pillar stands on every line in a garage, so its bays are a little wider to leave the same room between them.
-  const width = (garage ? (open ? lerp(2.9, 2.6, d) : lerp(2.8, 2.55, d)) : lerp(2.7, 2.35, d)) + fit.wider;
+  const width = (garage ? (open ? lerp(2.9, 2.6, d) : lerp(2.8, 2.55, d)) : lerp(2.7, to(2.35, kind === RowsKind.PILLARS ? 2.3 : 2.1), d)) + fit.wider;
   const north_front = EDGE + fit.depth;
   const south_front = north_front + aisle;
   const south_back = south_front + fit.depth;
@@ -304,7 +306,7 @@ export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fi
     for (let boundary = 0; boundary <= r.xs.length; boundary++) {
       if (!has_pillar(r, boundary)) continue;
       const x = r.xs[0] + boundary * r.width;
-      const inset = lerp(1.1, 0.45, d) + pillar / 2;
+      const inset = lerp(1.1, garage ? 0.45 : to(0.45, 0.2), d) + pillar / 2;
       const y = r.front + (r === north ? -inset : inset);
       b.solid(SolidKind.PILLAR, rect(x - pillar / 2, y - pillar / 2, x + pillar / 2, y + pillar / 2));
     }
@@ -341,13 +343,13 @@ export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fi
 export function angled(d: number, rng: Rng, open: boolean, fit: Fit): Layout {
   const b = new Builder(rng);
   const angle = Math.PI / 3;
-  const width = lerp(2.7, 2.4, d) + fit.wider;
+  const width = lerp(2.7, open ? 2.4 : 2.1, d) + fit.wider;
   const pitch = width / Math.sin(angle);
   // Slanted ends cut the corners of a rectangle, so an angled bay is drawn longer than a square one to hold a car.
   const length = 6 + fit.longer;
   const run = length * Math.cos(angle);
   const rise = length * Math.sin(angle);
-  const aisle = lerp(5.2, 4.2, d) * fit.turn;
+  const aisle = lerp(5.2, open ? 4.2 : 3.0, d) * fit.turn;
   const north_front = EDGE + rise;
   const south_front = north_front + aisle;
   const south_back = south_front + rise;

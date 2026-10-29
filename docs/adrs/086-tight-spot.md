@@ -67,6 +67,12 @@ Decided in the vehicles brainstorm's "Precision, vehicle choice and more rigs". 
 - **Picker.** With Any spot the picker offers Any only: no vehicle is common to every kind. A kind with one vehicle shows it, fixed. Below the `@2xl` container size the toolbar can't hold three pickers and its buttons in a row, so the picker moves onto the start card there. The open lot's picker lists its four (hatchback, the default, then van, pickup, car and trailer) with no Any, so a player who never picks keeps the hatchback. The four fit the open lot's existing layouts through `Fit`; a planner test covers every free bay of two open lots in each car, and a fixed sample in the trailer (every lot kind, both rows), so the file stays near 30 s for the deploy gate. For the trailer, a reverse-only search out of the bay (a new `directions` option on the test-only planner) gives a forward path in, replayed from a straight trailer; two bays of 68 need the full search from the gate. Searching each bay from the round's real start took 15 minutes and missed one bay to the coarse grid, so the trailer's proof starts at the lot's gate with the trailer straight.
 - **Achievement:** Perfect park (`perfect-park`), on a park of 95 % or more.
 
+## Revision 2026-10-29 (difficulty pass)
+Decided in the [wave-3 brainstorm](../brainstorm/2026-10-29_drive-hub-wave-3.md)'s "Parking difficulty pass"; owner: "with parking im really looking for difficulty". Built the same day ([page](../apps/tight-spot.md#lot-layouts)).
+- **Difficulty 1 is the tightest the planner proofs solve**, per kind and listed vehicle; a vehicle that fails a tightened kind is dropped from it rather than the kind loosened (the camper van left the garage door). The dead end's street adds a quarter of the vehicle's extra length at the top, so the van on its ladder still turns round. The open lot keeps its old tight ends (`open` in `rows()` and `angled()`).
+- **Levels: 66.** A hardest lap of 18 (every kind at difficulty 1, the underground and multi-storey garages last) appended after the 48, so every level keeps its number, kind, seed, difficulty and vehicle, and stars stay where they were. Their layouts at the tighter difficulties are tighter, as the sizes changed.
+- **Spots and the daily** take difficulty 0.15–1 from the seed, up from 0.15–0.85.
+
 ## Consequences
 - The first vehicle sim and polygon collision in the repo; they stay in the app until a second app needs them.
 - Grid roads look like city blocks with 90° junctions.

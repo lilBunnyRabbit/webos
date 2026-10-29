@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.89.0",
+    date: "2026-10-29",
+    title: "Tighter spots",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Tight Spot's hardest spots are much tighter: narrower bays, aisles, gaps, doors and ramps, as tight as they can be and still be parked, and Spots now go all the way up to them.",
+      },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Tight Spot has 18 new levels after the ladder: every kind of spot at its tightest, ending in the underground and multi-storey garages.",
+      },
+    ],
+  },
+  {
     version: "3.88.0",
     date: "2026-10-29",
     title: "Small town",

@@ -95,11 +95,11 @@ describe("scenario worlds", () => {
     }
   });
 
-  test("the parallel gap is never shorter than the car plus 1.3 m", () => {
+  test("the parallel gap is never shorter than the car plus 1.1 m", () => {
     for (let seed = 1; seed <= 30; seed++) {
       const bay = scenario_world(seed, "parallel", 1).bays[0];
       const ys = bay.shape.map((p) => p.y);
-      expect(Math.max(...ys) - Math.min(...ys) + 0.2).toBeGreaterThanOrEqual(4.3 + 1.3 - 1e-9);
+      expect(Math.max(...ys) - Math.min(...ys) + 0.2).toBeGreaterThanOrEqual(4.3 + 1.1 - 1e-9);
     }
   });
 });

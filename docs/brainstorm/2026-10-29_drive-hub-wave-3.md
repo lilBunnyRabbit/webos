@@ -106,6 +106,36 @@ Supersedes the straight street in "Yard (decided)".
 ### Airport: ground vehicles pass under wings (decided)
 Owner, on a tug "hitting" a parked aircraft's wing: "is this really a hit? the cart can go below the wings". Airport collision gets two heights, game-owned like the Warehouse's tiers (no core scene change): aircraft wings and tailplanes are high; fuselages, engines, landing gear, jet bridges, the terminal and ground kit are low. Tugs, baggage carts and ground kit collide only with low things; an aircraft's wings and tailplane collide with high things (other aircraft's wings and tails, jet bridges, the terminal), its fuselage, engines and gear with low things. Replaces "wings collide with everything (no heights)" from the first cut.
 
+### Parking difficulty pass (decided)
+Owner: "with parking im really looking for difficulty"; on the garages: "the point of the garage is to have really tight corners … really looking for that claustrophobic feeling", "with walls everywhere". Agreed: every spot kind's difficulty 1 becomes the tightest the proofs still solve, dropping bigger vehicles from a kind rather than loosening it (as the Multi-storey spot did); a new hardest set of levels after the ladder, no renumbering; Spots' difficulty range may widen toward the top. Valet Rush and the open lot stay as they are. Multi-storey and Underground were already tightened with the portals build and stay.
+
+**Build note (2026-10-29).** Each kind's top end swept down with every listed vehicle until a seed failed, then backed off a step ([page](../apps/tight-spot.md#lot-layouts) has every size and what set it). Old → new at difficulty 1:
+
+| Kind | Tightened | At difficulty 1 |
+|------|-----------|-----------------|
+| Parallel | gap car + 1.3 → 1.1 m, lane 2.3 → 2.2 m | all its vehicles |
+| Nose in | aisle 5.8 → 4.9 m, bay 2.35 → 2.1 m | all |
+| Reverse in | aisle 5.4 → 3.9 m, bay 2.35 → 2.1 m | all |
+| Angled | aisle 4.2 → 3 m, bay 2.4 → 2.1 m | all |
+| Pillars | aisle 5.8 → 4.6 m, bay 2.35 → 2.3 m, pillar 0.45 → 0.2 m in from the aisle (0.75 m) | all |
+| Garage | inside 2.55 → 2.4 m, slack 0.35 → 0.2 m | all |
+| Narrow aisle | aisle 4.9 → 3.6 m, bay 2.35 → 2.1 m | all |
+| Garage door | alley 4.6 → 4.45 m, door 2.3 → 2.2 m | all but the camper van (dropped) |
+| Dead end | street 5.4 → 5.1 m + 0.25 m per metre longer than the hatchback | all |
+| End bay | aisle 4.9 → 4.7 m, bay 2.4 → 2.2 m | all |
+| Bus stop | lane 3.1 → 3.0 m, box bus + 6.2 → 1.5 m (articulated bus unchanged) | all |
+| Depot | lane 3.25 → 3.0 m (articulated bus's drive-through unchanged) | all |
+| Driveway | street 6.6 → 6 m, driveway 3.1 → 2.9 m, slack 0.9 → 0.8 m | all |
+| Slipway | ramp 2.7 → 2.3 m, bay slack 0.7 → 0.3 m | all |
+| Camping pitch | pitch 3.6 → 3 m, track 7.8 → 7 m, hedge stubs 0.4 → 0.1 m short of the track | caravan |
+| Loading dock | door 3.6 → 3 m, drive-through lanes 3.7 → 3 m | all |
+
+- The open lot keeps its old tight ends: `rows()` and `angled()` in `core/lot-layout.ts` take them when `open`, so Valet Rush is untouched.
+- The dead end's street grows with the vehicle's length at the top: the van couldn't turn round at 5.25 m, and it's on the ladder, so dropping it would have changed existing levels.
+- Hardest lap: levels 49–66, every kind at difficulty 1 including the underground garage and the multi-storey (bay three floors down) last; seeds `hash(0x7195, 900 + k)`, picked so all 18 prove from the start. Levels 1–48 keep their kind, seed, difficulty and vehicle (their tighter ends make the late ones tighter too).
+- Spots and the daily: difficulty 0.15–1 from the seed (was 0.15–0.85).
+- Tests: no new sweeps; the existing ones (kinds at 0, 0.5 and 1, every level) prove the new tops and the hardest lap. The planner files went from 307 s to 340 s.
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.
@@ -124,6 +154,7 @@ Owner, on a tug "hitting" a parked aircraft's wing: "is this really a hit? the c
 10. [x] Airport: two collision heights, ground vehicles pass under wings and tailplanes.
 11. [x] The hub becomes a small town: districts round a plaza, a shape and an entrance sign per building (ADR-087 revision).
 12. [x] Multi-floor garages (ADR-090): core portals, the Multi-storey spot (straight ramps and a helix, one to three floors down), the open lot's garage with a floor below for Tight Spot and Valet Rush. The town's multi-storey building follows.
+13. [x] Parking difficulty pass: every spot kind's difficulty 1 at the tightest the proofs solve, a hardest lap of 18 levels after the ladder, Spots up to difficulty 1.
 
 ## Next session topics
 - The boat: where a dynamic (non-kinematic) model lives, shared with F1's later slip model.

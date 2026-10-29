@@ -138,15 +138,18 @@ describe("rounds", () => {
     expect(seen.size).toBe(SCENARIOS.length);
   });
 
-  test("levels cover every scenario but the underground and multi-storey garages, and get harder", () => {
+  test("three laps cover every scenario but the garages and get harder; the hardest lap after them has every kind at 1", () => {
     const rounds = Array.from({ length: LEVEL_COUNT }, (_, i) => level_round(i + 1));
-    const kinds = new Set(rounds.map((round) => round.scenario));
+    const laps = rounds.slice(0, 48);
+    const kinds = new Set(laps.map((round) => round.scenario));
     expect(kinds.has(Scenario.UNDERGROUND)).toBe(false);
     expect(kinds.has(Scenario.MULTI_STOREY)).toBe(false);
     expect(kinds.size).toBe(SCENARIOS.length - 2);
-    expect(rounds[0].difficulty).toBe(0);
-    expect(rounds[LEVEL_COUNT - 1].difficulty).toBe(1);
-    expect(rounds.every((round) => round.mode === Mode.LEVELS)).toBe(true);
+    expect(laps[0].difficulty).toBe(0);
+    const hardest = rounds.slice(48);
+    expect(new Set(hardest.map((round) => round.scenario)).size).toBe(SCENARIOS.length);
+    expect(hardest.every((round) => round.difficulty === 1)).toBe(true);
+    expect(rounds.every((round, i) => round.mode === Mode.LEVELS && round.level === i + 1)).toBe(true);
   });
 
   test("the big kinds' levels keep the seeds they had before the camping pitch and the loading dock joined the laps", () => {
@@ -183,7 +186,7 @@ describe("rounds", () => {
 
 describe("sensors", () => {
   test("read the gap to the wall ahead in the garage", () => {
-    const state = park_in_bay(driving(scenario_round(Scenario.GARAGE, 21, undefined, Vehicle.HATCH)));
+    const state = park_in_bay(driving({ ...scenario_round(Scenario.GARAGE, 21, undefined, Vehicle.HATCH), difficulty: 0.5 }));
     const front = sensor(state.car, obstacles(state.world), End.FRONT);
     expect(front).not.toBeNull();
     expect(front!).toBeLessThan(0.85);
@@ -305,7 +308,7 @@ describe("vehicles", () => {
 });
 
 describe("precision", () => {
-  const round = scenario_round(Scenario.REVERSE, 12, undefined, Vehicle.HATCH);
+  const round = { ...scenario_round(Scenario.REVERSE, 12, undefined, Vehicle.HATCH), difficulty: 0.5 };
   const bay = create_game(round).world.bays[0];
   const centre = centroid(bay.shape);
 
