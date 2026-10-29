@@ -776,7 +776,7 @@ export const GT_CAR: VehicleSpec = {
   wheel_diameter: 0.68,
   wheel_width: 0.3,
   turning_radius: 5.8,
-  steer_time: 0.8,
+  steer_time: 0.6,
   creep_speed: 1.8,
   creep_accel: 1.2,
   max_forward: 38,
@@ -786,7 +786,7 @@ export const GT_CAR: VehicleSpec = {
   rolling: 0.3,
   park_speed: 0.3,
   hitches: [],
-  a_lat: 8,
+  a_lat: 16,
 };
 
 // Skid steers: the pose is the middle of the wheels' or tracks' contact, and `turning_radius` is the circle the outer
