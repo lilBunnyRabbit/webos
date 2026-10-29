@@ -1,11 +1,12 @@
 import { create_rng, type Rng } from "$lib/core/utils/random";
 import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "./geometry";
-import { angled, fit_for, rows, RowsKind, type Layout } from "./lot-layout";
+import { angled, Builder, fit_for, rows, RowsKind, type Layout } from "./lot-layout";
 import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Solid, type Surface } from "./scene";
 import { hash } from "./seed";
 import { HATCHBACK, type VehicleSpec } from "./vehicle";
 
-export const ChunkKind = { ROAD: "road", LOT: "lot" } as const;
+/** `KERBSIDE` is a road whose east–west arms have parallel bays let into the kerb on both sides. */
+export const ChunkKind = { ROAD: "road", KERBSIDE: "kerbside", LOT: "lot" } as const;
 export type ChunkKind = (typeof ChunkKind)[keyof typeof ChunkKind];
 
 export const CHUNK = 32;
@@ -38,7 +39,16 @@ export interface LotCell {
   build: (rng: Rng) => Layout;
 }
 
-export type Cell = { kind: typeof ChunkKind.ROAD } | LotCell;
+export interface KerbsideCell {
+  kind: typeof ChunkKind.KERBSIDE;
+  spec: VehicleSpec;
+}
+
+export type Cell = { kind: typeof ChunkKind.ROAD } | KerbsideCell | LotCell;
+
+function is_road(cell: Cell): cell is Exclude<Cell, LotCell> {
+  return cell.kind !== ChunkKind.LOT;
+}
 
 export type Plan = (cx: number, cy: number) => Cell | null;
 
@@ -57,8 +67,8 @@ export function exits(plan: Plan, cx: number, cy: number): Exits {
   for (const side of SIDES) {
     const other = plan(cx + STEP[side].x, cy + STEP[side].y);
     if (!other) continue;
-    if (self.kind === ChunkKind.LOT) result[side] = self.entry === side && other.kind === ChunkKind.ROAD;
-    else if (other.kind === ChunkKind.ROAD) result[side] = true;
+    if (self.kind === ChunkKind.LOT) result[side] = self.entry === side && is_road(other);
+    else if (is_road(other)) result[side] = true;
     else result[side] = other.entry === OPPOSITE[side];
   }
   return result;
@@ -102,22 +112,99 @@ function place(
   };
 }
 
-function road_layout(open: Exits): Layout {
+const KERB_DEPTH = 2.5;
+const KERB_GAP = 2.1;
+const KERB_TAPER = 1.5;
+const KERB_END = 0.5;
+const KERB_TAKEN = 1 / 3;
+
+// Null leaves the corner kerbs whole: a trailer or a bay longer than the arm gets no lay-by.
+function lay_bys(b: Builder, x0: number, x1: number, spec: VehicleSpec, rng: Rng): Polygon[] | null {
+  const fit = fit_for(spec);
+  const length = fit.length + KERB_GAP * fit.turn;
+  const span = x1 - x0 - 2 * KERB_END;
+  if (spec.hitches.length > 0 || length > span) return null;
+  const depth = KERB_DEPTH + fit.wider;
+  const taper = Math.min(KERB_TAPER, (span - length) / 2);
+  const a = (x0 + x1 - length) / 2;
+  const z = a + length;
+  const lo = MID - ROAD_HALF;
+  const hi = MID + ROAD_HALF;
+  const north = lo - depth;
+  const south = hi + depth;
+  for (const [back, edge] of [
+    [north, lo],
+    [south, hi],
+  ] as const) {
+    b.ground(SurfaceKind.ASPHALT, [
+      { x: a - taper, y: edge },
+      { x: a, y: back },
+      { x: z, y: back },
+      { x: z + taper, y: edge },
+    ]);
+    b.line({ x: a, y: back }, { x: a, y: edge });
+    b.line({ x: z, y: back }, { x: z, y: edge });
+    const shape = rect(a, Math.min(back, edge), z, Math.max(back, edge));
+    const heading = rng() < 0.5 ? 0 : Math.PI;
+    if (rng() < KERB_TAKEN) b.car((a + z) / 2, (back + edge) / 2 + (back < edge ? -0.15 : 0.15), heading, length - 1);
+    else b.bay(shape, heading, true);
+  }
+  return [
+    rect(x0, 0, x1, north),
+    [
+      { x: x0, y: north },
+      { x: a, y: north },
+      { x: a - taper, y: lo },
+      { x: x0, y: lo },
+    ],
+    [
+      { x: z, y: north },
+      { x: x1, y: north },
+      { x: x1, y: lo },
+      { x: z + taper, y: lo },
+    ],
+    rect(x0, south, x1, CHUNK),
+    [
+      { x: x0, y: hi },
+      { x: a - taper, y: hi },
+      { x: a, y: south },
+      { x: x0, y: south },
+    ],
+    [
+      { x: z + taper, y: hi },
+      { x: x1, y: hi },
+      { x: x1, y: south },
+      { x: z, y: south },
+    ],
+  ];
+}
+
+function road_layout(open: Exits, kerbside: { spec: VehicleSpec; rng: Rng } | null = null): Layout {
   // A road with one way out runs straight on to the far edge, so a dead-end piece is still a street.
   const arms = { ...open };
   const count = SIDES.filter((side) => open[side]).length;
   if (count === 1) for (const side of SIDES) if (open[side]) arms[OPPOSITE[side]] = true;
   const lo = MID - ROAD_HALF;
   const hi = MID + ROAD_HALF;
-  const surfaces: Surface[] = [{ kind: SurfaceKind.ASPHALT, shape: rect(lo, lo, hi, hi) }];
-  const solids: Solid[] = [];
-  const marks: Mark[] = [];
+  const b = new Builder(kerbside?.rng ?? (() => 0));
+  const surfaces = b.surfaces;
+  const solids = b.solids;
+  const marks = b.marks;
+  surfaces.push({ kind: SurfaceKind.ASPHALT, shape: rect(lo, lo, hi, hi) });
   const kerb = (x0: number, y0: number, x1: number, y1: number) =>
     solids.push({ kind: SolidKind.KERB, shape: rect(x0, y0, x1, y1) });
-  kerb(0, 0, lo, lo);
-  kerb(hi, 0, CHUNK, lo);
-  kerb(0, hi, lo, CHUNK);
-  kerb(hi, hi, CHUNK, CHUNK);
+  const cut = (x0: number, x1: number) => (kerbside ? lay_bys(b, x0, x1, kerbside.spec, kerbside.rng) : null);
+  const west = arms.w ? cut(0, lo) : null;
+  const east = arms.e ? cut(hi, CHUNK) : null;
+  for (const piece of [...(west ?? []), ...(east ?? [])]) solids.push({ kind: SolidKind.KERB, shape: piece });
+  if (!west) {
+    kerb(0, 0, lo, lo);
+    kerb(0, hi, lo, CHUNK);
+  }
+  if (!east) {
+    kerb(hi, 0, CHUNK, lo);
+    kerb(hi, hi, CHUNK, CHUNK);
+  }
   const arm: Record<Side, [number, number, number, number]> = {
     n: [lo, 0, hi, lo],
     s: [lo, hi, hi, CHUNK],
@@ -138,7 +225,7 @@ function road_layout(open: Exits): Layout {
       marks.push({ kind: MarkKind.DASH, a: from, b: to });
     } else kerb(x0, y0, x1, y1);
   }
-  return { surfaces, solids, marks, bays: [] };
+  return { surfaces, solids, marks, bays: b.bays };
 }
 
 function barrier(side: Side): Polygon {
@@ -163,7 +250,9 @@ export function chunk(seed: number, cx: number, cy: number, plan: Plan): Chunk |
   const layout =
     cell.kind === ChunkKind.ROAD
       ? road_layout(open)
-      : cell.build(chunk_rng(seed, cx, cy));
+      : cell.kind === ChunkKind.KERBSIDE
+        ? road_layout(open, { spec: cell.spec, rng: chunk_rng(seed, cx, cy) })
+        : cell.build(chunk_rng(seed, cx, cy));
   const placed = place(layout, cell.kind === ChunkKind.LOT ? quarters(cell.entry) : 0, ox, oy);
   for (const side of SIDES) {
     if (plan(cx + STEP[side].x, cy + STEP[side].y)) continue;
@@ -195,21 +284,27 @@ export function assemble(seed: number, cells: readonly Vec[], plan: Plan, start:
   };
 }
 
-const OpenLot = { FORWARD: "forward", ANGLED: "angled", PILLARS: "pillars" } as const;
+const OpenLot = { FORWARD: "forward", ANGLED: "angled", PILLARS: "pillars", GARAGE: "garage" } as const;
 type OpenLot = (typeof OpenLot)[keyof typeof OpenLot];
-const OPEN_LOTS: readonly OpenLot[] = [OpenLot.FORWARD, OpenLot.ANGLED, OpenLot.PILLARS];
+const OPEN_LOTS: readonly OpenLot[] = [OpenLot.FORWARD, OpenLot.ANGLED, OpenLot.PILLARS, OpenLot.GARAGE];
+const KERBSIDE_ODDS = 3;
 const OPEN_DIFFICULTY = 0.3;
 
 function open_lot(kind: OpenLot, rng: Rng, spec: VehicleSpec): Layout {
   const fit = fit_for(spec);
   if (kind === OpenLot.ANGLED) return angled(OPEN_DIFFICULTY, rng, true, fit);
-  return rows(OPEN_DIFFICULTY, rng, true, kind === OpenLot.PILLARS ? RowsKind.PILLARS : RowsKind.FORWARD, fit);
+  const rows_kind = kind === OpenLot.PILLARS ? RowsKind.PILLARS : kind === OpenLot.GARAGE ? RowsKind.GARAGE : RowsKind.FORWARD;
+  return rows(OPEN_DIFFICULTY, rng, true, rows_kind, fit);
 }
 
-/** The open lot: a crossroads with a lot of free bays in each corner, every bay a target. */
+/**
+ * The open lot: a crossroads with a lot of free bays in each corner, every bay a target. Most east–west roads have
+ * kerb bays; the north–south ones stay plain, so Valet's queue and coach bays keep their lanes.
+ */
 export function open_plan(seed: number, spec: VehicleSpec = HATCHBACK): Plan {
   return (cx, cy) => {
     if (Math.abs(cx) > 1 || Math.abs(cy) > 1) return null;
+    if (cy === 0 && cx !== 0 && hash(seed, cx, cy, 11) % KERBSIDE_ODDS !== 0) return { kind: ChunkKind.KERBSIDE, spec };
     if (cx === 0 || cy === 0) return { kind: ChunkKind.ROAD };
     const h = hash(seed, cx, cy, 7);
     const entry: Side = h % 2 === 0 ? (cy < 0 ? Side.SOUTH : Side.NORTH) : cx < 0 ? Side.EAST : Side.WEST;

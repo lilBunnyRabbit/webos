@@ -37,7 +37,7 @@ export interface Mark {
   b: Vec;
 }
 
-export const SurfaceKind = { ASPHALT: "asphalt", FLOOR: "floor", PAVEMENT: "pavement", GRASS: "grass" } as const;
+export const SurfaceKind = { ASPHALT: "asphalt", FLOOR: "floor", PAVEMENT: "pavement", GRASS: "grass", GARAGE: "garage" } as const;
 export type SurfaceKind = (typeof SurfaceKind)[keyof typeof SurfaceKind];
 
 export interface Surface {

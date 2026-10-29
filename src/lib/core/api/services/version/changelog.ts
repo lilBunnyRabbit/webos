@@ -94,6 +94,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub gains the Driving Test: drive three routes through a town with lights, a roundabout, signs and a car park while an examiner tells you where to go, signal with Z and X, park in a bay and pull up, and get a pass or fail with a sheet explaining every fault.",
       },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub's open lot, in Tight Spot and Valet Rush, gains parallel bays let into the kerb along its side streets and underground garages with a ramp down and a pillar between every bay.",
+      },
     ],
   },
   {

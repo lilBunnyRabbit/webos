@@ -35,6 +35,7 @@ export interface Palette {
   void: string;
   asphalt: string;
   floor: string;
+  garage: string;
   pavement: string;
   kerb: string;
   paint: string;
@@ -118,6 +119,7 @@ export function read_palette(probe: HTMLElement): Palette {
     void: token("var(--background-darker)"),
     asphalt: token("var(--background)"),
     floor: token("var(--background-light)"),
+    garage: token("color-mix(in oklch, var(--background-darker) 65%, var(--background))"),
     pavement: token("var(--background-lighter)"),
     kerb: mix("foreground", 28),
     paint: mix("foreground", 78),
@@ -543,8 +545,14 @@ function hedges(ctx: CanvasRenderingContext2D, shapes: Polygon[], scale: number,
   ctx.restore();
 }
 
-const SURFACES = [SurfaceKind.GRASS, SurfaceKind.ASPHALT, SurfaceKind.FLOOR, SurfaceKind.PAVEMENT] as const;
-const GROUND: Record<SurfaceKind, "grass" | "asphalt" | "floor" | "pavement"> = { grass: "grass", asphalt: "asphalt", floor: "floor", pavement: "pavement" };
+const SURFACES = [SurfaceKind.GRASS, SurfaceKind.ASPHALT, SurfaceKind.FLOOR, SurfaceKind.GARAGE, SurfaceKind.PAVEMENT] as const;
+const GROUND: Record<SurfaceKind, "grass" | "asphalt" | "floor" | "garage" | "pavement"> = {
+  grass: "grass",
+  asphalt: "asphalt",
+  floor: "floor",
+  garage: "garage",
+  pavement: "pavement",
+};
 const DASH = 1.2;
 
 export function ground(ctx: CanvasRenderingContext2D, surfaces: Surface[], marks: Mark[], scale: number, palette: Palette) {

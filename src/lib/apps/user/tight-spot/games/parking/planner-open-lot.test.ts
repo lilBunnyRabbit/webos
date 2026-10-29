@@ -4,13 +4,13 @@ import { collide, obstacles } from "../../core/obstacles";
 import { drive, plan, type Move } from "../../core/planner";
 import { parked_poses } from "./poses";
 import { centroid, type Pose } from "../../core/geometry";
-import { jackknifed, VEHICLES, type Placement, type VehicleSpec } from "../../core/vehicle";
-import { ChunkKind, CHUNK, SIDES, type Bay, type Side, type World } from "./world";
+import { jackknifed, Vehicle, VEHICLES, type Placement, type VehicleSpec } from "../../core/vehicle";
+import { ChunkKind, CHUNK, SIDES, SurfaceKind, type Bay, type Side, type World } from "./world";
 
 /**
  * Its own file so the trailer's searches run beside the spot sweeps. Cars take every free bay; the trailer, whose
- * searches run seconds to a minute a bay, takes a fixed sample: per seed, bays from every lot covering each way its
- * bays face (both rows of a nose-in or pillars lot), so each lot kind and both sides are proven. A reverse-only path out of a bay is a forward path
+ * searches run seconds to a minute a bay, takes a fixed sample: per seed, a bay of each way a lot's bays face, so each
+ * lot kind and both sides are proven; it gets no kerb bays. A reverse-only path out of a bay is a forward path
  * in, which a towed trailer follows stably, so it's replayed forward from a straight trailer; reversing one would
  * amplify any difference, so the fallback searches from the gate with the trailer straight instead.
  */
@@ -58,8 +58,8 @@ function towed_in(bay: Bay, gate: Pose, world: World, spec: VehicleSpec): boolea
 }
 
 const TOWING_SAMPLE: Record<number, Record<string, readonly number[]>> = {
-  42: { "-1,-1": [0, 4], "1,-1": [4, 6], "-1,1": [0], "1,1": [0, 7] },
-  7: { "-1,-1": [1, 6], "1,-1": [0, 5], "-1,1": [0, 8], "1,1": [1, 9] },
+  5: { "-1,-1": [3, 6], "1,-1": [1, 6], "-1,1": [4, 8], "1,1": [6, 8] },
+  13: { "-1,-1": [2, 7], "1,-1": [3, 6], "-1,1": [4, 7], "1,1": [2, 6] },
 };
 
 function facing(bay: Bay): number {
@@ -67,10 +67,21 @@ function facing(bay: Bay): number {
   return ((degrees % 360) + 360) % 360;
 }
 
+// Seeds with an underground garage and kerb bays on both east–west roads, so every kind of free bay gets proven.
+const SEEDS = [5, 13];
+
+
 describe("free bays in the open lot can be reached through their lot's gate", () => {
+  test("the seeds cover a garage and kerb bays", () => {
+    const worlds = SEEDS.map((seed) => create_game(open_round(seed, Vehicle.HATCH)).world);
+    const chunks = worlds.flatMap((world) => world.chunks);
+    expect(chunks.some((each) => each.kind === ChunkKind.KERBSIDE && each.bays.length > 0)).toBe(true);
+    expect(chunks.some((each) => each.surfaces.some((surface) => surface.kind === SurfaceKind.GARAGE) && each.bays.length > 0)).toBe(true);
+  });
+
   for (const vehicle of vehicles_for(null)) {
-    for (const seed of [42, 7]) {
-      test(`${VEHICLES[vehicle].hitches.length > 0 ? "a sample" : "every bay"} in a ${vehicle}, seed ${seed}`, { timeout: 60_000 }, () => {
+    for (const seed of SEEDS) {
+      test(`${VEHICLES[vehicle].hitches.length > 0 ? "a sample" : "every bay"} in a ${vehicle}, seed ${seed}`, { timeout: 120_000 }, () => {
         const spec = VEHICLES[vehicle];
         const { world, car } = create_game(open_round(seed, vehicle));
         const near = obstacles(world);
@@ -94,6 +105,16 @@ describe("free bays in the open lot can be reached through their lot's gate", ()
                   (pose) => plan(pose, gate, near, { spec, heading_tolerance: Math.PI }) !== null
                 );
             expect(ok, `bay at ${centroid(bay.shape).x.toFixed(1)},${centroid(bay.shape).y.toFixed(1)}`).toBe(true);
+          }
+        }
+        // A kerb bay is proven out to the crossroads the round starts on.
+        for (const road of world.chunks.filter((each) => each.kind === ChunkKind.KERBSIDE)) {
+          if (spec.hitches.length > 0) expect(road.bays).toHaveLength(0);
+          for (const bay of road.bays) {
+            const ok = parked_poses(bay, near, 0.05, spec).some(
+              (pose) => plan(pose, world.start, near, { spec, heading_tolerance: Math.PI }) !== null
+            );
+            expect(ok, `kerb bay at ${centroid(bay.shape).x.toFixed(1)},${centroid(bay.shape).y.toFixed(1)}`).toBe(true);
           }
         }
       });

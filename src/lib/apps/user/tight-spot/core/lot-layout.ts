@@ -145,26 +145,63 @@ export function draw_row(b: Builder, r: Row) {
   }
 }
 
-export const RowsKind = { FORWARD: "forward", REVERSE: "reverse", PILLARS: "pillars" } as const;
+export const RowsKind = { FORWARD: "forward", REVERSE: "reverse", PILLARS: "pillars", GARAGE: "garage" } as const;
 export type RowsKind = (typeof RowsKind)[keyof typeof RowsKind];
+
+const LETTER = 1.5;
+
+// Painted strokes, not text: marks turn with the lot, so the sign reads upright for the driver coming in.
+function level_sign(b: Builder, centre: number, top: number) {
+  const h = LETTER;
+  const w = h * 0.55;
+  const x = centre - 1.6;
+  const y = top;
+  b.line({ x, y: y + h }, { x, y });
+  b.line({ x, y }, { x: x + w, y });
+  b.line({ x: x + w, y }, { x: x + w, y: y + h / 2 });
+  b.line({ x: x + w, y: y + h / 2 }, { x, y: y + h / 2 });
+  b.line({ x: x + 1.2, y: y + h / 2 }, { x: x + 1.9, y: y + h / 2 });
+  const one = x + 2.6;
+  b.line({ x: one, y }, { x: one, y: y + h });
+  b.line({ x: one - 0.35, y: y + 0.35 }, { x: one, y });
+  b.line({ x: one - 0.35, y: y + h }, { x: one + 0.35, y: y + h });
+}
+
+function ramp(b: Builder, from: number, to: number) {
+  const centre = (GATE_LO + GATE_HI) / 2;
+  const top = to - 1 - LETTER;
+  if (top - from > 0.5) level_sign(b, centre, top);
+  for (let y = from + 0.8; y + 0.8 <= top - 0.8; y += 1.8) {
+    b.line({ x: centre - 1.6, y: y + 0.8 }, { x: centre, y });
+    b.line({ x: centre, y }, { x: centre + 1.6, y: y + 0.8 });
+  }
+}
 
 export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fit): Layout {
   const b = new Builder(rng);
-  const indoor = kind === RowsKind.PILLARS;
+  const garage = kind === RowsKind.GARAGE;
+  const indoor = kind === RowsKind.PILLARS || garage;
   const aisle =
-    (kind === RowsKind.FORWARD ? lerp(7, 5.8, d) : kind === RowsKind.REVERSE ? lerp(6.6, 5.4, d) : lerp(6.8, 5.8, d)) *
-    fit.turn;
-  const width = lerp(2.7, 2.35, d) + fit.wider;
+    (kind === RowsKind.FORWARD
+      ? lerp(7, 5.8, d)
+      : kind === RowsKind.REVERSE
+        ? lerp(6.6, 5.4, d)
+        : garage
+          ? lerp(6.6, 5.6, d)
+          : lerp(6.8, 5.8, d)) * fit.turn;
+  // A pillar stands on every line in a garage, so its bays are a little wider to leave the same room between them.
+  const width = (garage ? lerp(2.9, 2.6, d) : lerp(2.7, 2.35, d)) + fit.wider;
   const north_front = EDGE + fit.depth;
   const south_front = north_front + aisle;
   const south_back = south_front + fit.depth;
   const wall = indoor ? SolidKind.WALL : SolidKind.KERB;
 
-  b.ground(indoor ? SurfaceKind.FLOOR : SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, south_back));
+  b.ground(garage ? SurfaceKind.GARAGE : indoor ? SurfaceKind.FLOOR : SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, south_back));
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, south_back, GATE_HI, SIZE));
   b.perimeter(wall);
   b.block(wall, EDGE, south_back, GATE_LO, SIZE - EDGE);
   b.block(wall, GATE_HI, south_back, SIZE - EDGE, SIZE - EDGE);
+  if (garage) ramp(b, south_back, SIZE);
 
   const north = row(EDGE, SIZE - EDGE, width, north_front, EDGE, "centre");
   const west = row(EDGE, GATE_LO, width, south_front, south_back, "end");
@@ -172,16 +209,25 @@ export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fi
   const all = [north, west, east];
   all.forEach((r) => draw_row(b, r));
 
-  const pillar = lerp(0.45, 0.75, d);
-  const pillar_every = 3;
+  const pillar = garage ? lerp(0.4, 0.55, d) : lerp(0.45, 0.75, d);
+  const pillar_every = garage ? 1 : 3;
   const has_pillar = (r: Row, boundary: number) =>
     indoor && boundary > 0 && boundary < r.xs.length && boundary % pillar_every === 0;
-  const target = 1 + Math.floor(rng() * (north.xs.length - 2));
-  // Indoors the target always has a pillar at one front corner, the spot that makes this scenario.
-  const target_index = indoor
-    ? Math.max(pillar_every, Math.round(target / pillar_every) * pillar_every) - (chance(rng, 0.5) ? 1 : 0)
-    : target;
-  const fill = open ? 0.45 : lerp(0.65, 1, d);
+  let target_index: number;
+  if (garage) {
+    // Off to one side of the ramp, with a bay either side: down the ramp, turn along the aisle, then in between pillars.
+    const aside = north.xs.flatMap((x, i) =>
+      i > 0 && i < north.xs.length - 1 && (x + width < GATE_LO - 1 || x > GATE_HI + 1) ? [i] : []
+    );
+    target_index = aside[Math.floor(rng() * aside.length)];
+  } else {
+    const target = 1 + Math.floor(rng() * (north.xs.length - 2));
+    // Indoors the target always has a pillar at one front corner, the spot that makes this scenario.
+    target_index = indoor
+      ? Math.max(pillar_every, Math.round(target / pillar_every) * pillar_every) - (chance(rng, 0.5) ? 1 : 0)
+      : target;
+  }
+  const fill = open ? 0.45 : garage ? lerp(0.8, 1, d) : lerp(0.65, 1, d);
   const slop = indoor ? 0.04 : lerp(0.1, 0.24, d);
 
   for (const r of all) {
@@ -196,7 +242,8 @@ export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fi
     r.xs.forEach((x, i) => {
       const shape = rect(x, Math.min(r.front, r.back), x + r.width, Math.max(r.front, r.back));
       const is_target = !open && r === north && i === target_index;
-      const free = is_target || !chance(rng, fill);
+      const beside = garage && !open && r === north && Math.abs(i - target_index) === 1;
+      const free = is_target || (!chance(rng, fill) && !beside);
       if (free) {
         if (open || is_target) {
           const heading = kind === RowsKind.REVERSE ? facing_in + Math.PI : facing_in;
