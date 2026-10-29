@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { create_car, Gear, NO_INPUT, steer_base } from "../../core/vehicle";
+import { create_car, Gear, steer_base } from "../../core/vehicle";
 import { drive_session } from "./autopilot";
 import {
   advance,
@@ -17,7 +17,7 @@ import {
   type LapResult,
 } from "./game";
 import { ghost_pose, quantise, record_frame } from "./ghost";
-import { A_LAT, grip_share, SPEC, with_grip } from "./grip";
+import { A_LAT, SPEC } from "./spec";
 import { HALF_WIDTH, locate } from "./track";
 import { TRACK_IDS, TrackId } from "./tracks";
 
@@ -36,14 +36,6 @@ function placed(state: GameState, s: number, lateral: number, turn: number, spee
 }
 
 describe("grip", () => {
-  it("holds the wheel to what the tyres can take at speed", () => {
-    expect(grip_share(0)).toBe(1);
-    expect(grip_share(8)).toBe(1);
-    expect(grip_share(40)).toBeLessThan(0.35);
-    expect(with_grip({ steer: -1, throttle: 1, brake: 0 }, 40).steer).toBeCloseTo(-grip_share(40));
-    expect(with_grip(NO_INPUT, 40)).toBe(NO_INPUT);
-  });
-
   it("never turns tighter than A_LAT / v² for long", () => {
     let state = placed(driving(), 40, 0, 0, 40);
     for (let i = 0; i < 120; i++) state = advance(state, { steer: 1, throttle: 1, brake: 0 }, DT);

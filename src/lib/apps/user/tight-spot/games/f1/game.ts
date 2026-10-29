@@ -2,7 +2,8 @@ import type { Vec } from "../../core/geometry";
 import { collide, obstacles } from "../../core/obstacles";
 import { body_centre, create_car, Gear, shift, step, type Car, type Input } from "../../core/vehicle";
 import { record_frame, type Ghost } from "./ghost";
-import { GRASS_SPEC, SPEC, with_grip } from "./grip";
+import { with_grip } from "../../core/grip";
+import { A_LAT, GRASS_SPEC, SPEC } from "./spec";
 import { racing_line } from "./line";
 import { locate, passes, progress, type Located, type Track } from "./track";
 import { TRACK_IDS, track_of, type TrackId } from "./tracks";
@@ -99,7 +100,7 @@ export function advance(state: GameState, input: Input, dt: number): GameState {
   if (state.status !== Status.DRIVING) return state;
   const { track } = state;
   const spec = state.grass ? GRASS_SPEC : SPEC;
-  let car = step(state.car, with_grip(input, state.car.speed, spec), dt, spec);
+  let car = step(state.car, with_grip(input, state.car.speed, spec, A_LAT), dt, spec);
   const ms = state.ms + dt * 1000;
   let lap = state.lap;
   let contact = state.contact;

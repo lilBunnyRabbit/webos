@@ -1,6 +1,7 @@
 import type { Vec } from "../../core/geometry";
 import { max_steer, steer_base } from "../../core/vehicle";
-import { A_LAT, SPEC, top_speed } from "./grip";
+import { top_speed } from "../../core/grip";
+import { A_LAT, SPEC } from "./spec";
 import { curvature_of, DS, HALF_WIDTH, type Track } from "./track";
 
 export const LINE_ROOM = HALF_WIDTH - SPEC.width / 2 - 0.3;

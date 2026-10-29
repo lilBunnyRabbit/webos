@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { body_centre, max_steer, steer_base } from "../../core/vehicle";
-import { SPEC } from "./grip";
+import { SPEC } from "./spec";
 import { lock_curvature, LINE_ROOM, racing_line } from "./line";
 import { HALF_WIDTH, KERB, locate, passes, progress, trace } from "./track";
 import { TRACK_DEFS, TRACK_IDS, track_of } from "./tracks";

@@ -2,7 +2,7 @@ import { begin_frame, contact_rings, player, union, type Palette, type View } fr
 import type { Pose, Vec } from "../../core/geometry";
 import { body_centre, create_car, Gear, Vehicle } from "../../core/vehicle";
 import type { GameState } from "./game";
-import { SPEC } from "./grip";
+import { SPEC } from "./spec";
 import { racing_line } from "./line";
 import { DS, HALF_WIDTH, KERB, type Track } from "./track";
 

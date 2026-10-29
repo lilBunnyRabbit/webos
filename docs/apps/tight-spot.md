@@ -192,6 +192,10 @@ A hinge folded past its link's `max_angle` (`jackknife()` gives the first such h
 
 Tests (`vehicle.test.ts`) pin the steering: lock in `steer_time / STEER_BOOST`, a target moved at the steady rate followed without lag, `steer_boost` flat for a short hold then rising monotonically to the cap, and the caster centring at the steady rate. And the geometry: the outer front wheel's circle is 5.3 m, the rear axle stays on its 3.84 m circle for 2000 steps, it only ever moves along the heading, the outer front corner swings outside the rear wheels' path, reversing on lock retraces the same circle, plus the steering rate, creep, brake hold, P refusal and determinism; every vehicle's lock gives its own turning radius; towing forward straightens the trailer, reversing grows the hitch angle until it jackknifes, the trailer's axle never slides sideways, its wheels roll the right distances, and towing is deterministic. A three-link chain starts straight with every link a body and the tail at `rig_ends`, its first link moves exactly as a lone trailer, forward straightens every link, reversing makes the hinges diverge until one folds past its limit, no link's axle slides sideways, each hinge jackknifes at its own limit, and it is deterministic with a step of no time (or less) a no-op. A test-local tug with one link at rest π: the link is created and placed ahead with `rig_ends` reaching its far end, a straight push keeps it at rest, it jackknifes past `max_angle` either side of π, and the planner turns the rig round into a pose box with no fold past the limit on the way. Rear steer: the pose is the front axle and the rear wheels point against the turn, full lock gives the turning radius at the outer rear wheel while the front axle stays on its circle, steering right turns right with the front axle only moving along the heading, the tail swings wider than anything at the front, each wheel rolls its own arc (the outer rear the most), and it is deterministic with a step of no time a no-op.
 
+### Grip
+
+`grip.ts`, opt-in and temporary (owner: "we will rework this when we add slip"). A kinematic car has no tyres to slide, so a game that drives at road speeds caps the wheel before each `step()`: `with_grip(input, speed, spec, a_lat = A_LAT)` holds the input's steer share to `grip_share`, so the curvature `tan(steer) / steer_base` stays at most `a_lat / v²` (`A_LAT` = 6 m/s²); `top_speed(spec)` is the steady speed the throttle holds against rolling resistance. It is meant for Ackermann road vehicles: a road vehicle keeps its full lock up to 4.8 m/s (the hatchback) to 7 m/s (the coach), so parking speeds never feel it (tested); on a forklift or a trolley it would bite at walking pace, and on a skid steer the share isn't an angle. Hot Lap (at its own 25 m/s²) and the Driving Test call it; Parking, the Warehouse and the rest don't. Moved from Hot Lap's `games/f1/grip.ts` for the Driving Test ([ADR-089](../adrs/089-driving-test.md)).
+
 ### Drawing
 
 `draw.ts` draws one frame onto the canvas in world metres; `read_palette` resolves the theme once per theme change.
@@ -405,7 +409,7 @@ Played through in a browser from the arrow keys and F (the planner's level 1 tur
 
 ## Hot Lap (f1)
 
-`games/f1/`: the tracks (`track.ts` builds one from its pieces, `tracks.ts` the three), the grip rule (`grip.ts`), the racing line and par (`line.ts`), the round (`game.ts`), the ghost (`ghost.ts`), the frame (`draw.ts`), the component (`game.svelte`), the proof driver (`autopilot.ts`, tests only). Decided in the [wave 3 brainstorm](../brainstorm/2026-10-29_drive-hub-wave-3.md) ("F1 grip", "First cuts › Hot Lap"). Building: `Building.TRACK`, a chequered band on the roof.
+`games/f1/`: the tracks (`track.ts` builds one from its pieces, `tracks.ts` the three), the car (`spec.ts`: the race tune, its grass version and its `A_LAT`), the racing line and par (`line.ts`), the round (`game.ts`), the ghost (`ghost.ts`), the frame (`draw.ts`), the component (`game.svelte`), the proof driver (`autopilot.ts`, tests only). Decided in the [wave 3 brainstorm](../brainstorm/2026-10-29_drive-hub-wave-3.md) ("F1 grip", "First cuts › Hot Lap"). Building: `Building.TRACK`, a chequered band on the roof.
 
 ### Tracks
 
@@ -423,11 +427,11 @@ The first cut was three variations of a rounded rectangle, 450–657 m long, for
 
 `locate(track, point, hint)` is the nearest centreline point (index, arc length `s`, signed `lateral`), searched within 24 samples of the last index so close parts of the track can't swap; `progress` and `passes` measure forward along the loop.
 
-### Grip (game-owned, temporary)
+### Grip
 
-The core is kinematic: a car turns as tight at 50 km/h as standing still. Until the core gets a slip model (owner: "we will rework this when we add slip"), Hot Lap holds the wheel before every `step()`: `with_grip` caps the input's steer share so the curvature `tan(steer) / wheelbase` stays at most `A_LAT / v²`, with `A_LAT` = 25 m/s², a racing car's cornering. At 40 m/s that's about an eighth of lock; below about 14 m/s the full lock is allowed.
+The core is kinematic: a car turns as tight at 50 km/h as standing still. Hot Lap holds the wheel before every `step()` with the core's opt-in grip cap (`with_grip`, Core › Grip), passing its own `A_LAT` = 25 m/s², a racing car's cornering (`spec.ts`). At 40 m/s that's about an eighth of lock; below about 14 m/s the full lock is allowed.
 
-**The car** is a race tune of the core's `F1_CAR`, owned by the game (`SPEC` in `grip.ts`): 80 m/s cap (about 78 m/s, 282 km/h, reached against rolling resistance), 15 m/s² acceleration, 36 m/s² brakes, 0.6 s centre to lock. The garage's F1 car, which the yard and the parking games drive, keeps the core spec's parking pace (14 m/s, 6 and 12 m/s²). The first cut drove the core spec itself.
+**The car** is a race tune of the core's `F1_CAR`, owned by the game (`SPEC` in `spec.ts`): 80 m/s cap (about 78 m/s, 282 km/h, reached against rolling resistance), 15 m/s² acceleration, 36 m/s² brakes, 0.6 s centre to lock. The garage's F1 car, which the yard and the parking games drive, keeps the core spec's parking pace (14 m/s, 6 and 12 m/s²). The first cut drove the core spec itself.
 
 ### The round
 

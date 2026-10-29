@@ -1,6 +1,6 @@
 import { max_steer, steer_base, type Input } from "../../core/vehicle";
 import { advance, Status, type GameState } from "./game";
-import { SPEC } from "./grip";
+import { SPEC } from "./spec";
 import { racing_line } from "./line";
 
 /**

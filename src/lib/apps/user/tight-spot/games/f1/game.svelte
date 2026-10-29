@@ -41,7 +41,8 @@
     type Round,
   } from "./game";
   import { ghost_pose, ghost_schema, type Ghost } from "./ghost";
-  import { SPEC, top_speed } from "./grip";
+  import { top_speed } from "../../core/grip";
+  import { SPEC } from "./spec";
   import { track_id_schema, TRACK_IDS, track_name, TrackId } from "./tracks";
 
   const TRACK_OPTIONS = TRACK_IDS.map((value) => ({ value, label: track_name(value) }));
