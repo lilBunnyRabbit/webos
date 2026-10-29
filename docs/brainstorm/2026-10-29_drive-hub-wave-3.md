@@ -79,6 +79,9 @@ Unchanged hub-wide rule: no commands; the `game` prop takes the new ids.
 - **Rodeo chains:** rigs of two or more links appear in the picker under an Experimental group, noted "course not proven"; no daily, no achievement progress. The daily keeps to rigs of at most one link (now decided).
 - **Parking and Forklift saved data move to the app data folder** like the new games: on first load copy the old localStorage bests and levels into the file, then remove those keys. Last choices stay in localStorage.
 
+### Open lot: parallel spots and a garage (decided)
+Owner: "for the valet im missing some paralel parking cases … or garage - maybe underground garage - that would be good". Both go into the shared open lot (`core/lot.ts`), so Valet Rush and Tight Spot's open lot get them: kerbside parallel bays along chunk roads, and an underground-garage chunk (walled, dim, a pillar grid, an entry ramp). Rejected: Valet-only kerb spots (Tight Spot's open lot would miss them).
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.
