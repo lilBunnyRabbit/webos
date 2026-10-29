@@ -11,6 +11,7 @@ import {
   FRAME_RAMP,
   front_frame,
   Gear,
+  GT_CAR,
   HATCHBACK,
   HATCH_TRAILER,
   hitch_angles,
@@ -289,6 +290,25 @@ describe("every vehicle", () => {
       const rear_steer = spec.drive.kind === DriveKind.ACKERMANN && spec.drive.steer_axle === SteerAxle.REAR;
       expect(rear_steer ? distance(all[2].at, centre) : outer, `${spec.length}`).toBeCloseTo(spec.turning_radius, 2);
     }
+  });
+});
+
+describe("GT car", () => {
+  test("pulls past 30 m/s in under ten seconds, tops out under its cap, and stops from there in under four", () => {
+    const flat_out = { steer: null, throttle: 1, brake: 0 };
+    const quick = run({ ...create_car(START), gear: Gear.DRIVE }, flat_out, 10, GT_CAR);
+    expect(quick.speed).toBeGreaterThan(30);
+    const top = run(quick, flat_out, 30, GT_CAR);
+    expect(top.speed).toBeLessThanOrEqual(GT_CAR.max_forward);
+    expect(top.speed).toBeGreaterThan(35);
+    const stopped = run(top, { steer: null, throttle: 0, brake: 1 }, 4, GT_CAR);
+    expect(stopped.speed).toBe(0);
+  });
+
+  test("turns a coupé's circle, much tighter than the F1 car's", () => {
+    expect(GT_CAR.turning_radius * 2).toBeGreaterThan(11);
+    expect(GT_CAR.turning_radius * 2).toBeLessThan(12);
+    expect(max_steer(GT_CAR)).toBeGreaterThan(max_steer(VEHICLES.f1));
   });
 });
 

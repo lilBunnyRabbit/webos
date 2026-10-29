@@ -59,6 +59,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub gains Valet Rush: park customers' cars in any free bay, fetch them back when their owners return for a tip, and keep the queue at the stand from reaching four, where every bump is a dent off your score, with a daily shift.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub's garage has a GT car: a low, quick coupé that pulls hard, brakes hard and turns tight, for fast laps of the yard.",
+      },
     ],
   },
   {

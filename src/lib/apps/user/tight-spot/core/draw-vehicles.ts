@@ -67,6 +67,7 @@ const Style = {
   RESURFACER: "resurfacer",
   TROLLEY: "trolley",
   F1: "f1",
+  GT: "gt",
   CAB: "cab",
   BOX_TRUCK: "box-truck",
   TUG: "tug",
@@ -127,6 +128,7 @@ const LOOKS: Record<Vehicle, Look> = {
   resurfacer: { style: Style.RESURFACER },
   trolley: { style: Style.TROLLEY },
   f1: { style: Style.F1 },
+  gt: { style: Style.GT },
   semi: { style: Style.CAB, loads: [Load.SEMI] },
   "box-truck": { style: Style.BOX_TRUCK },
   drawbar: { style: Style.BOX_TRUCK, loads: [Load.DOLLY, Load.BODY] },
@@ -186,6 +188,7 @@ const CORNERS: Record<Style, number[]> = {
   resurfacer: [0.12, 0.35, 0.35, 0.12],
   trolley: [0.04, 0.04, 0.04, 0.04],
   f1: [0.2, 0.3, 0.3, 0.2],
+  gt: [0.4, 0.6, 0.6, 0.4],
   cab: [0.1, 0.35, 0.35, 0.1],
   "box-truck": [0.1, 0.35, 0.35, 0.1],
   tug: [0.2, 0.25, 0.25, 0.2],
@@ -216,6 +219,7 @@ const HEIGHT: Record<Style | Load, number> = {
   resurfacer: 1.4,
   trolley: 0.5,
   f1: 0.4,
+  gt: 0.8,
   cab: 2,
   "box-truck": 1.9,
   tug: 0.8,
@@ -249,8 +253,32 @@ function outline(ctx: CanvasRenderingContext2D, l: number, half: number, style: 
     ctx.roundRect(-l / 2 + 0.15, -half + 0.08, 1.3, half * 2 - 0.16, 0.2);
     return;
   }
+  if (style === Style.GT) {
+    gt_outline(ctx, l, half);
+    return;
+  }
   const corners = CORNERS[style].map((r) => Math.min(r, half));
   ctx.roundRect(-l / 2, -half, l, half * 2, corners);
+}
+
+// Wide over the rear wheels, pinched at the doors, the front wings full again and the nose rounding off.
+function gt_outline(ctx: CanvasRenderingContext2D, l: number, h: number) {
+  const back = -l / 2;
+  const nose = l / 2;
+  ctx.moveTo(back + 0.4, -h);
+  ctx.lineTo(-0.5, -h);
+  ctx.bezierCurveTo(-0.15, -h + 0.1, 0.45, -h + 0.1, 0.8, -h + 0.02);
+  ctx.lineTo(nose - 0.55, -h + 0.02);
+  ctx.quadraticCurveTo(nose, -h + 0.06, nose, -h + 0.5);
+  ctx.lineTo(nose, h - 0.5);
+  ctx.quadraticCurveTo(nose, h - 0.06, nose - 0.55, h - 0.02);
+  ctx.lineTo(0.8, h - 0.02);
+  ctx.bezierCurveTo(0.45, h - 0.1, -0.15, h - 0.1, -0.5, h);
+  ctx.lineTo(back + 0.4, h);
+  ctx.quadraticCurveTo(back, h, back, h - 0.4);
+  ctx.lineTo(back, -h + 0.4);
+  ctx.quadraticCurveTo(back, -h, back + 0.4, -h);
+  ctx.closePath();
 }
 
 function shadow(
@@ -620,10 +648,46 @@ const PAINTERS: Record<Style, (ctx: CanvasRenderingContext2D, f: Frame) => void>
   resurfacer: () => {},
   trolley: () => {},
   f1: () => {},
+  gt: gt_top,
   machine: () => {},
 };
 
 const CAB_DEPTH = 2.3;
+
+// A long bonnet with its power bulge and vents, a low cabin swept back into a fastback, twin stripes and a wing on the tail.
+function gt_top(ctx: CanvasRenderingContext2D, f: Frame) {
+  const { l, half, paint, palette } = f;
+  const cabin = f.roof - 0.16;
+  const back = -0.95;
+  const front = -0.15;
+  const screen = 0.45;
+  const fastback = back - 0.85;
+  const tail = -l / 2;
+  ctx.globalAlpha = 0.7;
+  for (const side of [-1, 1]) {
+    pill(ctx, screen + 0.05, side * 0.17 - 0.06, l / 2 - screen - 0.12, 0.12, 0.04, paint.roof);
+    pill(ctx, tail + 0.1, side * 0.17 - 0.06, fastback - tail - 0.1, 0.12, 0.04, paint.roof);
+  }
+  ctx.globalAlpha = 1;
+  seams(
+    ctx,
+    [
+      [screen + 0.25, -0.42, l / 2 - 0.4, -0.34],
+      [screen + 0.25, 0.42, l / 2 - 0.4, 0.34],
+    ],
+    f.scale,
+    palette
+  );
+  for (const side of [-1, 1]) pill(ctx, 1.15, side * 0.58 - 0.05, 0.45, 0.1, 0.05, palette.ink);
+  pill(ctx, back, -cabin, front - back, cabin * 2, 0.2, paint.roof);
+  glass(ctx, paint);
+  pane(ctx, front, screen, cabin, half - 0.22);
+  pane(ctx, back, fastback, cabin - 0.02, cabin - 0.26);
+  for (const side of [-1, 1]) pill(ctx, front + 0.3, side > 0 ? half - 0.1 : -half - 0.08, 0.16, 0.18, 0.06, paint.roof);
+  for (const side of [-1, 1]) pill(ctx, tail + 0.36, side * 0.5 - 0.05, 0.16, 0.1, 0.03, palette.ink);
+  pill(ctx, tail + 0.2, -half + 0.06, 0.26, half * 2 - 0.12, 0.08, palette.ink);
+  pill(ctx, tail + 0.24, -half + 0.12, 0.14, half * 2 - 0.24, 0.05, paint.body);
+}
 
 // A box body's roof: a lighter panel inside the rim, ribbed across, with a rub rail down each side.
 function box_roof(ctx: CanvasRenderingContext2D, f: Frame, from: number, to: number) {
@@ -899,7 +963,7 @@ export function blur_of(car: Car): number {
 
 function tyres(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, style: Style, scale: number, palette: Palette, tread = true) {
   const size = { length: spec.wheel_diameter + 0.04, width: spec.wheel_width + 0.05 };
-  const front = style === Style.TRACTOR ? { length: 0.9, width: 0.32 } : size;
+  const front = style === Style.TRACTOR ? { length: 0.9, width: 0.32 } : style === Style.GT ? { ...size, width: size.width - 0.08 } : size;
   const blur = tread ? blur_of(car) : 0;
   const show = tyre_out(spec.track, size.width, spec.width);
   for (const [i, wheel] of wheels(car, spec).entries()) {

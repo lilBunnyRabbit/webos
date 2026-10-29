@@ -761,6 +761,30 @@ export const F1_CAR: VehicleSpec = {
   unlit: true,
 };
 
+// Staggered tyres: `wheel_width` is the rears', the drawing narrows the fronts. With no slip in the model yet, the full
+// lock bites at any pace.
+export const GT_CAR: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 4.5,
+  width: 1.95,
+  wheelbase: 2.65,
+  rear_overhang: 0.95,
+  track: 1.65,
+  wheel_diameter: 0.68,
+  wheel_width: 0.3,
+  turning_radius: 5.8,
+  steer_time: 0.8,
+  creep_speed: 1.8,
+  creep_accel: 1.2,
+  max_forward: 38,
+  max_reverse: 3,
+  accel: 8.5,
+  brake: 11,
+  rolling: 0.3,
+  park_speed: 0.3,
+  hitches: [],
+};
+
 // Skid steers: the pose is the middle of the wheels' or tracks' contact, and `turning_radius` is the circle the outer
 // wheel draws pivoting on the spot (lots size their room by it).
 export const BOBCAT: VehicleSpec = {
@@ -957,6 +981,7 @@ export const Vehicle = {
   RESURFACER: "resurfacer",
   TROLLEY: "trolley",
   F1: "f1",
+  GT: "gt",
   SEMI: "semi",
   BOX_TRUCK: "box-truck",
   DRAWBAR: "drawbar",
@@ -1003,6 +1028,7 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   resurfacer: ICE_RESURFACER,
   trolley: SHOPPING_TROLLEY,
   f1: F1_CAR,
+  gt: GT_CAR,
   semi: SEMI,
   "box-truck": BOX_TRUCK,
   drawbar: DRAWBAR_RIG,
@@ -1047,6 +1073,7 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   resurfacer: "Ice resurfacer",
   trolley: "Shopping trolley",
   f1: "F1 car",
+  gt: "GT car",
   semi: "Truck and semi-trailer",
   "box-truck": "Box truck",
   drawbar: "Truck and drawbar trailer",

@@ -19,7 +19,7 @@
   import DriveFrame from "../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../core/drive-input.svelte";
   import GearStrip from "../core/gear-strip.svelte";
-  import type { Vec } from "../core/geometry";
+  import { clamp, type Vec } from "../core/geometry";
   import KeyHint from "../core/key-hint.svelte";
   import CrabToggle from "../core/crab-toggle.svelte";
   import { CRAB_KEY, drive_note, DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, steer_hints, zoom_step } from "../core/keys";
@@ -197,7 +197,8 @@
       return frame(YARD.bounds, middle, size.width, size.height, zoom, insets, fit_span(landing, size.width, size.height, insets, OVERVIEW_MARGIN));
     }
     const centre = body_centre(car, spec);
-    const ahead = car.speed * 0.9;
+    // Capped so a fast car (the GT tops 36 m/s) stays in view on a phone's narrow side.
+    const ahead = clamp(car.speed * 0.9, -span * 0.4, span * 0.4);
     const focus = { x: centre.x + Math.cos(car.heading) * ahead, y: centre.y + Math.sin(car.heading) * ahead };
     return frame(YARD.bounds, focus, size.width, size.height, zoom, insets, span);
   }

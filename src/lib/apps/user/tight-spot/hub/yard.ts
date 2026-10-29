@@ -39,7 +39,7 @@ export interface Shelf {
 
 /** The garage's vehicles in shelves, so a phone's card shows a handful at a time; every vehicle is on one. */
 export const GARAGE: readonly Shelf[] = [
-  { id: "cars", name: "Cars", vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.LIMO, Vehicle.VAN, Vehicle.PICKUP, Vehicle.CAMPER] },
+  { id: "cars", name: "Cars", vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.GT, Vehicle.LIMO, Vehicle.VAN, Vehicle.PICKUP, Vehicle.CAMPER] },
   { id: "service", name: "Service", vehicles: [Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.LADDER, Vehicle.GARBAGE, Vehicle.BAGGAGE] },
   { id: "buses", name: "Buses", vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.COACH, Vehicle.ARTIC] },
   { id: "trucks", name: "Trucks", vehicles: [Vehicle.BOX_TRUCK, Vehicle.SEMI, Vehicle.DRAWBAR, Vehicle.ROAD_TRAIN] },
