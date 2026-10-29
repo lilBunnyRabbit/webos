@@ -186,8 +186,10 @@
   }
 
   function control_insets(): Insets {
-    const card_bottom = card && !side_card ? Math.min(card_size.height + 16, size.height * 0.5) : 0;
-    const card_left = card && side_card ? Math.min(card_size.width + 16, size.width * 0.6) : 0;
+    // The doorway prompt is a small chip over the board, so it doesn't move the camera.
+    const boxed = card !== null && card !== "door";
+    const card_bottom = boxed && !side_card ? Math.min(card_size.height + 16, size.height * 0.5) : 0;
+    const card_left = boxed && side_card ? Math.min(card_size.width + 16, size.width * 0.6) : 0;
     const insets = { top: hud_height + 8, right: 0, bottom: card_bottom, left: card_left };
     if (!sideways()) return insets;
     return { ...insets, right: pedal_box.width + OVERLAY_GAP, left: Math.max(card_left, steer_box.width + OVERLAY_GAP) };
@@ -417,6 +419,13 @@
     </div>
     <div class="flex flex-col items-end gap-1.5">
       <SpeedChip class="hidden pointer-coarse:block" speed={car.speed} />
+      {#if card === "door" && door_game}
+        <Button class="pointer-events-auto gap-1.5 pointer-coarse:h-11" size="sm" variant="primary" onclick={enter}>
+          <door_game.icon weight="bold" class="size-4" />
+          {door_game.name}
+          <span class="hidden text-2xs opacity-75 pointer-fine:inline">Enter ↵</span>
+        </Button>
+      {/if}
       {#if moved_note}
         <div class="rounded-md bg-background/85 px-1.5 py-0.5 text-ui backdrop-blur-[2px]" role="status">Moved to the nearest clear spot</div>
       {/if}
@@ -432,21 +441,7 @@
     </div>
   </div>
 
-  {#if card === "door" && door_game}
-    <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
-      <div class="flex min-w-0 flex-1 basis-40 items-center gap-2.5">
-        <span class="grid size-9 shrink-0 place-items-center rounded-lg bg-primary text-background"><door_game.icon weight="bold" class="size-5" /></span>
-        <div class="min-w-0">
-          <p class="text-base font-semibold">{door_game.name}</p>
-          <p class="text-ui text-foreground/80">Go in to play.</p>
-        </div>
-      </div>
-      <Button class="ml-auto" variant="primary" onclick={enter}>Enter</Button>
-      <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="Enter" text="go in" />
-      </p>
-    </RoundCard>
-  {:else if card === "pad"}
+  {#if card === "pad"}
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 basis-full">
         <p class="text-base font-semibold">Garage</p>
