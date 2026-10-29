@@ -102,7 +102,7 @@ Every model function takes a `VehicleSpec`; `VEHICLES` maps the `Vehicle` ids to
 | `pickup` | 5.3 × 1.9 m | 3.2 m | 1.2 m | 6.3 m | 1.15 s |
 | `bus` | 12 × 2.55 m | 5.9 m | 3.6 m | 11 m | 1.6 s |
 | `towing` (`HATCH_TRAILER`) | the hatchback + a 2.5 m box trailer, 8.1 m nose to tail | 2.6 m | 0.8 m | 5.3 m | 1.1 s |
-| `forklift` (`FORKLIFT`) | 2.5 × 1.2 m + 1.2 m forks, rear steer | 1.5 m | 0.55 m | 1.68 m (80.3° lock) | 1.05 s |
+| `forklift` (`FORKLIFT`) | 2.5 × 1.2 m + 1.2 m forks, rear steer | 1.5 m | 0.55 m | 1.68 m (80.3° lock) | 1.5 s |
 | `city` (`CITY_CAR`) | 3.6 × 1.65 m | 2.38 m | 0.55 m | 4.8 m | 1.0 s |
 | `suv` | 4.75 × 1.95 m | 2.85 m | 1.0 m | 5.9 m | 1.15 s |
 | `limo` | 8.2 × 1.95 m (a stretch) | 5.1 m | 1.25 m | 8.8 m | 1.4 s |
@@ -129,7 +129,7 @@ Every model function takes a `VehicleSpec`; `VEHICLES` maps the `Vehicle` ids to
 | `baggage` | a 2.8 × 1.4 m tug + three 2.9 × 1.45 m baggage carts, 15.0 m | 1.6 m | 0.55 m | 3.3 m | 0.95 s |
 | `tractor-two` | the tractor + two farm trailers, 16.5 m | 2.5 m | 0.8 m | 5.4 m | 1.3 s |
 | `bobcat` (`BOBCAT`) | 3.2 × 1.7 m, skid steer (track 1.6 m) | 1.05 m between the axles | 0.6 m | 1.2 m, on the spot | 0.6 s |
-| `mower` (`MOWER`) | 2.1 × 1.55 m, skid steer on its drive axle (track 1.2 m) | 0 | 0.45 m | 0.75 m, on the spot | 0.45 s |
+| `mower` (`MOWER`) | 2.1 × 1.55 m, skid steer on its drive axle (track 1.2 m) | 0 | 0.45 m | 0.75 m, on the spot | 0.95 s |
 | `tank` (`TANK`) | 6.6 × 3.0 m (the gun 1 m past the hull), skid steer (track 2.9 m) | 4.2 m of track on the ground | 0.5 m | 2.6 m, on the spot | 0.9 s |
 | `loader` (`WHEEL_LOADER`) | 7.0 × 2.5 m, frame steer, joint 1.4 m behind the front axle | 2.8 m | 1.6 m | 4.8 m (40° bend) | 1.3 s |
 | `dumper` (`DUMP_TRUCK`) | 10.5 × 2.8 m, frame steer, joint 1.6 m behind the front axle | 6.0 m, to the middle of the rear bogie | 1.9 m | 8.6 m (47.4° bend) | 1.6 s |
