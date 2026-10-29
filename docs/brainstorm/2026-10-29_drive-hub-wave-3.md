@@ -85,6 +85,9 @@ Owner: "for the valet im missing some paralel parking cases … or garage - mayb
 ### Multi-floor garages (decided)
 Owner: "maybe even multiple floors - all in one canvas with 'teleportation'". Core portals in the scene, crossed after `step()` and by the planner; floors side by side, the camera follows through a ramp. ADR-090. Built after the single-floor garage lands.
 
+### Forklift fork jams (decided)
+Owner: "for forklift lets make this easier. it doesnt mean fail … it just stops you and you need to reverse". Forks into a pallet outside its pockets stop the forklift (the step is undone, rings flash, "Jammed: back out"); the player reverses and carries on, and that job can no longer earn the time star. The body or the load hitting racks, walls, pillars or stock still ends the round.
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.
