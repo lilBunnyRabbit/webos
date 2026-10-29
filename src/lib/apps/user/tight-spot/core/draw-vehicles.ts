@@ -844,7 +844,13 @@ function a_frame(ctx: CanvasRenderingContext2D, left: Vec, right: Vec, ball: Vec
 }
 
 // Tyres are drawn over the body so the player sees where the front pair points; nudged out so they sit on its edge.
-export const TYRE_SHOW = 0.08;
+const TYRE_SHOW = 0.08;
+// A body as wide as the track would hide its tyres, so they move out until this much shows past the side.
+const TYRE_POKE = 0.11;
+
+export function tyre_out(track: number, tyre_width: number, body_width: number): number {
+  return Math.max(TYRE_SHOW, body_width / 2 + TYRE_POKE - track / 2 - tyre_width / 2);
+}
 const TREAD_PITCH = 0.11;
 // A coach's drive and tag axles straddle the pose, which sits between them.
 const TAG_SPREAD = 0.7;
@@ -894,8 +900,9 @@ function tyres(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, style
   const size = { length: spec.wheel_diameter + 0.04, width: spec.wheel_width + 0.05 };
   const front = style === Style.TRACTOR ? { length: 0.9, width: 0.32 } : size;
   const blur = tread ? blur_of(car) : 0;
+  const show = tyre_out(spec.track, size.width, spec.width);
   for (const [i, wheel] of wheels(car, spec).entries()) {
-    const out = (i % 2 ? 1 : -1) * TYRE_SHOW;
+    const out = (i % 2 ? 1 : -1) * show;
     const angle = car.heading + wheel.angle;
     if (i >= 2 && style === Style.COACH) {
       for (const shift of [-TAG_SPREAD, TAG_SPREAD]) {
@@ -1008,8 +1015,7 @@ function trailer(
 
   const size = { length: t.wheel_diameter + 0.04, width: t.wheel_width + 0.05 };
   const blur = blur_of(car);
-  // A bus section shows its tyres like the front one does; a caravan's and a box body's sit under it.
-  const out = load === Load.BUS ? TYRE_SHOW : load === Load.CARAVAN || rides(load) ? 0.04 : 0.1;
+  const out = tyre_out(t.track, size.width, t.width);
   const wheels_of = () => {
     for (const shift of AXLE_SETS[load] ?? [0]) {
       const along = { x: Math.cos(pose.heading) * shift, y: Math.sin(pose.heading) * shift };
@@ -1231,7 +1237,7 @@ function rig_tyre(rig: Rig, at: Vec, angle: number, roll: number, out: number) {
   tyre(ctx, at, car.heading + angle, roll, out, size, blur_of(car), scale, palette);
 }
 
-function four_tyres(rig: Rig, out = TYRE_SHOW) {
+function four_tyres(rig: Rig, out = tyre_out(rig.spec.track, rig.spec.wheel_width + 0.05, rig.spec.width)) {
   for (const [i, wheel] of wheels(rig.car, rig.spec).entries()) {
     rig_tyre(rig, wheel.at, wheel.angle, rig.car.roll[i], (i % 2 ? 1 : -1) * out);
   }

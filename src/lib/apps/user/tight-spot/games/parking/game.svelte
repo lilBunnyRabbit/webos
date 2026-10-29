@@ -362,6 +362,7 @@
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
     else if (game.status === Status.CRASHED) retry();
+    else if (game.status === Status.DRIVING && change_gear(game, Gear.PARK).status === Status.PARKED) shift(Gear.PARK);
     else if (game.status === Status.PARKED) {
       if (game.round.level === undefined) new_spot();
       else if (has_next_level) next_round();

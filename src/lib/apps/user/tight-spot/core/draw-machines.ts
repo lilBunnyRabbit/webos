@@ -1,6 +1,6 @@
 import type { Palette } from "./draw";
 import { tread } from "./draw-math";
-import { beacon, blur_of, flashes, lamp, pill, tyre, TYRE_SHOW, type Lamps } from "./draw-vehicles";
+import { beacon, blur_of, flashes, lamp, pill, tyre, tyre_out, type Lamps } from "./draw-vehicles";
 import type { Pose, Vec } from "./geometry";
 import {
   axles,
@@ -94,7 +94,7 @@ function tyre_size(spec: VehicleSpec) {
   return { length: spec.wheel_diameter + 0.04, width: spec.wheel_width + 0.05 };
 }
 
-function four(m: Machine, out = TYRE_SHOW) {
+function four(m: Machine, out = tyre_out(m.spec.track, tyre_size(m.spec).width, m.spec.width)) {
   const { car, spec } = m;
   for (const [i, wheel] of wheels(car, spec).entries()) tyre_at(m, wheel.at, car.heading + wheel.angle, car.roll[i], (i % 2 ? 1 : -1) * out);
 }

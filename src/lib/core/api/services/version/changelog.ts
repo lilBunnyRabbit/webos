@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.87.0",
+    date: "2026-10-29",
+    title: "Wheels out",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "In Tight Spot, Enter now finishes the round once you stand in a bay, the same as Space or P.",
+      },
+      {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Drive Hub's ladder truck, box truck, semi-trailers, caravan and other trailers show their wheels again instead of hiding them under the body.",
+      },
+    ],
+  },
+  {
     version: "3.86.0",
     date: "2026-10-29",
     title: "Full garage",
