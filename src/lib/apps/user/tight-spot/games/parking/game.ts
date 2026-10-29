@@ -20,16 +20,15 @@ import {
   type Placement,
   type VehicleSpec,
 } from "../../core/vehicle";
+import { open_world, type World } from "../../core/lot";
 import {
   hash,
-  open_world,
   Scenario,
   SCENARIOS,
   scenario_world,
   type Bay,
   type Solid,
   type SolidKind,
-  type World,
 } from "./world";
 
 export const Mode = { SCENARIO: "scenario", LEVELS: "levels", OPEN: "open" } as const;

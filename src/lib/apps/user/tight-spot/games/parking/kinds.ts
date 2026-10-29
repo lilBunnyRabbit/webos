@@ -1,7 +1,6 @@
-import type { Pose } from "../../core/geometry";
-import type { Bay, Mark, Solid, Surface } from "../../core/scene";
 
 export * from "../../core/scene";
+export type { Layout } from "../../core/lot-layout";
 
 export const Scenario = {
   PARALLEL: "parallel",
@@ -23,15 +22,3 @@ export const Scenario = {
 } as const;
 export type Scenario = (typeof Scenario)[keyof typeof Scenario];
 export const SCENARIOS: readonly Scenario[] = Object.values(Scenario);
-
-export const ChunkKind = { ROAD: "road", LOT: "lot" } as const;
-export type ChunkKind = (typeof ChunkKind)[keyof typeof ChunkKind];
-
-export interface Layout {
-  surfaces: Surface[];
-  solids: Solid[];
-  marks: Mark[];
-  bays: Bay[];
-  /** Where the car waits when the lot has its own start instead of the street leading in. */
-  start?: Pose;
-}

@@ -11,7 +11,7 @@ Three layers, each replaceable on its own (the parking brainstorm's later steps)
 | Layer | Files | Replaced by |
 |-------|-------|-------------|
 | Sim | `core/vehicle.ts` (model), `core/collision.ts`, `core/obstacles.ts`, `games/parking/game.ts` and `games/forklift/game.ts` (rounds, judging) | a dynamic tyre model behind the same `step()` |
-| World | `core/scene.ts` (shapes), `games/parking/world.ts` (chunks, plans), `lots.ts` (layouts), `kinds.ts` (kinds) | streamed chunks for the infinite world |
+| World | `core/scene.ts` (shapes), `core/lot.ts` (chunks, plans, the open lot), `core/lot-layout.ts` (the lot builder, the open lot's rows and angled layouts), `games/parking/world.ts` (the spot's plan), `lots.ts` (the other layouts), `kinds.ts` (kinds) | streamed chunks for the infinite world |
 | Drawing | `core/draw.ts` (palette, ground, markers), `core/draw-vehicles.ts` (bodies, liveries, trailers), `games/parking/draw.ts` (the frame), `core/draw-math.ts`, `core/camera.ts` | a tilted 3D renderer |
 
 `games/parking/game.svelte` runs a round on the core components; `core/sensors.ts` and `core/sound.ts` are the parking sensors and the sounds; `core/precision.ts` is the precision score both games use; `core/planner.ts` is test-only for parking (with `games/parking/poses.ts`) and works out the forklift's par time in a worker.
@@ -238,25 +238,25 @@ Round cards sit at the bottom of a tall board and on the left, centred, of a boa
 
 ### World: chunks and plans
 
-`world.ts`. The world is a grid of 32 m chunks. `chunk(seed, cx, cy, plan)` is pure: the same seed, cell and plan give the same chunk. A `Plan` says what each cell is in a mode (a road, a lot of some kind facing some side, or outside the world); the chunk reads its neighbours through it to open exits:
+`core/lot.ts`, shared by every game that drives a street of lots (Parking today; Valet Rush next). The world is a grid of 32 m chunks. `chunk(seed, cx, cy, plan)` is pure: the same seed, cell and plan give the same chunk. A `Plan` says what each cell is in a mode (a road, a lot facing some side with the `build(rng)` that lays it out, or outside the world); the chunk reads its neighbours through it to open exits:
 
 - road to road is always open; road to lot only through the lot's `entry`; lot to lot never;
 - a side facing the outside of the world gets a wall.
 
-Road chunks are an 8 m carriageway: a centre square plus an arm per open exit (a piece with one exit runs straight on to the far edge), kerbs elsewhere. Lots are laid out in their own frame (`lots.ts`), entry through the south edge between x 12 and 20, then turned in quarter turns to face their entry. `chunk_rng` seeds each chunk from `hash(seed, cx, cy)` with `core/utils/random.ts`.
+Road chunks are an 8 m carriageway: a centre square plus an arm per open exit (a piece with one exit runs straight on to the far edge), kerbs elsewhere. Lots are laid out in their own frame (a cell's `build`, from `core/lot-layout.ts` or parking's `lots.ts`), entry through the south edge between x 12 and 20, then turned in quarter turns to face their entry. `chunk_rng` seeds each chunk from `hash(seed, cx, cy)` with `core/utils/random.ts`.
 
 Plans today:
 
 | Mode | Plan |
 |------|------|
-| Spot, level, daily | `scenario_world`: the lot at (0, 0) facing south, a straight road at (0, 1); the car waits on the road facing north in the right lane, further up for a rig whose tail would reach the barrier at the road's end (the articulated bus), unless the lot names its own `start` |
-| Open lot | `open_plan`: roads on the middle row and column of a 3 × 3, a lot in each corner opening onto one of its two roads (picked by hash), kinds from nose-in rows, angled rows and pillars, each bay taken with a chance of 0.45 (about 55 % free) and every free bay a target |
+| Spot, level, daily | `scenario_world` (`games/parking/world.ts`, building the kind with `build_lot`): the lot at (0, 0) facing south, a straight road at (0, 1); the car waits on the road facing north in the right lane, further up for a rig whose tail would reach the barrier at the road's end (the articulated bus), unless the lot names its own `start` |
+| Open lot | `open_plan` and `open_world(seed, spec)` (`core/lot.ts`): roads on the middle row and column of a 3 × 3, a lot in each corner opening onto one of its two roads (picked by hash), kinds from nose-in rows, angled rows and pillars, each bay taken with a chance of 0.45 (about 55 % free) and every free bay a target |
 
 The infinite world is another plan over the same `chunk()`.
 
 ### Lot layouts
 
-`lots.ts`, one builder per kind; `difficulty` 0 is roomy and 1 is as tight as the ladder goes (all `lerp`s between the two):
+`lots.ts`, one builder per kind on the shared `Builder` and `Fit` (`core/lot-layout.ts`, which also holds the nose-in, reverse and pillars rows and the angled rows the open lot uses); `difficulty` 0 is roomy and 1 is as tight as the ladder goes (all `lerp`s between the two):
 
 | Kind | Layout | Tightens |
 |------|--------|----------|
