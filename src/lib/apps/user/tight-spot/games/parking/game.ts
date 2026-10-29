@@ -49,7 +49,7 @@ export type ScenarioPick = Scenario | typeof ANY;
 export { MAX_ANGLE };
 
 const CARS: readonly Vehicle[] = [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP];
-const CAR_LIKES: readonly Vehicle[] = [...CARS, Vehicle.CITY, Vehicle.SUV, Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE];
+const CAR_LIKES: readonly Vehicle[] = [...CARS, Vehicle.CITY, Vehicle.SUV, Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.TUK_TUK, Vehicle.GOLF_CART];
 const ROOMY: readonly Vehicle[] = [...CAR_LIKES, Vehicle.LIMO, Vehicle.CAMPER];
 
 interface ScenarioInfo {
@@ -137,7 +137,7 @@ export const OPEN_INFO = {
   name: "Open lot",
   brief: "Drive around and park in any free bay.",
   par: 1,
-  vehicles: [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP, Vehicle.TOWING, Vehicle.F1] as readonly Vehicle[],
+  vehicles: [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP, Vehicle.TOWING, Vehicle.F1, Vehicle.TUK_TUK, Vehicle.GOLF_CART] as readonly Vehicle[],
 };
 
 export type VehiclePick = Vehicle | typeof ANY;

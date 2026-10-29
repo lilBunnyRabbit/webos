@@ -17,7 +17,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
-        text: "A Fun shelf in Drive Hub's garage holds a tuk-tuk, a golf cart, an ice resurfacer, a shopping trolley and an F1 car, and the F1 car can take on Tight Spot's open lot with its lorry-sized turning circle.",
+        text: "A Fun shelf in Drive Hub's garage holds a tuk-tuk, a golf cart, an ice resurfacer, a shopping trolley and an F1 car; the tuk-tuk and the golf cart can park in Tight Spot's car spots, and the F1 car takes on the open lot with its lorry-sized turning circle.",
       },
     ],
   },

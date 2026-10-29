@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { fit_span, frame } from "./camera";
+import { fit_span, frame, view_span } from "./camera";
 
 const WORLD = { x0: -100, y0: -100, x1: 100, y1: 100 };
 
@@ -60,5 +60,14 @@ describe("fit_span", () => {
     expect(at.right).toBeLessThanOrEqual(844 - 200 + 1e-6);
     expect(at.top).toBeGreaterThanOrEqual(40 - 1e-6);
     expect(at.bottom).toBeLessThanOrEqual(340 + 1e-6);
+  });
+});
+
+describe("view_span", () => {
+  test("zooms by vehicle length both ways, capped at each end", () => {
+    expect(view_span(4.3)).toBeCloseTo(26);
+    expect(view_span(12)).toBeCloseTo(26 * 1.6);
+    expect(view_span(2.7)).toBeCloseTo((26 * 2.7) / 4.3);
+    expect(view_span(0.95)).toBeCloseTo(26 * 0.6);
   });
 });

@@ -35,13 +35,20 @@ function clamp_axis(centre: number, half: number, lo: number, hi: number): numbe
 
 const HATCH_LENGTH = 4.3;
 const MAX_STRETCH = 1.6;
+const MIN_STRETCH = 0.6;
 
 /**
- * Metres across the shorter side at zoom 1: 26 for the hatchback, more for longer rigs so a bus fills about the share
- * of the screen a hatchback does, but capped, or bay lines and kerbs would shrink to hairlines on a phone.
+ * How much more ground than the hatchback's a vehicle of this length is shown, both ways: a bus fills about the share
+ * of the screen a hatchback does, a trolley is not a speck. Capped at both ends, or bay lines and kerbs would shrink to
+ * hairlines on a phone, or a lot would be too close to read.
  */
+export function view_stretch(length: number): number {
+  return Math.min(MAX_STRETCH, Math.max(MIN_STRETCH, length / HATCH_LENGTH));
+}
+
+/** Metres across the shorter side at zoom 1: 26 for the hatchback, scaled by `view_stretch`. */
 export function view_span(length: number): number {
-  return SPAN * Math.min(MAX_STRETCH, Math.max(1, length / HATCH_LENGTH));
+  return SPAN * view_stretch(length);
 }
 
 /**

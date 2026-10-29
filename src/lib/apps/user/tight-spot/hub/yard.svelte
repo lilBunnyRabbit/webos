@@ -14,7 +14,7 @@
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "../core/camera";
+  import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, view_stretch, type Camera, type Insets } from "../core/camera";
   import type { Palette } from "../core/draw";
   import DriveFrame from "../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../core/drive-input.svelte";
@@ -97,7 +97,7 @@
   const spec = $derived(VEHICLES[vehicle]);
   const lock = $derived(max_steer(spec));
   // Wider than a round's view: the yard is for looking around, and its buildings should show from the gate.
-  const span = $derived(Math.max(YARD_SPAN, view_span(rig_length(spec))));
+  const span = $derived(Math.max(YARD_SPAN * Math.min(1, view_stretch(rig_length(spec))), view_span(rig_length(spec))));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const door = $derived(door_at(YARD, car, spec));
   const door_game = $derived(door === null ? null : GAMES[door]);

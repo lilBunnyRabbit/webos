@@ -497,12 +497,13 @@ interface Fit {
   rear: number;
 }
 
+// Never smaller than the hatchback's layout: a smaller vehicle gets the same room, not a shrunk copy of it.
 function fit_for(spec: VehicleSpec): Fit {
-  const length = rig_length(spec);
+  const length = Math.max(HATCHBACK.length, rig_length(spec));
   return {
     length,
     longer: length - HATCHBACK.length,
-    wider: Math.max(spec.width, spec.trailer?.width ?? 0) - HATCHBACK.width,
+    wider: Math.max(0, spec.width - HATCHBACK.width, (spec.trailer?.width ?? 0) - HATCHBACK.width),
     turn: Math.max(1, spec.turning_radius / HATCHBACK.turning_radius),
     depth: length + 0.7,
     rear: -rig_ends(spec).rear,

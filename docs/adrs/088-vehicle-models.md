@@ -44,4 +44,5 @@ Owner: "yes make the articulated bus parkable too". It failed every bus stop and
 ## Revision 2026-10-29 (wave 4, the fun ones)
 - Tuk-tuk, golf cart, ice resurfacer, shopping trolley, and an F1 car the owner added: plain front-steer specs, no model change, on a Fun shelf in the garage. The tuk-tuk's one front wheel is drawn only; the model's front pair stands in for it (the bicycle model is the same). The trolley, whose real casters all swivel, is front steer on an 80° lock, not all-wheel steer: that waits for W3.
 - One optional spec field, `unlit` (no headlight beams), for the trolley and the F1 car.
-- Parking: the planner proves the F1 car in the open lot.
+- Parking: the planner proves the F1 car in the open lot, and the tuk-tuk and the golf cart in every car kind and the open lot. They first failed because the lot builders shrank for vehicles smaller than the hatchback; `Fit` now never goes below the hatchback's layout (length, width and turning circle), and levels keep their vehicles through `ladder`. The resurfacer and the trolley are garage-only.
+- Camera: `view_span` zooms by vehicle length both ways (0.6–1.6× the hatchback's view), so small vehicles are zoomed in, in rounds and in the yard.
