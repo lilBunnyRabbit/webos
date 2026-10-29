@@ -88,6 +88,14 @@ Owner: "maybe even multiple floors - all in one canvas with 'teleportation'". Co
 ### Forklift: bumps, never a fail (decided)
 Owner: "for forklift lets make this easier. it doesnt mean fail … it just stops you and you need to reverse", then: "'touched a pallete' should also not be a fail. you know what nothing is a fail with forklift its just deduction. think of it how real forklifts work there is always bumps everywhere". Every contact in the Warehouse (forks jammed into a pallet, body or load against racks, walls, pillars, stock or pallets, the forks against a beam in the side view) is a bump: the step is undone, the forklift stops, rings flash, a hint says what was hit, and the player backs off and carries on. Pressing on against the same thing is one bump. Each bump adds 5 s to the time, so it eats into the time star; the done card lists the bumps. Nothing ends a round.
 
+### Pushback becomes the Airport game (decided)
+Owner, on the baggage train: "i would just do the pushback as the whole airport game with different modes like the parking + a combined mode where you do the whole thing everything combined". The game is renamed Airport, id `airport` (unreleased, so the id, data file, daily key and achievement prefix change freely; the building keeps its terminal roof). Modes, like Parking's:
+- **Pushback:** as built.
+- **Baggage run:** the tug with three carts (the garage's baggage train) from the baggage hall to an aircraft's hold door, weaving between parked aircraft and ground kit, stopping with the carts alongside the door. Forward-only routes, since a three-cart chain can't really reverse.
+- **Tow to gate:** tow an aircraft nose-first from a remote stand to a gate, the tug ahead with an ordinary towbar (rest 0).
+- **Turnaround:** one round doing it all: deliver the bags to the aircraft, swap to the pushback tug, push it back onto the taxiway; time and stars across the whole job.
+Rejected: a separate baggage game; leaving the baggage train in the garage and Rodeo only.
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.
