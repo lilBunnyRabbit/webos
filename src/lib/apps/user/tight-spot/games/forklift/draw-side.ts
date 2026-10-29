@@ -1,6 +1,6 @@
 import { clamp } from "../../core/geometry";
-import type { Palette } from "../../core/draw";
-import { SideKind, type GameState, type SideView } from "./game";
+import { contact_rings, type Palette } from "../../core/draw";
+import { bump_flash, SideKind, type GameState, type SideView } from "./game";
 import { CLEAN, Fit, ideal_lift, judge, MAST, MISS, POCKET, reach } from "./rack";
 import { TIER_HEIGHTS, type Slot } from "./warehouse";
 
@@ -146,6 +146,7 @@ export function draw_side(ctx: CanvasRenderingContext2D, state: GameState, canva
   });
   window_bands(f, view, Math.min(mast, -1.5), -OVERHANG);
   forklift(f, mast, view.lift, view.kind === SideKind.DROP);
+  if (bump_flash(state)) contact_rings(ctx, { x: tips, y: view.lift + TINE }, 0.5 + 0.5 * Math.sin(state.ms * 0.003), scale, palette);
 
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const miss = view.lift - ideal;

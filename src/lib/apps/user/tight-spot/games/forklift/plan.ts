@@ -6,7 +6,7 @@ import {
   contact,
   depth_to,
   fork_fit,
-  JAM_SIDE,
+  FORK_ROOM,
   load_pose,
   near_of,
   offset_of,
@@ -118,7 +118,7 @@ export function plan_job(state: GameState): JobPlan | null {
     // Lined up before the tips reach the pallet, with room inside the pockets' limits, as a driver would square up.
     const facing = (pose: Placement) => {
       const off = fork_fit(pose, pallet);
-      return off.angle <= MAX_ANGLE - LINED_UP && Math.abs(off.side) <= JAM_SIDE - SIDE_ROOM && off.gap > PALLET.length && off.gap < REACH + PALLET.length;
+      return off.angle <= MAX_ANGLE - LINED_UP && Math.abs(off.side) <= FORK_ROOM - SIDE_ROOM && off.gap > PALLET.length && off.gap < REACH + PALLET.length;
     };
     let fetched: Leg | null = null;
     for (const stage of pick_stages) fetched ??= leg(at, stage, facing, (pose) => can_lift(fork_fit(pose, pallet)), empty, near, empty_in);

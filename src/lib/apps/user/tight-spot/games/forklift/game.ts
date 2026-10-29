@@ -34,19 +34,20 @@ export const Status = {
   DRIVING: "driving",
   PAUSED: "paused",
   DONE: "done",
-  CRASHED: "crashed",
 } as const;
 export type Status = (typeof Status)[keyof typeof Status];
 
 export const SIZES = [1, 2, 3, 4] as const;
 export const size_schema = z.number().int().min(1).max(4);
 
+/** The room either side of the fork spread under a pallet: both tines under it with its centre this far off at most. */
+export const FORK_ROOM = (PALLET.width - (FORKLIFT.forks?.width ?? PALLET.width)) / 2;
 /**
- * The forks count as in a pallet's pockets only with both tines under it: off its centre by at most the room either
- * side of the fork spread, and square within the 5° a lift allows. Otherwise forks overlapping a pallet jam.
+ * The forks count as in a pallet's pockets within 10° of its axis and 15 cm of its centre, more than the fork spread
+ * strictly allows: forks slide under a pallet a little off, and a game should forgive it. Past that they jam.
  */
-export const JAM_ANGLE = MAX_ANGLE;
-export const JAM_SIDE = (PALLET.width - (FORKLIFT.forks?.width ?? PALLET.width)) / 2;
+export const JAM_ANGLE = (10 * Math.PI) / 180;
+export const JAM_SIDE = 0.15;
 /** Forks fully in: the mast within this of the pallet's face. */
 export const FULL_GAP = 0.15;
 /** At an upper tier the forklift stands at the rack face, the fork tips (or the load's front) at most this short of it. */
@@ -54,6 +55,12 @@ export const STANDOFF = 1;
 /** A height miss within this goes in clean; up to `MISS` it scrapes; past that it hits. */
 export const CLEAN = 0.04;
 export const MISS = 0.1;
+/** A bump holds the forklift where it was; pressing on is the same bump until it has backed off this far. */
+export const BUMP_CLEAR = 0.3;
+/** How long the contact rings flash after a bump, ms. */
+export const BUMP_FLASH_MS = 1200;
+/** What a bump adds to the round's time, ms. */
+export const BUMP_COST_MS = 5000;
 
 export interface Round {
   mode: Mode;
@@ -86,6 +93,13 @@ export interface Hit {
   by_load: boolean;
 }
 
+export interface Bump extends Hit {
+  /** Where the forklift stood when it bumped. */
+  from: Vec;
+  /** At the rack, the fork height off the ideal that hit going in; null for any other bump. */
+  miss: number | null;
+}
+
 export interface Drop extends Precision {
   /** The worse height miss of its lift and its put-down, metres; 0 off and onto the floor. */
   miss: number;
@@ -115,8 +129,8 @@ export interface GameState {
   moves: number;
   last_drive: Gear | null;
   ms: number;
+  /** Where the last bump touched. */
   contact: Vec | null;
-  hit: Hit | null;
   loads: Load[];
   /** The task in hand: every one before it is done. */
   current: number;
@@ -125,6 +139,12 @@ export interface GameState {
   /** The rack slot the forks are still raised into after a lift or put-down there, until they're out of it. */
   raised: Slot | null;
   side: SideView | null;
+  /** The bump the forklift is still up against, until it has backed off `BUMP_CLEAR` (at the rack, or fixed the height). */
+  bumped: Bump | null;
+  /** Bumps this round, each `BUMP_COST_MS` on the clock. */
+  bumps: number;
+  /** The round's clock just after the last bump, for the flash. */
+  bump_ms: number;
 }
 
 export const SPEC: VehicleSpec = FORKLIFT;
@@ -144,12 +164,14 @@ export function create_game(round: Round): GameState {
     last_drive: null,
     ms: 0,
     contact: null,
-    hit: null,
     loads: floor.tasks.map((task) => ({ pose: task.from.home, tier: task.from.tier, miss: 0, carried: null, placed: false })),
     current: 0,
     drops: [],
     raised: null,
     side: null,
+    bumped: null,
+    bumps: 0,
+    bump_ms: 0,
   };
 }
 
@@ -362,12 +384,68 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
   const ms = state.ms + dt * 1000;
   const load = carried_pose({ car, loads: state.loads });
   const hit = contact(near_of(state.floor), resting(state.loads), car, load, state.raised, 0, spec);
-  if (!hit) return { ...state, car, ms, raised: settle_raised(state.raised, car, load, spec) };
-  return crash(state, { ...car, speed: 0 }, ms, hit);
+  if (hit && end_stop(state, hit)) return { ...state, car: { ...state.car, speed: 0 }, ms };
+  if (hit) return bump(state, ms, hit);
+  const bumped = state.bumped && Math.hypot(car.x - state.bumped.from.x, car.y - state.bumped.from.y) <= BUMP_CLEAR ? state.bumped : null;
+  return { ...state, car, ms, bumped, raised: settle_raised(state.raised, car, load, spec) };
 }
 
-export function crash(state: GameState, car: GameState["car"], ms: number, hit: Contact): GameState {
-  return { ...state, car, ms, status: Status.CRASHED, contact: hit.at, hit: { kind: hit.kind, by_load: hit.by_load } };
+/**
+ * Nothing ends a round: a contact is a bump. The step is undone (the forklift and any load stay where they were,
+ * stopped, in gear) and the first bump against something costs `BUMP_COST_MS`; pressing on is the same bump.
+ */
+export function bump(state: GameState, ms: number, hit: Contact, miss: number | null = null): GameState {
+  const car = { ...state.car, speed: 0 };
+  if (state.bumped) return { ...state, car, ms, contact: hit.at };
+  const cost = ms + BUMP_COST_MS;
+  const bumped: Bump = { kind: hit.kind, by_load: hit.by_load, from: { x: car.x, y: car.y }, miss };
+  return { ...state, car, ms: cost, contact: hit.at, bumped, bumps: state.bumps + 1, bump_ms: cost };
+}
+
+/**
+ * A pallet where the job wants the forklift to stop is an end stop, not a bump: the mast against the pallet in hand with
+ * the forks fully in its pockets, or, lined up at an upper slot's face, the forks or load at travel height against the
+ * stock on the floor under it (hidden by the pallet drawn above), where the side view opens.
+ */
+function end_stop(state: GameState, hit: Contact): boolean {
+  if (hit.kind !== SolidKind.PALLET || state.raised) return false;
+  const load = state.loads[state.current];
+  const task = state.floor.tasks[state.current];
+  if (!load || !task) return false;
+  if (load.carried) return task.to.tier > 0 && at_drop_face(state.car, load.carried, task.to);
+  const at = fork_fit(state.car, load.pose);
+  return load.tier > 0 ? at_pick_face(at) : in_pockets(at) && at.gap <= FULL_GAP;
+}
+
+/** The contact rings flash for a moment after a bump. */
+export function bump_flash(state: Pick<GameState, "bumps" | "bump_ms" | "ms" | "contact">): boolean {
+  return state.bumps > 0 && state.contact !== null && state.ms - state.bump_ms < BUMP_FLASH_MS;
+}
+
+const HIT_NAMES: Record<SolidKind, string> = {
+  car: "a car",
+  wall: "a wall",
+  pillar: "a pillar",
+  kerb: "the kerb",
+  shelf: "a shelf",
+  water: "the water",
+  post: "a post",
+  rack: "a rack",
+  pallet: "a pallet",
+  hedge: "a hedge",
+};
+
+/** What the forklift is up against and how to get off it: "Bumped a rack: back off". */
+export function bump_hint(state: Pick<GameState, "bumped" | "status">): string | null {
+  const hit = state.bumped;
+  if (!hit || state.status !== Status.DRIVING) return null;
+  if (hit.miss !== null) {
+    const what = hit.kind === JAM ? "Jammed" : hit.by_load ? "The load hit the beam" : "The forks hit the beam";
+    return `${what}: ${hit.miss > 0 ? "lower" : "raise"} the forks`;
+  }
+  if (hit.kind === JAM) return "Jammed: back out";
+  if (hit.kind === BEAM) return hit.by_load ? "The load hit the beam: back off" : "The forks hit the beam: back off";
+  return `${hit.by_load ? "The load bumped" : "Bumped"} ${HIT_NAMES[hit.kind]}: back off`;
 }
 
 export function change_gear(state: GameState, gear: Gear): GameState {
@@ -499,7 +577,7 @@ export function par_moves(pallets: number): number {
   return pallets * 5 - 2;
 }
 
-/** One for the job done, one for the moves at or under par, one for the time at or under the planner's par time. */
+/** One for the job done, one for the moves at or under par, one for the time (bumps included) at or under the planner's par time. */
 export function stars(state: Pick<GameState, "moves" | "ms" | "status" | "round">, par_ms: number | null): 0 | 1 | 2 | 3 {
   if (state.status !== Status.DONE) return 0;
   const moves = state.moves <= par_moves(state.round.size) ? 1 : 0;
@@ -587,26 +665,6 @@ export const DAILY_SIZE = 3;
 
 export function daily_round(day: string, seed: number): Round {
   return { mode: Mode.JOBS, seed, size: DAILY_SIZE, difficulty: ((hash(seed, 7) % 1000) / 1000) * 0.5 + 0.3, daily: day };
-}
-
-const HIT_NAMES: Record<SolidKind, string> = {
-  car: "a car",
-  wall: "a wall",
-  pillar: "a pillar",
-  kerb: "the kerb",
-  shelf: "a shelf",
-  water: "the water",
-  post: "a post",
-  rack: "a rack",
-  pallet: "a pallet",
-  hedge: "a hedge",
-};
-
-export function crash_title(hit: Hit | null): string {
-  if (!hit) return "Touched something";
-  if (hit.kind === JAM) return "Jammed the forks into a pallet";
-  if (hit.kind === BEAM) return hit.by_load ? "The load hit a rack beam" : "The forks hit a rack beam";
-  return hit.by_load ? `The load touched ${HIT_NAMES[hit.kind]}` : `Touched ${HIT_NAMES[hit.kind]}`;
 }
 
 export function round_title(round: Round): string {

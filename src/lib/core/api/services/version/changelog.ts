@@ -17,6 +17,11 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["tight-spot"],
+        text: "The Warehouse never ends a round on a bump: you back off and it costs time, and lining the forks up with a pallet is more forgiving.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
         text: "Drive Hub's yard is now a street with a building for every game, and it grows longer as new games arrive.",
       },
       {

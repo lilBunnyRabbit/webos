@@ -18,7 +18,7 @@ import {
 import type { Polygon, Pose, Vec } from "../../core/geometry";
 import { SolidKind } from "../../core/scene";
 import { Gear, Vehicle } from "../../core/vehicle";
-import { carried_pose, fork_depth, objective, SPEC, Status, type GameState } from "./game";
+import { bump_flash, carried_pose, fork_depth, objective, SPEC, Status, type GameState } from "./game";
 import { PALLET, pallet_shape, SlotKind, type Slot } from "./warehouse";
 
 // An upper tier's pallet is drawn shifted up and left per tier, so a bay's stack reads from above.
@@ -285,7 +285,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     ctx.globalAlpha = 1;
   }
 
-  if (state.status === Status.CRASHED && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
+  if (bump_flash(state) && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
 
   const items: Tag[] = [];
   const badge = Math.max(11, Math.min(15, scale * 0.6));

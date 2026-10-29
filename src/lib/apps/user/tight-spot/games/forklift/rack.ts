@@ -3,11 +3,12 @@ import type { Placement } from "../../core/vehicle";
 import {
   along,
   BEAM,
+  bump,
+  BUMP_CLEAR,
   can_lift,
   carried_pose,
   CLEAN,
   contact,
-  crash,
   depth_to,
   fork_action,
   fork_fit,
@@ -91,7 +92,8 @@ function face_point(state: GameState, view: SideView): Vec {
 /**
  * One step at the rack. The forks go up or down at a fixed rate while they're out, and are held while they're in; the
  * forklift creeps straight in or out, no further back than where the view opened and no further in than fully in. The
- * moment the tips (or the load) pass the face the height is judged: more than `MISS` off hits the pallet or the beam.
+ * moment the tips (or the load) pass the face the height is judged: more than `MISS` off hits the pallet or the beam, a
+ * bump that stops the forks short of the face until the height is fixed.
  */
 export function step_side(state: GameState, controls: SideControls, dt: number): GameState {
   const view = state.side;
@@ -113,13 +115,20 @@ export function step_side(state: GameState, controls: SideControls, dt: number):
     const miss = lift - ideal_lift(view);
     if (judge(miss) === Fit.HIT) {
       const kind = view.kind === SideKind.PICK && miss > 0 ? JAM : BEAM;
-      return crash(moved, car, ms, { kind, at: face_point(state, view), by_load: view.kind === SideKind.DROP });
+      return bump(state, ms, { kind, at: face_point(state, view), by_load: view.kind === SideKind.DROP }, miss);
     }
     side = { ...side, miss };
   } else if (after <= 0) side = { ...side, miss: null };
   const hit = contact(near_of(state.floor), resting(state.loads), car, carried_pose(moved), view.slot, 0, SPEC);
-  if (hit) return crash(moved, car, ms, hit);
-  return { ...moved, side };
+  if (hit) return bump(state, ms, hit);
+  return { ...moved, side, bumped: cleared(state.bumped, view, car, lift) };
+}
+
+/** At the rack a bump clears once the forklift backs off `BUMP_CLEAR`, or, for a height bump, the forks are at a height that goes in. */
+function cleared(bumped: GameState["bumped"], view: SideView, car: Placement, lift: number): GameState["bumped"] {
+  if (!bumped) return null;
+  if (bumped.miss !== null && judge(lift - ideal_lift(view)) !== Fit.HIT) return null;
+  return Math.hypot(car.x - bumped.from.x, car.y - bumped.from.y) > BUMP_CLEAR ? null : bumped;
 }
 
 export function side_action(state: GameState): ForkAction | null {

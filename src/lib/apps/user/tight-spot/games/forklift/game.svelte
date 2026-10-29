@@ -38,8 +38,9 @@
   import {
     advance,
     average_precision,
+    BUMP_COST_MS,
+    bump_hint,
     change_gear,
-    crash_title,
     create_game,
     daily_round,
     data_schema,
@@ -134,14 +135,15 @@
   const lock = $derived(max_steer(SPEC));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
-  const over = $derived(game.status === Status.DONE || game.status === Status.CRASHED);
+  const over = $derived(game.status === Status.DONE);
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(data.value.bests[round_key(game.round)]);
   const action = $derived(game.side ? side_action(game) : fork_action(game));
   const side = $derived(game.side);
   const side_in = $derived(side ? reach(game, side) > 0 : false);
-  const hint = $derived(fork_hint(game));
+  const bump_text = $derived(bump_hint(game));
+  const hint = $derived(bump_text ?? fork_hint(game));
   const depth = $derived(fork_depth(game));
   const line = $derived(task_line(game));
   const earned = $derived(stars(game, par?.ms ?? null));
@@ -185,6 +187,10 @@
 
   function moves_text(count: number): string {
     return `${count} ${count === 1 ? "move" : "moves"}`;
+  }
+
+  function bumps_text(count: number): string {
+    return `${count} ${count === 1 ? "bump" : "bumps"}`;
   }
 
   function make_round(): Round {
@@ -378,14 +384,9 @@
     input.follow(next.car.steer / lock);
     sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02);
     if (next === game) return;
-    const before = game.status;
+    const bumps = game.bumps;
     game = next;
-    if (before === Status.DRIVING && next.status === Status.CRASHED) crashed();
-  }
-
-  function crashed() {
-    release_all();
-    sounds.crash();
+    if (next.bumps > bumps) sounds.crash();
   }
 
   function finish(state: GameState) {
@@ -498,7 +499,6 @@
 
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
-    else if (game.status === Status.CRASHED) retry();
     else if (game.status === Status.DONE) {
       if (game.round.daily) retry();
       else if (game.round.level === undefined) new_job();
@@ -737,6 +737,7 @@
       <canvas bind:this={side_canvas} class="absolute inset-0 block size-full"></canvas>
     </div>
     <div class="flex flex-wrap items-center gap-2 border-t border-foreground/10 p-2">
+      {#if bump_text}<p class="basis-full text-ui text-warning" aria-live="polite">{bump_text}</p>{/if}
       <div class="flex gap-1.5" role="group" aria-label="Forks">
         {@render side_button("down", "Lower the forks (↓)", CaretDownIcon)}
         {@render side_button("up", "Raise the forks (↑)", CaretUpIcon)}
@@ -798,7 +799,7 @@
   {#if side && (game.status === Status.DRIVING || game.status === Status.PAUSED)}
     {@render side_view(side)}
   {/if}
-  {#if hint && game.status === Status.DRIVING}
+  {#if hint && game.status === Status.DRIVING && !side}
     <p class="pointer-events-none absolute inset-x-0 bottom-2 mx-auto w-fit animate-pop-in rounded-md bg-background/85 px-2 py-1 text-ui text-warning backdrop-blur-[2px]" aria-live="polite">
       {hint}
     </p>
@@ -817,6 +818,7 @@
           {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
         <p class="text-ui text-foreground/80">Take each pallet to its target, in order; ↑1 and ↑2 are upper shelves.</p>
+        <p class="text-2xs text-foreground/65">A bump stops you: back off and carry on. Each one adds {BUMP_COST_MS / 1000} s.</p>
         <ol class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-2xs text-foreground/80 tabular-nums">
           {#each game.floor.tasks as task, i (i)}
             <li><span class="text-primary">{i + 1}</span> {slot_label(task.from)} → {slot_label(task.to)}</li>
@@ -863,6 +865,9 @@
             Precision {precision_percent}%{#if game.drops.length > 1}<span class="text-foreground/65"> · {game.drops.map((drop) => Math.round(drop.score)).join(" · ")}</span>{/if}
           </p>
         {/if}
+        {#if game.bumps > 0}
+          <p class="font-mono text-2xs text-warning tabular-nums">{bumps_text(game.bumps)}, +{(game.bumps * BUMP_COST_MS) / 1000} s on the time</p>
+        {/if}
         {#if !par && !par_failed}<p class="text-2xs text-foreground/65">Working out the par…</p>{/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
@@ -880,20 +885,6 @@
         <KeyHint key_name="R" text="again" />
       </p>
     </RoundCard>
-  {:else if game.status === Status.CRASHED}
-    <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
-      <div class="min-w-0 flex-1 basis-52">
-        <p class="text-base font-semibold">{crash_title(game.hit)}</p>
-        <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · {moves_text(game.moves)} · {game.current} of {game.floor.tasks.length} put down</p>
-      </div>
-      <div class="ml-auto flex shrink-0 gap-2">
-        {#if game.round.level === undefined && !game.round.daily}<Button variant="quiet" onclick={new_job}>New job</Button>{/if}
-        <Button variant="primary" onclick={retry}>Try again</Button>
-      </div>
-      <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="tries again" />
-      </p>
-    </RoundCard>
   {/if}
 {/snippet}
 
@@ -901,6 +892,7 @@
   <span>{round_title(game.round)}</span>
   <span class="tabular-nums">{time}</span>
   <span class="tabular-nums">Moves {game.moves}</span>
+  {#if game.bumps > 0}<span class="tabular-nums">Bumps {game.bumps}</span>{/if}
   <span class="tabular-nums pointer-coarse:hidden">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 2 ? " R" : wheel_degrees < -2 ? " L" : ""}</span>
   {#if par_time}<span class="hidden tabular-nums @lg:inline">Par {par_time}</span>{/if}
   <span class="hidden @5xl:inline">F or Space lifts and lowers · Esc pauses · C centres the wheel · + − zoom</span>

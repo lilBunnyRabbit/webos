@@ -108,6 +108,7 @@ Rejected: a separate baggage game; leaving the baggage train in the garage and R
 4. [x] After 1 merges: Valet Rush. [x] After 2 merges: Pushback.
 5. Each game: review, visual pass, then pushed in groups.
 6. [x] Review round: Parking and Forklift saved data moved to `parking.json` and `forklift.json` in the app data folder, old keys folded in and removed.
+7. [x] Forklift: every contact a bump (5 s, never a fail), forgiving pockets (10°, 15 cm), the face stop on the floor stock under an upper slot.
 
 ## Next session topics
 - The boat: where a dynamic (non-kinematic) model lives, shared with F1's later slip model.

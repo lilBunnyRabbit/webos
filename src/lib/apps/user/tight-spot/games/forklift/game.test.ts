@@ -5,7 +5,10 @@ import {
   advance,
   can_lift,
   change_gear,
-  crash_title,
+  BUMP_CLEAR,
+  BUMP_COST_MS,
+  bump_flash,
+  bump_hint,
   create_game,
   FULL_GAP,
   fork_action,
@@ -13,7 +16,7 @@ import {
   fork_hint,
   in_pockets,
   ForkAction,
-  JAM,
+  FORK_ROOM,
   JAM_SIDE,
   level_round,
   LEVEL_COUNT,
@@ -57,21 +60,22 @@ function driving(state: GameState, pose: Placement): GameState {
 describe("forks", () => {
   const pallet = { x: 10, y: 5, heading: -Math.PI / 2 };
 
-  test("fully in and square lifts; short of the face, or more than 5° off, doesn't", () => {
+  test("fully in and square lifts; short of the face, or more than 10° off, doesn't", () => {
     expect(can_lift(fork_fit(at_pallet(pallet), pallet))).toBe(true);
     expect(fork_fit(at_pallet(pallet), pallet).gap).toBeCloseTo(0.05, 9);
     expect(can_lift(fork_fit(at_pallet(pallet, FULL_GAP + 0.05), pallet))).toBe(false);
-    expect(can_lift(fork_fit(at_pallet(pallet, 0.05, 0, 4 * DEG), pallet))).toBe(true);
-    expect(can_lift(fork_fit(at_pallet(pallet, 0.05, 0, 6 * DEG), pallet))).toBe(false);
+    expect(can_lift(fork_fit(at_pallet(pallet, 0.05, 0, 9 * DEG), pallet))).toBe(true);
+    expect(can_lift(fork_fit(at_pallet(pallet, 0.05, 0, 11 * DEG), pallet))).toBe(false);
   });
 
-  test("the pockets take both tines under the pallet: 7 cm either side of centre at most, square within 5°", () => {
-    expect(JAM_SIDE).toBeCloseTo(0.07, 9);
-    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0.06), pallet))).toBe(true);
-    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0.08), pallet))).toBe(false);
-    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, -0.08), pallet))).toBe(false);
-    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0, 4.5 * DEG), pallet))).toBe(true);
-    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0, 6 * DEG), pallet))).toBe(false);
+  test("the pockets forgive more than the fork spread: 15 cm either side of centre, 10° off square", () => {
+    expect(FORK_ROOM).toBeCloseTo(0.07, 9);
+    expect(JAM_SIDE).toBe(0.15);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0.14), pallet))).toBe(true);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0.16), pallet))).toBe(false);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, -0.16), pallet))).toBe(false);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0, 9.5 * DEG), pallet))).toBe(true);
+    expect(in_pockets(fork_fit(at_pallet(pallet, 0.3, 0, 11 * DEG), pallet))).toBe(false);
   });
 
   test("a carried pallet keeps the offset it was picked up with", () => {
@@ -119,25 +123,58 @@ describe("a job", () => {
     const moving = { ...driving(start, at_pallet(task.from.home)), car: { ...driving(start, at_pallet(task.from.home)).car, speed: 0.4 } };
     expect(fork_action(moving)).toBeNull();
     expect(fork_hint(driving(start, at_pallet(task.from.home, 0.6)))).toBe("Drive the forks fully in");
-    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0, 6.5 * DEG)))).toBe("Line up: 6.5° off");
-    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0.1)))).toBe("Line up: pallet 10 cm to the left");
-    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, -0.1)))).toBe("Line up: pallet 10 cm to the right");
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0, 12.5 * DEG)))).toBe("Line up: 12.5° off");
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0.2)))).toBe("Line up: pallet 20 cm to the left");
+    expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, -0.2)))).toBe("Line up: pallet 20 cm to the right");
     expect(fork_hint(driving(start, at_pallet(task.from.home, 1.4, 0.03)))).toBe("Drive the forks fully in");
   });
 
-  test("forks off the pockets jam; the body touching a pallet is a contact", () => {
+  const push = (state: GameState, steps: number, until: (next: GameState) => boolean = () => false): GameState => {
+    let next = state;
+    for (let i = 0; i < steps && !until(next); i++) next = advance(next, { steer: 0, throttle: 1, brake: 0 }, 1 / 60);
+    return next;
+  };
+
+  test("forks off the pockets jam: a bump, the forklift stops where it was, pressing on is one bump", () => {
     const pallet = task.from.home;
-    const jammed = driving(start, at_pallet(pallet, 0.3, 0, 12 * DEG));
-    const after = advance(jammed, { steer: 0, throttle: 0, brake: 0 }, 1 / 120);
-    expect(after.status).toBe(Status.CRASHED);
-    expect(after.hit?.kind).toBe(JAM);
-    expect(crash_title(after.hit)).toBe("Jammed the forks into a pallet");
-    const beside = advance(driving(start, at_pallet(pallet, 0.3, 0.1)), { steer: 0, throttle: 0, brake: 0 }, 1 / 120);
-    expect(beside.hit?.kind).toBe(JAM);
+    const crooked = driving(start, at_pallet(pallet, PALLET.length + 0.15, 0, 12 * DEG));
+    const jammed = push(crooked, 600, (next) => next.bumps > 0);
+    expect(jammed.status).toBe(Status.DRIVING);
+    expect(jammed.car.speed).toBe(0);
+    expect(jammed.car.gear).toBe(Gear.DRIVE);
+    expect(bump_hint(jammed)).toBe("Jammed: back out");
+    expect(bump_flash(jammed)).toBe(true);
+    const held = push(jammed, 120);
+    expect(held.bumps).toBe(1);
+    expect(held.car.x).toBeCloseTo(jammed.car.x, 2);
+    expect(held.car.y).toBeCloseTo(jammed.car.y, 2);
+    expect(bump_flash(held)).toBe(false);
+    let out = change_gear(held, Gear.REVERSE);
+    out = push(out, 600, (next) => next.bumped === null);
+    expect(out.status).toBe(Status.DRIVING);
+    expect(Math.hypot(out.car.x - jammed.car.x, out.car.y - jammed.car.y)).toBeGreaterThan(BUMP_CLEAR);
+    expect(bump_hint(out)).toBeNull();
+    const again = push(change_gear(out, Gear.DRIVE), 600, (next) => next.bumps > 1);
+    expect(again.bumps).toBe(2);
+  });
+
+  test("forks fully in, the mast meeting the pallet is an end stop, not a bump", () => {
+    const stopped = push(driving(start, at_pallet(task.from.home, 0.4)), 600, (next) => next.car.speed === 0 && next.ms > 100);
+    expect(stopped.bumps).toBe(0);
+    expect(fork_action(stopped)).toBe(ForkAction.LIFT);
+  });
+
+  test("each bump adds 5 s to the time; the body against a rack is a bump too, and names it", () => {
+    const pallet = task.from.home;
     const clean = advance(driving(start, at_pallet(pallet, 0.3)), { steer: 0, throttle: 0, brake: 0 }, 1 / 120);
-    expect(clean.status).toBe(Status.DRIVING);
-    const rammed = advance(driving(start, at_pallet(pallet, -0.1)), { steer: 0, throttle: 0, brake: 0 }, 1 / 120);
-    expect(rammed.hit).toEqual({ kind: "pallet", by_load: false });
+    expect(clean.bumps).toBe(0);
+    const before = driving(start, at_pallet(pallet, PALLET.length + 0.15, 0.2));
+    const beside = push(before, 600, (next) => next.bumps > 0);
+    expect(beside.bumps).toBe(1);
+    const rammed = advance(driving(start, at_pallet(pallet, -0.1, 0.3)), { steer: 0, throttle: 0, brake: 0 }, 1 / 120);
+    expect(rammed.status).toBe(Status.DRIVING);
+    expect(rammed.ms).toBeCloseTo(1000 / 120 + BUMP_COST_MS, 6);
+    expect(bump_hint(rammed)).toBe("Bumped a rack: back off");
   });
 
   test("moves count changes between D and R, the first gear not counted", () => {
@@ -200,12 +237,36 @@ describe("an upper tier", () => {
     }
   });
 
-  test("more than 10 cm off hits: too low the beam, too high the pallet", () => {
+  test("more than 10 cm off bumps the beam or the pallet: the forks stop short until the height is fixed", () => {
     const low = drive_in(with_lift(ideal_lift(view) - 0.12));
-    expect(low.status).toBe(Status.CRASHED);
-    expect(crash_title(low.hit)).toBe("The forks hit a rack beam");
+    expect(low.status).toBe(Status.DRIVING);
+    expect(low.bumps).toBe(1);
+    expect(reach(low, low.side!)).toBeLessThanOrEqual(0);
+    expect(bump_hint(low)).toBe("The forks hit the beam: raise the forks");
     const high = drive_in(with_lift(ideal_lift(view) + 0.12));
-    expect(high.hit?.kind).toBe(JAM);
+    expect(high.bumps).toBe(1);
+    expect(bump_hint(high)).toBe("Jammed: lower the forks");
+    const lowered = step_side(high, { lift: -1, drive: 0 }, 0.1);
+    expect(lowered.bumped).toBeNull();
+    const ready = drive_in(lowered);
+    expect(ready.bumps).toBe(1);
+    expect(side_action(ready)).toBe(ForkAction.LIFT);
+  });
+
+  test("at the face, travel-height forks meeting the floor stock under the pallet stop without a bump", () => {
+    const game = create_game(level_round(7));
+    const i = game.floor.tasks.findIndex((each) => each.from.tier > 0 && game.floor.stock.some((slot) => slot.tier === 0 && slot.name === each.from.name));
+    const upper = game.floor.tasks[i];
+    let state: GameState = { ...driving(game, at_pallet(upper.from.home, PALLET.length + 0.3)), current: i };
+    for (let step = 0; step < 600; step++) {
+      const next = advance(state, { steer: 0, throttle: 0.3, brake: 0 }, 1 / 60);
+      const stopped = next.car.speed === 0 && state.car.speed > 0;
+      state = next;
+      if (stopped) break;
+    }
+    expect(fork_fit(state.car, upper.from.home).gap).toBeLessThan(PALLET.length + 0.05);
+    expect(state.bumps).toBe(0);
+    expect(fork_action(state)).toBe(ForkAction.RACK);
   });
 
   test("back out of the view only with the forks out", () => {
@@ -232,7 +293,7 @@ describe("scoring", () => {
     expect(stars({ ...done, moves: par_moves(2) + 1 }, 60_000)).toBe(2);
     expect(stars({ ...done, moves: par_moves(2) + 1 }, 50_000)).toBe(1);
     expect(stars({ ...done, moves: 0 }, null)).toBe(2);
-    expect(stars({ ...done, status: Status.CRASHED, moves: 0 }, 60_000)).toBe(0);
+    expect(stars({ ...done, status: Status.DRIVING, moves: 0 }, 60_000)).toBe(0);
   });
 
   test("a best is more stars, then quicker; precision only rises", () => {
