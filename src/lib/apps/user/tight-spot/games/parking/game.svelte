@@ -30,13 +30,13 @@
     advance,
     ANY,
     best_of,
-    bests_schema,
     change_gear,
     crash_title,
     create_game,
+    data_schema,
+    EMPTY_DATA,
     LEVEL_COUNT,
     level_round,
-    levels_schema,
     Mode,
     mode_schema,
     open_round,
@@ -58,13 +58,12 @@
     verdict,
     vehicle_pick_schema,
     vehicles_for,
-    type Bests,
     type GameState,
-    type LevelStars,
     type Round,
     type ScenarioPick,
     type VehiclePick,
   } from "./game";
+  import { adopt_legacy } from "./legacy";
   import { SCENARIOS, Scenario } from "./world";
 
   const MODE_LABELS: Record<Mode, string> = { scenario: "Spots", levels: "Levels", open: "Open lot" };
@@ -79,9 +78,7 @@
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
-  const bests = storage.persisted<Bests>("parking.best", {}, bests_schema);
-  const level_stars = storage.persisted<LevelStars>("parking.levels", {}, levels_schema);
-  const kinds = storage.persisted<string[]>("parking.kinds", [], z.array(z.string()));
+  const data = storage.file("parking.json", EMPTY_DATA, data_schema);
   const input = new DriveInput();
 
   // Per window, so two open games don't change each other's mode; storage only remembers the last pick.
@@ -89,7 +86,7 @@
   let mode = $state<Mode>(daily_day ? Mode.SCENARIO : (storage.get("parking.mode", mode_schema) ?? Mode.SCENARIO));
   let pick = $state<ScenarioPick>(storage.get("parking.pick", pick_schema) ?? ANY);
   let vehicle_pick = $state<VehiclePick>(storage.get("parking.vehicle", vehicle_pick_schema) ?? ANY);
-  let level = $state(Math.min(untrack(() => unlocked(level_stars.value)), storage.get("parking.level", z.number().int().min(1)) ?? 1));
+  let level = $state(Math.min(LEVEL_COUNT, storage.get("parking.level", z.number().int().min(1)) ?? 1));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let new_best = $state(false);
@@ -120,7 +117,7 @@
   const over = $derived(game.status === Status.PARKED || game.status === Status.CRASHED);
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
-  const best = $derived(best_of(bests.value, game.round));
+  const best = $derived(best_of(data.value.bests, game.round));
   // A kind with one vehicle shows it, fixed; Any spot shows Any, fixed. The open lot has no Any: it was always the hatchback.
   const vehicle_options = $derived.by(() => {
     const allowed = allowed_vehicles().map((value) => ({ value: value as VehiclePick, label: VEHICLE_NAMES[value] }));
@@ -130,12 +127,12 @@
   const fit = $derived(game.status === Status.PARKED && game.bay ? precision(game.car, game.bay, spec) : null);
   const fit_percent = $derived(fit ? Math.round(fit.score) : 0);
   const round_par = $derived(par(game.round));
-  const level_best = $derived(game.round.level !== undefined ? (level_stars.value[game.round.level] ?? 0) : 0);
-  const max_level = $derived(unlocked(level_stars.value));
+  const level_best = $derived(game.round.level !== undefined ? (data.value.levels[game.round.level] ?? 0) : 0);
+  const max_level = $derived(unlocked(data.value.levels));
   const level_options = $derived(
     Array.from({ length: max_level }, (_, i) => {
       const round = level_round(i + 1);
-      const got = level_stars.value[i + 1] ?? 0;
+      const got = data.value.levels[i + 1] ?? 0;
       return { value: String(i + 1), label: `${i + 1} · ${SCENARIO_INFO[round.scenario!].name}${round.vehicle === Vehicle.HATCH ? "" : ` · ${VEHICLE_NAMES[round.vehicle]}`}${got ? ` ${"★".repeat(got)}` : ""}` };
     })
   );
@@ -174,6 +171,20 @@
     if (mode === Mode.OPEN) return open_round(random_seed(), chosen_vehicle());
     return scenario_round(pick, random_seed(), undefined, chosen_vehicle());
   }
+
+  $effect(() => {
+    if (data.ready) untrack(() => adopt_legacy(storage, data));
+  });
+
+  // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
+  $effect(() => {
+    if (!data.ready || level <= max_level) return;
+    untrack(() => {
+      level = max_level;
+      storage.set("parking.level", level);
+      if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
+    });
+  });
 
   $effect(() => {
     if (!blocked) return;
@@ -308,8 +319,8 @@
     release_all();
     const percent = state.bay ? Math.round(precision(state.car, state.bay, spec_of(state.round)).score) : undefined;
     const result = { moves: state.moves, ms: Math.round(state.ms), precision: percent };
-    const recorded = record_best(bests.value, state.round, result);
-    bests.value = recorded.bests;
+    const recorded = record_best(data.value.bests, state.round, result);
+    data.value.bests = recorded.bests;
     new_best = recorded.improved;
     first_park = recorded.first;
     sounds.parked(new_best && !first_park);
@@ -319,8 +330,8 @@
     const scenario = state.round.scenario;
     if (scenario === null) achievements.achieve("open-lot");
     else {
-      if (!kinds.value.includes(scenario)) kinds.value = [...kinds.value, scenario];
-      achievements.progress("every-spot", kinds.value.length);
+      if (!data.value.kinds.includes(scenario)) data.value.kinds = [...data.value.kinds, scenario];
+      achievements.progress("every-spot", data.value.kinds.length);
       if (scenario === Scenario.PARALLEL) {
         achievements.achieve("kerbside");
         if (state.moves <= 1) achievements.achieve("one-sweep");
@@ -328,8 +339,8 @@
     }
     if (state.round.level !== undefined) {
       const at = state.round.level;
-      level_stars.value[at] = Math.max(level_stars.value[at] ?? 0, earned);
-      achievements.progress("licensed", Object.keys(level_stars.value).length);
+      data.value.levels[at] = Math.max(data.value.levels[at] ?? 0, earned);
+      achievements.progress("licensed", Object.keys(data.value.levels).length);
     }
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, result.moves, "parking");

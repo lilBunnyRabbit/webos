@@ -37,11 +37,12 @@
   import {
     advance,
     average_precision,
-    bests_schema,
     change_gear,
     crash_title,
     create_game,
     daily_round,
+    data_schema,
+    EMPTY_DATA,
     fork_action,
     fork_depth,
     fork_hint,
@@ -49,7 +50,6 @@
     job_round,
     LEVEL_COUNT,
     level_round,
-    levels_schema,
     Mode,
     mode_schema,
     par_moves,
@@ -67,14 +67,13 @@
     unlocked,
     use_fork,
     SideKind,
-    type Bests,
     type GameState,
-    type LevelStars,
     type Par,
     type Recorded,
     type Round,
     type SideView,
   } from "./game";
+  import { adopt_legacy } from "./legacy";
   import { work_out_par, type ParJob } from "./par";
   import { slot_label } from "./warehouse";
 
@@ -90,14 +89,13 @@
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
-  const bests = storage.persisted<Bests>("forklift.best", {}, bests_schema);
-  const level_stars = storage.persisted<LevelStars>("forklift.levels", {}, levels_schema);
+  const data = storage.file("forklift.json", EMPTY_DATA, data_schema);
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
   let mode = $state<Mode>(storage.get("forklift.mode", mode_schema) ?? Mode.JOBS);
   let size = $state(storage.get("forklift.size", size_schema) ?? 2);
-  let level = $state(Math.min(untrack(() => unlocked(level_stars.value)), storage.get("forklift.level", z.number().int().min(1)) ?? 1));
+  let level = $state(Math.min(LEVEL_COUNT, storage.get("forklift.level", z.number().int().min(1)) ?? 1));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let par = $state.raw<Par | null>(null);
@@ -137,7 +135,7 @@
   const over = $derived(game.status === Status.DONE || game.status === Status.CRASHED);
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
-  const best = $derived(bests.value[round_key(game.round)]);
+  const best = $derived(data.value.bests[round_key(game.round)]);
   const action = $derived(game.side ? side_action(game) : fork_action(game));
   const side = $derived(game.side);
   const side_in = $derived(side ? reach(game, side) > 0 : false);
@@ -148,12 +146,12 @@
   const precision = $derived(average_precision(game.drops));
   const precision_percent = $derived(precision === null ? null : Math.round(precision));
   const perfect = $derived(precision_percent !== null && precision_percent >= PERFECT);
-  const max_level = $derived(unlocked(level_stars.value));
-  const level_best = $derived(game.round.level !== undefined ? (level_stars.value[game.round.level] ?? 0) : 0);
+  const max_level = $derived(unlocked(data.value.levels));
+  const level_best = $derived(game.round.level !== undefined ? (data.value.levels[game.round.level] ?? 0) : 0);
   const level_options = $derived(
     Array.from({ length: max_level }, (_, i) => {
       const round = level_round(i + 1);
-      const got = level_stars.value[i + 1] ?? 0;
+      const got = data.value.levels[i + 1] ?? 0;
       return { value: String(i + 1), label: `${i + 1} · ${round.size} ${round.size === 1 ? "pallet" : "pallets"}${got ? ` ${"★".repeat(got)}` : ""}` };
     })
   );
@@ -197,6 +195,20 @@
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }
+
+  $effect(() => {
+    if (data.ready) untrack(() => adopt_legacy(storage, data));
+  });
+
+  // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
+  $effect(() => {
+    if (!data.ready || level <= max_level) return;
+    untrack(() => {
+      level = max_level;
+      storage.set("forklift.level", level);
+      if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
+    });
+  });
 
   // The par comes from the planner in a worker; the round can start, and finish, before it's known.
   $effect(() => {
@@ -390,8 +402,8 @@
   function record(state: GameState, score: number): Recorded & { stars: number } {
     const precision = average_precision(state.drops);
     const result = { stars: score, ms: Math.round(state.ms), ...(precision === null ? {} : { precision: Math.round(precision) }) };
-    const done = record_best(bests.value, state.round, result);
-    bests.value = done.bests;
+    const done = record_best(data.value.bests, state.round, result);
+    data.value.bests = done.bests;
     const pallets = state.round.size;
     achievements.achieve("forklift-first");
     if (pallets >= 4) achievements.achieve("forklift-full-load");
@@ -399,8 +411,8 @@
     if (pallets >= 3 && state.drops.every((drop) => Math.round(drop.score) >= PERFECT)) achievements.achieve("forklift-spotless");
     if (state.round.level !== undefined) {
       const at = state.round.level;
-      level_stars.value[at] = Math.max(level_stars.value[at] ?? 0, score);
-      achievements.progress("forklift-levels", Object.keys(level_stars.value).length);
+      data.value.levels[at] = Math.max(data.value.levels[at] ?? 0, score);
+      achievements.progress("forklift-levels", Object.keys(data.value.levels).length);
     }
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, 3 - score, DAILY_MODE);

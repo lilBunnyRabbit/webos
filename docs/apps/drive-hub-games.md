@@ -26,7 +26,7 @@ export default define_game({
 });
 ```
 
-The component takes `GameProps`: `settings` (the shared `DriveSettings`, owned per window by the shell), `daily` (the day of the daily the app was opened with, given only to the game it names), `menu` (the Games switcher snippet: render it first in the toolbar), `play` (the window's Game Hub tracker) and `onexit` (back to the yard). It keeps all its own state; nothing is shared through a context. It stores under `app.tight-spot.{id}.*` (`storage.persisted("forklift.best", …)`), never at the top level, which holds the shared settings.
+The component takes `GameProps`: `settings` (the shared `DriveSettings`, owned per window by the shell), `daily` (the day of the daily the app was opened with, given only to the game it names), `menu` (the Games switcher snippet: render it first in the toolbar), `play` (the window's Game Hub tracker) and `onexit` (back to the yard). It keeps all its own state; nothing is shared through a context. Bests, levels and ghosts go in a file in the app data folder (`storage.file("{id}.json", …)`, ADR-035); only last choices go under `app.tight-spot.{id}.*` localStorage, never at the top level, which holds the shared settings.
 
 The shell lazy-loads the component the first time it's entered, shows the game's toolbar over "Opening …" meanwhile, and returns to the yard with an error toast if the chunk fails.
 

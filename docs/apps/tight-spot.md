@@ -648,12 +648,16 @@ The core's hybrid A* didn't find a push in 120 000 expansions (two minutes): the
 
 - `f1/ghost-meadow.json`, `f1/ghost-harbour.json`, `f1/ghost-ridge.json` in `/var/lib/apps/tight-spot/`: Hot Lap's best lap per track and its ghost (`{ ms, splits: [s1, s2], frames: [x cm, y cm, heading mrad, …] }` at 10 Hz).
 - `app.tight-spot.f1.track`: the last track picked.
-- `app.tight-spot.parking.best`: best `{ moves, ms, precision? }` per kind and vehicle, keyed `kind:vehicle` (`open:vehicle` for the open lot), fewer moves first, then time (`record_best`). `precision` is the best seen on that key, whichever run set it, so it can come from a slower park. The start card shows the best and its precision.
-- `app.tight-spot.parking.levels`: stars per parked level; the next level after the highest parked one is open. The ladder grew from 27 to 42 levels (three laps of the nine car kinds, then bus stop, end bay, driveway, depot and slipway); car levels kept their kind, difficulty and seed, so levels 1–9 kept their numbers and old 10–27 moved to 15–23 and 29–37, which left their stored stars on other levels. The camping pitch then closed each lap (levels 15, 30 and 45), so lap 2 and 3 moved up by one and two the same way, and the loading dock after it (levels 16, 32 and 48), which moved them again: 48 levels.
-- `app.tight-spot.parking.kinds`: kinds parked, for the achievement.
+- `/var/lib/apps/tight-spot/parking.json` (the app data folder, ADR-035): Parking's `{ bests, levels, kinds }`, shared by every window of the app.
+  - `bests`: best `{ moves, ms, precision? }` per kind and vehicle, keyed `kind:vehicle` (`open:vehicle` for the open lot), fewer moves first, then time (`record_best`). `precision` is the best seen on that key, whichever run set it, so it can come from a slower park. The start card shows the best and its precision.
+  - `levels`: stars per parked level; the next level after the highest parked one is open. The ladder grew from 27 to 42 levels (three laps of the nine car kinds, then bus stop, end bay, driveway, depot and slipway); car levels kept their kind, difficulty and seed, so levels 1–9 kept their numbers and old 10–27 moved to 15–23 and 29–37, which left their stored stars on other levels. The camping pitch then closed each lap (levels 15, 30 and 45), so lap 2 and 3 moved up by one and two the same way, and the loading dock after it (levels 16, 32 and 48), which moved them again: 48 levels.
+  - `kinds`: kinds parked, for the achievement.
+  - Until 3.88 these lived in `app.tight-spot.parking.best`, `.levels` and `.kinds`. Once the file is read, those keys are folded in (`adopt_legacy` in `games/parking/legacy.ts`: the file wins on a key both hold, level stars take the higher, kinds the union) and removed, so a second window or tab finds nothing left. The saved `.level` waits for the file: it's clamped to what's open only after the read, like Ferry Loader's.
 - `app.tight-spot.parking.mode`, `.pick`, `.vehicle`, `.level`: last choices (`.vehicle` is `any` or a vehicle id).
-- `app.tight-spot.forklift.best`: best `{ stars, ms, precision? }` per `level:N`, `jobs:N` (pallets) and `daily:YYYY-MM-DD`, more stars first, then time; precision is the best average seen there.
-- `app.tight-spot.forklift.levels`: stars per finished level; the next one after the highest is open.
+- `/var/lib/apps/tight-spot/forklift.json` (the app data folder, ADR-035): the Warehouse's `{ bests, levels }`, shared by every window of the app.
+  - `bests`: best `{ stars, ms, precision? }` per `level:N`, `jobs:N` (pallets) and `daily:YYYY-MM-DD`, more stars first, then time; precision is the best average seen there.
+  - `levels`: stars per finished level; the next one after the highest is open.
+  - Until 3.88 these lived in `app.tight-spot.forklift.best` and `.levels`, folded in and removed the same way (`games/forklift/legacy.ts`).
 - `app.tight-spot.forklift.mode`, `.size`, `.level`: last choices.
 - `/var/lib/apps/tight-spot/ferry.json` (the app's data folder, ADR-035): Ferry Loader's `{ bests, levels }`: best `{ stars, ms }` per `level:N`, `sailing:N` and `daily:YYYY-MM-DD`, and stars per finished level (the next one after the highest is open). Shared by every window of the app.
 - `app.tight-spot.ferry.mode`, `.level`: Ferry Loader's last choices.

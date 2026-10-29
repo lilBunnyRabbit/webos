@@ -551,6 +551,9 @@ export function record_best(bests: Bests, round: Round, result: Result): Recorde
 
 export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
 export type LevelStars = z.infer<typeof levels_schema>;
+export const data_schema = z.object({ bests: bests_schema, levels: levels_schema });
+export type ForkliftData = z.infer<typeof data_schema>;
+export const EMPTY_DATA: ForkliftData = { bests: {}, levels: {} };
 
 const PER_SIZE = 4;
 export const LEVEL_COUNT = SIZES.length * PER_SIZE;

@@ -394,6 +394,9 @@ export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES
 
 export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
 export type LevelStars = z.infer<typeof levels_schema>;
+export const data_schema = z.object({ bests: bests_schema, levels: levels_schema, kinds: z.array(z.string()) });
+export type ParkingData = z.infer<typeof data_schema>;
+export const EMPTY_DATA: ParkingData = { bests: {}, levels: {}, kinds: [] };
 
 const LAP: readonly Scenario[] = [
   Scenario.GARAGE,

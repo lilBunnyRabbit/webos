@@ -96,6 +96,7 @@ Owner: "maybe even multiple floors - all in one canvas with 'teleportation'". Co
 3. In parallel at once: Ferry Loader, Mow Day, Rodeo, Hot Lap. Hot Lap and Mow Day built 2026-10-29.
 4. [x] After 1 merges: Valet Rush. [x] After 2 merges: Pushback.
 5. Each game: review, visual pass, then pushed in groups.
+6. [x] Review round: Parking and Forklift saved data moved to `parking.json` and `forklift.json` in the app data folder, old keys folded in and removed.
 
 ## Next session topics
 - The boat: where a dynamic (non-kinematic) model lives, shared with F1's later slip model.
