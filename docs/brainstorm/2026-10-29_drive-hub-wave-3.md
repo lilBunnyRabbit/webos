@@ -96,6 +96,9 @@ Owner, on the baggage train: "i would just do the pushback as the whole airport 
 - **Turnaround:** one round doing it all: deliver the bags to the aircraft, swap to the pushback tug, push it back onto the taxiway; time and stars across the whole job.
 Rejected: a separate baggage game; leaving the baggage train in the garage and Rodeo only.
 
+### Mow Day: bumps too (decided)
+Owner: "the mowing should not be that harsh with bumps". As in the Warehouse, hitting a tree, the shed, the pond or the hedge is a bump: the step is undone, the mower stops, rings flash, a hint names it, pressing on counts once, and each bump adds 5 s. Flowers keep their coverage cost and the "too many flowers flattened" end.
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.
