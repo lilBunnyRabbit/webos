@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { rect } from "../../core/geometry";
-import { BED_COST, coverage, create_grid, Cut, Ground, mow, overlap, REPASS, stripe, trample, type Tally } from "./coverage";
+import { BED_COST, CHUNK, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, REPASS, stripe, trample, type Tally } from "./coverage";
 import { deck_corners, DECKS, swept } from "./deck";
 import { Vehicle } from "../../core/vehicle";
 
@@ -35,7 +35,6 @@ describe("coverage grid", () => {
     const shape = rect(0, 0, 1.5, 1.5);
     const first = mow(grid, shape, { x: 1, y: 0 }, 0, tally);
     expect(first.mown).toBe(100);
-    expect(grid.dirty.length).toBe(100);
     expect(mow(grid, shape, { x: 1, y: 0 }, REPASS / 2, first)).toBe(first);
     const again = mow(grid, shape, { x: -1, y: 0 }, REPASS * 2, first);
     expect(again.overlapped).toBe(100);
@@ -51,6 +50,21 @@ describe("coverage grid", () => {
     expect(once.trampled).toBe(20);
     expect(trample(grid, [rect(4.5, 0, 6, 0.3)], once)).toBe(once);
     expect(coverage(once)).toBeCloseTo((400 - 20 * BED_COST) / once.coverable);
+  });
+
+  test("the drawing's marks grow one shape per chunk and start a run at each change of stripe", () => {
+    const deck = DECKS[Vehicle.MOWER]!;
+    const { marks } = create_grid(garden);
+    const pose = (x: number, heading = 0) => ({ x, y: 1, heading });
+    for (let i = 0; i < 10; i++) mark_cut(marks, pose(i * 0.05), pose((i + 1) * 0.05), deck, Cut.LIGHT);
+    expect(marks.cut).toHaveLength(1);
+    expect(marks.cut[0].shapes).toHaveLength(2);
+    const reach = Math.max(...marks.cut[0].shapes[0].map((p) => p.x));
+    expect(reach).toBeGreaterThan(deck.front + 0.2);
+    expect(reach).toBeLessThanOrEqual(deck.front + CHUNK + 1e-9);
+    mark_cut(marks, pose(0.5), pose(0.45), deck, Cut.DARK);
+    expect(marks.cut.map((run) => run.shade)).toEqual([Cut.LIGHT, Cut.DARK]);
+    expect(marks.revision).toBe(11);
   });
 
   test("the deck sweeps the hull of its two footprints", () => {

@@ -5,13 +5,13 @@ import type { Polygon, Vec } from "../../core/geometry";
 import { SolidKind } from "../../core/scene";
 import { hash } from "../../core/seed";
 import { Gear } from "../../core/vehicle";
-import { CELL, Cut, Ground, type Grid } from "./coverage";
+import { CELL, Cut, type Grid } from "./coverage";
 import { SPEC, Status, VEHICLE, type GameState } from "./game";
 import type { Garden } from "./garden";
 
 export interface Lawn {
-  /** Uncut grass in two tones, so long grass reads as tufts. */
-  long: [string, string];
+  long: string;
+  tuft: string;
   light: string;
   dark: string;
   soil: string;
@@ -23,16 +23,19 @@ export interface Lawn {
 }
 
 /**
- * The cut lawn takes less of the success hue than the long grass, so cut reads as paler on a light theme and duller
- * on a dark one; the two stripes differ by the same step either way, which keeps them readable on both.
+ * Every lawn tone is one green (`--success` into the background) moved in lightness, so cut grass is lighter than the
+ * long grass on both themes and the two stripes sit a fixed step apart instead of one of them sinking into the
+ * background.
  */
 export function read_lawn(probe: HTMLElement): Lawn {
   const token = (value: string) => resolve_token(probe, value);
   const green = (share: number) => token(`color-mix(in oklch, var(--success) ${share}%, var(--background))`);
+  const grass = (lightness: number, chroma = 1) => token(`oklch(from color-mix(in oklch, var(--success) 52%, var(--background)) calc(l + ${lightness}) calc(c * ${chroma}) h)`);
   return {
-    long: [green(54), green(47)],
-    light: green(7),
-    dark: green(32),
+    long: grass(-0.03),
+    tuft: grass(-0.043),
+    light: grass(0.08, 1.15),
+    dark: grass(0.045, 1.05),
     soil: token("color-mix(in oklab, color-mix(in oklab, var(--warning) 35%, var(--foreground)) 38%, var(--background))"),
     flattened: token("color-mix(in oklab, color-mix(in oklab, var(--warning) 35%, var(--foreground)) 60%, var(--background))"),
     flowers: ["--primary", "--secondary", "--tertiary", "--warning", "--error", "--info", "--cottontail"].map((name) => token(`var(${name})`)),
@@ -42,84 +45,141 @@ export function read_lawn(probe: HTMLElement): Lawn {
   };
 }
 
-function rgba(colour: string, scratch: CanvasRenderingContext2D): [number, number, number, number] {
-  scratch.clearRect(0, 0, 1, 1);
-  scratch.fillStyle = colour;
-  scratch.fillRect(0, 0, 1, 1);
-  const [r, g, b, a] = scratch.getImageData(0, 0, 1, 1).data;
-  return [r, g, b, a];
+const MAX_SIDE = 4096;
+const MAX_PIXELS = 8_000_000;
+const TUFTS_FROM = 36;
+const CHEAP = 400;
+
+/** Pixels per metre for a view, in steps of √2 rounded up, so a zoom repaints only when it crosses a step. */
+export function layer_resolution(wanted: number, width: number, height: number): number {
+  const stepped = 2 ** (Math.ceil(Math.log2(Math.max(1, wanted)) * 2) / 2);
+  return Math.min(stepped, MAX_SIDE / Math.max(width, height), Math.sqrt(MAX_PIXELS / (width * height)));
+}
+
+function trace(target: CanvasRenderingContext2D | Path2D, shape: Polygon) {
+  shape.forEach((p, i) => (i === 0 ? target.moveTo(p.x, p.y) : target.lineTo(p.x, p.y)));
+  target.closePath();
 }
 
 /**
- * The coverage grid as an image, one pixel a cell, drawn scaled and smoothed under the lawn's outline. Only the cells a
- * step changed are written back; a new grid or new colours repaint the lot.
+ * The lawn as vectors on an offscreen canvas at about the screen's resolution: the long grass, then the deck's swept
+ * shapes in the order they were cut, so stripes have the straight edges a mower leaves. The grid is only the score.
+ * A step paints just the shapes added since; a new round, a theme or a zoom past a resolution step repaints the lot.
  */
 export class LawnLayer {
   readonly canvas = document.createElement("canvas");
-  private readonly context = this.canvas.getContext("2d", { willReadFrequently: true })!;
-  private image: ImageData | null = null;
+  private readonly context = this.canvas.getContext("2d")!;
   private grid: Grid | null = null;
   private lawn: Lawn | null = null;
-  private colours: Record<string, [number, number, number, number]> = {};
+  private ppm = 0;
+  private revision = -1;
+  private run = 0;
+  private painted = 0;
+  private flats = 0;
+  private off_beds = new Path2D();
+  private on_beds = new Path2D();
 
-  sync(grid: Grid, lawn: Lawn) {
-    if (grid !== this.grid || lawn !== this.lawn) {
+  get width(): number {
+    return this.canvas.width / this.ppm;
+  }
+
+  get height(): number {
+    return this.canvas.height / this.ppm;
+  }
+
+  /** `settled` is false while the camera eases to a new zoom: the old layer, scaled, stands in until it lands. */
+  sync(grid: Grid, garden: Garden, lawn: Lawn, wanted: number, settled: boolean) {
+    const width = grid.cols * CELL;
+    const height = grid.rows * CELL;
+    const ppm = layer_resolution(wanted, width, height);
+    const cheap = grid.marks.cut.reduce((sum, run) => sum + run.shapes.length, 0) < CHEAP;
+    if (grid !== this.grid || lawn !== this.lawn || (ppm !== this.ppm && (settled || cheap))) {
       this.grid = grid;
       this.lawn = lawn;
-      this.repaint(grid, lawn);
-      return;
+      this.ppm = ppm;
+      this.repaint(grid, garden, lawn, width, height);
     }
-    if (grid.dirty.length === 0 || !this.image) return;
-    let c0 = grid.cols;
-    let r0 = grid.rows;
-    let c1 = -1;
-    let r1 = -1;
-    for (const i of grid.dirty) {
-      this.paint(grid, i);
-      const col = i % grid.cols;
-      const row = (i - col) / grid.cols;
-      c0 = Math.min(c0, col);
-      c1 = Math.max(c1, col);
-      r0 = Math.min(r0, row);
-      r1 = Math.max(r1, row);
-    }
-    grid.dirty.length = 0;
-    this.context.putImageData(this.image, 0, 0, c0, r0, c1 - c0 + 1, r1 - r0 + 1);
+    this.paint_marks(grid, lawn);
   }
 
-  private repaint(grid: Grid, lawn: Lawn) {
-    this.canvas.width = grid.cols;
-    this.canvas.height = grid.rows;
-    const scratch = this.context;
-    this.colours = {
-      long0: rgba(lawn.long[0], scratch),
-      long1: rgba(lawn.long[1], scratch),
-      light: rgba(lawn.light, scratch),
-      dark: rgba(lawn.dark, scratch),
-      flattened: rgba(lawn.flattened, scratch),
-    };
-    this.image = scratch.createImageData(grid.cols, grid.rows);
-    for (let i = 0; i < grid.ground.length; i++) this.paint(grid, i);
-    grid.dirty.length = 0;
-    scratch.putImageData(this.image, 0, 0);
+  private repaint(grid: Grid, garden: Garden, lawn: Lawn, width: number, height: number) {
+    const ctx = this.context;
+    this.canvas.width = Math.ceil(width * this.ppm);
+    this.canvas.height = Math.ceil(height * this.ppm);
+    ctx.setTransform(this.ppm, 0, 0, this.ppm, 0, 0);
+    this.off_beds = new Path2D();
+    this.off_beds.rect(0, 0, width, height);
+    this.on_beds = new Path2D();
+    for (const bed of garden.beds) {
+      trace(this.off_beds, bed);
+      trace(this.on_beds, bed);
+    }
+    this.revision = -1;
+    this.run = 0;
+    this.painted = 0;
+    this.flats = 0;
+
+    ctx.save();
+    ctx.clip(this.off_beds, "evenodd");
+    union(ctx, garden.lawn);
+    ctx.fillStyle = lawn.long;
+    ctx.fill();
+    if (this.ppm >= TUFTS_FROM) this.tufts(grid, lawn, width, height);
+    ctx.restore();
   }
 
-  private paint(grid: Grid, i: number) {
-    const data = this.image!.data;
-    let colour: [number, number, number, number] | null = null;
-    if (grid.ground[i] === Ground.LAWN) {
-      const cut = grid.cut[i];
-      colour = cut === Cut.LIGHT ? this.colours.light : cut === Cut.DARK ? this.colours.dark : hash(i, 3) & 1 ? this.colours.long0 : this.colours.long1;
-    } else if (grid.ground[i] === Ground.BED && grid.trampled[i]) colour = this.colours.flattened;
-    const at = i * 4;
-    if (!colour) {
-      data[at + 3] = 0;
-      return;
+  // One short blade every 0.16 m or so, its place and lean from a hash of the spot: a grain with no pattern to it.
+  private tufts(grid: Grid, lawn: Lawn, width: number, height: number) {
+    const ctx = this.context;
+    const step = 0.16;
+    ctx.strokeStyle = lawn.tuft;
+    ctx.lineWidth = 0.022;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let row = 0; row * step < height; row++) {
+      for (let col = 0; col * step < width; col++) {
+        const h = hash(grid.cols, col, row);
+        const x = (col + 0.5) * step + ((h & 0xff) / 255 - 0.5) * step;
+        const y = (row + 0.5) * step + (((h >> 8) & 0xff) / 255 - 0.5) * step;
+        const angle = (((h >> 16) & 0xff) / 255) * Math.PI;
+        const blade = 0.05 + ((h >>> 24) / 255) * 0.04;
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(angle) * blade, y + Math.sin(angle) * blade);
+      }
     }
-    data[at] = colour[0];
-    data[at + 1] = colour[1];
-    data[at + 2] = colour[2];
-    data[at + 3] = colour[3];
+    ctx.stroke();
+  }
+
+  private paint_marks(grid: Grid, lawn: Lawn) {
+    const ctx = this.context;
+    const { cut, flat, revision } = grid.marks;
+    if (revision === this.revision) return;
+    this.revision = revision;
+    if (cut.length > 0) {
+      ctx.save();
+      ctx.clip(this.off_beds, "evenodd");
+      for (let run = this.run; run < cut.length; run++) {
+        const { shade, shapes } = cut[run];
+        ctx.fillStyle = shade === Cut.DARK ? lawn.dark : lawn.light;
+        ctx.beginPath();
+        for (let i = run === this.run ? this.painted : 0; i < shapes.length; i++) trace(ctx, shapes[i]);
+        ctx.fill();
+      }
+      ctx.restore();
+      // The last shape keeps growing with the next steps, so it's painted again until a newer one starts.
+      this.run = cut.length - 1;
+      this.painted = cut[this.run].shapes.length - 1;
+    }
+    if (flat.length > this.flats) {
+      ctx.save();
+      ctx.clip(this.on_beds);
+      ctx.fillStyle = lawn.flattened;
+      ctx.beginPath();
+      for (let i = this.flats; i < flat.length; i++) trace(ctx, flat[i]);
+      ctx.fill();
+      ctx.restore();
+      this.flats = flat.length;
+    }
   }
 }
 
@@ -130,6 +190,7 @@ export interface Extras {
   layer: LawnLayer;
   lawn: Lawn;
   uncut: Vec | null;
+  settled: boolean;
 }
 
 function patio(ctx: CanvasRenderingContext2D, garden: Garden, scale: number, palette: Palette) {
@@ -164,7 +225,7 @@ function beds(ctx: CanvasRenderingContext2D, garden: Garden, scale: number, lawn
         const h = hash(b + 1, Math.round(x * 100), Math.round(y * 100));
         const cx = x + ((h & 0xff) / 255 - 0.5) * 0.16;
         const cy = y + (((h >> 8) & 0xff) / 255 - 0.5) * 0.16;
-        ctx.fillStyle = lawn.long[0];
+        ctx.fillStyle = lawn.long;
         ctx.beginPath();
         ctx.arc(cx, cy, r * 1.25, 0, Math.PI * 2);
         ctx.fill();
@@ -265,12 +326,12 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   patio(ctx, garden, scale, palette);
   beds(ctx, garden, scale, lawn);
 
-  layer.sync(grid, lawn);
+  layer.sync(grid, garden, lawn, scale * view.dpr, extras.settled);
   ctx.save();
   union(ctx, garden.lawn as Polygon[]);
   ctx.clip();
   ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(layer.canvas, 0, 0, grid.cols * CELL, grid.rows * CELL);
+  ctx.drawImage(layer.canvas, 0, 0, layer.width, layer.height);
   ctx.restore();
 
   solids(ctx, garden.solids.filter((solid) => solid.kind === SolidKind.HEDGE || solid.kind === SolidKind.WATER), scale, palette);

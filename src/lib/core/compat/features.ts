@@ -140,12 +140,12 @@ export const FEATURES: Feature[] = [
     probe: () => proto("HTMLDialogElement", "closedBy"),
   },
   {
-    // Relative OKLCH (122 / 128 / 18) and `abs()` (138 / 118 / 15.4) in derived themes.
+    // Relative OKLCH (122 / 128 / 18) and `abs()` (138 / 118 / 15.4) in derived themes and Mow Day's lawn tones.
     id: "relative-colors",
     name: "Relative colours",
     lost: "Themes other than Brand Dark and Brand Light get wrong surface and state colours.",
     level: Level.SHELL,
-    apps: ["settings"],
+    apps: ["settings", "tight-spot"],
     min: min("138", "128", "18"),
     probe: () => css("color: oklch(from red l c h)") && css("width: abs(-1px)"),
   },

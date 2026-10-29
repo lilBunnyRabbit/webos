@@ -279,6 +279,7 @@
       layer,
       lawn,
       uncut,
+      settled: Math.abs(camera.scale - target.scale) <= target.scale * 0.02,
     });
   }
 

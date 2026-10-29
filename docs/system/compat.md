@@ -136,7 +136,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `popover` | Popover | The start menu, notification centre, terminal suggestions and app menus don't open or close properly. | `terminal` `font-maker` `hopsprite` `image-editor` `kanban` `lunar-lander` `markdown-pdf` `moonrabbit` `paint` `quick-notes` `soundboard` `warren` `web-app` `portfolio` | 114 | 125 | 18.3 |
 | `anchor-positioning` | Anchor positioning | Menus, dialogs, the start menu and tooltips open in the wrong place. | `terminal` `font-maker` `hopsprite` `image-editor` `lunar-lander` `paint` `soundboard` `warren` `portfolio` | 129 | 147 | 26 |
 | `dialog-closedby` | Dialog light dismiss | Menus and dialogs don't close when you click outside them. |  | 134 | 141 | no |
-| `relative-colors` | Relative colours | Themes other than Brand Dark and Brand Light get wrong surface and state colours. | `settings` | 138 | 128 | 18 |
+| `relative-colors` | Relative colours | Themes other than Brand Dark and Brand Light get wrong surface and state colours. | `settings`, `tight-spot` | 138 | 128 | 18 |
 | `light-dark` | light-dark() | Some controls get the wrong colours. |  | 123 | 120 | 17.5 |
 | `css-nesting` | CSS nesting | Parts of the taskbar and start menu lose their styles. |  | 120 | 117 | 17.2 |
 | `container-queries` | Container queries | Windows and apps don't fit their layout to their size. |  | 105 | 110 | 16 |

@@ -1,5 +1,6 @@
 import { inside_convex } from "../../core/collision";
-import { bounds_of, type Polygon, type Vec } from "../../core/geometry";
+import { angle_between, bounds_of, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { swept, type Deck } from "./deck";
 import type { Garden } from "./garden";
 
 export const CELL = 0.15;
@@ -22,8 +23,44 @@ export interface Grid {
   first: Float32Array;
   overlapped: Uint8Array;
   trampled: Uint8Array;
-  /** Cells changed since the drawing last took them. */
-  dirty: number[];
+  /** What the deck and the wheels went over, in order, for drawing only: the cells above are the score. */
+  marks: Marks;
+}
+
+/** Steps cutting one stripe tone; the next tone starts a new run, so replaying runs in order repaints the lawn. */
+export interface Stroke {
+  shade: Cut;
+  shapes: Polygon[];
+  /** Where the last shape starts: it grows with each step until the deck has gone `CHUNK` or turned `CHUNK_TURN`. */
+  from: Pose;
+}
+
+export interface Marks {
+  cut: Stroke[];
+  flat: Polygon[];
+  revision: number;
+}
+
+// A long round is tens of thousands of steps; one shape per chunk keeps a full repaint quick. The hull of two poses
+// this close is the true sweep to well under a cell.
+export const CHUNK = 0.3;
+export const CHUNK_TURN = 0.08;
+
+export function mark_cut(marks: Marks, from: Pose, to: Pose, deck: Deck, shade: Cut) {
+  const last = marks.cut[marks.cut.length - 1];
+  marks.revision++;
+  if (last?.shade === shade) {
+    const start = last.from;
+    const near = Math.hypot(to.x - start.x, to.y - start.y) <= CHUNK && angle_between(start.heading, to.heading) <= CHUNK_TURN;
+    if (near) {
+      last.shapes[last.shapes.length - 1] = swept(start, to, deck);
+      return;
+    }
+    last.shapes.push(swept(from, to, deck));
+    last.from = from;
+    return;
+  }
+  marks.cut.push({ shade, shapes: [swept(from, to, deck)], from });
 }
 
 export interface Tally {
@@ -56,7 +93,7 @@ export function create_grid(garden: Pick<Garden, "width" | "height" | "lawn" | "
     first: new Float32Array(size),
     overlapped: new Uint8Array(size),
     trampled: new Uint8Array(size),
-    dirty: [],
+    marks: { cut: [], flat: [], revision: 0 },
   };
 }
 
@@ -97,10 +134,7 @@ export function mow(grid: Grid, shape: Polygon, motion: Vec, odometer: number, t
       grid.overlapped[i] = 1;
       if (grid.coverable[i]) overlapped++;
     }
-    if (grid.cut[i] !== shade) {
-      grid.cut[i] = shade;
-      grid.dirty.push(i);
-    }
+    grid.cut[i] = shade;
   });
   return mown === tally.mown && overlapped === tally.overlapped ? tally : { ...tally, mown, overlapped };
 }
@@ -109,12 +143,16 @@ export function mow(grid: Grid, shape: Polygon, motion: Vec, odometer: number, t
 export function trample(grid: Grid, shapes: Polygon[], tally: Tally): Tally {
   let { trampled } = tally;
   for (const shape of shapes) {
+    const before = trampled;
     each_cell(grid, shape, (i) => {
       if (grid.ground[i] !== Ground.BED || grid.trampled[i]) return;
       grid.trampled[i] = 1;
-      grid.dirty.push(i);
       trampled++;
     });
+    if (trampled > before) {
+      grid.marks.flat.push(shape);
+      grid.marks.revision++;
+    }
   }
   return trampled === tally.trampled ? tally : { ...tally, trampled };
 }

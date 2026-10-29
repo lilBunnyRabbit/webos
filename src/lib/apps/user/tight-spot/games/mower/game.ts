@@ -4,7 +4,7 @@ import { collide, obstacles } from "../../core/obstacles";
 import { SolidKind } from "../../core/scene";
 import { hash } from "../../core/seed";
 import { bodies, create_car, Gear, MOWER, shift, step, Vehicle, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
-import { BED_COST, CELL, coverage, create_grid, Cut, Ground, mow, overlap, trample, type Grid, type Tally } from "./coverage";
+import { BED_COST, CELL, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, stripe, trample, type Grid, type Tally } from "./coverage";
 import { deck_centre, deck_of, swept } from "./deck";
 import { build_garden, type Garden } from "./garden";
 import { flood } from "./reach";
@@ -144,6 +144,7 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
   if (moved < 1e-6 && car.heading === state.car.heading) return { ...state, car, ms };
   const odometer = state.odometer + moved;
   let tally = mow(state.grid, swept(state.car, car, DECK), motion, odometer, state.tally);
+  mark_cut(state.grid.marks, state.car, car, DECK, stripe(motion));
   if (state.garden.beds.length > 0) tally = trample(state.grid, bodies(car, spec), tally);
   if (state.measured && tally.trampled > state.tally.trampled && out_of_reach(tally)) {
     return { ...state, car: { ...car, speed: 0 }, ms, odometer, tally, status: Status.FLATTENED };
