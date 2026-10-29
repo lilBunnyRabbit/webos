@@ -73,7 +73,8 @@ describe("portals", () => {
     const ramp: Portal = { mouth: rect(13, 0, 13.5, 8), heading: 0, from: { x: 13, y: 0, heading: 0 }, to: { x: 33, y: 0, heading: 0 } };
     const near = obstacles({ solids });
     const from = { x: 2, y: 4, heading: 0 };
-    const to = { x: 44, y: 4, heading: 0 };
+    // The goal as seen from the start's floor: the search carries it through the portal with the path.
+    const to = { x: 24, y: 4, heading: 0 };
     expect(plan(from, to, near, { spec: HATCHBACK, max_expansions: 20_000 })).toBeNull();
     const found = plan(from, to, near, { spec: HATCHBACK, portals: [ramp] });
     expect(found).not.toBeNull();

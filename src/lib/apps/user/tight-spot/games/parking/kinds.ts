@@ -20,6 +20,7 @@ export const Scenario = {
   CAMPING: "camping",
   LOADING_DOCK: "loading-dock",
   UNDERGROUND: "underground",
+  MULTI_STOREY: "multi-storey",
 } as const;
 export type Scenario = (typeof Scenario)[keyof typeof Scenario];
 export const SCENARIOS: readonly Scenario[] = Object.values(Scenario);

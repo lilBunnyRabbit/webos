@@ -20,7 +20,7 @@ describe("scenario worlds", () => {
             const world = scenario_world(seed, scenario, difficulty, spec);
             const label = `${scenario} ${difficulty} ${seed}`;
             expect(
-              world.chunks.map((each) => each.kind),
+              world.chunks.filter((each) => each.kind !== ChunkKind.FLOOR).map((each) => each.kind),
               label
             ).toEqual([ChunkKind.LOT, ChunkKind.ROAD]);
             expect(world.bays, label).toHaveLength(1);

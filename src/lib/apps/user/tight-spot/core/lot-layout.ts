@@ -17,6 +17,17 @@ export const CARAVAN_LENGTH = CARAVAN_TRAILER.box_length + CARAVAN_TRAILER.drawb
 export const CARAVAN_WIDTH = CARAVAN_TRAILER.width;
 export const DROPPED_TRAILER = { length: 13.6, width: 2.55 };
 
+/** A portal in a lot's own frame, between two of its floors (0 is the lot itself, 1 the floor below it, …). */
+export interface Passage {
+  mouth: Polygon;
+  heading: number;
+  /** Any point: the floors are laid out alike, so it maps to the same spot on both. */
+  at: Vec;
+  from: number;
+  to: number;
+  lead?: readonly Pose[];
+}
+
 export interface Layout {
   surfaces: Surface[];
   solids: Solid[];
@@ -24,6 +35,11 @@ export interface Layout {
   bays: Bay[];
   /** Where the car waits when the lot has its own start instead of the street leading in. */
   start?: Pose;
+  /** The floors below the lot, in its own frame, the next one down first. */
+  floors?: Layout[];
+  passages?: Passage[];
+  /** Bars at a garage's way in that a vehicle taller than a car or a van can't pass under. */
+  headroom?: Polygon[];
 }
 
 export class Builder implements Layout {
@@ -32,6 +48,9 @@ export class Builder implements Layout {
   marks: Mark[] = [];
   bays: Bay[] = [];
   start?: Pose;
+  floors?: Layout[];
+  passages?: Passage[];
+  headroom?: Polygon[];
 
   constructor(private readonly rng: Rng) {}
 
@@ -151,7 +170,7 @@ export type RowsKind = (typeof RowsKind)[keyof typeof RowsKind];
 const LETTER = 1.5;
 
 // Painted strokes, not text: marks turn with the lot, so the sign reads upright for the driver coming in.
-function level_sign(b: Builder, centre: number, top: number) {
+export function level_sign(b: Builder, centre: number, top: number) {
   const h = LETTER;
   const w = h * 0.55;
   const x = centre - 1.6;
@@ -167,13 +186,50 @@ function level_sign(b: Builder, centre: number, top: number) {
   b.line({ x: one - 0.35, y: y + h }, { x: one + 0.35, y: y + h });
 }
 
-function ramp(b: Builder, from: number, to: number) {
+export function ramp(b: Builder, from: number, to: number, half = 1.6) {
   const centre = (GATE_LO + GATE_HI) / 2;
   const top = to - 1 - LETTER;
   if (top - from > 0.5) level_sign(b, centre, top);
-  for (let y = from + 0.8; y + 0.8 <= top - 0.8; y += 1.8) {
-    b.line({ x: centre - 1.6, y: y + 0.8 }, { x: centre, y });
-    b.line({ x: centre, y }, { x: centre + 1.6, y: y + 0.8 });
+  chevrons(b, centre, from + 0.8, top - 0.8, -1, half);
+}
+
+/** `way` −1 points them north, 1 south: the way down the ramp. */
+export function chevrons(b: Builder, centre: number, from: number, to: number, way: 1 | -1, half = 1.6) {
+  for (let y = from; y + 0.8 <= to; y += 1.8) {
+    const tip = way < 0 ? y : y + 0.8;
+    const arms = way < 0 ? y + 0.8 : y;
+    b.line({ x: centre - half, y: arms }, { x: centre, y: tip });
+    b.line({ x: centre, y: tip }, { x: centre + half, y: arms });
+  }
+}
+
+export const FLARE = 1.2;
+export const LANE_WALL = 0.3;
+
+type Flares = { top?: readonly ("w" | "e")[]; bottom?: readonly ("w" | "e")[] };
+
+// A wall end that opens onto an aisle is cut at 45°, the way real ramps are, or no car could turn into a lane this narrow.
+export function lane(b: Builder, x0: number, x1: number, y0: number, y1: number, flares: Flares = {}) {
+  b.ground(SurfaceKind.RAMP, rect(x0, y0, x1, y1));
+  for (const side of ["w", "e"] as const) {
+    const top = flares.top?.includes(side) ? FLARE : 0;
+    const bottom = flares.bottom?.includes(side) ? FLARE : 0;
+    const face = side === "w" ? x0 : x1;
+    const out = side === "w" ? -1 : 1;
+    b.block(SolidKind.WALL, Math.min(face, face + out * LANE_WALL), y0 + top, Math.max(face, face + out * LANE_WALL), y1 - bottom);
+    const chamfer = (edge: number, inward: number): Vec[] => {
+      const corner = { x: face + out * FLARE, y: edge };
+      const shape = [
+        { x: face, y: edge + inward * FLARE },
+        corner,
+        { x: corner.x + out * LANE_WALL, y: edge },
+        { x: corner.x + out * LANE_WALL, y: edge + inward * FLARE },
+      ];
+      b.ground(SurfaceKind.RAMP, [{ x: face, y: edge }, corner, { x: face, y: edge + inward * FLARE }]);
+      return (out > 0) === (inward > 0) ? shape : [...shape].reverse();
+    };
+    if (top) b.solid(SolidKind.WALL, chamfer(y0, 1));
+    if (bottom) b.solid(SolidKind.WALL, chamfer(y1, -1));
   }
 }
 
@@ -187,10 +243,12 @@ export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fi
       : kind === RowsKind.REVERSE
         ? lerp(6.6, 5.4, d)
         : garage
-          ? lerp(6.6, 5.6, d)
+          ? open
+            ? lerp(6.6, 5.6, d)
+            : lerp(6.2, 4.8, d)
           : lerp(6.8, 5.8, d)) * fit.turn;
   // A pillar stands on every line in a garage, so its bays are a little wider to leave the same room between them.
-  const width = (garage ? lerp(2.9, 2.6, d) : lerp(2.7, 2.35, d)) + fit.wider;
+  const width = (garage ? (open ? lerp(2.9, 2.6, d) : lerp(2.8, 2.55, d)) : lerp(2.7, 2.35, d)) + fit.wider;
   const north_front = EDGE + fit.depth;
   const south_front = north_front + aisle;
   const south_back = south_front + fit.depth;
@@ -201,7 +259,18 @@ export function rows(d: number, rng: Rng, open: boolean, kind: RowsKind, fit: Fi
   b.perimeter(wall);
   b.block(wall, EDGE, south_back, GATE_LO, SIZE - EDGE);
   b.block(wall, GATE_HI, south_back, SIZE - EDGE, SIZE - EDGE);
-  if (garage) ramp(b, south_back, SIZE);
+  if (garage && !open) {
+    // The spot is the tight one: a walled lane in from the gate instead of the whole gap, cut back where it meets the aisle.
+    const half = (lerp(4, 3.6, d) + fit.wider) / 2;
+    const mid = (GATE_LO + GATE_HI) / 2;
+    lane(b, mid - half, mid + half, south_front, SIZE, { top: ["w", "e"] });
+    b.block(SolidKind.WALL, GATE_LO, south_front + FLARE, mid - half - LANE_WALL - FLARE, SIZE);
+    b.block(SolidKind.WALL, mid - half - LANE_WALL - FLARE, south_front + FLARE, mid - half - LANE_WALL, SIZE);
+    b.block(SolidKind.WALL, mid + half + LANE_WALL, south_front + FLARE, mid + half + LANE_WALL + FLARE, SIZE);
+    b.block(SolidKind.WALL, mid + half + LANE_WALL + FLARE, south_front + FLARE, GATE_HI, SIZE);
+    b.headroom = [rect(mid - half - LANE_WALL, SIZE - 0.95, mid + half + LANE_WALL, SIZE - 0.65)];
+    ramp(b, south_back, SIZE, Math.min(1.6, half - 0.4));
+  } else if (garage) ramp(b, south_back, SIZE);
 
   const north = row(EDGE, SIZE - EDGE, width, north_front, EDGE, "centre");
   const west = row(EDGE, GATE_LO, width, south_front, south_back, "end");

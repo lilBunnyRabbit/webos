@@ -3,6 +3,7 @@ import { create_game, open_round, parked_in, vehicles_for } from "./game";
 import { collide, obstacles } from "../../core/obstacles";
 import { drive, plan, type Move } from "../../core/planner";
 import { parked_poses } from "./poses";
+import { plan_across } from "./proof";
 import { centroid, type Pose } from "../../core/geometry";
 import { jackknifed, Vehicle, VEHICLES, type Placement, type VehicleSpec } from "../../core/vehicle";
 import { ChunkKind, CHUNK, SIDES, SurfaceKind, type Bay, type Side, type World } from "./world";
@@ -72,11 +73,12 @@ const SEEDS = [5, 13];
 
 
 describe("free bays in the open lot can be reached through their lot's gate", () => {
-  test("the seeds cover a garage and kerb bays", () => {
+  test("the seeds cover a garage and its floor below, and kerb bays", () => {
     const worlds = SEEDS.map((seed) => create_game(open_round(seed, Vehicle.HATCH)).world);
     const chunks = worlds.flatMap((world) => world.chunks);
     expect(chunks.some((each) => each.kind === ChunkKind.KERBSIDE && each.bays.length > 0)).toBe(true);
     expect(chunks.some((each) => each.surfaces.some((surface) => surface.kind === SurfaceKind.GARAGE) && each.bays.length > 0)).toBe(true);
+    expect(chunks.some((each) => each.kind === ChunkKind.FLOOR && each.bays.length > 0)).toBe(true);
   });
 
   for (const vehicle of vehicles_for(null)) {
@@ -88,22 +90,31 @@ describe("free bays in the open lot can be reached through their lot's gate", ()
         const lots = world.chunks.filter((each) => each.kind === ChunkKind.LOT);
         expect(lots).toHaveLength(4);
         for (const lot of lots) {
+          const below = world.chunks.filter(
+            (each) => each.kind === ChunkKind.FLOOR && each.cy === lot.cy && Math.sign(each.cx) === Math.sign(lot.cx) && lot.floor === -1
+          );
           const side = SIDES.find((each) => lot.exits[each])!;
           const gate = gate_pose(lot.cx, lot.cy, side);
           expect(plan(car, gate, near, { spec, heading_tolerance: Math.PI }), `gate ${lot.cx},${lot.cy}`).not.toBeNull();
           expect(lot.bays.length).toBeGreaterThan(0);
-          let bays = lot.bays;
+          let bays = [...lot.bays, ...below.flatMap((each) => each.bays)];
           if (spec.hitches.length > 0) {
             bays = TOWING_SAMPLE[seed][`${lot.cx},${lot.cy}`].map((index) => lot.bays[index]);
             const sides = new Set(bays.map(facing));
             expect([...new Set(lot.bays.map(facing))].every((each) => sides.has(each)), `sample at ${lot.cx},${lot.cy}`).toBe(true);
           }
+          const lower = new Set(below.flatMap((each) => each.bays));
+          const inward = { ...gate, heading: gate.heading + Math.PI };
           for (const bay of bays) {
+            // A floor below is proven the way in, from the gate down the ramp: out of it, the U-turn from the ramp's top
+            // back to the gate is a long search, where going down is a leg a floor.
             const ok = spec.hitches.length > 0
               ? towed_in(bay, gate, world, spec)
-              : parked_poses(bay, near, 0.05, spec).some(
-                  (pose) => plan(pose, gate, near, { spec, heading_tolerance: Math.PI }) !== null
-                );
+              : lower.has(bay)
+                ? parked_poses(bay, near, 0.05, spec)
+                    .slice(0, 4)
+                    .some((pose) => plan_across(world, inward, pose, { spec, arrive: (at) => parked_in(at, bay, spec) }) !== null)
+                : parked_poses(bay, near, 0.05, spec).some((pose) => plan(pose, gate, near, { spec, heading_tolerance: Math.PI }) !== null);
             expect(ok, `bay at ${centroid(bay.shape).x.toFixed(1)},${centroid(bay.shape).y.toFixed(1)}`).toBe(true);
           }
         }

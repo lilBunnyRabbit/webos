@@ -12,6 +12,16 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
+        text: "Tight Spot has a Multi-storey spot: drive down tight walled ramps and round a spiral, one to three floors below the street, to the one free bay.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "The open lot's underground garages have a second floor below, in Tight Spot and in Valet Rush, and the Underground spot is tighter, with a walled ramp.",
+      },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
         text: "Drive Hub's garage has a motorcycle: quick, nimble and paddled backwards with your feet, and it turns up in Rodeo, the open lot and now and then in the ferry queue.",
       },
       {

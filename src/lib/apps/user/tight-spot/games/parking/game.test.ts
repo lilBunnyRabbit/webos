@@ -35,7 +35,7 @@ import { bounds_of } from "../../core/geometry";
 import { beep_period, End, sensor, sensor_frame, SENSOR_RANGE } from "../../core/sensors";
 import { corners, create_car, Gear, NO_INPUT, pose_from_centre, Vehicle, VEHICLES, type Placement } from "../../core/vehicle";
 import { centroid } from "../../core/geometry";
-import { hash, SCENARIOS, Scenario, SolidKind } from "./world";
+import { ChunkKind, hash, SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;
 
@@ -138,11 +138,12 @@ describe("rounds", () => {
     expect(seen.size).toBe(SCENARIOS.length);
   });
 
-  test("levels cover every scenario but the underground garage, and get harder", () => {
+  test("levels cover every scenario but the underground and multi-storey garages, and get harder", () => {
     const rounds = Array.from({ length: LEVEL_COUNT }, (_, i) => level_round(i + 1));
     const kinds = new Set(rounds.map((round) => round.scenario));
     expect(kinds.has(Scenario.UNDERGROUND)).toBe(false);
-    expect(kinds.size).toBe(SCENARIOS.length - 1);
+    expect(kinds.has(Scenario.MULTI_STOREY)).toBe(false);
+    expect(kinds.size).toBe(SCENARIOS.length - 2);
     expect(rounds[0].difficulty).toBe(0);
     expect(rounds[LEVEL_COUNT - 1].difficulty).toBe(1);
     expect(rounds.every((round) => round.mode === Mode.LEVELS)).toBe(true);
@@ -176,7 +177,7 @@ describe("rounds", () => {
   test("open lot has no single scenario", () => {
     const state = create_game(open_round(5));
     expect(state.round.scenario).toBeNull();
-    expect(state.world.chunks).toHaveLength(9);
+    expect(state.world.chunks.filter((each) => each.kind !== ChunkKind.FLOOR)).toHaveLength(9);
   });
 });
 
@@ -243,7 +244,7 @@ describe("vehicles", () => {
       const round = scenario_round(ANY, seed, "2026-10-29");
       return `${round.scenario}:${round.vehicle}`;
     });
-    expect(picks).toEqual(["driveway:towing", "garage:van", "underground:pickup", "narrow:pickup", "garage:van", "pillars:van", "bus-stop:bus"]);
+    expect(picks).toEqual(["driveway:towing", "driveway:towing", "underground:pickup", "underground:van", "underground:hatch", "driveway:towing", "depot:bus"]);
     for (let seed = 1; seed <= 200; seed++) {
       const round = scenario_round(ANY, seed, "2026-10-29");
       const info = SCENARIO_INFO[round.scenario!];

@@ -3,7 +3,7 @@ import type { Insets } from "./camera";
 import { against, dash_phase, darkest, lightest, wound, type Tone } from "./draw-math";
 import { machine } from "./draw-machines";
 import { blinkers, parked_vehicle, player as vehicle_player } from "./draw-vehicles";
-import type { Polygon, Pose, Vec } from "./geometry";
+import { bounds_of, type Polygon, type Pose, type Vec } from "./geometry";
 import { End, sensor_frame } from "./sensors";
 import { blink_lit, Signal } from "./signal";
 import {
@@ -36,6 +36,7 @@ export interface Palette {
   asphalt: string;
   floor: string;
   garage: string;
+  ramp: string;
   pavement: string;
   kerb: string;
   paint: string;
@@ -120,6 +121,7 @@ export function read_palette(probe: HTMLElement): Palette {
     asphalt: token("var(--background)"),
     floor: token("var(--background-light)"),
     garage: token("color-mix(in oklch, var(--background-darker) 65%, var(--background))"),
+    ramp: token("var(--background-darker)"),
     pavement: token("var(--background-lighter)"),
     kerb: mix("foreground", 28),
     paint: mix("foreground", 78),
@@ -545,12 +547,13 @@ function hedges(ctx: CanvasRenderingContext2D, shapes: Polygon[], scale: number,
   ctx.restore();
 }
 
-const SURFACES = [SurfaceKind.GRASS, SurfaceKind.ASPHALT, SurfaceKind.FLOOR, SurfaceKind.GARAGE, SurfaceKind.PAVEMENT] as const;
-const GROUND: Record<SurfaceKind, "grass" | "asphalt" | "floor" | "garage" | "pavement"> = {
+const SURFACES = [SurfaceKind.GRASS, SurfaceKind.ASPHALT, SurfaceKind.FLOOR, SurfaceKind.GARAGE, SurfaceKind.RAMP, SurfaceKind.PAVEMENT] as const;
+const GROUND: Record<SurfaceKind, "grass" | "asphalt" | "floor" | "garage" | "ramp" | "pavement"> = {
   grass: "grass",
   asphalt: "asphalt",
   floor: "floor",
   garage: "garage",
+  ramp: "ramp",
   pavement: "pavement",
 };
 const DASH = 1.2;
@@ -658,6 +661,72 @@ export function begin_frame(ctx: CanvasRenderingContext2D, view: View, palette: 
     dpr * (width / 2 - view.x * scale),
     dpr * (height / 2 - view.y * scale)
   );
+}
+
+// Hung overhead, so it's drawn over the cars passing under it: a striped beam between two posts.
+export function headroom(ctx: CanvasRenderingContext2D, bars: Polygon[], scale: number, palette: Palette) {
+  for (const bar of bars) {
+    const box = bounds_of(bar);
+    const across = box.x1 - box.x0 >= box.y1 - box.y0;
+    const length = across ? box.x1 - box.x0 : box.y1 - box.y0;
+    const stripe = 0.35;
+    ctx.save();
+    path(ctx, bar);
+    ctx.fillStyle = palette.ink;
+    ctx.fill();
+    ctx.clip();
+    ctx.fillStyle = palette.warning;
+    for (let at = 0; at < length; at += stripe * 2) {
+      if (across) ctx.fillRect(box.x0 + at, box.y0, stripe, box.y1 - box.y0);
+      else ctx.fillRect(box.x0, box.y0 + at, box.x1 - box.x0, stripe);
+    }
+    ctx.restore();
+    ctx.strokeStyle = palette.wall_edge;
+    ctx.lineWidth = Math.max(0.04, 1.5 / scale);
+    path(ctx, bar);
+    ctx.stroke();
+  }
+}
+
+/** A garage's floor numbers in screen space, at the top-left of what shows of each floor clear of the insets, so the floor you're on is always labelled. */
+export function floor_labels(
+  ctx: CanvasRenderingContext2D,
+  chunks: readonly { cx: number; cy: number; floor?: number }[],
+  size: number,
+  view: View,
+  palette: Palette,
+  font: string,
+  insets: Insets
+) {
+  ctx.save();
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  const px = Math.max(12, Math.min(22, view.scale * 1.4));
+  ctx.font = `700 ${px}px ${font}`;
+  for (const chunk of chunks) {
+    if (chunk.floor === undefined) continue;
+    const text = `${chunk.floor < 0 ? "−" : ""}${Math.abs(chunk.floor)}`;
+    const width = ctx.measureText(text).width + px * 0.8;
+    const height = px * 1.3;
+    const left = view.width / 2 + (chunk.cx * size - view.x) * view.scale;
+    const top = view.height / 2 + (chunk.cy * size - view.y) * view.scale;
+    const right = left + size * view.scale;
+    const bottom = top + size * view.scale;
+    const x = Math.max(left + 2 * view.scale, insets.left + 8);
+    const y = Math.max(top + 0.75 * view.scale, insets.top + 8 + height / 2);
+    if (x + width > Math.min(right, view.width - insets.right) - 4 || y + height / 2 > Math.min(bottom, view.height - insets.bottom) - 4) continue;
+    ctx.beginPath();
+    ctx.roundRect(x, y - height / 2, width, height, 4);
+    ctx.fillStyle = palette.void;
+    ctx.fill();
+    ctx.strokeStyle = palette.faint;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = palette.paint;
+    ctx.fillText(text, x + px * 0.4, y + 0.5);
+  }
+  ctx.restore();
 }
 
 export function veil(ctx: CanvasRenderingContext2D, view: View, alpha: number, palette: Palette) {

@@ -6,8 +6,10 @@ import {
   begin_frame,
   contact_rings,
   fill,
+  floor_labels,
   ground,
   guides,
+  headroom,
   player,
   sensor_arcs,
   solids,
@@ -19,6 +21,7 @@ import type { End } from "../../core/sensors";
 import { body_centre, Gear, Vehicle, VEHICLES } from "../../core/vehicle";
 import { countdown, dented, JobKind, spec_of, Status, type GameState } from "./game";
 import { BOOTH } from "./street";
+import { CHUNK, toward } from "../../core/lot";
 
 export interface Extras {
   guides: boolean;
@@ -144,6 +147,9 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
   }
 
+  headroom(ctx, street.world.headroom, scale, palette);
+  floor_labels(ctx, street.world.chunks, CHUNK, view, palette, extras.font, extras.insets);
+
   const size = Math.max(10, Math.min(13, scale * 0.6));
   const items: Tag[] = [];
   for (const ticket of state.tickets) {
@@ -170,7 +176,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     const goal = returning ? street.returns : bus ? street.coach[0] : null;
     if (goal) {
       ctx.save();
-      bay_pointer(ctx, goal, view, extras.insets, palette);
+      bay_pointer(ctx, toward(street.world, state.car, goal), view, extras.insets, palette);
       ctx.restore();
     }
   }

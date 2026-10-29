@@ -70,14 +70,15 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - Bests are kept per spot and vehicle: fewest moves, then the quickest, plus the best precision you've reached there.
 - In **P** outside a bay the line at the bottom says what's off: not inside a bay, not straight, or facing the wrong way.
 - Parking sensors watch the bumper you're driving towards: the beeps quicken as it closes in on something and go steady under 30 cm. The garage is where you'll lean on them.
-- The **underground** garage: down the ramp, along the aisle and in between two pillars, with cars parked either side. Either way round counts.
+- The **underground** garage: down the walled ramp, along the aisle and in between two pillars, with cars parked either side. Either way round counts.
+- The **multi-storey** garage: the free bay is one to three floors down. Each ramp drops you straight into an aisle with cars right in front, so turn at once; bigger garages go on down a spiral round the stairs (hold the wheel over and keep going round). The floors are laid side by side, labelled −1, −2, −3, and the view follows you through each ramp. Cars and SUVs only: the bar at the entrance is too low for anything bigger.
 - The **end bay** sits in the corner of a full, narrow aisle with no room past it: get in with a few short moves, back and forth. Par allows two.
 
 ## Tight Spot modes
 
 - **Spots:** a random spot of the kind you pick, or any. The daily is the same spot for everyone, and Game Hub keeps your results.
 - **Levels:** 48 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot, the slipway, the camping pitch and the loading dock. Park one to open the next.
-- **Open lot:** a block of streets and car parks, some of them underground garages, with parallel bays let into the kerb along the side streets; park in any free bay.
+- **Open lot:** a block of streets and car parks, some of them underground garages with a second floor below, with parallel bays let into the kerb along the side streets; park in any free bay.
 
 ## Rodeo: the course
 
@@ -169,7 +170,7 @@ Mow a garden with the zero-turn mower. It starts on the patio by the shed; mow a
 
 Run a valet stand on the open lot. Cars pull up at the stand on the south road, faster and faster as the shift goes on; **four waiting ends the shift**.
 
-- At the stand, **T** (or **Take**) takes the first car in the queue. Drive it to any free bay and press **P** or **Space**, lined up within 5°. You walk back to the stand, and the clock runs on while you walk: far bays cost time.
+- At the stand, **T** (or **Take**) takes the first car in the queue. Drive it to any free bay and press **P** or **Space**, lined up within 5°. You walk back to the stand, and the clock runs on while you walk: far bays cost time, and a bay on the garage's floor below costs the walk back up the ramp. The bus is too tall for the garages.
 - Each owner comes back a while later; their car's chip counts down, then shows how long they've waited. **F** (or **Fetch**) walks out to the car of the owner who has waited longest; drive it into the box by the stand and press **P**.
 - **Tips** are paid when you hand a car back: 10, up to 10 more for a quick return (gone after a minute's wait), up to 5 for how neatly you parked it. The bus pays double; it only fits a coach bay up the north road, straight on from the stand, and you back it out again.
 - **A touch is a dent:** the car stops short, you lose 5 and that car's whole tip, and the shift goes on. Pressing on against the same thing is one dent.

@@ -1,6 +1,7 @@
-import { angle_between } from "../../core/geometry";
+import { angle_between, centroid, type Pose } from "../../core/geometry";
+import { chunk_at, route, type World } from "../../core/lot";
 import { collide, obstacles, type Obstacles } from "../../core/obstacles";
-import { drive, inflate, plan, type Move } from "../../core/planner";
+import { drive, inflate, plan, type Move, type PlanOptions } from "../../core/planner";
 import { jackknifed, rig_length, VEHICLES, type Placement, type Vehicle, type VehicleSpec } from "../../core/vehicle";
 import { create_game, Mode, parked_in, SCENARIO_INFO, spec_of, verdict, type GameState } from "./game";
 import { parked_poses } from "./poses";
@@ -54,7 +55,60 @@ function pull_up(at: Placement, bay: Bay, near: Obstacles, spec: VehicleSpec, bo
   return null;
 }
 
+const APPROACH = 1.2;
+
+/**
+ * Across floors, one search a floor: the route's portals in order, each leg aimed at a pose just short of the next
+ * mouth and done once the pose is on the floor beyond it; the last leg is the caller's own. One search over every
+ * floor would be led by the straight line to a goal on another floor, into the wall between them.
+ */
+export function plan_across(world: World, from: Placement, to: Pose, options: PlanOptions): { moves: Move[]; end: Placement } | null {
+  const portals = route(world, from, to);
+  if (!portals) return null;
+  const near = obstacles(world);
+  const moves: Move[] = [];
+  let at = from;
+  for (const portal of portals) {
+    for (const lead of portal.lead ?? []) {
+      const leg = plan(at, lead, near, { ...options, portals: world.portals, arrive: undefined });
+      if (!leg) return null;
+      moves.push(...leg.moves);
+      at = leg.path.at(-1)!;
+    }
+    const beyond = chunk_at(world, portal.to);
+    const mouth = centroid(portal.mouth);
+    const aim = { x: mouth.x - Math.cos(portal.heading) * APPROACH, y: mouth.y - Math.sin(portal.heading) * APPROACH, heading: portal.heading };
+    const leg = plan(at, aim, near, { ...options, heading_tolerance: Math.PI, portals: world.portals, arrive: (pose) => chunk_at(world, pose) === beyond });
+    if (!leg) return null;
+    moves.push(...leg.moves);
+    at = leg.path.at(-1)!;
+  }
+  const last = plan(at, to, near, { ...options, portals: world.portals });
+  if (!last) return null;
+  return { moves: [...moves, ...last.moves], end: last.path.at(-1)! };
+}
+
+/** A garage with floors is proven from the start, through every ramp a driver takes, and driven again through them. */
+function reachable_across(state: GameState): boolean {
+  const { world, car } = state;
+  const spec = spec_of(state.round);
+  const near = obstacles(world);
+  const bay = world.bays[0];
+  const start: Placement = { x: car.x, y: car.y, heading: car.heading };
+  const tried = new Map<number, number>();
+  return parked_poses(bay, near, 0.05, spec).some((pose) => {
+    const count = tried.get(pose.heading) ?? 0;
+    if (count >= 2) return false;
+    tried.set(pose.heading, count + 1);
+    const found = plan_across(world, start, pose, { spec, arrive: (at) => parked_in(at, bay, spec) });
+    if (!found) return false;
+    if (!parks(state, found.moves)) throw new Error("the path the search found doesn't park when driven");
+    return true;
+  });
+}
+
 export function reachable(state: GameState, from_start: boolean): boolean {
+  if (state.world.portals.length > 0) return reachable_across(state);
   const { world, car } = state;
   const spec = spec_of(state.round);
   const near = obstacles(world);
@@ -107,7 +161,7 @@ function parks(state: GameState, moves: readonly Move[]): boolean {
   for (const move of moves) {
     const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
     for (let k = 0; k < pieces; k++) {
-      at = drive(at, { ...move, distance: move.distance / pieces }, spec);
+      at = drive(at, { ...move, distance: move.distance / pieces }, spec, state.world.portals);
       if (jackknifed(at, spec) || collide(at, near, spec)) return false;
     }
   }

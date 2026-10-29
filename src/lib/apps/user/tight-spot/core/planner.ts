@@ -1,6 +1,6 @@
 import { angle_between } from "./geometry";
 import { collide, type Obstacles } from "./obstacles";
-import { through } from "./portals";
+import { carry, portal_at, through } from "./portals";
 import type { Portal } from "./scene";
 import {
   can_crab,
@@ -54,7 +54,7 @@ export interface PlanOptions {
   crabbing?: readonly number[];
   /** Added per change of direction; higher finds paths a driver would take, with fewer shuffles. */
   switch_cost?: number;
-  /** A pose that rolls into a mouth goes on from where the portal carries it, so a path can cross floors. */
+  /** A pose that rolls into a mouth goes on from where the portal carries it, so a path can cross floors; `to` is carried along, so it is given as seen from the start's floor. */
   portals?: readonly Portal[];
 }
 
@@ -74,6 +74,8 @@ export interface PlanResult {
 
 interface Node {
   pose: Placement;
+  /** `to`, carried through every portal the path passed, so the heuristic reads as if the floors were joined. */
+  goal: Placement;
   cost: number;
   score: number;
   direction: number;
@@ -176,22 +178,23 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   if (can_crab(spec)) primitives.push(...(options.crabbing ?? CRABBING).map((share) => ({ steer: lock * share, crab: true })));
   const switch_cost = options.switch_cost ?? SWITCH_COST;
   const portals = options.portals ?? [];
-  const distance = (pose: Placement) => Math.hypot(pose.x - to.x, pose.y - to.y);
+  const distance = (pose: Placement, goal: Placement) => Math.hypot(pose.x - goal.x, pose.y - goal.y);
   const turn_weight = tolerance < Math.PI ? TURN_WEIGHT : 0;
-  const settled = rest_trailers(to.heading, spec);
-  const folded = (pose: Placement) =>
-    pose.trailers ? pose.trailers.reduce((sum, trailer, i) => sum + angle_between(trailer.heading, settled[i].heading), 0) : 0;
-  const heuristic = (pose: Placement) =>
-    distance(pose) + turn_weight * (angle_between(pose.heading, to.heading) + folded(pose));
-  const arrived =
-    options.arrive ??
-    ((pose: Placement) => distance(pose) <= reach && angle_between(pose.heading, to.heading) <= tolerance);
+  const settled = rest_trailers(0, spec);
+  const folded = (pose: Placement, goal: Placement) =>
+    pose.trailers
+      ? pose.trailers.reduce((sum, trailer, i) => sum + angle_between(trailer.heading, settled[i].heading + goal.heading), 0)
+      : 0;
+  const heuristic = (pose: Placement, goal: Placement) =>
+    distance(pose, goal) + turn_weight * (angle_between(pose.heading, goal.heading) + folded(pose, goal));
+  const arrived = (pose: Placement, goal: Placement) =>
+    options.arrive ? options.arrive(pose) : distance(pose, goal) <= reach && angle_between(pose.heading, goal.heading) <= tolerance;
   const blocked = options.blocked ?? ((pose: Placement) => jackknifed(pose, spec) || collide(pose, near, body) !== null);
 
   if (blocked(from)) return null;
   const open = new Heap();
   const closed = new Set<number | string>();
-  open.push({ pose: from, cost: 0, score: heuristic(from), direction: 0, reversals: 0, move: null, parent: null });
+  open.push({ pose: from, goal: to, cost: 0, score: heuristic(from, to), direction: 0, reversals: 0, move: null, parent: null });
   let expansions = 0;
   while (open.size > 0 && expansions < limit) {
     const node = open.pop()!;
@@ -199,7 +202,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
     if (closed.has(key)) continue;
     closed.add(key);
     expansions++;
-    if (arrived(node.pose)) {
+    if (arrived(node.pose, node.goal)) {
       const path: Placement[] = [];
       const moves: Move[] = [];
       for (let at: Node | null = node; at; at = at.parent) {
@@ -212,11 +215,15 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
       for (const primitive of primitives) {
         // A move that runs into something stops short, the way a driver creeps up to a bumper in a tight spot.
         let pose = node.pose;
+        let goal = node.goal;
         let travelled = 0;
         for (let i = 0; i < SUBSTEPS; i++) {
-          const next = drive(pose, { ...primitive, distance: (direction * STEP) / SUBSTEPS }, spec, portals);
+          const moved = drive(pose, { ...primitive, distance: (direction * STEP) / SUBSTEPS }, spec);
+          const portal = portals.length > 0 ? portal_at(moved, direction, portals) : null;
+          const next = portal ? carry(moved, portal) : moved;
           if (blocked(next)) break;
           pose = next;
+          if (portal) goal = carry(goal, portal);
           travelled += STEP / SUBSTEPS;
         }
         if (travelled === 0 || closed.has(cell_key(pose, direction, bends, spec))) continue;
@@ -224,8 +231,9 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
         const cost = node.cost + travelled * (direction < 0 ? REVERSE_COST : 1) + (switched ? switch_cost : 0);
         open.push({
           pose,
+          goal,
           cost,
-          score: cost + heuristic(pose) * GREED,
+          score: cost + heuristic(pose, goal) * GREED,
           direction,
           reversals: node.reversals + (switched ? 1 : 0),
           move: { ...primitive, distance: direction * travelled },

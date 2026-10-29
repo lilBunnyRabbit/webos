@@ -1,13 +1,14 @@
 import { describe, expect, test } from "vitest";
 import { create_game, level_round, LEVEL_COUNT, Mode, SCENARIO_INFO } from "./game";
 import { reachable } from "./proof";
-import { SCENARIOS } from "./world";
+import { Scenario, SCENARIOS } from "./world";
 
 const SEEDS = 8;
 
 // The vehicles each kind's levels pick from; the ones added since are proven beside it, in planner-vehicles.test.ts.
 describe("every generated spot can be reached with the vehicle's turning circle", () => {
-  for (const scenario of SCENARIOS) {
+  // The multi-storey garage is proven through its ramps in its own file.
+  for (const scenario of SCENARIOS.filter((each) => each !== Scenario.MULTI_STOREY)) {
     const info = SCENARIO_INFO[scenario];
     for (const vehicle of info.ladder ?? info.vehicles) {
       for (const difficulty of [0, 0.5, 1]) {

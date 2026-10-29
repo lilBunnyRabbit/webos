@@ -37,7 +37,7 @@ export interface Mark {
   b: Vec;
 }
 
-export const SurfaceKind = { ASPHALT: "asphalt", FLOOR: "floor", PAVEMENT: "pavement", GRASS: "grass", GARAGE: "garage" } as const;
+export const SurfaceKind = { ASPHALT: "asphalt", FLOOR: "floor", PAVEMENT: "pavement", GRASS: "grass", GARAGE: "garage", RAMP: "ramp" } as const;
 export type SurfaceKind = (typeof SurfaceKind)[keyof typeof SurfaceKind];
 
 export interface Surface {
@@ -51,4 +51,6 @@ export interface Portal {
   heading: number;
   from: Pose;
   to: Pose;
+  /** Where a driver lines up on the way to a mouth round a bend, in order: a search aims at each in turn. */
+  lead?: readonly Pose[];
 }

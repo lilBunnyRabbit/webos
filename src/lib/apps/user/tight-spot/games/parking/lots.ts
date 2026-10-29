@@ -25,6 +25,7 @@ import {
   type Fit,
   type Layout,
 } from "../../core/lot-layout";
+import { garage as multi_storey } from "../../core/garage";
 import { BOX_TRUCK, HATCHBACK, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import { MarkKind, Scenario, SolidKind, SurfaceKind } from "./kinds";
 
@@ -621,6 +622,11 @@ export function build_lot(
       return rows(difficulty, rng, open, RowsKind.PILLARS, fit);
     case Scenario.UNDERGROUND:
       return rows(difficulty, rng, open, RowsKind.GARAGE, fit);
+    case Scenario.MULTI_STOREY: {
+      // One to three floors down; a bay on −1 still gets a second floor, so the garage reads as more than one.
+      const down = 1 + Math.floor(rng() * 3);
+      return multi_storey(difficulty, rng, fit, { floors: Math.max(2, down), target: down - 1 });
+    }
     case Scenario.ANGLED:
       return angled(difficulty, rng, open, fit);
     case Scenario.GARAGE:

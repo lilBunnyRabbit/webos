@@ -2,6 +2,7 @@ import { z } from "zod";
 import { create_rng } from "$lib/core/utils/random";
 import { inside_convex, overlaps } from "../../core/collision";
 import { angle_between, clamp, lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { walk_length, type World } from "../../core/lot";
 import { collide, obstacles, type Scene } from "../../core/obstacles";
 import { pass_portals } from "../../core/portals";
 import { fit, MAX_ANGLE } from "../../core/precision";
@@ -269,7 +270,10 @@ export function car_solids(vehicle: Customer, car: Placement, paint: number): So
 function with_scene(state: GameState): GameState {
   const parked = state.tickets.flatMap((ticket) => ticket.solids);
   const queue = queue_solids(state);
-  return { ...state, out: queue.out, lined: queue.lined, scene: { solids: [...state.street.world.solids, ...parked, ...queue.solids] } };
+  // The bus is too tall for the garages: their height bars are solid to it alone.
+  const bars: Solid[] =
+    state.job?.ticket.vehicle === Vehicle.BUS ? state.street.world.headroom.map((shape) => ({ kind: SolidKind.WALL, shape })) : [];
+  return { ...state, out: queue.out, lined: queue.lined, scene: { solids: [...state.street.world.solids, ...parked, ...queue.solids, ...bars] } };
 }
 
 /** A standing car still short of its place, waiting for the car in hand to clear the way up. */
@@ -393,8 +397,9 @@ export function take(state: GameState): GameState {
   return begin({ ...state, queue: state.queue.slice(1), tickets: [...state.tickets, ticket] }, ticket, JobKind.PARK, car);
 }
 
-export function walk_ms(from: Vec): number {
-  return Math.round((distance(from, STAND) / WALK_SPEED) * 1000);
+/** Up the ramps from a car parked below: the walk follows them floor by floor. */
+export function walk_ms(world: World, from: Vec): number {
+  return Math.round((walk_length(world, from, STAND) / WALK_SPEED) * 1000);
 }
 
 /** The valet walks to the car of the owner who has waited longest, then drives it. The walk can end the shift. */
@@ -402,7 +407,7 @@ export function fetch(state: GameState): GameState {
   if (!can_fetch(state)) return state;
   const ticket = waiting(state)[0];
   const parked = ticket.parked!;
-  const walk = walk_ms(body_centre(parked, VEHICLES[ticket.vehicle]));
+  const walk = walk_ms(state.street.world, body_centre(parked, VEHICLES[ticket.vehicle]));
   const walked = tick(state, state.ms + walk);
   if (walked.status === Status.OVER) return walked;
   const out: Ticket = { ...ticket, solids: [] };
@@ -465,7 +470,7 @@ function park(state: GameState, bay: Bay): GameState {
   const precision = fit(bodies(placed, spec).flat(), headings(placed, spec), bay).score;
   const ticket: Ticket = { ...job.ticket, parked: placed, bay, precision, solids: car_solids(job.ticket.vehicle, placed, job.ticket.paint) };
   const tickets = state.tickets.map((each) => (each === job.ticket ? ticket : each));
-  const walk = walk_ms(body_centre(placed, spec));
+  const walk = walk_ms(state.street.world, body_centre(placed, spec));
   const served = state.served + (job.kind === JobKind.PARK ? 1 : 0);
   const parked = with_scene({ ...state, tickets, job: null, held: false, status: Status.STAND, resume: Status.STAND, served });
   const walked = tick(parked, state.ms + walk);

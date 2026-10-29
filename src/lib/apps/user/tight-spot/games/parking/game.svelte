@@ -7,7 +7,7 @@
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { clamp_zoom, ease, fade, frame, NO_INSETS, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "../../core/camera";
+  import { clamp_zoom, ease, fade, fit_span, frame, NO_INSETS, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "../../core/camera";
   import { veil, type Palette } from "../../core/draw";
   import DriveFrame from "../../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../../core/drive-input.svelte";
@@ -242,6 +242,11 @@
       const covered_right = sideways() ? pedal_box.width + OVERLAY_GAP : 0;
       const width = size.width - covered_x - covered_right;
       const height = size.height - covered_y;
+      if (game.world.portals.length > 0) {
+        // A garage with floors shows all of them side by side, the street, the ramps and the bay.
+        const whole = frame(bounds, { x: (bounds.x0 + bounds.x1) / 2, y: (bounds.y0 + bounds.y1) / 2 }, width, height, zoom, NO_INSETS, fit_span(bounds, width, height, NO_INSETS, 1));
+        return { ...whole, x: whole.x - (covered_x - covered_right) / 2 / whole.scale, y: whole.y + covered_y / 2 / whole.scale };
+      }
       const across = Math.max(Math.abs(bay.x - car.x) + 12, all.x1 - all.x0 + 4);
       const along = Math.max(Math.abs(bay.y - car.y) + 12, all.y1 - all.y0 + 4);
       const long = across > Math.abs(bay.x - car.x) + 12 || along > Math.abs(bay.y - car.y) + 12;
@@ -291,6 +296,7 @@
       },
       time: now / 1000,
       insets: control_insets(),
+      font: getComputedStyle(canvas).fontFamily,
     });
     veil(ctx, view, fade((now - cut_at) / 1000), palette);
   }

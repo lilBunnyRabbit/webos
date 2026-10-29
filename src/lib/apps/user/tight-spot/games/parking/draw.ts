@@ -6,8 +6,10 @@ import {
   beams,
   begin_frame,
   contact_rings,
+  floor_labels,
   ground,
   guides,
+  headroom,
   player,
   sensor_arcs,
   solids,
@@ -15,6 +17,7 @@ import {
   type View,
 } from "../../core/draw";
 import type { End } from "../../core/sensors";
+import { CHUNK, toward } from "../../core/lot";
 import { Gear } from "../../core/vehicle";
 import { spec_of, Status, type GameState } from "./game";
 
@@ -24,6 +27,7 @@ export interface Extras {
   time: number;
   /** What sits over the board's edges (the HUD, sideways touch controls), the same strips the camera keeps clear of. */
   insets: Insets;
+  font: string;
 }
 
 export function draw_scene(
@@ -76,10 +80,12 @@ export function draw_scene(
     extras.time
   );
   if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
+  headroom(ctx, world.headroom, scale, palette);
+  floor_labels(ctx, world.chunks, CHUNK, view, palette, extras.font, extras.insets);
 
   if (!open && world.bays.length === 1 && state.status === Status.DRIVING) {
     ctx.save();
-    bay_pointer(ctx, world.bays[0], view, extras.insets, palette);
+    bay_pointer(ctx, toward(world, state.car, world.bays[0]), view, extras.insets, palette);
     ctx.restore();
   }
 

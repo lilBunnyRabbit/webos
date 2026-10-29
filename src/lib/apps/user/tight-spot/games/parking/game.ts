@@ -94,6 +94,12 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
     vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.GT],
     ladder: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN],
   },
+  "multi-storey": {
+    name: "Multi-storey",
+    brief: "Down the ramps to the floor with the free bay. Every ramp ends in a tight turn.",
+    par: 2,
+    vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV],
+  },
   narrow: { name: "Narrow aisle", brief: "Cars on both sides and little room to swing.", par: 2, vehicles: [...ROOMY, ...WIDE_MACHINES], ladder: CARS },
   door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: [...CAR_LIKES, Vehicle.CAMPER, ...SKIDS], ladder: CARS },
   "dead-end": {
