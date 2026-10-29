@@ -76,6 +76,17 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - **Levels:** 48 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot, the slipway, the camping pitch and the loading dock. Park one to open the next.
 - **Open lot:** a block of streets and car parks; park in any free bay.
 
+## Rodeo: the course
+
+Pick any vehicle from the garage, trailers and machines included, and drive a timed course built for it: the bigger the vehicle and the wider it turns, the more room it gets.
+
+- **Gates:** three pairs of cones down the first lane, in order. Drive between them; the next one glows.
+- **Slalom:** turn round at the far end and weave down the other lane, passing each cone on the side its arrow shows.
+- **Stop box:** drive through the last gate into the box and stop with the whole vehicle inside it.
+- **Reverse gate:** back out through the gate you came in by. The run ends when your front is through it.
+- **Cones:** each cone you knock over adds 5 seconds and the run goes on. Touching the fence, or jackknifing a trailer, ends it.
+- **Courses:** twelve, with a best per vehicle and course. **Daily:** today's course with a vehicle picked for everyone; Game Hub lists it as Drive Hub · Rodeo.
+
 ## Warehouse: the forklift
 
 Move pallets with a forklift. A job is one to four pallets, each to be taken from its marked slot to its marked target, in order: a rack bay (**B4**) or a spot at the dock (**Dock C**). The start card lists them and shows the whole floor; the pallet in hand pulses with its number on it, its target is dashed with an arrow and its number, and an arrow on the edge of the view points the way when it's off screen. The chip at the top says what's next: *Pallet 2/3 · pick up at B4*, then *Pallet 2/3 → Dock C*.

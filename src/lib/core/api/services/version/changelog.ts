@@ -39,6 +39,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub plays with a game controller: steer with the stick, drive with the triggers, and feel the bumps if it rumbles.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub gains Rodeo: pick any vehicle from the garage and race a course sized to it, through gates, round a cone slalom, into a stop box and back out through a gate, with five seconds added for every cone you knock, and a daily course with a vehicle picked for everyone.",
+      },
     ],
   },
   {
