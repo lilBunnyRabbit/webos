@@ -82,6 +82,9 @@ Unchanged hub-wide rule: no commands; the `game` prop takes the new ids.
 ### Open lot: parallel spots and a garage (decided)
 Owner: "for the valet im missing some paralel parking cases … or garage - maybe underground garage - that would be good". Both go into the shared open lot (`core/lot.ts`), so Valet Rush and Tight Spot's open lot get them: kerbside parallel bays along chunk roads, and an underground-garage chunk (walled, dim, a pillar grid, an entry ramp). Rejected: Valet-only kerb spots (Tight Spot's open lot would miss them).
 
+### Multi-floor garages (decided)
+Owner: "maybe even multiple floors - all in one canvas with 'teleportation'". Core portals in the scene, crossed after `step()` and by the planner; floors side by side, the camera follows through a ramp. ADR-090. Built after the single-floor garage lands.
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.
