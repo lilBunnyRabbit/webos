@@ -85,8 +85,8 @@ Owner: "for the valet im missing some paralel parking cases … or garage - mayb
 ### Multi-floor garages (decided)
 Owner: "maybe even multiple floors - all in one canvas with 'teleportation'". Core portals in the scene, crossed after `step()` and by the planner; floors side by side, the camera follows through a ramp. ADR-090. Built after the single-floor garage lands.
 
-### Forklift fork jams (decided)
-Owner: "for forklift lets make this easier. it doesnt mean fail … it just stops you and you need to reverse". Forks into a pallet outside its pockets stop the forklift (the step is undone, rings flash, "Jammed: back out"); the player reverses and carries on, and that job can no longer earn the time star. The body or the load hitting racks, walls, pillars or stock still ends the round.
+### Forklift: bumps, never a fail (decided)
+Owner: "for forklift lets make this easier. it doesnt mean fail … it just stops you and you need to reverse", then: "'touched a pallete' should also not be a fail. you know what nothing is a fail with forklift its just deduction. think of it how real forklifts work there is always bumps everywhere". Every contact in the Warehouse (forks jammed into a pallet, body or load against racks, walls, pillars, stock or pallets, the forks against a beam in the side view) is a bump: the step is undone, the forklift stops, rings flash, a hint says what was hit, and the player backs off and carries on. Pressing on against the same thing is one bump. Each bump adds 5 s to the time, so it eats into the time star; the done card lists the bumps. Nothing ends a round.
 
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
