@@ -616,6 +616,25 @@ const BAGGAGE_CART: TrailerSpec = {
 
 const BAGGAGE_TRAIN: VehicleSpec = { ...TUG, hitches: [{ ...BAGGAGE_CART, hitch: 0.75 }, BAGGAGE_CART, BAGGAGE_CART] };
 
+// An A320-sized airliner on a towbar off the tug's front: the hinge is the nose gear, 7.6 m ahead of the tug's rear axle
+// (the tug's front stops just short of the nose), the main gear 12.6 m behind it, the nose 5.07 m ahead of it. The box
+// is the fuselage; the wings are the Pushback game's. The hinge's limit is the nose gear's steering lock.
+const AIRLINER: TrailerSpec = {
+  hitch: -7.6,
+  axle: 12.64,
+  drawbar: -5.07,
+  box_length: 37.57,
+  width: 3.95,
+  track: 7.59,
+  wheel_diameter: 1.14,
+  wheel_width: 0.4,
+  max_angle: degrees(75),
+  rest: Math.PI,
+};
+
+/** The tug pushing an airliner back: the Pushback game's rig, kept out of the garage. */
+export const PUSHBACK: VehicleSpec = { ...TUG, steer_time: 2.2, max_forward: 2.2, max_reverse: 1.2, accel: 0.9, brake: 3, hitches: [AIRLINER] };
+
 // The second trailer hitches to the first one's tail, 0.4 m behind its box.
 const TRACTOR_TWO: VehicleSpec = {
   ...TRACTOR,

@@ -1620,6 +1620,7 @@ export function player(
   const loads = look.loads ?? [];
   const dim = { braking: false, reversing: false, lit: 0.6 };
   for (const i of draw_order(loads)) {
+    if (i >= spec.hitches.length) continue;
     if (i >= 0) trailer(ctx, car, spec, i, loads[i], i === loads.length - 1 ? lamps : dim, scale, palette);
     else vehicle_body(ctx, car, spec, look, lamps, dim, scale, palette, time);
   }

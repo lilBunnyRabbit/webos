@@ -32,6 +32,11 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
+        text: "Drive Hub gains Pushback: push an airliner off its stand with a tug, past parked aircraft and jet bridges, onto the taxiway and its stop mark, facing the way the tower tells you, in random pushes, 12 levels or a daily.",
+      },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
         text: "Drive Hub plays with a game controller: steer with the stick, drive with the triggers, and feel the bumps if it rumbles.",
       },
     ],

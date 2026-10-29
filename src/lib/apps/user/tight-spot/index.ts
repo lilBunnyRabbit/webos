@@ -23,7 +23,7 @@ export default define_app({
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
     game: z.enum(GAME_CHOICES).optional(),
-    /** With `daily`, which game's daily (ADR-050): parking, the Warehouse, Hot Lap, Ferry Loader or Mow Day. */
+    /** With `daily`, which game's daily (ADR-050): parking, the Warehouse, Hot Lap, Ferry Loader, Mow Day or Pushback. */
     mode: z.enum(DAILY_GAMES).optional(),
   }),
   daily_rank: {
@@ -32,6 +32,7 @@ export default define_app({
     f1: DailyRank.TIME,
     ferry: DailyRank.SCORE_ASC,
     mower: DailyRank.SCORE_ASC,
+    pushback: DailyRank.SCORE_ASC,
   },
   achievements: GAMES.flatMap((game) => game.achievements),
   component: () => import("./tight-spot.app.svelte"),
