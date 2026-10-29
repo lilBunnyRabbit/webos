@@ -3,6 +3,7 @@
   import { daily_seed, format_time } from "$kit/games";
   import { random_seed } from "$lib/core/utils/random";
   import { cn } from "$lib/core/utils";
+  import { motion_reduced } from "$lib/core/utils/motion";
   import { Badge, BoardOverlay, Button, IconButton, Segmented, Select } from "$lib/core/components/ui";
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
@@ -35,11 +36,13 @@
     create_game,
     data_schema,
     EMPTY_DATA,
+    extreme_round,
     LAP_LEVELS,
     LEVEL_COUNT,
     level_round,
     Mode,
     mode_schema,
+    OFF,
     open_round,
     par,
     PERFECT,
@@ -65,14 +68,16 @@
     type VehiclePick,
   } from "./game";
   import { adopt_legacy } from "./legacy";
+  import { course_index, COURSES, courses_open } from "./extreme/courses";
   import { SCENARIOS, Scenario } from "./world";
 
-  const MODE_LABELS: Record<Mode, string> = { scenario: "Spots", levels: "Levels", open: "Open lot" };
+  const MODE_LABELS: Record<Mode, string> = { scenario: "Spots", levels: "Levels", open: "Open lot", extreme: "Extreme" };
   const MODE_OPTIONS = (Object.keys(MODE_LABELS) as Mode[]).map((value) => ({ value, label: MODE_LABELS[value] }));
   const PICK_OPTIONS: { value: ScenarioPick; label: string }[] = [
     { value: ANY, label: "Any spot" },
     ...SCENARIOS.map((value) => ({ value, label: SCENARIO_INFO[value].name })),
   ];
+  const TIP_MS = 650;
   const VERDICTS = { crooked: "Not straight in the bay", backwards: "Facing the wrong way", outside: "Not inside a bay" } as const;
 
   const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
@@ -88,6 +93,7 @@
   let pick = $state<ScenarioPick>(storage.get("parking.pick", pick_schema) ?? ANY);
   let vehicle_pick = $state<VehiclePick>(storage.get("parking.vehicle", vehicle_pick_schema) ?? ANY);
   let level = $state(Math.min(LEVEL_COUNT, storage.get("parking.level", z.number().int().min(1)) ?? 1));
+  let course = $state(COURSES[course_index(storage.get("parking.course", z.string()) ?? "")].id);
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let new_best = $state(false);
@@ -104,6 +110,7 @@
   let pedal_box = $state({ width: 0, height: 0 });
   let stage_rect = $state<DOMRectReadOnly>();
   let hud_height = $state(0);
+  let tip = $state(1);
 
   let camera: Camera | null = null;
   let cut_at = -Infinity;
@@ -129,7 +136,21 @@
   const fit = $derived(game.status === Status.PARKED && game.bay ? precision(game.car, game.bay, spec) : null);
   const fit_percent = $derived(fit ? Math.round(fit.score) : 0);
   const round_par = $derived(par(game.round));
-  const level_best = $derived(game.round.level !== undefined ? (data.value.levels[game.round.level] ?? 0) : 0);
+  const course_stars = $derived(data.value.extreme ?? {});
+  const level_best = $derived(
+    game.round.level !== undefined
+      ? (data.value.levels[game.round.level] ?? 0)
+      : game.round.course !== undefined
+        ? (course_stars[game.round.course] ?? 0)
+        : 0
+  );
+  const open_courses = $derived(courses_open(course_stars));
+  const course_options = $derived(
+    COURSES.slice(0, open_courses).map((each, i) => {
+      const got = course_stars[each.id] ?? 0;
+      return { value: each.id, label: `${i + 1} · ${each.name}${got ? ` ${"★".repeat(got)}` : ""}` };
+    })
+  );
   const max_level = $derived(unlocked(data.value.levels));
   const level_options = $derived(
     Array.from({ length: max_level }, (_, i) => {
@@ -138,7 +159,13 @@
       return { value: String(i + 1), label: `${i + 1} · ${SCENARIO_INFO[round.scenario!].name}${round.vehicle === Vehicle.HATCH ? "" : ` · ${VEHICLE_NAMES[round.vehicle]}`}${got ? ` ${"★".repeat(got)}` : ""}` };
     })
   );
-  const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNT);
+  const has_next_level = $derived(
+    game.round.course !== undefined
+      ? course_index(game.round.course) < COURSES.length - 1
+      : game.round.level !== undefined && game.round.level < LEVEL_COUNT
+  );
+  const laddered = $derived(game.round.level !== undefined || game.round.course !== undefined);
+  const next_label = $derived(game.round.course !== undefined ? "Next course" : "Next level");
   // A wide board (a desktop window, a phone held sideways) takes cards on its left, centred: a strip at the bottom read as detached there.
   const side_card = $derived(size.height > 0 && size.width > size.height * 1.2);
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
@@ -170,6 +197,7 @@
   function make_round(): Round {
     if (daily) return scenario_round(ANY, daily_seed(daily, app_id), daily);
     if (mode === Mode.LEVELS) return level_round(level);
+    if (mode === Mode.EXTREME) return extreme_round(course);
     if (mode === Mode.OPEN) return open_round(random_seed(), chosen_vehicle());
     return scenario_round(pick, random_seed(), undefined, chosen_vehicle());
   }
@@ -185,6 +213,15 @@
       level = max_level;
       storage.set("parking.level", level);
       if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
+    });
+  });
+
+  $effect(() => {
+    if (!data.ready || course_index(course) < open_courses) return;
+    untrack(() => {
+      course = COURSES[open_courses - 1].id;
+      storage.set("parking.course", course);
+      if (game.status === Status.READY && game.round.course !== undefined) load(make_round());
     });
   });
 
@@ -223,7 +260,7 @@
 
   // While driving the frame loop draws; this covers everything else (menus, a resize, a new theme).
   $effect(() => {
-    void [game, palette, size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
+    void [game, palette, size, zoom, tip, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -243,8 +280,8 @@
       const covered_right = sideways() ? pedal_box.width + OVERLAY_GAP : 0;
       const width = size.width - covered_x - covered_right;
       const height = size.height - covered_y;
-      if (game.world.portals.length > 0) {
-        // A garage with floors shows all of them side by side, the street, the ramps and the bay.
+      if (game.world.portals.length > 0 || game.round.course !== undefined) {
+        // A garage with floors shows all of them side by side, the street, the ramps and the bay; a course shows all of it.
         const whole = frame(bounds, { x: (bounds.x0 + bounds.x1) / 2, y: (bounds.y0 + bounds.y1) / 2 }, width, height, zoom, NO_INSETS, fit_span(bounds, width, height, NO_INSETS, 1));
         return { ...whole, x: whole.x - (covered_x - covered_right) / 2 / whole.scale, y: whole.y + covered_y / 2 / whole.scale };
       }
@@ -298,6 +335,7 @@
       time: now / 1000,
       insets: control_insets(),
       font: getComputedStyle(canvas).fontFamily,
+      tip,
     });
     veil(ctx, view, fade((now - cut_at) / 1000), palette);
   }
@@ -328,6 +366,20 @@
   function crashed() {
     release_all();
     sounds.crash();
+    if (game.hit?.kind === OFF) tip_over();
+  }
+
+  function tip_over() {
+    if (motion_reduced()) return;
+    const from = performance.now();
+    const round = game;
+    tip = 0;
+    const frame = (now: number) => {
+      if (game !== round) return void (tip = 1);
+      tip = Math.min(1, (now - from) / TIP_MS);
+      if (tip < 1) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
   }
 
   function parked(state: GameState) {
@@ -343,7 +395,12 @@
     achievements.achieve("first-park");
     if (percent !== undefined && percent >= PERFECT) achievements.achieve("perfect-park");
     const scenario = state.round.scenario;
-    if (scenario === null) achievements.achieve("open-lot");
+    if (state.round.course !== undefined) {
+      const stars = data.value.extreme ?? {};
+      data.value.extreme = { ...stars, [state.round.course]: Math.max(stars[state.round.course] ?? 0, earned) };
+      achievements.achieve("parking-extreme");
+      achievements.progress("parking-extreme-all", Object.keys(data.value.extreme).filter((id) => COURSES.some((each) => each.id === id)).length);
+    } else if (scenario === null) achievements.achieve("open-lot");
     else {
       if (!data.value.kinds.includes(scenario)) data.value.kinds = [...data.value.kinds, scenario];
       achievements.progress("every-spot", data.value.kinds.length);
@@ -392,13 +449,14 @@
     else if (game.status === Status.CRASHED) retry();
     else if (game.status === Status.DRIVING && change_gear(game, Gear.PARK).status === Status.PARKED) shift(Gear.PARK);
     else if (game.status === Status.PARKED) {
-      if (game.round.level === undefined) new_spot();
+      if (!laddered) new_spot();
       else if (has_next_level) next_round();
       else retry();
     }
   }
 
   function load(round: Round) {
+    tip = 1;
     input.reset();
     sounds.quiet();
     new_best = false;
@@ -413,7 +471,10 @@
   }
 
   function next_round() {
-    if (game.round.level !== undefined && has_next_level && game.status === Status.PARKED) {
+    if (game.round.course !== undefined && has_next_level && game.status === Status.PARKED) {
+      course = COURSES[course_index(game.round.course) + 1].id;
+      storage.set("parking.course", course);
+    } else if (game.round.level !== undefined && has_next_level && game.status === Status.PARKED) {
       level = game.round.level + 1;
       storage.set("parking.level", level);
     }
@@ -443,6 +504,12 @@
     daily = null;
     vehicle_pick = next;
     storage.set("parking.vehicle", next);
+    load(make_round());
+  }
+
+  function set_course(next: string) {
+    course = COURSES[Math.min(course_index(next), open_courses - 1)].id;
+    storage.set("parking.course", course);
     load(make_round());
   }
 
@@ -577,12 +644,14 @@
 
 {#snippet toolbar()}
   {@render menu?.()}
-  <Segmented size="sm" class="hidden @xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
-  <Select class="w-[5.75rem] @xl:hidden pointer-coarse:w-[6.5rem]" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
+  <Segmented size="sm" class="hidden @4xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
+  <Select class="w-[5.75rem] @4xl:hidden pointer-coarse:w-[6.5rem]" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
   {#if mode === Mode.SCENARIO && !daily}
     {@render kind_picker("hidden w-32 min-w-0 @md/ts-app:inline-flex")}
   {:else if mode === Mode.LEVELS}
     <Select class="w-[7.5rem] min-w-0 @md:w-40" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+  {:else if mode === Mode.EXTREME}
+    <Select class="w-[7.5rem] min-w-0 @md:w-44" size="sm" aria-label="Course" options={course_options} bind:value={() => course, set_course} />
   {/if}
   {#if choosing_vehicle}{@render vehicle_picker("hidden w-36 min-w-0 @2xl/ts-app:inline-flex")}{/if}
   {#if daily}<span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>{/if}
@@ -594,7 +663,7 @@
   <IconButton size="sm" class="hidden @md:inline-flex" label="Retry this spot" onclick={retry}>
     <ArrowCounterClockwiseIcon weight="bold" />
   </IconButton>
-  {#if mode !== Mode.LEVELS}
+  {#if mode !== Mode.LEVELS && mode !== Mode.EXTREME}
     <Button size="sm" variant="primary" onclick={new_spot}>New</Button>
   {/if}
 {/snippet}
@@ -703,14 +772,14 @@
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
         <Button variant="quiet" onclick={retry}>Again</Button>
-        {#if game.round.level === undefined}
+        {#if !laddered}
           <Button variant="primary" onclick={new_spot}>New spot</Button>
         {:else if has_next_level}
-          <Button variant="primary" onclick={next_round}>Next level</Button>
+          <Button variant="primary" onclick={next_round}>{next_label}</Button>
         {/if}
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        {#if game.round.level === undefined || has_next_level}<KeyHint key_name="Enter" text={game.round.level === undefined ? "new spot" : "next level"} />{/if}
+        {#if !laddered || has_next_level}<KeyHint key_name="Enter" text={laddered ? next_label.toLowerCase() : "new spot"} />{/if}
         <KeyHint key_name="R" text="again" />
       </p>
     </RoundCard>
@@ -721,7 +790,7 @@
         <p class="font-mono text-2xs text-foreground/80 tabular-nums">{time} · {moves_text(game.moves)}</p>
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
-        {#if game.round.level === undefined && !game.round.daily}<Button variant="quiet" onclick={new_spot}>New spot</Button>{/if}
+        {#if !laddered && !game.round.daily}<Button variant="quiet" onclick={new_spot}>New spot</Button>{/if}
         <Button variant="primary" onclick={retry}>Try again</Button>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">

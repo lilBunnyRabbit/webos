@@ -1,4 +1,5 @@
 import type { Insets } from "../../core/camera";
+import type { Vec } from "../../core/geometry";
 import {
   bay_arrow,
   bay_outline,
@@ -18,8 +19,10 @@ import {
 } from "../../core/draw";
 import type { End } from "../../core/sensors";
 import { CHUNK, toward } from "../../core/lot";
-import { Gear } from "../../core/vehicle";
-import { spec_of, Status, type GameState } from "./game";
+import { body_centre, Gear } from "../../core/vehicle";
+import { draw_course, draw_course_over } from "./extreme/draw";
+import { course_by_id } from "./extreme/courses";
+import { OFF, spec_of, Status, type GameState } from "./game";
 
 export interface Extras {
   guides: boolean;
@@ -28,6 +31,8 @@ export interface Extras {
   /** What sits over the board's edges (the HUD, sideways touch controls), the same strips the camera keeps clear of. */
   insets: Insets;
   font: string;
+  /** How far a car whose tyre went off has tipped over the edge, 0 to 1. */
+  tip: number;
 }
 
 export function draw_scene(
@@ -50,7 +55,10 @@ export function draw_scene(
     palette
   );
 
-  const open = state.round.scenario === null;
+  const course = state.round.course !== undefined ? course_by_id(state.round.course) : null;
+  if (course) draw_course(ctx, course, scale, palette, extras.time);
+
+  const open = state.round.scenario === null && !course;
   const pulse = 0.5 + 0.5 * Math.sin(extras.time * 3);
   const line = Math.max(0.12, 2 / scale);
   for (const bay of world.bays) {
@@ -67,8 +75,11 @@ export function draw_scene(
 
   if (palette.beams && state.status !== Status.CRASHED) beams(ctx, state.car, spec, palette);
   solids(ctx, world.solids, scale, palette);
+  if (course) draw_course_over(ctx, course, scale, palette);
 
   if (extras.guides && state.status === Status.DRIVING) guides(ctx, state.car, spec, scale, palette);
+  const tipping = state.status === Status.CRASHED && state.hit?.kind === OFF && state.contact;
+  if (tipping) tip_over(ctx, body_centre(state.car, spec), state.contact!, extras.tip);
   player(
     ctx,
     state.car,
@@ -79,6 +90,7 @@ export function draw_scene(
     palette,
     extras.time
   );
+  if (tipping) ctx.restore();
   if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
   headroom(ctx, world.headroom, scale, palette);
   floor_labels(ctx, world.chunks, CHUNK, view, palette, extras.font, extras.insets);
@@ -90,4 +102,18 @@ export function draw_scene(
   }
 
   if (state.status === Status.CRASHED && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
+}
+
+// Seen from above, a car going over an edge slides toward it, shrinks as it drops away and darkens.
+function tip_over(ctx: CanvasRenderingContext2D, centre: Vec, edge: Vec, t: number) {
+  const dx = edge.x - centre.x;
+  const dy = edge.y - centre.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const eased = t * t;
+  ctx.save();
+  ctx.translate(edge.x + (dx / length) * eased * 0.9, edge.y + (dy / length) * eased * 0.9);
+  ctx.rotate(Math.sign(dx * dy || 1) * eased * 0.25);
+  ctx.scale(1 - eased * 0.3, 1 - eased * 0.3);
+  ctx.translate(-edge.x, -edge.y);
+  ctx.globalAlpha = 1 - eased * 0.45;
 }

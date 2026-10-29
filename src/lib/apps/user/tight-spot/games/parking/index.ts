@@ -16,6 +16,8 @@ export default define_game({
     { id: "daily", title: "Daily spot", text: "Park the daily spot." },
     { id: "perfect-park", title: "Perfect park", text: "Park with 95% precision or better: centred and square in the bay." },
     { id: "one-sweep", title: "One sweep", text: "Parallel park with a single reverse.", secret: true },
+    { id: "parking-extreme", title: "Every wheel on", text: "Park at the end of an Extreme course." },
+    { id: "parking-extreme-all", title: "Daredevil", text: "Park at the end of every Extreme course.", goal: 9 },
   ],
   load: () => import("./game.svelte"),
 });

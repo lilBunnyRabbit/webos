@@ -79,6 +79,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - **Spots:** a random spot of the kind you pick, or any. The daily is the same spot for everyone, and Game Hub keeps your results.
 - **Levels:** 48 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot, the slipway, the camping pitch and the loading dock. Park one to open the next.
 - **Open lot:** a block of streets and car parks, some of them underground garages with a second floor below, with parallel bays let into the kerb along the side streets; park in any free bay.
+- **Extreme:** nine hand-made courses, each with its own vehicle: planks over a pit, a narrow bridge, a car transporter's ramps and deck, a quay edge, mountain switchbacks. Every wheel has to stay on the planks, the bridge, the deck or the road: one over the edge ends the round. Park in the bay at the end; stars come from moves, as in Levels, and parking one opens the next.
 
 ## Rodeo: the course
 

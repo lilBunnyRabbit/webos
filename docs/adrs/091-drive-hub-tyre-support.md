@@ -1,6 +1,6 @@
 # ADR-091: Drive Hub tyre support and Tight Spot Extreme
 **Date:** 2026-10-29
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 Owner: "For the parking i even have some crazy ideas. Like cars driving on planks and other extreme scenarios". Today only the body collides (`core/obstacles.ts` `collide()`); surfaces in a chunk are drawn, never felt, and nothing knows where a tyre is. Planks, a quay edge, a car transporter's ramps and switchbacks with a drop all need "is every tyre on something". Ideas and grill: `docs/brainstorm/2026-10-29_extreme-parking.md`.
@@ -25,3 +25,13 @@ Owner: "For the parking i even have some crazy ideas. Like cars driving on plank
 - The scene shape gains an optional field; every existing scene is unchanged.
 - The planner's validity check gains an optional ground test (cost only where ground is set).
 - Hand-made courses mean proofs per course in tests, few and fixed.
+
+## Revision 2026-10-29: built
+
+Decided within the ADR while building:
+- **Where `ground` lives.** On `Scene` (`core/obstacles.ts`) and on the lot `World` (`core/lot.ts`), both optional; `support(car, spec, ground, margin)` takes it directly. Tyres are points: one per wheel at its axle and track, a frame steer's front pair on its front frame, each trailer's pair after them.
+- **Planner hook.** `PlanOptions.ground`: the default `blocked` adds "a tyre less than `margin` inside the ground". A game's own `blocked` replaces it, as before.
+- **The edge's name.** The piece the off tyre stood on a step earlier names it: plank, bridge, quay, ramp, deck; a pad or the road is "Over the edge". A course may name its walls for the crash card ("the lorry", "the rock face").
+- **Tip.** The round ends at once (status crashed, `hit.kind` `off`); the 650 ms slide-shrink-fade is drawing only, off with reduced motion.
+- **First ladder.** Nine courses: Planks, Narrow bridge, Long planks, Car transporter, Dogleg, Quay edge (van), Switchbacks, Offset planks, Hairpins (pickup). "Gapped" planks became two pairs offset sideways with a platform between, since a tyre is a point and a gap under it is always a fall. Stars per course id in `parking.json` (`extreme`), bests under `extreme:{id}`.
+- **Toolbar.** Four modes don't fit the segmented control in a 640 px window: it now shows from a wider container (`@4xl`), the Mode select below that.

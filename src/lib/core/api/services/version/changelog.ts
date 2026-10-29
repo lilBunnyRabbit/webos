@@ -20,6 +20,11 @@ export const CHANGELOG: Release[] = [
         text: "Tight Spot has 18 new levels after the ladder: every kind of spot at its tightest, ending in the underground and multi-storey garages.",
       },
       {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Tight Spot has an Extreme mode: nine courses over planks, a narrow bridge, a car transporter's ramps, a quay edge and mountain switchbacks, where one wheel over the edge ends the run.",
+      },
+      {
         kind: FIXED,
         apps: ["tight-spot"],
         text: "Tight Spot's level and spot achievements count the right number, and the hardest levels have an achievement of their own.",

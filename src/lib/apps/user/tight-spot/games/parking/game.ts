@@ -4,6 +4,7 @@ import { angle_between, type Vec } from "../../core/geometry";
 import { fit, MAX_ANGLE, type Precision } from "../../core/precision";
 import { collide, obstacles } from "../../core/obstacles";
 import { pass_portals } from "../../core/portals";
+import { ground_under, support, tyres } from "../../core/support";
 import {
   bodies,
   create_car,
@@ -29,10 +30,11 @@ import {
   scenario_world,
   type Bay,
   type Solid,
-  type SolidKind,
+  SolidKind,
 } from "./world";
+import { course_by_id, course_world, edge_title } from "./extreme/courses";
 
-export const Mode = { SCENARIO: "scenario", LEVELS: "levels", OPEN: "open" } as const;
+export const Mode = { SCENARIO: "scenario", LEVELS: "levels", OPEN: "open", EXTREME: "extreme" } as const;
 export type Mode = (typeof Mode)[keyof typeof Mode];
 export const MODES: readonly Mode[] = Object.values(Mode);
 
@@ -192,10 +194,13 @@ export interface Round {
   vehicle: Vehicle;
   level?: number;
   daily?: string;
+  /** An Extreme course's id. */
+  course?: string;
 }
 
 export const JACKKNIFE = "jackknife";
-type HitKind = SolidKind | typeof JACKKNIFE;
+export const OFF = "off";
+type HitKind = SolidKind | typeof JACKKNIFE | typeof OFF;
 
 export interface Hit {
   kind: HitKind;
@@ -203,6 +208,8 @@ export interface Hit {
   hinge?: number;
   /** A parked truck or trailer rather than a car. */
   truck?: boolean;
+  /** The crash card's title, when the course names what was hit or the edge a tyre went over. */
+  title?: string;
 }
 
 const TRUCKS: ReadonlySet<Vehicle | undefined> = new Set([Vehicle.SEMI, Vehicle.BOX_TRUCK]);
@@ -241,6 +248,7 @@ function ladder_vehicle(scenario: Scenario, seed: number): Vehicle {
 }
 
 export function world_for(round: Round): World {
+  if (round.mode === Mode.EXTREME) return course_world(course_by_id(round.course ?? ""));
   if (round.mode === Mode.OPEN || round.scenario === null) return open_world(round.seed, spec_of(round));
   return scenario_world(round.seed, round.scenario, round.difficulty, spec_of(round));
 }
@@ -320,7 +328,8 @@ export function advance(
     };
   }
   const hit = collide(car, obstacles(state.world), spec);
-  if (hit)
+  if (hit) {
+    const walls = state.round.course !== undefined && hit.solid.kind === SolidKind.WALL ? course_by_id(state.round.course).walls : undefined;
     return {
       ...state,
       car: { ...car, speed: 0 },
@@ -328,8 +337,28 @@ export function advance(
       passes,
       status: Status.CRASHED,
       contact: hit.at,
-      hit: TRUCKS.has(hit.solid.car?.vehicle) ? { kind: hit.solid.kind, truck: true } : { kind: hit.solid.kind },
+      hit: TRUCKS.has(hit.solid.car?.vehicle)
+        ? { kind: hit.solid.kind, truck: true }
+        : walls
+          ? { kind: hit.solid.kind, title: `Touched ${walls}` }
+          : { kind: hit.solid.kind },
     };
+  }
+  const ground = state.world.ground;
+  const off = ground ? support(car, spec, ground) : [];
+  if (ground && off.length > 0) {
+    const was = ground_under(tyres(state.car, spec)[off[0]], ground);
+    const course = course_by_id(state.round.course ?? "");
+    return {
+      ...state,
+      car: { ...car, speed: 0 },
+      ms,
+      passes,
+      status: Status.CRASHED,
+      contact: tyres(car, spec)[off[0]],
+      hit: { kind: OFF, title: edge_title(course, was) },
+    };
+  }
   return { ...state, car, ms, passes };
 }
 
@@ -353,6 +382,7 @@ export function toggle_crab(state: GameState): GameState {
 }
 
 export function par(round: Round): number {
+  if (round.course !== undefined) return course_by_id(round.course).par;
   return round.scenario === null ? OPEN_INFO.par : SCENARIO_INFO[round.scenario].par;
 }
 
@@ -374,6 +404,7 @@ export function better(a: Result | undefined, b: Result): boolean {
 }
 
 export function round_key(round: Round): string {
+  if (round.course !== undefined) return `${Mode.EXTREME}:${round.course}`;
   return `${round.scenario ?? Mode.OPEN}:${round.vehicle}`;
 }
 
@@ -415,7 +446,13 @@ export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES
 
 export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
 export type LevelStars = z.infer<typeof levels_schema>;
-export const data_schema = z.object({ bests: bests_schema, levels: levels_schema, kinds: z.array(z.string()) });
+export const data_schema = z.object({
+  bests: bests_schema,
+  levels: levels_schema,
+  kinds: z.array(z.string()),
+  /** Stars per Extreme course id. */
+  extreme: levels_schema.optional(),
+});
 export type ParkingData = z.infer<typeof data_schema>;
 export const EMPTY_DATA: ParkingData = { bests: {}, levels: {}, kinds: [] };
 
@@ -546,11 +583,14 @@ const ORDINALS = ["first", "second", "third", "fourth", "fifth"];
 
 export function crash_title(hit: GameState["hit"]): string {
   if (!hit) return "Touched something";
+  if (hit.title) return hit.title;
   if (hit.kind === JACKKNIFE) return hit.hinge === undefined ? "Jackknifed the trailer" : `Jackknifed at the ${ORDINALS[hit.hinge]} hinge`;
+  if (hit.kind === OFF) return "Over the edge";
   return hit.truck ? "Touched a parked truck" : `Touched ${HIT_NAMES[hit.kind]}`;
 }
 
 export function round_title(round: Round): string {
+  if (round.course !== undefined) return `Extreme · ${course_by_id(round.course).name}`;
   const name = round.scenario === null ? OPEN_INFO.name : SCENARIO_INFO[round.scenario].name;
   if (round.daily) return `Daily · ${name}`;
   if (round.level) return `Level ${round.level} · ${name}`;
@@ -558,5 +598,11 @@ export function round_title(round: Round): string {
 }
 
 export function round_brief(round: Round): string {
+  if (round.course !== undefined) return course_by_id(round.course).brief;
   return round.scenario === null ? OPEN_INFO.brief : SCENARIO_INFO[round.scenario].brief;
+}
+
+export function extreme_round(id: string): Round {
+  const course = course_by_id(id);
+  return { mode: Mode.EXTREME, scenario: null, difficulty: 1, seed: 0, vehicle: course.vehicle, course: course.id };
 }
