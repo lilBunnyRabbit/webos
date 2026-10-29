@@ -91,12 +91,9 @@ export class StaticLayer {
     if (!this.canvas) return;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    // Whole device pixels: a fractional offset would resample the whole town and soften its hairlines as the view moves.
-    ctx.drawImage(
-      this.canvas,
-      Math.round(dpr * (width / 2 + (this.area.x0 - view.x) * scale)),
-      Math.round(dpr * (height / 2 + (this.area.y0 - view.y) * scale))
-    );
+    // Not snapped: the labels and doorways drawn over it move continuously with the camera (begin_frame), and a snapped
+    // town would shift up to half a pixel against them every frame.
+    ctx.drawImage(this.canvas, dpr * (width / 2 + (this.area.x0 - view.x) * scale), dpr * (height / 2 + (this.area.y0 - view.y) * scale));
     ctx.restore();
   }
 }
