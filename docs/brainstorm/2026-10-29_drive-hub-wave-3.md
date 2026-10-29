@@ -99,6 +99,10 @@ Rejected: a separate baggage game; leaving the baggage train in the garage and R
 ### Mow Day: bumps too (decided)
 Owner: "the mowing should not be that harsh with bumps". As in the Warehouse, hitting a tree, the shed, the pond or the hedge is a bump: the step is undone, the mower stops, rings flash, a hint names it, pressing on counts once, and each bump adds 5 s. Flowers keep their coverage cost and the "too many flowers flattened" end.
 
+### The hub becomes a small town (decided, to review on screenshots)
+Owner, on the street: "it doesnt look great … the container should be shaped based on the game it is. also zoomed in you have no clue what it is. and maybe they are all a bit too big", then "this is meh now just one straight line", and on districts around a loop: "maybe yea. like a small town feel so i dont have to drive for ages to get to it". The straight street gives way to a compact town: a ring road round a central plaza (the gate and the garage), districts off it by theme (Waterfront: Ferry, Airport; Industrial: Warehouse; Sport: Hot Lap, Rodeo; Town: Car Park, Valet, Mow Day, Driving Test). Every plot is short to reach from the plaza; a district grows outward when a game joins it. The game-to-district map lives in the hub's own data (`hub/`), not in `define_game`, so the game contract doesn't change. Each building gets its own shape and silhouette from above, a readable sign at its entrance at any zoom, and a smaller footprint. The owner judges it on screenshots.
+Supersedes the straight street in "Yard (decided)".
+
 ## Key takeaways
 - One plot per game on a street that grows east; nothing caps the number of games.
 - Contact detection is shared, the rule is each game's.
