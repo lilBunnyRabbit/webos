@@ -751,6 +751,7 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
 - [ ] App isolation via Shadow DOM
 - [ ] Kernel custom events with zod-validated payloads
 - [ ] Window events for file upload (and similar app-level events)
+- [ ] **Temporary camera app** (owner, 2026-10-29). No design yet; what "temporary" covers (photos that expire, nothing saved, a stopgap until another app has it) is open
 - [x] "App store": designed 2026-10-26 as [ADR-077](adrs/077-app-store.md) ([brainstorm](brainstorm/2026-10-26_app-store.md)). Installed = cached, catalogue and flat boot, app updates without reload; three stages.
   - [x] Stage 1 (2026-10-26, 3.74.0): installed means downloaded and kept offline, StoreService, Install and Open, App Library renamed App Store, system apps out of the precache
   - [x] Stage 2 (2026-10-26, 3.74.0): the build writes the catalogue, icon sprite and a chunk per manifest; boot reads only the installed apps' entries and loads their code after first paint; the full catalogue on demand (Store, search, Open with, links, intro, announcements, Game Hub); sprite icons for apps that aren't installed; versions per app; release notes on the update screen; a core hash that holds across app-only releases. Boot 218.7 → 164.2 KB gz
