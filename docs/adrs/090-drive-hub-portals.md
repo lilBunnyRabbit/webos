@@ -21,3 +21,9 @@ Owner: "maybe even multiple floors - all in one canvas with 'teleportation'". Un
 - Core and the planner change; every proof that uses a world with portals must cross them.
 - Collision only ever looks at one floor's solids, since floors don't overlap on the canvas.
 - A rig longer than a ramp is split across two floors while passing; collision checks both ends' floors (the build must handle it or keep mouths long enough that it can't happen).
+
+## Revision 2026-10-29 (details decided)
+- **Where:** a Tight Spot "Multi-storey" spot kind (enter at ground, drive to a bay one to three floors away; Spots, Any, the daily, not the level ladder); the open lot's garage chunk gains floors, so Valet can park customers below (longer walk back); the town's car park building becomes a real multi-storey to drive round in free play (after the town lands).
+- **Links:** straight ramps, plus a spiral helix in bigger garages (a portal per turn of the helix).
+- **Layout:** floors side by side in one row (−1, −2, −3 left to right, labelled), each ramp's exit at the same spot on the next floor.
+- **Rigs:** cars and vans only (a height-limit sign at the entry); nothing straddles two floors, so collision stays per floor.
