@@ -46,12 +46,15 @@
   import { track_id_schema, TRACK_IDS, track_name, TrackId } from "./tracks";
 
   const TRACK_OPTIONS = TRACK_IDS.map((value) => ({ value, label: track_name(value) }));
-  // Slow, the view is a parking game's; flat out it pulls back and looks ahead, so about three seconds of track show
-  // ahead even across the shorter side: the focus leads by up to LEAD of the span, the car stays on screen behind it.
+  // Slow, the view is a parking game's; flat out it pulls back only as far as keeps the car readable (about 30 px long
+  // on a 600 px board, 20 px on a phone) and spends the look-ahead along the direction of travel, so the longer side
+  // carries most of it. Speed is eased (PACE_RATE per second) so braking or lifting doesn't pump the zoom.
   const SPAN_SLOW = view_span(SPEC.length);
-  const SPAN_FAST = 280;
-  const LOOK_AHEAD = 1.2;
-  const LEAD = 0.35;
+  const SPAN_FAST = 110;
+  const PACE_RATE = 1.2;
+  const LOOK_AHEAD = 2;
+  const LEAD = 0.7;
+  const UNBOUNDED = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity };
   const OVERVIEW_MARGIN = 3;
   const DAILY_MODE = "f1";
 
@@ -84,6 +87,7 @@
   let hud_height = $state(0);
 
   let camera: Camera | null = null;
+  let pace = 0;
   // The ghost a session races is the one saved when it started: beating it mid-session doesn't swap the car ahead.
   let racing: Ghost | null = untrack(() => ghosts[game.round.track].value);
   const sounds = new Sounds(() => settings);
@@ -184,11 +188,29 @@
       return frame(bounds, middle, board_size.width, board_size.height, zoom, insets, fit_span(bounds, board_size.width, board_size.height, insets, OVERVIEW_MARGIN));
     }
     const centre = body_centre(game.car, SPEC);
-    const pace = Math.min(1, Math.abs(game.car.speed) / top_speed(SPEC));
     const span = SPAN_SLOW + (SPAN_FAST - SPAN_SLOW) * pace;
-    const ahead = Math.sign(game.car.speed) * Math.min(Math.abs(game.car.speed) * LOOK_AHEAD, (span / zoom) * LEAD);
-    const focus = { x: centre.x + Math.cos(game.car.heading) * ahead, y: centre.y + Math.sin(game.car.heading) * ahead };
-    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, span);
+    const scale = Math.max(1, Math.min(board_size.width, board_size.height)) / (span / zoom);
+    const direction = game.car.speed < 0 ? -1 : 1;
+    const along = { x: Math.cos(game.car.heading) * direction, y: Math.sin(game.car.heading) * direction };
+    const ahead = Math.min(pace * top_speed(SPEC) * LOOK_AHEAD, reach(along, insets, scale) * LEAD);
+    const focus = { x: centre.x + along.x * ahead, y: centre.y + along.y * ahead };
+    // Not kept inside the track's bounds: clamping pushed the car off the board's centre line next to an outer straight.
+    return frame(UNBOUNDED, focus, board_size.width, board_size.height, zoom, insets, span);
+  }
+
+  /** Metres from the middle of the clear part of the board to its edge along `along`. */
+  function reach(along: { x: number; y: number }, insets: Insets, scale: number): number {
+    const half_width = Math.max(1, board_size.width - insets.left - insets.right) / 2 / scale;
+    const half_height = Math.max(1, board_size.height - insets.top - insets.bottom) / 2 / scale;
+    return Math.min(half_width / Math.max(1e-6, Math.abs(along.x)), half_height / Math.max(1e-6, Math.abs(along.y)));
+  }
+
+  /** The camera eases toward its target relative to the car, so following at speed doesn't trail it. */
+  function follow(target: Camera, dt: number): Camera {
+    if (!camera || dt <= 0) return target;
+    const centre = body_centre(game.car, SPEC);
+    const offset = ease({ x: camera.x - centre.x, y: camera.y - centre.y, scale: camera.scale }, { x: target.x - centre.x, y: target.y - centre.y, scale: target.scale }, dt);
+    return { x: centre.x + offset.x, y: centre.y + offset.y, scale: offset.scale };
   }
 
   function render(dt: number) {
@@ -197,8 +219,8 @@
     const height = Math.round(board_size.height * board_size.dpr);
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
-    const target = target_camera();
-    camera = dt > 0 ? ease(camera, target, dt) : target;
+    if (dt > 0) pace += (Math.min(1, Math.abs(game.car.speed) / top_speed(SPEC)) - pace) * (1 - Math.exp(-dt * PACE_RATE));
+    camera = follow(target_camera(), dt);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const lap_ms = lap_time(game);
@@ -284,6 +306,7 @@
     sounds.quiet();
     new_best = false;
     camera = null;
+    pace = 0;
     game = create_game(next);
     racing = ghosts[next.track].value;
     focus_board();

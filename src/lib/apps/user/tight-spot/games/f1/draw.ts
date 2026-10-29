@@ -1,7 +1,7 @@
 import { begin_frame, contact_rings, player, union, type Palette, type View } from "../../core/draw";
 import type { Pose, Vec } from "../../core/geometry";
 import { body_centre, create_car, Gear, Vehicle } from "../../core/vehicle";
-import type { GameState } from "./game";
+import { Status, type GameState } from "./game";
 import { SPEC } from "./spec";
 import { racing_line } from "./line";
 import { DS, HALF_WIDTH, KERB, type Track } from "./track";
@@ -42,11 +42,13 @@ function kerbs(ctx: CanvasRenderingContext2D, track: Track, palette: Palette) {
   }
 }
 
-// The asphalt is one ring, both edges in one path filled even-odd, so no seams show between its pieces.
-function surface(ctx: CanvasRenderingContext2D, track: Track, palette: Palette) {
+// The asphalt is one ring, both edges in one path filled even-odd, so no seams show between its pieces. The overview
+// shows the grass as the track's plot; following, the camera may look past it, so the grass fills the board.
+function surface(ctx: CanvasRenderingContext2D, track: Track, view: View, overview: boolean, palette: Palette) {
   const { bounds } = track;
   ctx.fillStyle = palette.grass;
-  ctx.fillRect(bounds.x0, bounds.y0, bounds.x1 - bounds.x0, bounds.y1 - bounds.y0);
+  if (overview) ctx.fillRect(bounds.x0, bounds.y0, bounds.x1 - bounds.x0, bounds.y1 - bounds.y0);
+  else ctx.fillRect(view.x - view.width / 2 / view.scale, view.y - view.height / 2 / view.scale, view.width / view.scale, view.height / view.scale);
   const n = track.centre.length;
   ctx.beginPath();
   for (const side of [-1, 1]) {
@@ -163,10 +165,11 @@ function line_guide(ctx: CanvasRenderingContext2D, track: Track, scale: number, 
   ctx.setLineDash([]);
 }
 
-// Pulled back for speed the car is a few pixels long, so a ring of fixed screen size marks it, fading in as the view widens.
+// Zoomed out by hand (pinch, −) the car can shrink to a few pixels, so a ring of fixed screen size marks it, fading in
+// below the scale the speed camera ever pulls back to.
 const MARKER_PX = 12;
-const MARKER_FROM = 6;
-const MARKER_FULL = 3;
+const MARKER_FROM = 3.4;
+const MARKER_FULL = 2;
 
 function marker(ctx: CanvasRenderingContext2D, at: Vec, scale: number, palette: Palette) {
   const strength = Math.min(1, Math.max(0, (MARKER_FROM - scale) / (MARKER_FROM - MARKER_FULL)));
@@ -186,7 +189,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   const { scale } = view;
   const { track, car } = state;
   begin_frame(ctx, view, palette);
-  surface(ctx, track, palette);
+  surface(ctx, track, view, state.status === Status.READY || state.status === Status.DONE, palette);
   kerbs(ctx, track, palette);
   edge_lines(ctx, track, scale, palette);
   sector_lines(ctx, track, scale, palette);
