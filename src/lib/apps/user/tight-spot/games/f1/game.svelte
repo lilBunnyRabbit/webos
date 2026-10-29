@@ -232,7 +232,9 @@
     if (canvas.height !== height) canvas.height = height;
     if (dt > 0) pace += (Math.min(1, Math.abs(game.car.speed) / top_speed(SPEC)) - pace) * (1 - Math.exp(-dt * PACE_RATE));
     const target_turn = settings.turn_view && game.status !== Status.READY && game.status !== Status.DONE ? heading_up(game.car.heading) : 0;
-    turn = dt > 0 ? ease_turn(turn, target_turn, dt) : target_turn;
+    // A still frame (pause, blur, the loop's first frame) keeps the eased turn: snapping there swung the board at once.
+    if (dt > 0) turn = ease_turn(turn, target_turn, dt);
+    else if (target_turn === 0) turn = 0;
     camera = follow(target_camera(), dt);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
