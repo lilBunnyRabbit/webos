@@ -40,6 +40,6 @@ describe("every pushback can be done from the tug's start", () => {
 
   test("the daily of 2026-10-29", { timeout: 20_000 }, () => {
     const day = "2026-10-29";
-    expect(prove(create_game(daily_round(day, daily_seed(day, "tight-spot/pushback"))))).toBeNull();
+    expect(prove(create_game(daily_round(day, daily_seed(day, "tight-spot/airport"))))).toBeNull();
   });
 });

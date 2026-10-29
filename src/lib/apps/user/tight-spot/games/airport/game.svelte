@@ -64,7 +64,7 @@
   // Wide enough for both wingtips with room to see what they pass, whichever way the aircraft points.
   const VIEW_SPAN = SPAN + 18;
   const OVERVIEW_MARGIN = 6;
-  const DAILY_MODE = "pushback";
+  const DAILY_MODE = "airport";
   const LIMIT_DEGREES = (STEERING_LIMIT * 180) / Math.PI;
 
   const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
@@ -72,12 +72,12 @@
 
   const { app_id, window: win, storage, achievements } = get_app_context();
   const speech = $derived(kernel.service<SpeechService>("speech"));
-  const save = storage.file("pushback.json", EMPTY_SAVE, save_schema);
+  const save = storage.file("airport.json", EMPTY_SAVE, save_schema);
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
-  let mode = $state<Mode>(storage.get("pushback.mode", mode_schema) ?? Mode.PUSHES);
-  let level = $state(storage.get("pushback.level", z.number().int().min(1).max(LEVEL_COUNT)) ?? 1);
+  let mode = $state<Mode>(storage.get("airport.mode", mode_schema) ?? Mode.PUSHES);
+  let level = $state(storage.get("airport.level", z.number().int().min(1).max(LEVEL_COUNT)) ?? 1);
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let par = $state.raw<Par | null>(null);
@@ -288,13 +288,13 @@
     new_best = done.improved;
     first_push = done.first;
     sounds.parked(new_best && !first_push);
-    achievements.achieve("pushback-first");
-    if (state.moves === 0) achievements.achieve("pushback-one-go");
-    if (score === 3) achievements.achieve("pushback-by-the-book");
-    if (state.round.level !== undefined) achievements.progress("pushback-levels", Object.keys(done.save.levels).length);
+    achievements.achieve("airport-first");
+    if (state.moves === 0) achievements.achieve("airport-one-go");
+    if (score === 3) achievements.achieve("airport-by-the-book");
+    if (state.round.level !== undefined) achievements.progress("airport-levels", Object.keys(done.save.levels).length);
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, 3 - score, DAILY_MODE);
-      achievements.achieve("pushback-daily");
+      achievements.achieve("airport-daily");
     }
   }
 
@@ -352,7 +352,7 @@
   function next_round() {
     if (game.round.level !== undefined && has_next_level && game.status === Status.DONE) {
       level = Math.min(max_level, game.round.level + 1);
-      storage.set("pushback.level", level);
+      storage.set("airport.level", level);
     }
     load(make_round());
   }
@@ -365,13 +365,13 @@
   function set_mode(next: Mode) {
     daily = null;
     mode = next;
-    storage.set("pushback.mode", next);
+    storage.set("airport.mode", next);
     load(make_round());
   }
 
   function set_level(next: string) {
     level = Math.max(1, Math.min(LEVEL_COUNT, Number(next)));
-    storage.set("pushback.level", level);
+    storage.set("airport.level", level);
     load(make_round());
   }
 
