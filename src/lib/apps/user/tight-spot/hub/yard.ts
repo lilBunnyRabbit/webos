@@ -52,7 +52,7 @@ export const GARAGE: readonly Shelf[] = [
     name: "Machines",
     vehicles: [Vehicle.FORKLIFT, Vehicle.BOBCAT, Vehicle.TELEHANDLER, Vehicle.LOADER, Vehicle.DUMPER, Vehicle.MOWER, Vehicle.TANK],
   },
-  { id: "fun", name: "Fun", vehicles: [Vehicle.TUK_TUK, Vehicle.GOLF_CART, Vehicle.RESURFACER, Vehicle.TROLLEY, Vehicle.F1] },
+  { id: "fun", name: "Fun", vehicles: [Vehicle.MOTORCYCLE, Vehicle.TUK_TUK, Vehicle.GOLF_CART, Vehicle.RESURFACER, Vehicle.TROLLEY, Vehicle.F1] },
 ];
 
 export function shelf_of(vehicle: Vehicle): Shelf {

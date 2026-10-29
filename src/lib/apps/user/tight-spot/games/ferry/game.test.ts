@@ -65,6 +65,18 @@ describe("the deck", () => {
     }
   });
 
+  test("a motorcycle comes now and then, one at most, and boards last in its lane", () => {
+    const decks = Array.from({ length: 60 }, (_, i) => build_deck(1000 + i, 0.5, 5));
+    const ridden = decks.filter((deck) => deck.queue.includes(Vehicle.MOTORCYCLE));
+    expect(ridden.length).toBeGreaterThan(0);
+    expect(ridden.length).toBeLessThan(decks.length / 2);
+    for (const deck of ridden) {
+      expect(deck.queue.filter((each) => each === Vehicle.MOTORCYCLE)).toHaveLength(1);
+      const bike = deck.plan[deck.queue.indexOf(Vehicle.MOTORCYCLE)];
+      for (const slot of deck.plan) if (slot.lane === bike.lane) expect(slot.pose.x).toBeGreaterThanOrEqual(bike.pose.x);
+    }
+  });
+
   test("tighter levels have narrower lanes", () => {
     const easy = create_game(level_round(1)).deck;
     const hard = create_game(level_round(LEVEL_COUNT)).deck;

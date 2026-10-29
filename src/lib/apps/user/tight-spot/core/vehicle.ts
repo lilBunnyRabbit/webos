@@ -789,6 +789,31 @@ export const GT_CAR: VehicleSpec = {
   a_lat: 16,
 };
 
+// Single track: the model's two wheels per axle both sit on the centre line, so it steers the same bicycle and the
+// drawing shows one wheel at each end. Backing up is the rider paddling it with their feet.
+export const MOTORCYCLE: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 2.1,
+  width: 0.8,
+  wheelbase: 1.45,
+  rear_overhang: 0.33,
+  track: 0,
+  wheel_diameter: 0.62,
+  wheel_width: 0.15,
+  turning_radius: 2.6,
+  steer_time: 0.6,
+  creep_speed: 1,
+  creep_accel: 1.0,
+  max_forward: 34,
+  max_reverse: 1,
+  accel: 7,
+  brake: 9,
+  rolling: 0.3,
+  park_speed: 0.3,
+  hitches: [],
+  a_lat: 9.5,
+};
+
 // Skid steers: the pose is the middle of the wheels' or tracks' contact, and `turning_radius` is the circle the outer
 // wheel draws pivoting on the spot (lots size their room by it).
 export const BOBCAT: VehicleSpec = {
@@ -986,6 +1011,7 @@ export const Vehicle = {
   TROLLEY: "trolley",
   F1: "f1",
   GT: "gt",
+  MOTORCYCLE: "motorcycle",
   SEMI: "semi",
   BOX_TRUCK: "box-truck",
   DRAWBAR: "drawbar",
@@ -1033,6 +1059,7 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   trolley: SHOPPING_TROLLEY,
   f1: F1_CAR,
   gt: GT_CAR,
+  motorcycle: MOTORCYCLE,
   semi: SEMI,
   "box-truck": BOX_TRUCK,
   drawbar: DRAWBAR_RIG,
@@ -1078,6 +1105,7 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   trolley: "Shopping trolley",
   f1: "F1 car",
   gt: "GT car",
+  motorcycle: "Motorcycle",
   semi: "Truck and semi-trailer",
   "box-truck": "Box truck",
   drawbar: "Truck and drawbar trailer",

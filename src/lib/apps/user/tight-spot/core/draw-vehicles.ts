@@ -9,6 +9,7 @@ import {
   Gear,
   hangs_ahead,
   hitch_point,
+  MOTORCYCLE,
   outline as rig_outline,
   to_world,
   TRACTOR,
@@ -71,6 +72,7 @@ const Style = {
   TROLLEY: "trolley",
   F1: "f1",
   GT: "gt",
+  MOTORCYCLE: "motorcycle",
   CAB: "cab",
   BOX_TRUCK: "box-truck",
   TUG: "tug",
@@ -132,6 +134,7 @@ const LOOKS: Record<Vehicle, Look> = {
   trolley: { style: Style.TROLLEY },
   f1: { style: Style.F1 },
   gt: { style: Style.GT },
+  motorcycle: { style: Style.MOTORCYCLE },
   semi: { style: Style.CAB, loads: [Load.SEMI] },
   "box-truck": { style: Style.BOX_TRUCK },
   drawbar: { style: Style.BOX_TRUCK, loads: [Load.DOLLY, Load.BODY] },
@@ -192,6 +195,7 @@ const CORNERS: Record<Style, number[]> = {
   trolley: [0.04, 0.04, 0.04, 0.04],
   f1: [0.2, 0.3, 0.3, 0.2],
   gt: [0.4, 0.6, 0.6, 0.4],
+  motorcycle: [0.1, 0.1, 0.1, 0.1],
   cab: [0.1, 0.35, 0.35, 0.1],
   "box-truck": [0.1, 0.35, 0.35, 0.1],
   tug: [0.2, 0.25, 0.25, 0.2],
@@ -223,6 +227,7 @@ const HEIGHT: Record<Style | Load, number> = {
   trolley: 0.5,
   f1: 0.4,
   gt: 0.8,
+  motorcycle: 1.3,
   cab: 2,
   "box-truck": 1.9,
   tug: 0.8,
@@ -652,6 +657,7 @@ const PAINTERS: Record<Style, (ctx: CanvasRenderingContext2D, f: Frame) => void>
   trolley: () => {},
   f1: () => {},
   gt: gt_top,
+  motorcycle: () => {},
   machine: () => {},
 };
 
@@ -833,6 +839,7 @@ export function parked_vehicle(ctx: CanvasRenderingContext2D, solid: Solid, scal
   if (car.vehicle === Vehicle.SEMI) return parked_trailer(ctx, solid, scale, palette);
   const { style } = look_of(car.vehicle);
   const paint = palette.cars[car.paint % palette.cars.length];
+  if (car.vehicle === Vehicle.MOTORCYCLE) return parked_motorcycle(ctx, solid, paint, scale, palette);
   shadow(ctx, car.pose, car.pose.heading, car.length, car.width, style, HEIGHT[style], palette);
   ctx.save();
   ctx.translate(car.pose.x, car.pose.y);
@@ -1654,7 +1661,156 @@ const f1: RigDraw = (rig) => {
   });
 };
 
+const BIKE_BAR = 0.48;
+
+function bike_shape(ctx: CanvasRenderingContext2D, l: number, rider: boolean) {
+  ctx.beginPath();
+  ctx.roundRect(-l, -0.12, l * 2, 0.24, 0.1);
+  if (rider) ctx.ellipse(-0.28, 0, 0.2, 0.28, 0, 0, Math.PI * 2);
+}
+
+interface Bike {
+  l: number;
+  half: number;
+  paint: Paint;
+  palette: Palette;
+  line: number;
+  steer: number;
+  rider: boolean;
+  lamps: Lamps;
+}
+
+// A motorcycle from above, in the body's frame: the tail and its lamp, the exhaust down the right, the seat, the
+// teardrop tank, and the bars, mirrors, headlamp and front mudguard turning with the fork. Ridden, a rider in a
+// helmet leans over the tank with their arms out to the grips.
+function bike_top(ctx: CanvasRenderingContext2D, b: Bike) {
+  const { l, half, paint, palette, line, lamps } = b;
+  const edge = Math.max(0.015, line);
+  pill(ctx, -l + 0.22, 0.12, 0.7, 0.08, 0.04, palette.steel);
+  ctx.beginPath();
+  ctx.roundRect(-l + 0.12, -0.06, 0.5, 0.12, 0.06);
+  ctx.fillStyle = paint.body;
+  ctx.fill();
+  ctx.strokeStyle = palette.edge;
+  ctx.lineWidth = edge;
+  ctx.stroke();
+  if (lamps.braking) pill(ctx, -l - 0.02, -0.12, 0.22, 0.24, 0.12, palette.brake_glow);
+  lamp(ctx, -l + 0.1, -0.05, 0.05, 0.1, palette.brake, palette, lamps.braking ? 1 : lamps.lit);
+  pill(ctx, -0.12, -0.3, 0.07, 0.6, 0.03, palette.ink);
+  pill(ctx, -0.72, -0.13, 0.7, 0.26, 0.12, palette.ink);
+  ctx.beginPath();
+  ctx.moveTo(-0.06, 0);
+  ctx.bezierCurveTo(-0.06, -0.24, 0.42, -0.16, 0.44, 0);
+  ctx.bezierCurveTo(0.42, 0.16, -0.06, 0.24, -0.06, 0);
+  ctx.fillStyle = paint.body;
+  ctx.fill();
+  ctx.strokeStyle = palette.edge;
+  ctx.stroke();
+  pill(ctx, 0.04, -0.03, 0.3, 0.06, 0.03, paint.glass);
+
+  const turn = (x: number, y: number): Vec => ({
+    x: BIKE_BAR + Math.cos(b.steer) * (x - BIKE_BAR) - Math.sin(b.steer) * y,
+    y: Math.sin(b.steer) * (x - BIKE_BAR) + Math.cos(b.steer) * y,
+  });
+  const grips = [turn(BIKE_BAR - 0.02, -0.31), turn(BIKE_BAR - 0.02, 0.31)];
+  ctx.save();
+  ctx.translate(BIKE_BAR, 0);
+  ctx.rotate(b.steer);
+  pill(ctx, 0.14, -0.05, 0.3, 0.1, 0.05, paint.body);
+  ctx.strokeStyle = palette.ink;
+  ctx.lineCap = "round";
+  ctx.lineWidth = 0.035;
+  ctx.beginPath();
+  for (const side of [-1, 1]) {
+    ctx.moveTo(0, side * 0.24);
+    ctx.lineTo(0.07, side * (half - 0.06));
+  }
+  ctx.stroke();
+  ctx.lineWidth = 0.05;
+  ctx.beginPath();
+  ctx.moveTo(-0.02, -0.33);
+  ctx.quadraticCurveTo(0.05, 0, -0.02, 0.33);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+  for (const side of [-1, 1]) pill(ctx, 0.03, side * (half - 0.06) - 0.05, 0.08, 0.1, 0.04, palette.ink);
+  ctx.beginPath();
+  ctx.arc(0.13, 0, 0.09, 0, Math.PI * 2);
+  ctx.fillStyle = palette.ink;
+  ctx.fill();
+  ctx.globalAlpha = lamps.lit;
+  ctx.beginPath();
+  ctx.arc(0.14, 0, 0.06, 0, Math.PI * 2);
+  ctx.fillStyle = palette.glow;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  if (!b.rider) return;
+
+  ctx.lineCap = "round";
+  for (const [width, colour] of [
+    [0.13, palette.ink],
+    [0.08, paint.roof],
+  ] as const) {
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    for (const [i, side] of [-1, 1].entries()) {
+      ctx.moveTo(-0.26, side * 0.2);
+      ctx.quadraticCurveTo(0.12, side * 0.3, grips[i].x, grips[i].y);
+    }
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+  ctx.beginPath();
+  ctx.ellipse(-0.32, 0, 0.17, 0.26, 0, 0, Math.PI * 2);
+  ctx.fillStyle = paint.roof;
+  ctx.fill();
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = Math.max(0.02, line);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-0.17, 0, 0.14, 0, Math.PI * 2);
+  ctx.fillStyle = paint.body;
+  ctx.fill();
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(-0.17, 0, 0.1, -1.05, 1.05);
+  ctx.strokeStyle = paint.glass;
+  ctx.lineWidth = 0.06;
+  ctx.stroke();
+}
+
+const motorcycle: RigDraw = (rig) => {
+  const { ctx, car, spec, palette, l, half, line, lamps } = rig;
+  const [front, , rear] = wheels(car, spec);
+  rig_shadow(rig, () => bike_shape(ctx, l, true));
+  rig_tyre(rig, rear.at, rear.angle, car.roll[2], 0);
+  rig_tyre(rig, front.at, front.angle, car.roll[0], 0);
+  in_body(rig, () => bike_top(ctx, { l, half, paint: palette.player, palette, line, steer: car.steer, rider: true, lamps }));
+};
+
+// Left on a deck or in a bay it stands with nobody on it.
+function parked_motorcycle(ctx: CanvasRenderingContext2D, solid: Solid, paint: Paint, scale: number, palette: Palette) {
+  const car = solid.car!;
+  const l = car.length / 2;
+  ctx.save();
+  ctx.translate(car.pose.x + 0.1 * HEIGHT.motorcycle, car.pose.y + 0.16 * HEIGHT.motorcycle);
+  ctx.rotate(car.pose.heading);
+  bike_shape(ctx, l, false);
+  ctx.fillStyle = palette.shadow;
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  ctx.translate(car.pose.x, car.pose.y);
+  ctx.rotate(car.pose.heading);
+  const tyre = 0.66;
+  for (const x of [-l + MOTORCYCLE.rear_overhang, -l + MOTORCYCLE.rear_overhang + MOTORCYCLE.wheelbase]) pill(ctx, x - tyre / 2, -0.1, tyre, 0.2, 0.07, palette.ink);
+  bike_top(ctx, { l, half: car.width / 2, paint, palette, line: 1 / scale, steer: 0, rider: false, lamps: { braking: false, reversing: false, lit: 0.6 } });
+  ctx.restore();
+}
+
 const FUN: Partial<Record<Vehicle, RigDraw>> = {
+  [Vehicle.MOTORCYCLE]: motorcycle,
   [Vehicle.F1]: f1,
   [Vehicle.TUK_TUK]: tuk_tuk,
   [Vehicle.GOLF_CART]: golf_cart,

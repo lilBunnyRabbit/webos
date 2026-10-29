@@ -21,6 +21,7 @@ import {
   jackknife,
   jackknifed,
   max_steer,
+  MOTORCYCLE,
   NO_INPUT,
   REAR_STEER,
   rig_ends,
@@ -310,6 +311,22 @@ describe("GT car", () => {
     expect(GT_CAR.turning_radius * 2).toBeGreaterThan(11);
     expect(GT_CAR.turning_radius * 2).toBeLessThan(12);
     expect(max_steer(GT_CAR)).toBeGreaterThan(max_steer(VEHICLES.f1));
+  });
+});
+
+describe("motorcycle", () => {
+  test("turns tighter than any car, both wheels on the centre line, and is only paddled backwards", () => {
+    expect(MOTORCYCLE.turning_radius).toBeLessThan(VEHICLES.city.turning_radius);
+    for (const wheel of wheels(create_car(START, Gear.DRIVE, MOTORCYCLE), MOTORCYCLE)) expect(wheel.at.y).toBeCloseTo(0, 9);
+    const backing = run({ ...create_car(START), gear: Gear.REVERSE }, { steer: null, throttle: 1, brake: 0 }, 5, MOTORCYCLE);
+    expect(Math.abs(backing.speed)).toBeLessThanOrEqual(MOTORCYCLE.max_reverse);
+  });
+
+  test("past 30 m/s flat out, its steering capped at speed", () => {
+    const top = run({ ...create_car(START), gear: Gear.DRIVE }, { steer: null, throttle: 1, brake: 0 }, 15, MOTORCYCLE);
+    expect(top.speed).toBeGreaterThan(30);
+    const leaning = run(top, { steer: 1, throttle: 0, brake: 0 }, 1, MOTORCYCLE);
+    expect(leaning.steer).toBeLessThan(max_steer(MOTORCYCLE) * 0.2);
   });
 });
 

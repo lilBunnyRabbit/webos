@@ -4,7 +4,7 @@ import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "../../core/seed";
 import { body_ends, Vehicle, VEHICLES } from "../../core/vehicle";
 
-export const CARGO = [Vehicle.CITY, Vehicle.HATCH, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.BOX_TRUCK, Vehicle.BUS] as const;
+export const CARGO = [Vehicle.CITY, Vehicle.HATCH, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.BOX_TRUCK, Vehicle.BUS, Vehicle.MOTORCYCLE] as const;
 export type Cargo = (typeof CARGO)[number];
 
 /** Tonnes, laden: what the balance weighs. */
@@ -16,7 +16,11 @@ export const WEIGHT: Record<Cargo, number> = {
   van: 2.8,
   "box-truck": 7.5,
   bus: 12,
+  motorcycle: 0.25,
 };
+
+// Now and then a motorcycle takes the place of a city car, one a sailing at most: a filler that squeezes in anywhere.
+const MOTORCYCLE_SHARE = 0.08;
 
 const HEAVY = new Set<Cargo>([Vehicle.BOX_TRUCK, Vehicle.BUS]);
 
@@ -110,7 +114,10 @@ function pick_cargo(rng: Rng, count: number, difficulty: number): Cargo[] {
     if (roll < 0.1 + difficulty * 0.05 && buses === 0) vehicle = Vehicle.BUS;
     else if (roll < 0.27 + difficulty * 0.05) vehicle = Vehicle.BOX_TRUCK;
     else if (roll < 0.47) vehicle = Vehicle.VAN;
-    else vehicle = CARGO[Math.floor(rng() * 4)];
+    else {
+      const car = rng();
+      vehicle = car < MOTORCYCLE_SHARE && !picked.includes(Vehicle.MOTORCYCLE) ? Vehicle.MOTORCYCLE : CARGO[Math.floor(car * 4)];
+    }
     if (HEAVY.has(vehicle) && heavy >= 2) continue;
     if (HEAVY.has(vehicle)) heavy++;
     if (vehicle === Vehicle.BUS) buses++;
@@ -183,7 +190,9 @@ export function build_deck(seed: number, difficulty: number, count: number): Dec
   const slots: { index: number; slot: Slot; front: number; tie: number }[] = [];
   packing.lanes.forEach((members, lane) => {
     let front = length - PACK_GAP;
-    for (const i of shuffle([...members], rng)) {
+    // A motorcycle goes to the back of its lane: in front, it would leave the car behind it a bike's room to swing in.
+    const order = shuffle([...members], rng).sort((a, b) => Number(cargo[a] === Vehicle.MOTORCYCLE) - Number(cargo[b] === Vehicle.MOTORCYCLE));
+    for (const i of order) {
       const spec = VEHICLES[cargo[i]];
       const pose = { x: front - body_ends(spec).front, y: (lane + 0.5) * lane_width, heading: 0 };
       slots.push({ index: i, slot: { lane, pose }, front, tie: rng() });

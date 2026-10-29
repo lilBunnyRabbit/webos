@@ -10,6 +10,11 @@ export const CHANGELOG: Release[] = [
     title: "Small town",
     changes: [
       {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub's garage has a motorcycle: quick, nimble and paddled backwards with your feet, and it turns up in Rodeo, the open lot and now and then in the ferry queue.",
+      },
+      {
         kind: IMPROVED,
         apps: ["tight-spot"],
         text: "Tight Spot lets you park the GT car: pick it in any car spot or in the open lot.",
