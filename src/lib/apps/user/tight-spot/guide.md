@@ -9,7 +9,7 @@ Driving games around one yard. The app opens on the whole yard, your car at the 
 ## The yard is a playground
 
 - Nothing is judged here. Touching something just stops you with a bump; back away and carry on.
-- Stop on the **Garage** pad to pick any of 23 vehicles, shelf by shelf: **Cars** (hatchback to camper van and a stretch limousine), **Service** (taxi, police car, ambulance, fire engine, garbage truck, forklift), **Buses** (city bus, double-decker, coach, articulated bus) and **Towing** (trailer, caravan, boat, horse box, tractor, quad). It waits on the pad, ready to drive off, and stays yours in the yard until you close the window. The police car, ambulance and fire engine flash their lights while in gear.
+- Stop on the **Garage** pad to pick any of 28 vehicles, shelf by shelf: **Cars** (hatchback to camper van and a stretch limousine), **Service** (taxi, police car, ambulance, fire engine, garbage truck, forklift), **Buses** (city bus, double-decker, coach, articulated bus) and **Towing** (trailer, caravan, boat, horse box, tractor, quad) and **Fun** (tuk-tuk, golf cart, ice resurfacer, shopping trolley, F1 car). It waits on the pad, ready to drive off, and stays yours in the yard until you close the window. The police car, ambulance and fire engine flash their lights while in gear.
 - The cones are for a slalom, the bays on the left wall for practice parking.
 - The gears, pedals, wheel, sensors and settings work as in every game below.
 
@@ -27,7 +27,8 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 ## Vehicles
 
 - Each spot hands you a vehicle, named on the start card. Car spots take the cars and service cars (some leave out the limousine or the camper van where they don't fit); the bus stop takes the city bus, the double-decker or the articulated bus; the depot those, the coach, the garbage truck and the fire engine (the articulated bus drives through its depot nose first); the driveway a trailer, a horse box or the quad; the slipway a trailer or the boat; the camping pitch the caravan. Bigger ones need wider swings, and the bays and gaps grow to fit them. Levels keep the vehicle they always had.
-- Rather pick? In **Spots** with a kind chosen, and in the **Open lot**, the **Vehicle** picker next to the spot picker takes Any vehicle or one the spot allows (on a narrow window it sits on the start card). The open lot starts in the hatchback and also takes the van, the pickup or the car and trailer. Levels and the daily keep their own vehicle.
+- Rather pick? In **Spots** with a kind chosen, and in the **Open lot**, the **Vehicle** picker next to the spot picker takes Any vehicle or one the spot allows (on a narrow window it sits on the start card). The open lot starts in the hatchback and also takes the van, the pickup, the car and trailer or the F1 car. Levels and the daily keep their own vehicle.
+- The **F1 car** is fast and stops hard, but its wheels barely turn: it needs as much room to swing as a lorry.
 - The **bus** has a 12 m body and a long tail behind the rear wheels: when it turns, the tail swings out the other way.
 - The **trailer** pivots on the tow ball. Towing forward it follows and straightens. Reversing it goes the opposite way to the wheel: steer left to send it right, and catch it early. Past about 70° it jackknifes and the round ends. The guide lines follow the trailer's tail while you reverse, and the rear sensors read from it.
 - The **articulated bus** bends in the middle: its back half follows like a trailer, so it folds the same way when you reverse. The **coach** has a tag axle behind the drive axle; it turns about the middle of the two.

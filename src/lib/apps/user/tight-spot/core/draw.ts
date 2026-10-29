@@ -290,7 +290,7 @@ const BEAM = 7;
 
 export function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, palette: Palette) {
   const direction = gear_direction(car.gear);
-  if (direction === 0) return;
+  if (direction === 0 || spec.unlit) return;
   const t = direction < 0 ? spec.trailer : undefined;
   // Reversing with a trailer, the light comes off the trailer's tail.
   const frame: Pose = t

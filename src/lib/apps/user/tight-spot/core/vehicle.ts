@@ -59,6 +59,8 @@ export interface VehicleSpec {
   forks?: Forks;
   /** Beeps whenever it backs up, like site machinery. */
   reverse_beeper?: boolean;
+  /** No lamps, so no headlight beams either. */
+  unlit?: boolean;
 }
 
 export interface Forks {
@@ -439,6 +441,119 @@ const ARTICULATED_BUS: VehicleSpec = {
   trailer: BUS_REAR,
 };
 
+// Three wheels: the model's front pair stands in for the one front wheel on the centre line, which steers the same
+// bicycle; only the drawing shows one.
+export const TUK_TUK: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 2.7,
+  width: 1.3,
+  wheelbase: 1.95,
+  rear_overhang: 0.4,
+  track: 1.15,
+  wheel_diameter: 0.46,
+  wheel_width: 0.13,
+  turning_radius: 2.9,
+  steer_time: 0.9,
+  creep_speed: 1.5,
+  creep_accel: 1.0,
+  max_forward: 6,
+  max_reverse: 2,
+  accel: 1.8,
+  brake: 5,
+  rolling: 0.35,
+  park_speed: 0.3,
+};
+
+export const GOLF_CART: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 2.4,
+  width: 1.2,
+  wheelbase: 1.65,
+  rear_overhang: 0.4,
+  track: 0.9,
+  wheel_diameter: 0.46,
+  wheel_width: 0.18,
+  turning_radius: 3.1,
+  steer_time: 0.9,
+  creep_speed: 1,
+  creep_accel: 0,
+  max_forward: 5.5,
+  max_reverse: 2.5,
+  accel: 1.6,
+  brake: 5,
+  rolling: 0.4,
+  park_speed: 0.3,
+};
+
+export const ICE_RESURFACER: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 4.3,
+  width: 2.1,
+  wheelbase: 2.4,
+  rear_overhang: 1.25,
+  track: 1.7,
+  wheel_diameter: 0.66,
+  wheel_width: 0.22,
+  turning_radius: 4.6,
+  steer_time: 1.4,
+  creep_speed: 1,
+  creep_accel: 0.6,
+  max_forward: 3.5,
+  max_reverse: 1.5,
+  accel: 1,
+  brake: 4,
+  rolling: 0.25,
+  park_speed: 0.3,
+};
+
+// A joke: every caster of a real one swivels; front steer on a huge lock pivots it nearly on the spot the way pushing
+// one does. Walking pace, and no creep: it stops when you stop pushing.
+export const SHOPPING_TROLLEY: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 0.95,
+  width: 0.56,
+  wheelbase: 0.7,
+  rear_overhang: 0.12,
+  track: 0.45,
+  wheel_diameter: 0.12,
+  wheel_width: 0.04,
+  turning_radius: 0.78,
+  steer_time: 0.45,
+  creep_speed: 1,
+  creep_accel: 0,
+  max_forward: 1.6,
+  max_reverse: 1.2,
+  accel: 1.4,
+  brake: 4,
+  rolling: 0.5,
+  park_speed: 0.3,
+  unlit: true,
+};
+
+// A racing car's lock is tiny, so its turning circle is a lorry's: that is the challenge. The width is over the open
+// wheels. Its pace is capped at what a kinematic model with no tyre slip still drives believably.
+export const F1_CAR: VehicleSpec = {
+  drive: FRONT_STEER,
+  length: 5.6,
+  width: 2.0,
+  wheelbase: 3.6,
+  rear_overhang: 0.95,
+  track: 1.6,
+  wheel_diameter: 0.72,
+  wheel_width: 0.38,
+  turning_radius: 9.5,
+  steer_time: 0.8,
+  creep_speed: 1,
+  creep_accel: 0,
+  max_forward: 14,
+  max_reverse: 2,
+  accel: 6,
+  brake: 12,
+  rolling: 0.3,
+  park_speed: 0.3,
+  unlit: true,
+};
+
 export const Vehicle = {
   HATCH: "hatch",
   VAN: "van",
@@ -463,6 +578,11 @@ export const Vehicle = {
   QUAD: "quad",
   BOAT: "boat",
   CARAVAN: "caravan",
+  TUK_TUK: "tuk-tuk",
+  GOLF_CART: "golf-cart",
+  RESURFACER: "resurfacer",
+  TROLLEY: "trolley",
+  F1: "f1",
 } as const;
 export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
 
@@ -491,6 +611,11 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   quad: QUAD_RIG,
   boat: BOAT_RIG,
   caravan: CARAVAN_RIG,
+  "tuk-tuk": TUK_TUK,
+  "golf-cart": GOLF_CART,
+  resurfacer: ICE_RESURFACER,
+  trolley: SHOPPING_TROLLEY,
+  f1: F1_CAR,
 };
 
 export const VEHICLE_NAMES: Record<Vehicle, string> = {
@@ -517,6 +642,11 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   quad: "Quad and trailer",
   boat: "Pickup and boat",
   caravan: "Car and caravan",
+  "tuk-tuk": "Tuk-tuk",
+  "golf-cart": "Golf cart",
+  resurfacer: "Ice resurfacer",
+  trolley: "Shopping trolley",
+  f1: "F1 car",
 };
 
 const coasting = new WeakMap<VehicleSpec, VehicleSpec>();

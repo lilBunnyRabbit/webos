@@ -14,6 +14,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub's garage fills up with 17 more vehicles, from a city car, a limousine and a fire engine with flashing lights to a double-decker, an articulated bus and a car towing a caravan, and Tight Spot gains a camping pitch where you back the caravan in between the hedges, plus bus stops and depot lanes the articulated bus can park in.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "A Fun shelf in Drive Hub's garage holds a tuk-tuk, a golf cart, an ice resurfacer, a shopping trolley and an F1 car, and the F1 car can take on Tight Spot's open lot with its lorry-sized turning circle.",
+      },
     ],
   },
   {

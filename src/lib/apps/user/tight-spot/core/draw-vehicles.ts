@@ -60,6 +60,11 @@ const Style = {
   QUAD: "quad",
   FORKLIFT: "forklift",
   CARAVAN: "caravan",
+  TUK_TUK: "tuk-tuk",
+  GOLF_CART: "golf-cart",
+  RESURFACER: "resurfacer",
+  TROLLEY: "trolley",
+  F1: "f1",
 } as const;
 type Style = (typeof Style)[keyof typeof Style];
 
@@ -99,6 +104,11 @@ const LOOKS: Record<Vehicle, Look> = {
   boat: { style: Style.PICKUP, load: Load.BOAT },
   caravan: { style: Style.HATCH, load: Load.CARAVAN },
   forklift: { style: Style.FORKLIFT },
+  "tuk-tuk": { style: Style.TUK_TUK },
+  "golf-cart": { style: Style.GOLF_CART },
+  resurfacer: { style: Style.RESURFACER },
+  trolley: { style: Style.TROLLEY },
+  f1: { style: Style.F1 },
 };
 
 function look_of(vehicle: Vehicle | undefined): Look {
@@ -124,6 +134,11 @@ const CORNERS: Record<Style, number[]> = {
   quad: [0.3, 0.3, 0.3, 0.3],
   forklift: [0.5, 0.08, 0.08, 0.5],
   caravan: [0.3, 0.9, 0.9, 0.3],
+  "tuk-tuk": [0.2, 0.6, 0.6, 0.2],
+  "golf-cart": [0.18, 0.4, 0.4, 0.18],
+  resurfacer: [0.12, 0.35, 0.35, 0.12],
+  trolley: [0.04, 0.04, 0.04, 0.04],
+  f1: [0.2, 0.3, 0.3, 0.2],
 };
 
 // Taller vehicles throw a longer shadow: the sun is fixed, so the offset only grows with the roof.
@@ -145,6 +160,11 @@ const HEIGHT: Record<Style | Load, number> = {
   quad: 0.6,
   forklift: 0.9,
   caravan: 1.4,
+  "tuk-tuk": 1.2,
+  "golf-cart": 1.1,
+  resurfacer: 1.4,
+  trolley: 0.5,
+  f1: 0.4,
   box: 0.5,
   horse: 1.4,
   farm: 0.9,
@@ -489,6 +509,11 @@ const PAINTERS: Record<Style, (ctx: CanvasRenderingContext2D, f: Frame) => void>
   },
   caravan: (ctx, f) => caravan_top(ctx, f),
   forklift: () => {},
+  "tuk-tuk": () => {},
+  "golf-cart": () => {},
+  resurfacer: () => {},
+  trolley: () => {},
+  f1: () => {},
 };
 
 function caravan_top(ctx: CanvasRenderingContext2D, f: Frame) {
@@ -981,6 +1006,386 @@ function forklift(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, la
   ctx.stroke();
   ctx.restore();
 }
+
+interface Rig {
+  ctx: CanvasRenderingContext2D;
+  car: Car;
+  spec: VehicleSpec;
+  lamps: Lamps;
+  scale: number;
+  palette: Palette;
+  l: number;
+  half: number;
+  line: number;
+  /** Shadow offset, as `HEIGHT` gives the body styles. */
+  height: number;
+}
+
+type RigDraw = (rig: Rig) => void;
+
+function rig_tyre(rig: Rig, at: Vec, angle: number, roll: number, out: number) {
+  const { ctx, car, spec, scale, palette } = rig;
+  const size = { length: spec.wheel_diameter + 0.04, width: spec.wheel_width + 0.05 };
+  tyre(ctx, at, car.heading + angle, roll, out, size, blur_of(car), scale, palette);
+}
+
+function four_tyres(rig: Rig, out = TYRE_SHOW) {
+  for (const [i, wheel] of wheels(rig.car, rig.spec).entries()) {
+    rig_tyre(rig, wheel.at, wheel.angle, rig.car.roll[i], (i % 2 ? 1 : -1) * out);
+  }
+}
+
+// The sun stands still in the world, so the shadow is offset before the body turns, as `shadow()` does.
+function rig_shadow(rig: Rig, shape: () => void) {
+  const { ctx, car, spec, palette, height } = rig;
+  const centre = body_centre(car, spec);
+  ctx.save();
+  ctx.translate(centre.x + 0.1 * height, centre.y + 0.16 * height);
+  ctx.rotate(car.heading);
+  shape();
+  ctx.fillStyle = palette.shadow;
+  ctx.fill();
+  ctx.restore();
+}
+
+function in_body(rig: Rig, paint: () => void) {
+  const { ctx, car, spec } = rig;
+  const centre = body_centre(car, spec);
+  ctx.save();
+  ctx.translate(centre.x, centre.y);
+  ctx.rotate(car.heading);
+  paint();
+  ctx.restore();
+}
+
+function fill_edge(rig: Rig, fill: string) {
+  const { ctx, palette, line } = rig;
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.strokeStyle = palette.edge;
+  ctx.lineWidth = line;
+  ctx.stroke();
+}
+
+function rig_tail_lamps(rig: Rig, size: number, inset: number) {
+  const { ctx, l, half, palette, lamps } = rig;
+  for (const side of [-1, 1]) {
+    const y = side * (half - inset) - size / 2;
+    if (lamps.braking) pill(ctx, -l - 0.08, y - 0.06, 0.22, size + 0.12, 0.12, palette.brake_glow);
+    lamp(ctx, -l + 0.04, y, 0.07, size, palette.brake, palette, lamps.braking ? 1 : lamps.lit);
+    if (lamps.reversing) lamp(ctx, -l + 0.04, side * (half - inset - size / 2 - 0.1) - 0.04, 0.07, 0.08, palette.glow, palette);
+  }
+}
+
+function tuk_shape(rig: Rig) {
+  const { ctx, l, half } = rig;
+  const cab = l - 0.95;
+  const nose = 0.2;
+  ctx.beginPath();
+  ctx.moveTo(-l + 0.18, -half);
+  ctx.lineTo(cab, -half);
+  ctx.quadraticCurveTo(l - 0.25, -half + 0.05, l - 0.04, -nose);
+  ctx.quadraticCurveTo(l + 0.02, 0, l - 0.04, nose);
+  ctx.quadraticCurveTo(l - 0.25, half - 0.05, cab, half);
+  ctx.lineTo(-l + 0.18, half);
+  ctx.quadraticCurveTo(-l, half, -l, half - 0.18);
+  ctx.lineTo(-l, -half + 0.18);
+  ctx.quadraticCurveTo(-l, -half, -l + 0.18, -half);
+  ctx.closePath();
+}
+
+// An auto rickshaw from above: a canvas hood with ribs over the bench and the rider, a windscreen, and the nose
+// tapering to its one front wheel and one headlamp.
+const tuk_tuk: RigDraw = (rig) => {
+  const { ctx, car, palette, l, half, line } = rig;
+  const paint = palette.player;
+  const [fl, fr, rl, rr] = wheels(car, rig.spec);
+  const front = { x: (fl.at.x + fr.at.x) / 2, y: (fl.at.y + fr.at.y) / 2 };
+  rig_shadow(rig, () => tuk_shape(rig));
+  rig_tyre(rig, rl.at, rl.angle, car.roll[2], -TYRE_SHOW);
+  rig_tyre(rig, rr.at, rr.angle, car.roll[3], TYRE_SHOW);
+  in_body(rig, () => {
+    tuk_shape(rig);
+    fill_edge(rig, paint.body);
+    const back = -l + 0.08;
+    const brow = l - 0.95;
+    pill(ctx, back, -half + 0.05, brow - back, half * 2 - 0.1, 0.22, paint.roof);
+    ctx.strokeStyle = palette.edge;
+    ctx.lineWidth = line;
+    ctx.beginPath();
+    for (const x of [back + 0.4, back + 0.8, back + 1.2]) {
+      ctx.moveTo(x, -half + 0.1);
+      ctx.lineTo(x, half - 0.1);
+    }
+    ctx.stroke();
+    ctx.fillStyle = paint.glass;
+    ctx.strokeStyle = paint.glass;
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 0.05;
+    ctx.beginPath();
+    ctx.moveTo(brow, -half + 0.1);
+    ctx.lineTo(brow + 0.24, -half + 0.2);
+    ctx.lineTo(brow + 0.24, half - 0.2);
+    ctx.lineTo(brow, half - 0.1);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    rig_tail_lamps(rig, 0.2, 0.16);
+  });
+  rig_tyre(rig, front, car.steer, (car.roll[0] + car.roll[1]) / 2, 0);
+  in_body(rig, () => {
+    pill(ctx, l - 0.62, -0.3, 0.06, 0.6, 0.03, palette.ink);
+    lamp(ctx, l - 0.18, -0.11, 0.09, 0.22, palette.glow, palette, rig.lamps.lit);
+  });
+};
+
+// A golf cart from above: a light canopy on its posts over the seats, a short cowl in front, two bags in the rack
+// at the back with their club heads showing.
+const golf_cart: RigDraw = (rig) => {
+  const { ctx, palette, l, half, line } = rig;
+  const paint = palette.player;
+  const shape = () => {
+    ctx.beginPath();
+    ctx.roundRect(-l, -half, l * 2, half * 2, [0.18, 0.4, 0.4, 0.18]);
+  };
+  rig_shadow(rig, shape);
+  in_body(rig, () => {
+    shape();
+    fill_edge(rig, paint.body);
+    const deck = -l + 0.55;
+    pill(ctx, -l + 0.06, -half + 0.08, deck - (-l + 0.06), half * 2 - 0.16, 0.08, paint.glass);
+    for (const side of [-1, 1]) {
+      const bag = { x: -l + 0.3, y: side * 0.24 };
+      ctx.beginPath();
+      ctx.arc(bag.x, bag.y, 0.16, 0, Math.PI * 2);
+      ctx.fillStyle = palette.ink;
+      ctx.fill();
+      ctx.strokeStyle = palette.edge;
+      ctx.lineWidth = line;
+      ctx.stroke();
+      ctx.fillStyle = palette.steel;
+      for (const [dx, dy] of [
+        [-0.05, -0.05],
+        [0.06, -0.02],
+        [-0.01, 0.07],
+      ]) {
+        ctx.beginPath();
+        ctx.arc(bag.x + dx, bag.y + dy, 0.035, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    const top = deck + 0.05;
+    const brow = l - 0.48;
+    ctx.beginPath();
+    ctx.roundRect(top, -half + 0.03, brow - top, half * 2 - 0.06, 0.12);
+    fill_edge(rig, paint.roof);
+    ctx.beginPath();
+    ctx.roundRect(top + 0.1, -half + 0.13, brow - top - 0.2, half * 2 - 0.26, 0.08);
+    ctx.strokeStyle = palette.edge;
+    ctx.stroke();
+    pill(ctx, brow, -half + 0.08, 0.07, half * 2 - 0.16, 0.03, paint.glass);
+    for (const side of [-1, 1]) lamp(ctx, l - 0.12, side * (half - 0.22) - 0.07, 0.08, 0.14, palette.glow, palette, rig.lamps.lit);
+    rig_tail_lamps(rig, 0.16, 0.12);
+  });
+  four_tyres(rig);
+};
+
+// A resurfacer from above: the big snow tank filling most of the top, the driver's seat and wheel up front on the left,
+// the conditioner across the back, and while it drives forward the film of water it lays behind it.
+const resurfacer: RigDraw = (rig) => {
+  const { ctx, car, palette, l, half, line } = rig;
+  const paint = palette.player;
+  const shape = () => {
+    ctx.beginPath();
+    ctx.roundRect(-l, -half, l * 2, half * 2, [0.12, 0.35, 0.35, 0.12]);
+  };
+  rig_shadow(rig, shape);
+  if (car.speed > 0.05) {
+    in_body(rig, () => {
+      ctx.globalAlpha = Math.min(1, car.speed / 1.5) * 0.8;
+      pill(ctx, -l - 0.5, -half + 0.08, 0.6, half * 2 - 0.16, 0.12, palette.water);
+      ctx.globalAlpha = 1;
+    });
+  }
+  in_body(rig, () => {
+    shape();
+    fill_edge(rig, paint.body);
+    const tank_back = -l + 0.55;
+    const tank_front = l - 1.05;
+    ctx.beginPath();
+    ctx.roundRect(tank_back, -half + 0.12, tank_front - tank_back, half * 2 - 0.24, 0.18);
+    fill_edge(rig, paint.glass);
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = palette.glow;
+    ctx.globalAlpha = 0.3;
+    ctx.beginPath();
+    ctx.roundRect(tank_back + 0.15, -half + 0.3, tank_front - tank_back - 0.3, half * 2 - 0.6, 0.3);
+    ctx.fill();
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    for (const [x, y, r] of [
+      [tank_front - 0.4, -0.35, 0.32],
+      [tank_front - 0.55, 0.3, 0.36],
+      [tank_front - 1.0, -0.05, 0.3],
+    ]) {
+      ctx.moveTo(x + r, y);
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+    }
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    pill(ctx, -l + 0.02, -half + 0.04, 0.32, half * 2 - 0.08, 0.06, palette.steel);
+    ctx.strokeStyle = palette.ink;
+    ctx.lineWidth = Math.max(0.02, line);
+    ctx.beginPath();
+    ctx.moveTo(-l + 0.18, -half + 0.1);
+    ctx.lineTo(-l + 0.18, half - 0.1);
+    ctx.stroke();
+    const seat = { x: l - 0.7, y: -half + 0.42 };
+    pill(ctx, seat.x - 0.22, seat.y - 0.22, 0.42, 0.44, 0.12, paint.glass);
+    ctx.beginPath();
+    ctx.arc(seat.x + 0.38, seat.y, 0.15, 0, Math.PI * 2);
+    ctx.strokeStyle = palette.ink;
+    ctx.lineWidth = 0.05;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(l - 0.55, half - 0.45, 0.14, 0, Math.PI * 2);
+    fill_edge(rig, paint.roof);
+    for (const side of [-1, 1]) lamp(ctx, l - 0.14, side * (half - 0.3) - 0.12, 0.1, 0.24, palette.glow, palette, rig.lamps.lit);
+    rig_tail_lamps(rig, 0.22, 0.42);
+  });
+  four_tyres(rig, 0);
+};
+
+// A shopping trolley from above: a wire basket, narrower at the front, the plastic handle and the folding child seat
+// at the back, and four little casters showing through the mesh.
+const trolley: RigDraw = (rig) => {
+  const { ctx, palette, l, half, scale } = rig;
+  const paint = palette.player;
+  const nose = half * 0.78;
+  const basket = () => {
+    ctx.beginPath();
+    ctx.moveTo(-l + 0.05, -half);
+    ctx.lineTo(l, -nose);
+    ctx.lineTo(l, nose);
+    ctx.lineTo(-l + 0.05, half);
+    ctx.closePath();
+  };
+  rig_shadow(rig, basket);
+  four_tyres(rig, 0);
+  in_body(rig, () => {
+    basket();
+    ctx.fillStyle = palette.steel;
+    ctx.globalAlpha = 0.22;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.save();
+    ctx.clip();
+    ctx.strokeStyle = palette.steel;
+    ctx.lineWidth = Math.max(0.01, 0.7 / scale);
+    ctx.beginPath();
+    for (let y = -half + 0.07; y < half; y += 0.07) {
+      ctx.moveTo(-l, y);
+      ctx.lineTo(l, y);
+    }
+    for (let x = -l + 0.12; x < l; x += 0.09) {
+      ctx.moveTo(x, -half);
+      ctx.lineTo(x, half);
+    }
+    ctx.stroke();
+    ctx.restore();
+    basket();
+    ctx.strokeStyle = palette.ink;
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(0.025, 1.5 / scale);
+    ctx.stroke();
+    ctx.globalAlpha = 0.9;
+    pill(ctx, -l + 0.08, -half * 0.62, 0.22, half * 1.24, 0.04, paint.roof);
+    ctx.globalAlpha = 1;
+    pill(ctx, -l - 0.02, -half - 0.03, 0.07, half * 2 + 0.06, 0.035, paint.body);
+  });
+};
+
+function f1_shape(rig: Rig) {
+  const { ctx, l } = rig;
+  ctx.beginPath();
+  ctx.moveTo(-l + 0.3, -0.3);
+  ctx.lineTo(-1.5, -0.42);
+  ctx.quadraticCurveTo(-0.9, -0.72, -0.2, -0.72);
+  ctx.quadraticCurveTo(0.6, -0.7, 1.0, -0.3);
+  ctx.lineTo(l - 0.3, -0.13);
+  ctx.quadraticCurveTo(l - 0.12, 0, l - 0.3, 0.13);
+  ctx.lineTo(1.0, 0.3);
+  ctx.quadraticCurveTo(0.6, 0.7, -0.2, 0.72);
+  ctx.quadraticCurveTo(-0.9, 0.72, -1.5, 0.42);
+  ctx.lineTo(-l + 0.3, 0.3);
+  ctx.closePath();
+}
+
+// A racing car from above: open wheels out past a slim body with its sidepods, the nose out to the front wing, the
+// driver's helmet under the halo, the rear wing over the gearbox, and one rain light. It sits low, so its shadow is tight.
+const f1: RigDraw = (rig) => {
+  const { ctx, palette, l, half, line, lamps } = rig;
+  const paint = palette.player;
+  rig_shadow(rig, () => {
+    f1_shape(rig);
+    ctx.rect(l - 0.4, -half, 0.36, half * 2);
+    ctx.rect(-l, -0.55, 0.42, 1.1);
+  });
+  four_tyres(rig, 0);
+  in_body(rig, () => {
+    f1_shape(rig);
+    fill_edge(rig, paint.body);
+    ctx.beginPath();
+    ctx.moveTo(-1.4, 0);
+    ctx.lineTo(l - 0.35, 0);
+    ctx.strokeStyle = paint.glass;
+    ctx.lineWidth = 0.12;
+    ctx.stroke();
+    pill(ctx, -1.6, -0.17, 1.55, 0.34, 0.12, paint.roof);
+    for (const side of [-1, 1]) pill(ctx, -0.55, side * 0.55 - 0.08, 0.5, 0.16, 0.06, paint.glass);
+    ctx.beginPath();
+    ctx.ellipse(0.35, 0, 0.42, 0.22, 0, 0, Math.PI * 2);
+    ctx.fillStyle = paint.glass;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(0.22, 0, 0.13, 0, Math.PI * 2);
+    ctx.fillStyle = palette.glow;
+    ctx.fill();
+    ctx.strokeStyle = palette.ink;
+    ctx.lineWidth = Math.max(0.02, line);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(0.3, 0, 0.3, 0.26, 0, -Math.PI / 2, Math.PI / 2);
+    ctx.moveTo(0.6, 0);
+    ctx.lineTo(0.78, 0);
+    ctx.strokeStyle = palette.ink;
+    ctx.lineWidth = 0.06;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.lineCap = "butt";
+    ctx.beginPath();
+    ctx.roundRect(l - 0.4, -half + 0.02, 0.34, half * 2 - 0.04, 0.08);
+    fill_edge(rig, paint.body);
+    pill(ctx, l - 0.34, -half + 0.12, 0.08, half * 2 - 0.24, 0.03, paint.glass);
+    ctx.beginPath();
+    ctx.roundRect(-l, -0.55, 0.42, 1.1, 0.05);
+    fill_edge(rig, paint.body);
+    pill(ctx, -l + 0.08, -0.47, 0.1, 0.94, 0.03, paint.glass);
+    if (lamps.braking) pill(ctx, -l - 0.1, -0.16, 0.24, 0.32, 0.12, palette.brake_glow);
+    lamp(ctx, -l + 0.22, -0.07, 0.08, 0.14, palette.brake, palette, lamps.braking ? 1 : lamps.lit);
+  });
+};
+
+const FUN: Partial<Record<Vehicle, RigDraw>> = {
+  [Vehicle.F1]: f1,
+  [Vehicle.TUK_TUK]: tuk_tuk,
+  [Vehicle.GOLF_CART]: golf_cart,
+  [Vehicle.RESURFACER]: resurfacer,
+  [Vehicle.TROLLEY]: trolley,
+};
+
 export function player(
   ctx: CanvasRenderingContext2D,
   car: Car,
@@ -996,6 +1401,11 @@ export function player(
   if (vehicle === Vehicle.FORKLIFT) {
     tyres(ctx, car, spec, look.style, scale, palette, false);
     forklift(ctx, car, spec, lamps, scale, palette, time);
+    return;
+  }
+  const fun = FUN[vehicle];
+  if (fun) {
+    fun({ ctx, car, spec, lamps, scale, palette, l: spec.length / 2, half: spec.width / 2, line: 1 / scale, height: HEIGHT[look.style] });
     return;
   }
   if (look.load) trailer(ctx, car, spec, look.load, lamps, scale, palette);

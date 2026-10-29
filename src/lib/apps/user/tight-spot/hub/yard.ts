@@ -42,6 +42,7 @@ export const GARAGE: readonly Shelf[] = [
   { id: "service", name: "Service", vehicles: [Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.GARBAGE, Vehicle.FORKLIFT] },
   { id: "buses", name: "Buses", vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.COACH, Vehicle.ARTIC] },
   { id: "towing", name: "Towing", vehicles: [Vehicle.TOWING, Vehicle.CARAVAN, Vehicle.BOAT, Vehicle.HORSE_BOX, Vehicle.TRACTOR, Vehicle.QUAD] },
+  { id: "fun", name: "Fun", vehicles: [Vehicle.TUK_TUK, Vehicle.GOLF_CART, Vehicle.RESURFACER, Vehicle.TROLLEY, Vehicle.F1] },
 ];
 
 export function shelf_of(vehicle: Vehicle): Shelf {

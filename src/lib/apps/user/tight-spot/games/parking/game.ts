@@ -137,7 +137,7 @@ export const OPEN_INFO = {
   name: "Open lot",
   brief: "Drive around and park in any free bay.",
   par: 1,
-  vehicles: [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP, Vehicle.TOWING] as readonly Vehicle[],
+  vehicles: [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP, Vehicle.TOWING, Vehicle.F1] as readonly Vehicle[],
 };
 
 export type VehiclePick = Vehicle | typeof ANY;

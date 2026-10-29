@@ -40,3 +40,8 @@ Owner: "yes make the articulated bus parkable too". It failed every bus stop and
 - **Depot:** drive-through. No 32 m yard lets an 18 m bus swing round and back in, so for it the gate is open and the bay faces in: it drives nose first from the road into a lane 2–3.5 m either side of the gate's line, the lanes in between left empty. The plain from-start search proves it. The depot's brief now says to face the way the bay's arrow points.
 - **Start:** a rig whose tail would reach the barrier at the end of the road waits further up it (only the articulated bus).
 - Levels are unchanged: the bus stop's and depot's ladder is still the city bus, whose layouts and draws from the seed are identical.
+
+## Revision 2026-10-29 (wave 4, the fun ones)
+- Tuk-tuk, golf cart, ice resurfacer, shopping trolley, and an F1 car the owner added: plain front-steer specs, no model change, on a Fun shelf in the garage. The tuk-tuk's one front wheel is drawn only; the model's front pair stands in for it (the bicycle model is the same). The trolley, whose real casters all swivel, is front steer on an 80° lock, not all-wheel steer: that waits for W3.
+- One optional spec field, `unlit` (no headlight beams), for the trolley and the F1 car.
+- Parking: the planner proves the F1 car in the open lot.
