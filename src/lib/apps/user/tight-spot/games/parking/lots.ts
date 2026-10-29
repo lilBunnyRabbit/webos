@@ -1,6 +1,6 @@
 import type { Rng } from "$lib/core/utils/random";
 import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
-import { body_ends, BUS, CARAVAN_TRAILER, HATCHBACK, rig_length, Vehicle, type VehicleSpec } from "../../core/vehicle";
+import { BUS, CARAVAN_TRAILER, HATCHBACK, rig_ends, rig_length, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import {
   MarkKind,
   Scenario,
@@ -505,41 +505,78 @@ function fit_for(spec: VehicleSpec): Fit {
     wider: Math.max(spec.width, spec.trailer?.width ?? 0) - HATCHBACK.width,
     turn: Math.max(1, spec.turning_radius / HATCHBACK.turning_radius),
     depth: length + 0.7,
-    rear: length - body_ends(spec).front,
+    rear: -rig_ends(spec).rear,
   };
 }
 
 function bus_stop(d: number, rng: Rng, fit: Fit): Layout {
   const b = new Builder(rng);
-  const lane = lerp(3.3, 3.1, d);
-  const kerb = GATE_HI + lane;
+  // The bus comes up from the road, so the stop runs to the lot's edge; the parked cars are ahead of it and across.
+  const stop = fit.length + lerp(8, 6.2, d);
+  const length = 4 + rng() * 0.6;
+  // An articulated bus's stop takes the whole street: no car ahead of it, and a wide kerbside bay that starts in the
+  // road's right lane, since its rear section can't swing out of the road and straighten again in one street.
+  const long = SIZE - EDGE - 0.1 - (EDGE + 0.7 + length) - stop < 0;
+  const inner = long ? 17.6 : GATE_HI;
+  const lane = long ? lerp(3.9, 3.7, d) : lerp(3.3, 3.1, d);
+  const kerb = inner + lane;
   b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, EDGE, kerb, SIZE));
   b.block(SolidKind.KERB, 0, 0, GATE_LO, SIZE);
   b.block(SolidKind.KERB, kerb, 0, SIZE, SIZE);
   b.block(SolidKind.KERB, GATE_LO, 0, kerb, EDGE);
   b.line({ x: 16, y: EDGE + 0.5 }, { x: 16, y: SIZE }, MarkKind.DASH);
-  b.line({ x: GATE_HI, y: EDGE }, { x: GATE_HI, y: SIZE });
+  b.line({ x: inner, y: EDGE }, { x: inner, y: SIZE });
 
-  // The bus comes up from the road, so the stop runs to the lot's edge; the parked cars are ahead of it and across.
-  const ahead = 4 + rng() * 0.6;
-  place_car(b, kerb - 0.2 - rng() * 0.1 - 0.9, EDGE + 0.3 + ahead / 2, NORTH, ahead, 1.8, rng);
-  const stop = fit.length + lerp(8, 6.2, d);
-  const top = EDGE + 0.3 + ahead + 0.4 + rng() * (SIZE - EDGE - 0.1 - (EDGE + 0.7 + ahead) - stop);
+  const ahead = long ? -0.4 : length;
+  if (!long) place_car(b, kerb - 0.2 - rng() * 0.1 - 0.9, EDGE + 0.3 + ahead / 2, NORTH, ahead, 1.8, rng);
+  const top = EDGE + 0.3 + ahead + 0.4 + rng() * Math.max(0, SIZE - EDGE - 0.1 - (EDGE + 0.7 + ahead) - stop);
   const bottom = top + stop;
   if (d > 0.4) {
     const across = 4 + rng() * 0.6;
-    place_car(b, GATE_LO + 0.25 + 0.9, between(rng, top - 2, top + 3), SOUTH, across, 1.8, rng);
+    place_car(b, GATE_LO + 0.25 + 0.9, Math.max(EDGE + 0.3 + across / 2, between(rng, top - 2, top + 3)), SOUTH, across, 1.8, rng);
   }
-  for (const y of [top, bottom]) b.line({ x: GATE_HI, y }, { x: kerb, y });
+  for (const y of [top, bottom]) b.line({ x: inner, y }, { x: kerb, y });
   b.line({ x: kerb - 0.25, y: top }, { x: kerb - 0.25, y: bottom }, MarkKind.DASH);
   // The stop's sign and shelter sit right on the kerb, where the tail swings as the bus straightens.
   b.solid(SolidKind.POST, rect(kerb, top + 1.2, kerb + 0.22, top + 1.42));
   b.block(SolidKind.WALL, kerb + 0.5, top + 3, kerb + 1.7, top + 8);
-  b.bay(rect(GATE_HI, top + 0.1, kerb, bottom - 0.1), NORTH, false);
+  b.bay(rect(inner, top + 0.1, kerb, bottom - 0.1), NORTH, false);
+  return b;
+}
+
+// An articulated bus can't swing round in a 32 m yard, so its depot is drive-through: the gate is open and it goes
+// nose first into a lane near the gate's line, the way artic depots park them.
+function depot_through(d: number, rng: Rng, fit: Fit): Layout {
+  const b = new Builder(rng);
+  const width = lerp(3.8, 3.4, d);
+  const front = EDGE + fit.depth + 0.3;
+  b.ground(SurfaceKind.ASPHALT, rect(EDGE, EDGE, SIZE - EDGE, SIZE - EDGE));
+  b.ground(SurfaceKind.ASPHALT, rect(GATE_LO, SIZE - EDGE, GATE_HI, SIZE));
+  b.perimeter(SolidKind.WALL);
+  const lanes = row(EDGE, SIZE - EDGE, width, front, EDGE, "centre");
+  draw_row(b, lanes);
+  const aim = 18 + (chance(rng, 0.5) ? -1 : 1) * between(rng, 2, 3.5);
+  const target = lanes.xs.reduce(
+    (best, x, i) => (Math.abs(x + width / 2 - aim) < Math.abs(lanes.xs[best] + width / 2 - aim) ? i : best),
+    0
+  );
+  const swing = [Math.min(18, aim), Math.max(18, aim)];
+  const fill = lerp(0.65, 1, d);
+  lanes.xs.forEach((x, i) => {
+    if (i === target) {
+      b.bay(rect(x, EDGE, x + width, front), NORTH, false);
+      return;
+    }
+    if (!chance(rng, fill) || (x < swing[1] && x + width > swing[0])) return;
+    const room = (width - BUS_WIDTH) / 2 - 0.08;
+    const centre = x + width / 2 + Math.max(-room, Math.min(room, (rng() * 2 - 1) * lerp(0.1, 0.25, d)));
+    b.bus(centre, EDGE + 0.3 + rng() * 0.4 + BUS_LENGTH / 2, chance(rng, 0.8) ? SOUTH : NORTH);
+  });
   return b;
 }
 
 function depot(d: number, rng: Rng, fit: Fit): Layout {
+  if (fit.length > 16) return depot_through(d, rng, fit);
   const b = new Builder(rng);
   const width = lerp(3.8, 3.25, d);
   const front = EDGE + Math.max(fit.depth, BUS_LENGTH + 0.7) + 0.5;

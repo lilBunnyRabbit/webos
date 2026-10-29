@@ -99,16 +99,16 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
   },
   "bus-stop": {
     name: "Bus stop",
-    brief: "Pull into the stop box along the kerb, short of the parked car. The tail swings out as you straighten.",
+    brief: "Pull into the stop box along the kerb, short of anything parked ahead. The tail swings out as you straighten.",
     par: 1,
-    vehicles: [Vehicle.BUS, Vehicle.DECKER],
+    vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.ARTIC],
     ladder: [Vehicle.BUS],
   },
   depot: {
     name: "Depot",
-    brief: "Back into your lane between the parked buses, nose out.",
+    brief: "Park in your lane between the parked buses, facing the way its arrow points.",
     par: 1,
-    vehicles: [Vehicle.BUS, Vehicle.COACH, Vehicle.DECKER, Vehicle.GARBAGE, Vehicle.FIRE],
+    vehicles: [Vehicle.BUS, Vehicle.COACH, Vehicle.DECKER, Vehicle.GARBAGE, Vehicle.FIRE, Vehicle.ARTIC],
     ladder: [Vehicle.BUS],
   },
   driveway: {

@@ -14,7 +14,7 @@ import {
   type Surface,
 } from "./kinds";
 import { build_lot } from "./lots";
-import { HATCHBACK, type VehicleSpec } from "../../core/vehicle";
+import { HATCHBACK, rig_ends, type VehicleSpec } from "../../core/vehicle";
 
 export * from "./kinds";
 
@@ -221,6 +221,8 @@ export function scenario_world(
     if (cy === 1) return { kind: ChunkKind.ROAD };
     return null;
   };
+  // A long rig waits further up the road, so its tail clears the barrier where the road ends.
+  const tail = -rig_ends(spec).rear;
   const world = assemble(
     seed,
     [
@@ -228,7 +230,7 @@ export function scenario_world(
       { x: 0, y: 1 },
     ],
     plan,
-    { x: MID + 2, y: CHUNK + 26, heading: -Math.PI / 2 }
+    { x: MID + 2, y: Math.min(CHUNK + 26, CHUNK * 2 - BARRIER - 1 - tail), heading: -Math.PI / 2 }
   );
   const own = world.chunks[0].start;
   return own ? { ...world, start: own } : world;

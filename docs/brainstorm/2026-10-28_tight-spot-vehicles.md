@@ -30,7 +30,7 @@ Today one car, `HATCHBACK` in `vehicle.ts`; every model function already takes a
 - [x] Build: specs, trailer model + tests, two-body collision and hitch check, drawing (trailer, bus), four new kinds, levels, planner replay test, camera zoom, docs/apps page, guide, changelog `new`, plus the end bay
 - [ ] Feature review, then desktop and mobile visual pass before push
 - [x] Precision score (formula, card, Perfect badge, Perfect park achievement) and vehicle picker (Spots and open lot, bests per kind and vehicle), ADR-086 revision note
-- [x] More rigs (2026-10-29, with the Drive Hub W1 vehicles): boat trailer on the slipway, caravan with a new camping pitch, articulated bus, coach and double-decker (specs and drawing; the articulated bus stays garage-only, the planner couldn't prove it at the bus stop or the depot)
+- [x] More rigs (2026-10-29, with the Drive Hub W1 vehicles): boat trailer on the slipway, caravan with a new camping pitch, articulated bus, coach and double-decker (specs and drawing; the articulated bus parks at the bus stop and a drive-through depot)
 
 ## Trucks (later the same day)
 Owner: "Oh no truck car option?", then: "the classic European truck you see with trailers. Lets work on that later". Parked for a later session; draft picks to revisit then:

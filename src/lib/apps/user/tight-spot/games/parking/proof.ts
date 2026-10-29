@@ -1,9 +1,10 @@
-import { collide, obstacles } from "../../core/obstacles";
-import { drive, plan, type PlanResult } from "../../core/planner";
+import { angle_between } from "../../core/geometry";
+import { collide, obstacles, type Obstacles } from "../../core/obstacles";
+import { drive, inflate, plan, type Move } from "../../core/planner";
 import { jackknifed, VEHICLES, type Placement, type Vehicle, type VehicleSpec } from "../../core/vehicle";
 import { create_game, Mode, parked_in, SCENARIO_INFO, spec_of, verdict, type GameState } from "./game";
 import { parked_poses } from "./poses";
-import type { Scenario } from "./world";
+import type { Bay, Scenario } from "./world";
 
 /** The vehicles a kind gained after its levels were laid out; a look on a spec already proven there needs no proof. */
 export function added(scenario: Scenario): Vehicle[] {
@@ -34,13 +35,36 @@ export function unreached(scenario: Scenario, vehicle: Vehicle, difficulty: numb
  * same path backwards getting in since a car has no slip; cheaper, and only sound without a trailer, so the seed sweeps
  * of car kinds use it and a trailer, or a fixed level, always goes from the start.
  */
+// A towed section straightens behind a vehicle driving straight, so in a spot entered forwards (a bus stop) the search
+// only has to line the front up: from there the rig pulls straight ahead until the game calls it parked. The coarse
+// hitch bins of a forward-only search can't line both up on their own, and with reversing allowed an 18 m bus from
+// the road takes the search 10–30 s a seed.
+const PULL_UP: ReadonlySet<Scenario> = new Set(["bus-stop"]);
+const PULL_UP_RANGE = 20;
+const PULL_UP_ANGLE = (3 * Math.PI) / 180;
+
+function pull_up(at: Placement, bay: Bay, near: Obstacles, spec: VehicleSpec, body: VehicleSpec): number | null {
+  if (angle_between(at.heading, bay.heading) > PULL_UP_ANGLE) return null;
+  let pose = at;
+  for (let s = 0; s <= PULL_UP_RANGE; s += PIECE) {
+    if (parked_in(pose, bay, spec)) return s;
+    pose = drive(pose, { curvature: 0, distance: PIECE }, spec);
+    if (collide(pose, near, body)) return null;
+  }
+  return null;
+}
+
 export function reachable(state: GameState, from_start: boolean): boolean {
   const { world, car } = state;
   const spec = spec_of(state.round);
   const near = obstacles(world);
   const bay = world.bays[0];
   const start: Placement = { x: car.x, y: car.y, heading: car.heading, trailer: car.trailer };
-  const arrive = (at: Placement) => parked_in(at, bay, spec);
+  const straight = spec.trailer !== undefined && state.round.scenario !== null && PULL_UP.has(state.round.scenario);
+  const body = inflate(spec, 0.05);
+  const arrive = straight
+    ? (at: Placement) => pull_up(at, bay, near, spec, body) !== null
+    : (at: Placement) => parked_in(at, bay, spec);
   // A few of the most central poses per way round: the search's coarse closed set can miss with one and not the next.
   const tried = new Map<number, number>();
   return parked_poses(bay, near, 0.05, spec).some((pose) => {
@@ -48,9 +72,11 @@ export function reachable(state: GameState, from_start: boolean): boolean {
     if (count >= 3) return false;
     tried.set(pose.heading, count + 1);
     if (!from_start && !spec.trailer) return plan(pose, world.start, near, { spec }) !== null;
-    const found = plan(start, pose, near, { spec, arrive });
+    const found = plan(start, pose, near, { spec, arrive, directions: straight ? [1] : undefined });
     if (!found) return false;
-    if (!parks(state, found)) throw new Error("the path the search found doesn't park when driven");
+    const end = straight ? pull_up(found.path.at(-1)!, bay, near, spec, body) : null;
+    const moves = end ? [...found.moves, { curvature: 0, distance: end }] : found.moves;
+    if (!parks(state, moves)) throw new Error("the path the search found doesn't park when driven");
     return true;
   });
 }
@@ -58,11 +84,11 @@ export function reachable(state: GameState, from_start: boolean): boolean {
 const PIECE = 0.15;
 
 /** Drives the moves from the round's start in the search's own pieces and judges where they end as a round would. */
-function parks(state: GameState, found: PlanResult): boolean {
+function parks(state: GameState, moves: readonly Move[]): boolean {
   const spec = spec_of(state.round);
   const near = obstacles(state.world);
   let at: Placement = state.car;
-  for (const move of found.moves) {
+  for (const move of moves) {
     const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
     for (let k = 0; k < pieces; k++) {
       at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, spec);
