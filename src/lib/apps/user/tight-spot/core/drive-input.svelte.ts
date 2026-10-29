@@ -1,5 +1,6 @@
 import { WheelMode } from "./settings.svelte";
 import { BACK_KEYS, FORWARD_KEYS } from "./keys";
+import { NO_SIGNAL, Signal, signal_after, toggle_signal, type SignalState } from "./signal";
 import { Gear, steer_boost, type Input, type VehicleSpec } from "./vehicle";
 
 export type Hold = "gas" | "brake" | "left" | "right";
@@ -9,6 +10,7 @@ const RELEASED: Record<Hold, boolean> = { gas: false, brake: false, left: false,
 export class DriveInput {
   wheel = $state(0);
   held = $state({ ...RELEASED });
+  signal = $state<Signal>(Signal.NONE);
 
   // Read every physics step, never rendered, so holding a key doesn't re-run effects.
   readonly keys = new Set<string>();
@@ -18,6 +20,7 @@ export class DriveInput {
   private steer_way = 0;
   private steer_held = 0;
   private pad = { gas: 0, brake: 0 };
+  private stalk: SignalState = NO_SIGNAL;
 
   step_wheel(dt: number, spec: VehicleSpec, mode: WheelMode) {
     const right = this.keys.has("ArrowRight") || this.keys.has("KeyD") || this.holds.right.size > 0;
@@ -39,6 +42,7 @@ export class DriveInput {
         this.steering_by_keys = false;
       }
     }
+    this.watch_signal();
   }
 
   read(gear: Gear): Input {
@@ -49,11 +53,25 @@ export class DriveInput {
     const forward = Math.max(keyed_forward ? 1 : 0, this.pad.gas);
     const back = Math.max(keyed_back ? 1 : 0, this.pad.brake);
     const reversing = gear === Gear.REVERSE;
-    return { steer: this.hands ? this.wheel : null, throttle: reversing ? back : forward, brake: reversing ? forward : back };
+    return { steer: this.hands ? this.wheel : null, throttle: reversing ? back : forward, brake: reversing ? forward : back, signal: this.signal };
   }
 
   follow(share: number) {
     if (!this.hands) this.wheel = share;
+    this.watch_signal();
+  }
+
+  toggle_signal(side: Signal) {
+    this.set_stalk(toggle_signal(this.stalk, side));
+  }
+
+  private watch_signal() {
+    if (this.stalk.side !== Signal.NONE) this.set_stalk(signal_after(this.stalk, this.wheel));
+  }
+
+  private set_stalk(stalk: SignalState) {
+    this.stalk = stalk;
+    if (this.signal !== stalk.side) this.signal = stalk.side;
   }
 
   set_wheel(value: number) {
@@ -104,6 +122,7 @@ export class DriveInput {
 
   reset() {
     this.release();
+    this.set_stalk(NO_SIGNAL);
     this.hands = false;
     this.steering_by_keys = false;
     this.wheel = 0;

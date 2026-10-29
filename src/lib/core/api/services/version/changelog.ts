@@ -64,6 +64,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub's garage has a GT car: a low, quick coupé that pulls hard, brakes hard and turns tight, for fast laps of the yard.",
       },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub's telehandler switches crab steer with V now, since Z and X work the new turn signals.",
+      },
     ],
   },
   {

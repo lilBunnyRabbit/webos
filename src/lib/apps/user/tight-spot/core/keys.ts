@@ -1,6 +1,6 @@
 import { can_crab, DriveKind, Gear, SteerAxle, type VehicleSpec } from "./vehicle";
 
-export const CRAB_KEY = "KeyX";
+export const CRAB_KEY = "KeyV";
 
 export interface SteerHint {
   key_name: string;
@@ -11,7 +11,7 @@ export function steer_hints(spec: VehicleSpec): SteerHint[] {
   const drive = spec.drive;
   if (drive.kind === DriveKind.SKID) return [{ key_name: "← →", text: "turn" }];
   if (drive.kind === DriveKind.FRAME) return [{ key_name: "← →", text: "bend" }];
-  if (can_crab(spec)) return [{ key_name: "← →", text: "steer" }, { key_name: "X", text: "crab" }];
+  if (can_crab(spec)) return [{ key_name: "← →", text: "steer" }, { key_name: "V", text: "crab" }];
   return [{ key_name: "← →", text: "steer" }];
 }
 

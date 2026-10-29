@@ -1,6 +1,6 @@
 import { CRAB_KEY } from "./keys";
 
-export const PadButton = { A: 0, B: 1, X: 2, Y: 3, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9 } as const;
+export const PadButton = { A: 0, B: 1, X: 2, Y: 3, RB: 5, LT: 6, RT: 7, VIEW: 8, MENU: 9, LEFT: 14, RIGHT: 15 } as const;
 export type PadButton = (typeof PadButton)[keyof typeof PadButton];
 
 export const BUTTON_KEYS: Partial<Record<number, string>> = {
@@ -11,6 +11,8 @@ export const BUTTON_KEYS: Partial<Record<number, string>> = {
   [PadButton.VIEW]: "Escape",
   [PadButton.MENU]: "Space",
   [PadButton.RB]: "Enter",
+  [PadButton.LEFT]: "KeyZ",
+  [PadButton.RIGHT]: "KeyX",
 };
 
 export function key_event(code: string): KeyboardEvent {

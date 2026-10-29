@@ -1,15 +1,18 @@
 import type { Paint, Palette } from "./draw";
 import { tread } from "./draw-math";
-import { wrap_angle, type Pose, type Vec } from "./geometry";
+import { centroid, wrap_angle, type Polygon, type Pose, type Vec } from "./geometry";
 import type { Solid } from "./scene";
+import { Signal } from "./signal";
 import {
   body_centre,
   CARAVAN_TRAILER,
   Gear,
   hangs_ahead,
   hitch_point,
+  outline as rig_outline,
   to_world,
   TRACTOR,
+  trailer_corners,
   trailer_pose,
   trailer_wheels,
   Vehicle,
@@ -1687,6 +1690,40 @@ export function player(
     if (i >= spec.hitches.length) continue;
     if (i >= 0) trailer(ctx, car, spec, i, loads[i], i === loads.length - 1 ? lamps : dim, scale, palette);
     else vehicle_body(ctx, car, spec, look, lamps, dim, scale, palette, time);
+  }
+}
+
+const BLINKER_INSET = 0.18;
+
+function toward(point: Vec, shape: Polygon, by: number): Vec {
+  const middle = centroid(shape);
+  const length = Math.hypot(middle.x - point.x, middle.y - point.y) || 1;
+  return { x: point.x + ((middle.x - point.x) / length) * by, y: point.y + ((middle.y - point.y) / length) * by };
+}
+
+/** Lit blinkers on the signalled side, front and rear corners, over any vehicle; a chain's rear ones sit on its last link. */
+export function blinkers(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec, side: Signal, scale: number, palette: Palette) {
+  if (side === Signal.NONE) return;
+  const front = rig_outline(car, spec);
+  const links = spec.hitches.length;
+  const rear = links > 0 && !hangs_ahead(spec) ? trailer_corners(car, spec, links - 1) : front;
+  const left = side === Signal.LEFT;
+  const lamps = [toward(left ? front[0] : front[1], front, BLINKER_INSET), toward(left ? rear[3] : rear[2], rear, BLINKER_INSET)];
+  const halo = Math.max(0.5, 7 / scale);
+  const lens = Math.max(0.14, 2.5 / scale);
+  for (const at of lamps) {
+    ctx.fillStyle = palette.warning_glow;
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, halo, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = palette.ink;
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, lens + Math.max(0.03, 0.8 / scale), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = palette.warning;
+    ctx.beginPath();
+    ctx.arc(at.x, at.y, lens, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 

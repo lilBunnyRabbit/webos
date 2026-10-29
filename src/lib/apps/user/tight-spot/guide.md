@@ -39,13 +39,13 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
   - **Skid steer** (the skid-steer loader, the mower, the tank): the wheel slows one side. Half lock turns about the inner side; full lock spins it on the spot as soon as you give it gas. The tank's tracks run against each other as it turns.
   - **Frame steer** (the wheel loader, the dump truck): the wheel bends it in the middle, even standing still, and the back follows the front. Both halves have to be straight in the bay.
   - **All-wheel steer** (the ladder truck): the back wheels turn the other way, so it turns in half the room and its tail swings out the other side.
-  - **Crab steer** (the telehandler): steers all four wheels like the ladder truck; stop and press **X** or tap **Crab** and every wheel turns the same way, so it slides sideways without turning. Press it again to steer normally.
+  - **Crab steer** (the telehandler): steers all four wheels like the ladder truck; stop and press **V** or tap **Crab** and every wheel turns the same way, so it slides sideways without turning. Press it again to steer normally.
 - The **camping pitch**: you start lined up on the track, the car swung out and the caravan's tail at the pitch. Back it in caravan first; steer the other way to swing it, and keep it off the hedges.
 
 ## Keyboard
 
 - **← →** or **A D** turn the wheel: a tap nudges it, and held a moment it turns faster. **↑** or **W** drives forward, **↓** or **S** backs up: against the way you're going it brakes, and pressing it again once the car stands switches to D or R.
-- **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel. **X** switches the telehandler's crab mode (stopped).
+- **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel. **V** switches the telehandler's crab mode (stopped).
 - **+** and **-** zoom. **Escape** pauses and resumes.
 - **Enter** starts, resumes, and once the round is over takes the card's main button: a new spot, the next level, or another try after a touch. **R** tries the same spot again.
 - The keys keep driving after you click a button or close the settings.

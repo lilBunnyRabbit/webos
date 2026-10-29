@@ -1,4 +1,5 @@
 import { clamp, wrap_angle, type Pose, type Vec } from "./geometry";
+import type { Signal } from "./signal";
 
 export const Gear = { PARK: "P", REVERSE: "R", NEUTRAL: "N", DRIVE: "D" } as const;
 export type Gear = (typeof Gear)[keyof typeof Gear];
@@ -1134,6 +1135,8 @@ export interface Input {
   steer: number | null;
   throttle: number;
   brake: number;
+  /** The turn signal; `step` ignores it, a game that judges signals reads it. */
+  signal?: Signal;
 }
 
 export const NO_INPUT: Input = { steer: null, throttle: 0, brake: 0 };

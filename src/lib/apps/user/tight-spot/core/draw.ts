@@ -2,9 +2,10 @@ import { resolve_token } from "$lib/core/utils";
 import type { Insets } from "./camera";
 import { against, dash_phase, darkest, lightest, wound, type Tone } from "./draw-math";
 import { machine } from "./draw-machines";
-import { parked_vehicle, player as vehicle_player } from "./draw-vehicles";
+import { blinkers, parked_vehicle, player as vehicle_player } from "./draw-vehicles";
 import type { Polygon, Pose, Vec } from "./geometry";
 import { End, sensor_frame } from "./sensors";
+import { blink_lit, Signal } from "./signal";
 import {
   body_centre,
   DriveKind,
@@ -675,8 +676,10 @@ export function player(
   braking: boolean,
   scale: number,
   palette: Palette,
-  time = 0
+  time = 0,
+  signal: Signal = Signal.NONE
 ) {
   const lamps = { braking, reversing: car.gear === Gear.REVERSE, lit: 0.85 };
   if (!machine(ctx, car, vehicle, spec, lamps, scale, palette, time)) vehicle_player(ctx, car, vehicle, spec, braking, scale, palette, time);
+  if (blink_lit(time)) blinkers(ctx, car, spec, signal, scale, palette);
 }

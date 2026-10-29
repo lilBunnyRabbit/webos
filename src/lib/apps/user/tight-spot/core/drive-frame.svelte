@@ -3,13 +3,14 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
   import { StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
+  import { ArrowFatLeft as ArrowFatLeftIcon, ArrowFatRight as ArrowFatRightIcon, CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { clamp_zoom } from "./camera";
   import { read_palette, type Palette } from "./draw";
   import { BUTTON_KEYS, first_pad, key_event, PadButton, pressed, read_pad } from "./gamepad";
   import type { DriveInput, Hold } from "./drive-input.svelte";
   import { SteeringMode, WheelMode, type DriveSettings } from "./settings.svelte";
+  import { Signal } from "./signal";
   import SteeringWheel from "./steering-wheel.svelte";
 
   interface Box {
@@ -24,6 +25,8 @@
     /** Held sideways the hidden control leaves its side of the board clear (a card sits on the left there). */
     wheel_idle: boolean;
     pedals_idle: boolean;
+    /** Turn signal buttons over the wheel on touch, for a game that judges them. */
+    signals?: boolean;
     /** A touch control was pressed: may start the round; `false` ignores the press. */
     engage: () => boolean;
     onpress: (which: Hold) => void;
@@ -52,6 +55,7 @@
     settings,
     wheel_idle,
     pedals_idle,
+    signals = false,
     engage,
     onpress,
     onsteer,
@@ -260,8 +264,25 @@
       <div
         bind:clientWidth={steer_box.width}
         bind:clientHeight={steer_box.height}
-        class={cn("ts-wheel hidden touch-none place-items-center select-none pointer-coarse:grid", wheel_idle && "ts-idle")}
+        class={cn("ts-wheel hidden touch-none place-items-center gap-2 select-none pointer-coarse:grid", wheel_idle && "ts-idle")}
       >
+        {#if signals}
+          <div class="flex gap-3" role="group" aria-label="Turn signals">
+            {#each [{ side: Signal.LEFT, label: "Signal left" }, { side: Signal.RIGHT, label: "Signal right" }] as button (button.side)}
+              {@const on = input.signal === button.side}
+              <button
+                type="button"
+                class={cn("ts-control ts-pad grid size-11 place-items-center rounded-lg transition-colors", on ? "ts-blink text-warning" : "text-foreground/70")}
+                aria-label={button.label}
+                aria-pressed={on}
+                onmousedown={(event) => event.preventDefault()}
+                onclick={() => input.toggle_signal(button.side)}
+              >
+                {#if button.side === Signal.LEFT}<ArrowFatLeftIcon weight={on ? "fill" : "bold"} class="size-6" />{:else}<ArrowFatRightIcon weight={on ? "fill" : "bold"} class="size-6" />{/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
         {#if settings.steering === SteeringMode.BUTTONS}
           <div class="flex gap-2" role="group" aria-label="Steering">
             {#each [{ side: "left", label: "Steer left" }, { side: "right", label: "Steer right" }] as const as button (button.side)}
@@ -470,6 +491,27 @@
 
   .ts-pad-hint {
     animation: ts-pad-hint 2.5s ease both;
+  }
+
+  /* In step with the drawn blinkers' period (BLINK_PERIOD). */
+  .ts-blink {
+    animation: ts-blink 0.8s step-end infinite;
+  }
+
+  @keyframes ts-blink {
+    50% {
+      color: color-mix(in oklch, var(--warning) 35%, transparent);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ts-blink {
+      animation: none;
+    }
+  }
+
+  :global(html[data-motion="off"]) .ts-blink {
+    animation: none;
   }
 
   @keyframes ts-pad-hint {

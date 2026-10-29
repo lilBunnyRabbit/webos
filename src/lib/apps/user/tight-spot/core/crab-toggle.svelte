@@ -16,7 +16,7 @@
     on ? "bg-primary font-semibold text-background" : "bg-background/85 text-foreground/70 hover:text-foreground"
   )}
   aria-pressed={on}
-  title="Crab steer (X), switches when stopped"
+  title="Crab steer (V), switches when stopped"
   onmousedown={(event) => event.preventDefault()}
   {onclick}
 >

@@ -1,5 +1,6 @@
 import { rumble, Rumble } from "./rumble";
 import { beep_period } from "./sensors";
+import { BLINK_PERIOD } from "./signal";
 
 const PITCH = 1750;
 const BEEP = 0.07;
@@ -23,6 +24,8 @@ export class Sounds {
   private next_beep = 0;
   private next_alarm = 0;
   private next_tick = 0;
+  private next_click = 0;
+  private click_on = true;
 
   // A getter: the window's settings object is a prop, read fresh on every call.
   constructor(private readonly settings: () => SoundSettings) {}
@@ -136,6 +139,22 @@ export class Sounds {
     this.next_alarm = now + ALARM_PERIOD;
   }
 
+  /** Called every frame; the relay clicks on and off with the blinkers. */
+  indicator(on: boolean) {
+    if (!on) {
+      this.next_click = 0;
+      this.click_on = true;
+      return;
+    }
+    const audio = this.audio();
+    if (!audio) return;
+    const now = audio.currentTime;
+    if (now < this.next_click) return;
+    this.blip(this.click_on ? 1900 : 1500, now, 0.012, VOLUME * 0.5, "square");
+    this.click_on = !this.click_on;
+    this.next_click = now + BLINK_PERIOD / 2;
+  }
+
   fork(up: boolean) {
     const audio = this.audio();
     if (!audio) return;
@@ -159,6 +178,8 @@ export class Sounds {
     this.next_beep = 0;
     this.next_alarm = 0;
     this.next_tick = 0;
+    this.next_click = 0;
+    this.click_on = true;
   }
 
   close() {
