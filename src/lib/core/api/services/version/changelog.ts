@@ -62,7 +62,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
-        text: "Drive Hub gains Pushback: push an airliner off its stand with a tug, past parked aircraft and jet bridges, onto the taxiway and its stop mark, facing the way the tower tells you, in random pushes, 12 levels or a daily.",
+        text: "Drive Hub gains Airport, four jobs on the apron: push an airliner back onto the taxiway, weave the baggage train between parked aircraft to a hold door, tow an aircraft from a remote stand to its gate, or do a whole turnaround, each with levels, plus a daily turnaround.",
       },
       {
         kind: NEW,

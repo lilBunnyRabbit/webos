@@ -1,11 +1,23 @@
 import type { Insets } from "../../core/camera";
-import { bay_pointer, begin_frame, contact_rings, fill, guides, outlined, path, player, type Palette, type View } from "../../core/draw";
+import {
+  bay_pointer,
+  begin_frame,
+  contact_rings,
+  fill,
+  guides,
+  outlined,
+  path,
+  player,
+  type Palette,
+  type View,
+} from "../../core/draw";
 import { flashes } from "../../core/draw-vehicles";
-import { oriented_box, type Pose, type Vec } from "../../core/geometry";
+import { oriented_box, type Polygon, type Pose, type Vec } from "../../core/geometry";
 import { Gear, to_world, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import { AircraftPart, aircraft_parts, NOSE, NOSE_GEAR, pose_from_nose_gear, SHAPES, TAIL } from "./aircraft";
-import { tunnel, type Apron } from "./apron";
-import { aircraft_pose, SPEC, Status, type GameState } from "./game";
+import { KitKind, tunnel, type Apron, type Kit } from "./apron";
+import { aircraft_pose, Phase, SPEC, Status, type GameState } from "./game";
+import { BAGGAGE, MIDDLE } from "./train";
 
 export interface Extras {
   guides: boolean;
@@ -15,6 +27,7 @@ export interface Extras {
 }
 
 const TUG_ALONE: VehicleSpec = { ...SPEC, hitches: [] };
+const CART = BAGGAGE.hitches[MIDDLE];
 const TAXIWAY = 11.5;
 const STOP_BAR = 4;
 
@@ -83,6 +96,19 @@ function ground(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, pale
   const r = apron.lead_radius;
   for (const stand of apron.stands) {
     const { x, y } = stand.at;
+    if (stand.remote) {
+      ctx.globalAlpha = 0.8;
+      line(ctx, [
+        { x, y: y + 3 },
+        { x, y: centreline },
+      ]);
+      line(ctx, [
+        { x: x - 1.5, y },
+        { x: x + 1.5, y },
+      ]);
+      ctx.globalAlpha = 1;
+      continue;
+    }
     ctx.globalAlpha = 0.8;
     ctx.beginPath();
     ctx.moveTo(x, y - 3);
@@ -124,7 +150,13 @@ function bridges(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, pal
       ctx.lineTo(at.x + (dy / length) * 1.2, at.y - (dx / length) * 1.2);
     }
     ctx.stroke();
-    outlined(ctx, [oriented_box(bridge.to.x, bridge.to.y, Math.atan2(dy, dx), 2.4, 3.2)], palette.stock, palette.ink, 1 / scale);
+    outlined(
+      ctx,
+      [oriented_box(bridge.to.x, bridge.to.y, Math.atan2(dy, dx), 2.4, 3.2)],
+      palette.stock,
+      palette.ink,
+      1 / scale
+    );
     ctx.beginPath();
     ctx.arc(bridge.from.x, bridge.from.y, 1.6, 0, Math.PI * 2);
     ctx.fillStyle = palette.pillar;
@@ -139,7 +171,14 @@ interface Livery {
   beacon: number;
 }
 
-function aircraft(ctx: CanvasRenderingContext2D, pose: Pose, livery: Livery, scale: number, palette: Palette, ghost = false) {
+function aircraft(
+  ctx: CanvasRenderingContext2D,
+  pose: Pose,
+  livery: Livery,
+  scale: number,
+  palette: Palette,
+  ghost = false
+) {
   const parts = aircraft_parts(pose);
   if (ghost) {
     ctx.strokeStyle = palette.free;
@@ -164,7 +203,8 @@ function aircraft(ctx: CanvasRenderingContext2D, pose: Pose, livery: Livery, sca
   const edge = Math.max(0.05, 1 / scale);
   parts.forEach((shape, i) => {
     const part = SHAPES[i].part;
-    const colour = part === AircraftPart.ENGINE ? palette.steel : part === AircraftPart.FUSELAGE ? body.body : palette.pavement;
+    const colour =
+      part === AircraftPart.ENGINE ? palette.steel : part === AircraftPart.FUSELAGE ? body.body : palette.pavement;
     outlined(ctx, [shape], colour, palette.edge, edge);
   });
 
@@ -222,8 +262,9 @@ function aircraft(ctx: CanvasRenderingContext2D, pose: Pose, livery: Livery, sca
 }
 
 function towbar(ctx: CanvasRenderingContext2D, state: GameState, scale: number, palette: Palette) {
-  const front = to_world(state.car, { x: SPEC.length - SPEC.rear_overhang, y: 0 });
-  const gear = to_world(aircraft_pose(state.car), { x: NOSE_GEAR, y: 0 });
+  const pushing = state.phase === Phase.PUSH;
+  const front = to_world(state.car, { x: pushing ? SPEC.length - SPEC.rear_overhang : -SPEC.rear_overhang, y: 0 });
+  const gear = to_world(aircraft_pose(state.car, state.spec), { x: NOSE_GEAR, y: 0 });
   ctx.strokeStyle = palette.ink;
   ctx.lineCap = "round";
   ctx.lineWidth = Math.max(0.22, 2.5 / scale);
@@ -234,7 +275,14 @@ function towbar(ctx: CanvasRenderingContext2D, state: GameState, scale: number, 
   ctx.lineCap = "butt";
 }
 
-function stop_mark(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, palette: Palette, pulse: number, playing: boolean) {
+function stop_mark(
+  ctx: CanvasRenderingContext2D,
+  apron: Apron,
+  scale: number,
+  palette: Palette,
+  pulse: number,
+  playing: boolean
+) {
   const { stop, heading } = apron;
   const across = heading + Math.PI / 2;
   const a = { x: stop.x + Math.cos(across) * STOP_BAR, y: stop.y + Math.sin(across) * STOP_BAR };
@@ -250,45 +298,174 @@ function stop_mark(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, p
   ctx.restore();
 }
 
-export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view: View, palette: Palette, extras: Extras) {
+function hall(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, palette: Palette) {
+  if (!apron.hall) return;
+  const { door, width } = apron.hall;
+  ctx.fillStyle = palette.floor;
+  ctx.fillRect(door.x - width / 2, -2.2, width, 2.2);
+  ctx.strokeStyle = palette.wall_edge;
+  ctx.lineWidth = 1.5 / scale;
+  ctx.strokeRect(door.x - width / 2, -2.2, width, 2.2);
+  ctx.strokeStyle = palette.faint;
+  ctx.lineWidth = 1 / scale;
+  ctx.beginPath();
+  for (let x = door.x - width / 2 + 0.6; x < door.x + width / 2; x += 0.6) {
+    ctx.moveTo(x, -2.1);
+    ctx.lineTo(x, -0.1);
+  }
+  ctx.stroke();
+}
+
+function kit(ctx: CanvasRenderingContext2D, items: readonly Kit[], scale: number, palette: Palette) {
+  const edge = Math.max(0.04, 1 / scale);
+  for (const item of items) {
+    if (item.kind === KitKind.CONE) {
+      ctx.beginPath();
+      ctx.arc(item.pose.x, item.pose.y, 0.24, 0, Math.PI * 2);
+      ctx.fillStyle = palette.warning;
+      ctx.fill();
+      ctx.strokeStyle = palette.ink;
+      ctx.lineWidth = edge;
+      ctx.stroke();
+      continue;
+    }
+    outlined(ctx, [item.shape], item.kind === KitKind.GPU ? palette.steel : palette.pavement, palette.edge, edge);
+    ctx.save();
+    ctx.translate(item.pose.x, item.pose.y);
+    ctx.rotate(item.pose.heading);
+    ctx.fillStyle = palette.ink;
+    if (item.kind === KitKind.GPU) {
+      ctx.globalAlpha = 0.5;
+      ctx.fillRect(-0.9, -0.45, 1, 0.9);
+    } else {
+      const length = Math.hypot(item.shape[1].x - item.shape[0].x, item.shape[1].y - item.shape[0].y);
+      ctx.globalAlpha = 0.35;
+      for (let x = -length / 2 + 0.4; x < length / 2 - 0.3; x += 0.5) ctx.fillRect(x, -0.45, 0.12, 0.9);
+    }
+    ctx.restore();
+  }
+}
+
+function dashed(ctx: CanvasRenderingContext2D, shape: Polygon, scale: number, palette: Palette) {
+  ctx.strokeStyle = palette.free;
+  ctx.lineWidth = Math.max(0.08, 1.5 / scale);
+  ctx.setLineDash([0.5, 0.4]);
+  path(ctx, shape);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function hold_door(
+  ctx: CanvasRenderingContext2D,
+  apron: Apron,
+  door: Vec,
+  scale: number,
+  palette: Palette,
+  pulse: number
+) {
+  const along = { x: Math.cos(apron.aircraft.heading) * 0.9, y: Math.sin(apron.aircraft.heading) * 0.9 };
+  const a = { x: door.x + along.x, y: door.y + along.y };
+  const b = { x: door.x - along.x, y: door.y - along.y };
+  ctx.save();
+  ctx.shadowColor = palette.target;
+  ctx.shadowBlur = 6 + 6 * pulse;
+  ctx.strokeStyle = palette.target;
+  ctx.lineWidth = Math.max(0.3, 3 / scale);
+  line(ctx, [a, b]);
+  ctx.restore();
+}
+
+export function draw_scene(
+  ctx: CanvasRenderingContext2D,
+  state: GameState,
+  view: View,
+  palette: Palette,
+  extras: Extras
+) {
   const { scale } = view;
   const { apron } = state;
   begin_frame(ctx, view, palette);
   ground(ctx, apron, scale, palette);
+  hall(ctx, apron, scale, palette);
 
   const pulse = 0.5 + 0.5 * Math.sin(extras.time * 3);
   const playing = state.status !== Status.DONE && state.status !== Status.CRASHED;
-  if (playing) aircraft(ctx, pose_from_nose_gear(apron.stop, apron.heading), { fin: palette.free, beacon: 0 }, scale, palette, true);
-  stop_mark(ctx, apron, scale, palette, pulse, playing);
+  const bags = state.phase === Phase.BAGS;
+  const train = apron.train;
+  if (bags && train && playing)
+    dashed(ctx, oriented_box(train.mark.x, train.mark.y, train.heading, CART.box_length, CART.width), scale, palette);
+  if (!bags && playing)
+    aircraft(
+      ctx,
+      pose_from_nose_gear(apron.stop, apron.heading),
+      { fin: palette.free, beacon: 0 },
+      scale,
+      palette,
+      true
+    );
+  if (!bags) stop_mark(ctx, apron, scale, palette, pulse, playing);
 
   apron.parked.forEach((pose, i) => aircraft(ctx, pose, { fin: palette.cars[i % 2].body, beacon: 0 }, scale, palette));
+  kit(ctx, apron.kit, scale, palette);
   bridges(ctx, apron, scale, palette);
 
   const moving = state.status === Status.DRIVING && state.car.gear !== Gear.PARK;
-  const plane = aircraft_pose(state.car);
-  const on = state.status === Status.READY ? 0 : flashes(extras.time / 1.6, true)[0] > 0.5 ? 0.85 : 0.15;
-  aircraft(ctx, plane, { fin: palette.player.body, beacon: on }, scale, palette);
-  if (extras.guides && moving) guides(ctx, state.car, SPEC, scale, palette);
-  towbar(ctx, state, scale, palette);
-  player(ctx, { ...state.car, trailers: undefined }, Vehicle.BAGGAGE, TUG_ALONE, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
+  const braking = state.car.brake > 0.05 && state.car.gear !== Gear.PARK;
+  if (bags) {
+    aircraft(ctx, apron.aircraft, { fin: palette.player.body, beacon: 0 }, scale, palette);
+    kit(ctx, apron.ours_kit, scale, palette);
+    if (playing && train) hold_door(ctx, apron, train.door, scale, palette, pulse);
+    if (extras.guides && moving) guides(ctx, state.car, BAGGAGE, scale, palette);
+    player(ctx, state.car, Vehicle.BAGGAGE, BAGGAGE, braking, scale, palette, extras.time);
+  } else {
+    const plane = aircraft_pose(state.car, state.spec);
+    const on = state.status === Status.READY ? 0 : flashes(extras.time / 1.6, true)[0] > 0.5 ? 0.85 : 0.15;
+    aircraft(ctx, plane, { fin: palette.player.body, beacon: on }, scale, palette);
+    if (extras.guides && moving) guides(ctx, state.car, state.spec, scale, palette);
+    towbar(ctx, state, scale, palette);
+    player(
+      ctx,
+      { ...state.car, trailers: undefined },
+      Vehicle.BAGGAGE,
+      TUG_ALONE,
+      braking,
+      scale,
+      palette,
+      extras.time
+    );
+  }
 
-  if (state.status === Status.CRASHED && state.contact) contact_rings(ctx, state.contact, pulse, Math.min(scale, 12), palette);
+  if (state.status === Status.CRASHED && state.contact)
+    contact_rings(ctx, state.contact, pulse, Math.min(scale, 12), palette);
 
   const label = Math.max(11, Math.min(16, scale * 0.9));
   const items: Tag[] = apron.stands.map((stand) => ({
-    at: { x: stand.at.x + 4.5, y: 1.8 },
-    text: String(stand.number),
+    at: stand.remote ? { x: stand.at.x + 4.5, y: stand.at.y + 4 } : { x: stand.at.x + 4.5, y: 1.8 },
+    text: stand.remote ? `R${stand.number}` : String(stand.number),
     size: label,
     colour: stand.mine ? palette.void : palette.paint,
     ...(stand.mine ? { pill: palette.target } : {}),
   }));
-  if (playing) items.push({ at: apron.stop, text: "STOP", size: label, colour: palette.void, pill: palette.target });
+  if (apron.hall)
+    items.push({
+      at: { x: apron.hall.door.x, y: 1.4 },
+      text: "BAGS",
+      size: label,
+      colour: palette.void,
+      pill: bags ? palette.target : palette.paint,
+    });
+  if (playing && !bags)
+    items.push({ at: apron.stop, text: "STOP", size: label, colour: palette.void, pill: palette.target });
+  if (playing && bags && train)
+    items.push({ at: train.mark, text: "HOLD", size: label, colour: palette.void, pill: palette.target });
   tags(ctx, items, view, extras.font, palette);
 
   if (state.status === Status.DRIVING) {
-    const mark = oriented_box(apron.stop.x, apron.stop.y, apron.heading, 2, STOP_BAR * 2);
+    const target = bags && train ? train.mark : apron.stop;
+    const heading = bags && train ? train.heading : apron.heading;
+    const mark = oriented_box(target.x, target.y, heading, 2, STOP_BAR * 2);
     ctx.save();
-    bay_pointer(ctx, { shape: mark, heading: apron.heading, either: false }, view, extras.insets, palette);
+    bay_pointer(ctx, { shape: mark, heading, either: false }, view, extras.insets, palette);
     ctx.restore();
   }
 }

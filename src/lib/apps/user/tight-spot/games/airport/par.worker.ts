@@ -1,8 +1,6 @@
-import { create_game, type Par, type Round } from "./game";
-import { par_of, plan_push } from "./plan";
+import { create_game, type Round } from "./game";
+import { job_par } from "./plan";
 
 self.onmessage = ({ data }: MessageEvent<Round>) => {
-  const found = plan_push(create_game(data));
-  const par: Par | null = found ? par_of(found) : null;
-  self.postMessage(par);
+  self.postMessage(job_par(create_game(data)));
 };

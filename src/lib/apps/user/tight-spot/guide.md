@@ -179,13 +179,14 @@ Run a valet stand on the open lot. Cars pull up at the stand on the south road, 
 
 ## Airport
 
-Push an airliner back off its stand with the tug. The card shows ATC's clearance, *push back approved, face west*, and reads it aloud when you start (with sound on). Push the aircraft tail first onto the taxiway and stop with its nose gear on the glowing **STOP** bar, on the yellow centreline, facing the way you were told. The dashed outline shows where it should end up.
+Work the apron. Pick a job at the top: **Pushback**, **Baggage run**, **Tow to gate** or **Turnaround**, and **Random** or a level beside it. The card shows the tower's clearance and reads it aloud when you start (with sound on). **Any touch ends the round:** wings, engines and tails collide with everything, and so do the tug, the carts, the jet bridges, the terminal, the ground kit and the blast fence.
 
-- **Up** (or **Gas**) drives the tug forward into the aircraft, which pushes it back; **Down** pulls it forward again. Steer the tug the opposite way to where you want the tail to go, then follow it round as the aircraft turns.
-- Pushing is unstable, like reversing a trailer: a small turn of the tug grows. The **Nose** chip shows the nose gear's angle and turns amber near its 75° lock; past it the towbar breaks and the push ends.
-- **Wings collide with everything:** a wingtip, an engine, the tail or the tug touching a parked aircraft, a jet bridge, the terminal or the blast fence ends the push.
+- **Pushback.** Push the aircraft tail first onto the taxiway and stop with its nose gear on the glowing **STOP** bar, on the yellow centreline, facing the way you were told. **Up** (or **Gas**) drives the tug into the aircraft, which pushes it back; **Down** pulls it forward again. Steer the tug the opposite way to where you want the tail to go, then follow it round. Pushing is unstable, like reversing a trailer: the **Nose** chip shows the nose gear's angle and turns amber near its 75° lock; past it the towbar breaks.
+- **Baggage run.** Drive the baggage train from the **BAGS** door to the aircraft and stop with the middle cart beside its aft hold door, on the dashed outline by **HOLD**, lined up with the aircraft. Weave past the parked aircraft, cones, power units and belt loaders. The carts can't really back up, so plan your turns: swing wide, the carts cut inside.
+- **Tow to gate.** Tow the aircraft nose first from its remote stand across the taxiway and up to the gate, nose gear on the **STOP** bar, lined up with the lead-in line. Swing wide round corners: the aircraft's wheels cut inside the tug's.
+- **Turnaround.** The whole job: deliver the bags, then the train leaves and you're in the pushback tug at the nose. Press **Push back** and push it off. The clock runs across both parts and stops while the card is up.
 - Stop on the mark and press **P** or **Space** (or **Enter**). Off the mark, a line at the bottom says what's off.
-- Three stars: one for the push, one for never changing direction, one for the time at or under par. **Pushes** are random stands, **Levels** are 12 tighter and tighter, and the **Daily** is the same push for everyone; Game Hub lists it as Drive Hub · Airport.
+- Three stars: one for the job, one for never changing direction, one for the time at or under par. Each job has its own levels, tighter and tighter. The **Daily** is the same turnaround for everyone; Game Hub lists it as Drive Hub · Airport.
 
 ## Driving Test
 

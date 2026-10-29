@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { overlaps } from "../../core/collision";
-import { obstacles } from "../../core/obstacles";
+import { collide, obstacles } from "../../core/obstacles";
 import { create_car, folds, Gear, NO_INPUT, type Car } from "../../core/vehicle";
 import { aircraft_parts, nose_gear, pose_from_nose_gear } from "./aircraft";
-import { build_apron, Face, TOWBAR } from "./apron";
+import { build_apron, Face, Part, TOWBAR } from "./apron";
 import {
   advance,
   aircraft_pose,
@@ -13,8 +13,13 @@ import {
   crash_title,
   EMPTY_SAVE,
   is_done,
+  JACKKNIFE,
+  Job,
   judge,
   level_round,
+  Ours,
+  Phase,
+  phase_done,
   record,
   set_status,
   SPEC,
@@ -22,8 +27,10 @@ import {
   Status,
   STEERING,
   stop_hint,
+  TOW,
   type GameState,
 } from "./game";
+import { BAGGAGE, middle_cart } from "./train";
 
 function at_mark(state: GameState, along = 0, across = 0, turn = 0): Car {
   const { apron } = state;
@@ -34,7 +41,11 @@ function at_mark(state: GameState, along = 0, across = 0, turn = 0): Car {
   };
   const heading = apron.heading + turn;
   const tug = heading + Math.PI;
-  return create_car({ x: gear.x - Math.cos(tug) * TOWBAR, y: gear.y - Math.sin(tug) * TOWBAR, heading: tug }, Gear.DRIVE, SPEC);
+  return create_car(
+    { x: gear.x - Math.cos(tug) * TOWBAR, y: gear.y - Math.sin(tug) * TOWBAR, heading: tug },
+    Gear.DRIVE,
+    SPEC
+  );
 }
 
 describe("apron", () => {
@@ -113,9 +124,86 @@ describe("judging", () => {
     const round = level_round(2);
     let save = record(EMPTY_SAVE, round, { stars: 2, ms: 50_000 }).save;
     save = record(save, round, { stars: 1, ms: 30_000 }).save;
-    expect(save.best["level:2"]).toEqual({ stars: 2, ms: 50_000 });
-    expect(save.levels[2]).toBe(2);
+    expect(save.best["pushback:level:2"]).toEqual({ stars: 2, ms: 50_000 });
+    expect(save.levels.pushback[2]).toBe(2);
     save = record(save, round, { stars: 2, ms: 40_000 }).save;
-    expect(save.best["level:2"].ms).toBe(40_000);
+    expect(save.best["pushback:level:2"].ms).toBe(40_000);
+    save = record(save, level_round(2, Job.TOW), { stars: 3, ms: 90_000 }).save;
+    expect(save.levels).toEqual({ pushback: { 2: 2 }, tow: { 2: 3 } });
+  });
+});
+
+describe("baggage run", () => {
+  const ready = () => set_status(create_game(level_round(4, Job.BAGGAGE)), Status.DRIVING);
+  const placed = (state: GameState, along: number, across = 0, turn = 0): Car => {
+    const { mark, heading } = state.apron.train!;
+    const centre = {
+      x: mark.x + Math.cos(heading) * along - Math.sin(heading) * across,
+      y: mark.y + Math.sin(heading) * along + Math.cos(heading) * across,
+    };
+    const offset = middle_cart(create_car({ x: 0, y: 0, heading: heading + turn }, Gear.PARK, BAGGAGE));
+    return {
+      ...create_car({ x: centre.x - offset.x, y: centre.y - offset.y, heading: heading + turn }, Gear.DRIVE, BAGGAGE),
+      speed: 0,
+    };
+  };
+
+  test("the train starts clear at the hall, every kit and the goal clear of each other", () => {
+    for (const job of [Job.BAGGAGE, Job.TURNAROUND]) {
+      const state = create_game(level_round(8, job));
+      expect(collide(state.car, obstacles(state.scene), BAGGAGE)).toBeNull();
+      expect(state.apron.hall).not.toBeNull();
+      expect(state.apron.kit.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("the middle cart within a metre of the mark and parallel is done", () => {
+    const state = ready();
+    expect(phase_done(state, placed(state, 0))).toBe(true);
+    expect(phase_done(state, placed(state, 0.7, 0.5))).toBe(true);
+    expect(phase_done(state, placed(state, -1.2))).toBe(false);
+    expect(phase_done(state, placed(state, 0, 0, 0.25))).toBe(false);
+  });
+
+  test("P short of the door says how far", () => {
+    const state = { ...ready(), last_drive: Gear.DRIVE };
+    const short = change_gear({ ...state, car: placed(state, -3) }, Gear.PARK);
+    expect(short.status).toBe(Status.DRIVING);
+    expect(stop_hint(short)).toBe("Middle cart 3.0 m short of the hold door");
+  });
+
+  test("a turnaround swaps to the pushback tug at the nose once the bags are on, the clock and moves carried", () => {
+    const state = {
+      ...set_status(create_game(level_round(2, Job.TURNAROUND)), Status.DRIVING),
+      last_drive: Gear.DRIVE,
+      ms: 61_000,
+      moves: 1,
+    };
+    const next = change_gear({ ...state, car: placed(state, 0) }, Gear.PARK);
+    expect(next.status).toBe(Status.READY);
+    expect(next.phase).toBe(Phase.PUSH);
+    expect(next.loaded).toBe(true);
+    expect(next.ms).toBe(61_000);
+    expect(next.moves).toBe(1);
+    expect(contact(obstacles(next.scene), next.apron, next.car, 0.3)).toBeNull();
+  });
+
+  test("a folded cart reads as a jackknife", () => {
+    expect(crash_title({ kind: JACKKNIFE, by: Ours.TRAIN, hinge: 1 })).toBe("Jackknifed at the second hinge");
+    expect(crash_title({ kind: Part.LOADER, by: Ours.TRAIN })).toBe("The baggage train touched a belt loader");
+  });
+});
+
+describe("tow to gate", () => {
+  test("the aircraft waits on a remote stand behind the tug, clear; the gate is empty", () => {
+    for (const level of [1, 8]) {
+      const state = create_game(level_round(level, Job.TOW));
+      expect(contact(obstacles(state.scene), state.apron, state.car, 0.3, TOW)).toBeNull();
+      const pose = aircraft_pose(state.car, TOW);
+      expect(pose.y).toBeGreaterThan(state.apron.centreline);
+      expect(state.apron.stands.some((stand) => stand.remote)).toBe(true);
+      const goal = aircraft_parts(pose_from_nose_gear(state.apron.stop, state.apron.heading));
+      for (const part of goal) for (const solid of state.apron.solids) expect(overlaps(part, solid.shape)).toBe(false);
+    }
   });
 });
