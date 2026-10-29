@@ -1,5 +1,7 @@
 import { angle_between } from "./geometry";
 import { collide, type Obstacles } from "./obstacles";
+import { through } from "./portals";
+import type { Portal } from "./scene";
 import {
   can_crab,
   DriveKind,
@@ -52,6 +54,8 @@ export interface PlanOptions {
   crabbing?: readonly number[];
   /** Added per change of direction; higher finds paths a driver would take, with fewer shuffles. */
   switch_cost?: number;
+  /** A pose that rolls into a mouth goes on from where the portal carries it, so a path can cross floors. */
+  portals?: readonly Portal[];
 }
 
 /** The wheel held at `steer` (the car's own steer: a wheel angle, a skid's share, a frame's bend) for `distance`. */
@@ -145,8 +149,8 @@ function cell_key(pose: Placement, direction: number, bends: boolean, spec: Vehi
   return angles.length > 1 ? `${key}:${angles.slice(1).map(hitch_bin).join(",")}` : key;
 }
 
-export function drive(from: Placement, move: Move, spec: VehicleSpec): Placement {
-  return travel(from, move.steer, move.distance, spec, move.crab);
+export function drive(from: Placement, move: Move, spec: VehicleSpec, portals: readonly Portal[] = []): Placement {
+  return through(travel(from, move.steer, move.distance, spec, move.crab), Math.sign(move.distance), portals);
 }
 
 // A skid steer's half lock already turns about the inner track, so its finer shares do the gentle curves.
@@ -171,6 +175,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   const primitives: Omit<Move, "distance">[] = steering.map((share) => ({ steer: lock * share }));
   if (can_crab(spec)) primitives.push(...(options.crabbing ?? CRABBING).map((share) => ({ steer: lock * share, crab: true })));
   const switch_cost = options.switch_cost ?? SWITCH_COST;
+  const portals = options.portals ?? [];
   const distance = (pose: Placement) => Math.hypot(pose.x - to.x, pose.y - to.y);
   const turn_weight = tolerance < Math.PI ? TURN_WEIGHT : 0;
   const settled = rest_trailers(to.heading, spec);
@@ -209,7 +214,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
         let pose = node.pose;
         let travelled = 0;
         for (let i = 0; i < SUBSTEPS; i++) {
-          const next = drive(pose, { ...primitive, distance: (direction * STEP) / SUBSTEPS }, spec);
+          const next = drive(pose, { ...primitive, distance: (direction * STEP) / SUBSTEPS }, spec, portals);
           if (blocked(next)) break;
           pose = next;
           travelled += STEP / SUBSTEPS;

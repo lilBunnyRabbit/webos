@@ -3,6 +3,7 @@ import { inside_convex } from "../../core/collision";
 import { angle_between, type Vec } from "../../core/geometry";
 import { fit, MAX_ANGLE, type Precision } from "../../core/precision";
 import { collide, obstacles } from "../../core/obstacles";
+import { pass_portals } from "../../core/portals";
 import {
   bodies,
   create_car,
@@ -212,6 +213,8 @@ export interface GameState {
   contact: Vec | null;
   hit: Hit | null;
   bay: Bay | null;
+  /** Counts the portals passed, so the screen can cut the camera to the car's new place. */
+  passes: number;
 }
 
 export function spec_of(round: Round): VehicleSpec {
@@ -249,6 +252,7 @@ export function create_game(round: Round): GameState {
     contact: null,
     hit: null,
     bay: null,
+    passes: 0,
   };
 }
 
@@ -293,7 +297,9 @@ export function advance(
   spec: VehicleSpec = spec_of(state.round)
 ): GameState {
   if (state.status !== Status.DRIVING) return state;
-  const car = step(state.car, input, dt, spec);
+  const stepped = step(state.car, input, dt, spec);
+  const car = pass_portals(stepped, state.world.portals);
+  const passes = car === stepped ? state.passes : state.passes + 1;
   const ms = state.ms + dt * 1000;
   const folded = jackknife(car, spec);
   if (folded >= 0) {
@@ -301,6 +307,7 @@ export function advance(
       ...state,
       car: { ...car, speed: 0 },
       ms,
+      passes,
       status: Status.CRASHED,
       contact: hitch_point(car, spec, folded),
       hit: spec.hitches.length > 1 ? { kind: JACKKNIFE, hinge: folded } : { kind: JACKKNIFE },
@@ -312,11 +319,12 @@ export function advance(
       ...state,
       car: { ...car, speed: 0 },
       ms,
+      passes,
       status: Status.CRASHED,
       contact: hit.at,
       hit: TRUCKS.has(hit.solid.car?.vehicle) ? { kind: hit.solid.kind, truck: true } : { kind: hit.solid.kind },
     };
-  return { ...state, car, ms };
+  return { ...state, car, ms, passes };
 }
 
 export function change_gear(state: GameState, gear: Gear): GameState {

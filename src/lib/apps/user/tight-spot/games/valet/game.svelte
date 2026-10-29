@@ -6,8 +6,8 @@
   import { Badge, BoardOverlay, Button, IconButton } from "$lib/core/components/ui";
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "../../core/camera";
-  import type { Palette } from "../../core/draw";
+  import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "../../core/camera";
+  import { veil, type Palette } from "../../core/draw";
   import DriveFrame from "../../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../../core/drive-input.svelte";
   import GearStrip from "../../core/gear-strip.svelte";
@@ -86,6 +86,7 @@
   let hud_height = $state(0);
 
   let camera: Camera | null = null;
+  let cut_at = -Infinity;
   let readings: Record<End, number | null> = { front: null, rear: null };
   const sounds = new Sounds(() => settings);
 
@@ -220,16 +221,19 @@
     camera = dt > 0 ? ease(camera, target, dt) : target;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
+    const view = { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr };
+    const now = performance.now();
+    draw_scene(ctx, game, view, palette, {
       guides: settings.guides,
       sensors: {
         front: game.car.gear === Gear.DRIVE ? readings.front : null,
         rear: game.car.gear === Gear.REVERSE ? readings.rear : null,
       },
-      time: performance.now() / 1000,
+      time: now / 1000,
       insets: control_insets(),
       font: getComputedStyle(canvas).fontFamily,
     });
+    veil(ctx, view, fade((now - cut_at) / 1000), palette);
   }
 
   function run(steps: number, dt: number) {
@@ -247,6 +251,10 @@
     } else readings = { front: null, rear: null };
     sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02 && !!current.reverse_beeper);
     if (next === game) return;
+    if (next.passes !== game.passes) {
+      camera = null;
+      cut_at = performance.now();
+    }
     const before = game;
     game = next;
     if (next.dents > before.dents) sounds.crash();

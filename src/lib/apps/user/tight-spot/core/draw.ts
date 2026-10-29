@@ -660,6 +660,16 @@ export function begin_frame(ctx: CanvasRenderingContext2D, view: View, palette: 
   );
 }
 
+export function veil(ctx: CanvasRenderingContext2D, view: View, alpha: number, palette: Palette) {
+  if (alpha <= 0) return;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = palette.void;
+  ctx.fillRect(0, 0, view.width * view.dpr, view.height * view.dpr);
+  ctx.restore();
+}
+
 export function contact_rings(ctx: CanvasRenderingContext2D, at: Vec, pulse: number, scale: number, palette: Palette) {
   ctx.strokeStyle = palette.error;
   ctx.fillStyle = palette.error;

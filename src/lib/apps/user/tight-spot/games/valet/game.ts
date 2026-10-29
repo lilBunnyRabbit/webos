@@ -3,6 +3,7 @@ import { create_rng } from "$lib/core/utils/random";
 import { inside_convex, overlaps } from "../../core/collision";
 import { angle_between, clamp, lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
 import { collide, obstacles, type Scene } from "../../core/obstacles";
+import { pass_portals } from "../../core/portals";
 import { fit, MAX_ANGLE } from "../../core/precision";
 import { SolidKind, type Bay, type Solid } from "../../core/scene";
 import { hash } from "../../core/seed";
@@ -140,6 +141,8 @@ export interface GameState {
   walk: { ms: number; at: number } | null;
   tip: Tip | null;
   served: number;
+  /** Counts the portals passed, so the screen can cut the camera to the car's new place. */
+  passes: number;
 }
 
 function pick_car(roll: number): Customer {
@@ -327,6 +330,7 @@ export function create_game(shift: Shift): GameState {
     walk: null,
     tip: null,
     served: 0,
+    passes: 0,
   };
   return tick(state, 0);
 }
@@ -516,7 +520,8 @@ export function change_gear(state: GameState, gear: Gear): GameState {
 export function advance(state: GameState, input: Input, dt: number, spec: VehicleSpec = spec_of(state)): GameState {
   if (state.status !== Status.DRIVING && state.status !== Status.STAND) return state;
   if (state.status === Status.STAND || !state.job) return tick(state, state.ms + dt * 1000);
-  const moved = step(state.car, input, dt, spec);
+  const stepped = step(state.car, input, dt, spec);
+  const moved = pass_portals(stepped, state.street.world.portals);
   const hit = collide(moved, obstacles(state.scene), spec);
   let next: GameState;
   if (hit) {
@@ -542,7 +547,7 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
     };
   } else {
     const away = state.touched && distance(moved, state.touched) > CLEAR;
-    next = { ...state, car: moved, touched: away ? null : state.touched };
+    next = { ...state, car: moved, touched: away ? null : state.touched, passes: moved === stepped ? state.passes : state.passes + 1 };
   }
   const held = in_lane(next.car, spec);
   if (held !== next.held) next = with_scene({ ...next, held });

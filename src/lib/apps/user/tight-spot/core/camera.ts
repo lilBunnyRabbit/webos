@@ -82,6 +82,13 @@ export function fit_span(bounds: Bounds, width: number, height: number, insets: 
   return Math.max(1, Math.min(width, height)) / scale;
 }
 
+const FADE = 0.4;
+
+// Through a portal the camera cuts to the car and the frame fades in: easing across would sweep the empty canvas between floors.
+export function fade(elapsed: number): number {
+  return Math.max(0, Math.min(1, 1 - elapsed / FADE));
+}
+
 export function ease(current: Camera | null, target: Camera, dt: number): Camera {
   if (!current) return target;
   const k = 1 - Math.exp(-dt * 6);

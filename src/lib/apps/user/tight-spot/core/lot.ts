@@ -1,7 +1,7 @@
 import { create_rng, type Rng } from "$lib/core/utils/random";
 import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "./geometry";
 import { angled, Builder, fit_for, rows, RowsKind, type Layout } from "./lot-layout";
-import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Solid, type Surface } from "./scene";
+import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Portal, type Solid, type Surface } from "./scene";
 import { hash } from "./seed";
 import { HATCHBACK, type VehicleSpec } from "./vehicle";
 
@@ -267,6 +267,7 @@ export interface World {
   start: Pose;
   solids: Solid[];
   bays: Bay[];
+  portals: Portal[];
 }
 
 export function assemble(seed: number, cells: readonly Vec[], plan: Plan, start: Pose): World {
@@ -281,6 +282,7 @@ export function assemble(seed: number, cells: readonly Vec[], plan: Plan, start:
     start,
     solids: chunks.flatMap((each) => each.solids),
     bays: chunks.flatMap((each) => each.bays),
+    portals: [],
   };
 }
 

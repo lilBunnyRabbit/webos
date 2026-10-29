@@ -44,3 +44,11 @@ export interface Surface {
   kind: SurfaceKind;
   shape: Polygon;
 }
+
+export interface Portal {
+  /** Just past the crossed line and deeper than one step of travel, so a step can't jump it. */
+  mouth: Polygon;
+  heading: number;
+  from: Pose;
+  to: Pose;
+}
