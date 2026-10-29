@@ -317,6 +317,8 @@ export interface World {
   bays: Bay[];
   portals: Portal[];
   headroom: Polygon[];
+  /** Where a tyre may stand (`support()`); absent, everywhere. */
+  ground?: Polygon[];
 }
 
 export function assemble(seed: number, cells: readonly Vec[], plan: Plan, start: Pose): World {

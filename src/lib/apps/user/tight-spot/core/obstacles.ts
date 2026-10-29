@@ -15,6 +15,8 @@ export interface Obstacles {
 
 export interface Scene {
   solids: Solid[];
+  /** Where a tyre may stand (`support()`); absent, everywhere. */
+  ground?: Polygon[];
 }
 
 const obstacle_cache = new WeakMap<Scene, Obstacles>();

@@ -1,7 +1,8 @@
-import { angle_between } from "./geometry";
+import { angle_between, type Polygon } from "./geometry";
 import { collide, type Obstacles } from "./obstacles";
 import { carry, portal_at, through } from "./portals";
 import type { Portal } from "./scene";
+import { support } from "./support";
 import {
   can_crab,
   DriveKind,
@@ -56,6 +57,8 @@ export interface PlanOptions {
   switch_cost?: number;
   /** A pose that rolls into a mouth goes on from where the portal carries it, so a path can cross floors; `to` is carried along, so it is given as seen from the start's floor. */
   portals?: readonly Portal[];
+  /** Every tyre must stay `margin` inside these (`support()`); absent, everywhere is ground. Ignored with `blocked`. */
+  ground?: readonly Polygon[];
 }
 
 /** The wheel held at `steer` (the car's own steer: a wheel angle, a skid's share, a frame's bend) for `distance`. */
@@ -189,7 +192,11 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
     distance(pose, goal) + turn_weight * (angle_between(pose.heading, goal.heading) + folded(pose, goal));
   const arrived = (pose: Placement, goal: Placement) =>
     options.arrive ? options.arrive(pose) : distance(pose, goal) <= reach && angle_between(pose.heading, goal.heading) <= tolerance;
-  const blocked = options.blocked ?? ((pose: Placement) => jackknifed(pose, spec) || collide(pose, near, body) !== null);
+  const ground = options.ground;
+  const blocked =
+    options.blocked ??
+    ((pose: Placement) =>
+      jackknifed(pose, spec) || collide(pose, near, body) !== null || (ground !== undefined && support(pose, spec, ground, margin).length > 0));
 
   if (blocked(from)) return null;
   const open = new Heap();
