@@ -68,6 +68,16 @@ Built as accepted above. The build's calls within scope:
 - **Looks.** `Building` gains `valet-stand`, `apron`, `ferry`, `garden`, `arena` and `track`, each with a roof in `hub/draw.ts`, so a new game only registers. The south side is drawn through a mirror of the north.
 - **The open lot** (`open_world`, its chunks and the rows and angled layouts it uses) moved to `core/lot.ts` and `core/lot-layout.ts`; a lot cell now carries its own `build(rng)`, so parking's spots build their kind through it and the core never imports a game.
 
+## Revision 2026-10-29 (Hot Lap, the race track)
+Built from the wave 3 brainstorm ("F1 grip", "First cuts › Hot Lap"); game `f1`, `Building.TRACK`. What the build decided within that scope:
+- **Grip.** `A_LAT` = 6 m/s²: the wheel is capped before `step()` so curvature stays at most 6 / v². `F1_CAR` and the core are unchanged. Grass is a game-owned spec variant (top speed 5 m/s, 4 m/s² drag) used for the step after the body centre leaves the asphalt and kerb.
+- **Session.** Three laps from a grid 9 m behind the line; a lap must pass both sector lines in order. A wall hit puts the car back where it was at speed 0 and voids the lap; the session goes on.
+- **Tracks.** Three hand-laid circuits as straights and bends (Meadow, Harbour, Ridge, 450–657 m). Walls sit up to 7 m out, closing in where another part of the track is near.
+- **Par.** The minimum-curvature line (projected over-relaxation, coarse to fine) and a forward/backward speed pass with the car's own acceleration, brakes and `A_LAT`. Stars: a clean lap, within 20 % of par, within 8 %.
+- **Ghost and bests.** One file per track in the app's data folder (`f1/ghost-{track}.json`), the best clean lap's time, splits and poses at 10 Hz in centimetres and milliradians; it is the track's best, so there is no separate bests file.
+- **Camera.** Game-owned within the core's `frame`: a 0.9 s look-ahead and a span from 34 m standing to 72 m at top speed.
+- **Daily.** The track of the day from `daily_seed(day, "tight-spot/f1")`, every clean lap reported, `daily_rank.f1` = `TIME`.
+
 ## Consequences
 - One large app; folders keep games apart.
 - The id `tight-spot` stays even for games that aren't parking.

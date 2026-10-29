@@ -364,8 +364,68 @@ Tasks go in order; the HUD names the one in hand (`task_line`: "Pallet 2/3 · pi
 
 Played through in a browser from the arrow keys and F (the planner's level 1 turned into key presses by a closed-loop driver over `DriveInput` and `advance`, replayed under Playwright's fake clock): the pick, the carry and the drop, the Fork button lighting up, the done card and the achievement.
 
+## Hot Lap (f1)
+
+`games/f1/`: the tracks (`track.ts` builds one from its pieces, `tracks.ts` the three), the grip rule (`grip.ts`), the racing line and par (`line.ts`), the round (`game.ts`), the ghost (`ghost.ts`), the frame (`draw.ts`), the component (`game.svelte`), the proof driver (`autopilot.ts`, tests only). Decided in the [wave 3 brainstorm](../brainstorm/2026-10-29_drive-hub-wave-3.md) ("F1 grip", "First cuts › Hot Lap"). Building: `Building.TRACK`, a chequered band on the roof.
+
+### Tracks
+
+Hand-laid, not seeded: each `TrackDef` is a list of straights and bends (`{ straight }`, `{ radius, degrees }`, positive turning right) traced from the origin heading east; the turns add up to one right-hand lap and the pieces close on themselves (a test holds the miss under 1 m; what's left is spread over the lap). `line` puts the start/finish line 30 m down the first straight so the grid behind it is straight. `build_track` resamples the centreline every metre and keeps per sample: the heading, the normal (to the right), the signed curvature, a kerb flag (within 4 m of a bend tighter than 45 m), the edge (5.5 m half-width, plus the 1 m kerb where there is one) and the wall's distance on each side.
+
+| Track | Length | Character | Par |
+|-------|--------|-----------|-----|
+| Meadow | 450 m | a rounded rectangle with a kink, 18 m corners | 34.3 s |
+| Harbour | 573 m | a 16 m hairpin, an S, a chicane | 42.9 s |
+| Ridge | 657 m | a fast S, a long 135° right, esses | 47.8 s |
+
+**Walls.** Each side's wall sits up to 7 m of grass out from the asphalt's edge, but never past 0.85 of the point where another part of the track is as near (`|Δ|² / (2 Δ·n)` over every other sample): between two close straights the walls run either side of a grass strip, inside a bend the wall closes to a ring rather than a point. A minimum over ±6 samples and an average smooth it. Collision uses one 1 m thick rectangle per 2 m of wall, extruded along each piece's own perpendicular so it stays a rectangle in any bend; drawing uses one closed line per wall (`walls`), since a translucent stroke over many pieces shows their seams. The asphalt is drawn as one ring (both edges, even-odd fill) for the same reason. No bend is tighter than 16 m on the centreline, 0.6 of what the car's lock allows (tested).
+
+`locate(track, point, hint)` is the nearest centreline point (index, arc length `s`, signed `lateral`), searched within 24 samples of the last index so close parts of the track can't swap; `progress` and `passes` measure forward along the loop.
+
+### Grip (game-owned, temporary)
+
+The core is kinematic: a car turns as tight at 50 km/h as standing still. Until the core gets a slip model (owner: "we will rework this when we add slip"), Hot Lap holds the wheel before every `step()`: `with_grip` caps the input's steer share so the curvature `tan(steer) / wheelbase` stays at most `A_LAT / v²`, with `A_LAT` = 6 m/s². At 13 m/s that's under a third of lock; below about 8 m/s the full lock is allowed. The car is the core's `F1_CAR` unchanged (14 m/s cap, about 13.3 reached against rolling resistance, 6 m/s² acceleration, 12 m/s² brakes).
+
+### The round
+
+`create_game({ track, daily? })` puts the car on the grid, 9 m behind the line, in D. `advance(state, input, dt)`:
+
+- **Grass.** With the body centre past the edge (half the car off), the next step uses `GRASS_SPEC`: top speed 5 m/s and 4 m/s² of drag, so it slows hard. The HUD says "On the grass". The lap still counts.
+- **Walls.** Tested only when the car could reach one (its lateral plus 4 m past the wall's distance). A hit puts the car back where it was at speed 0 (the wheel and pedals keep moving), draws the contact rings for 1.2 s and voids the lap (`clean: false`). Back away and carry on; the thunk plays once per touch.
+- **Laps.** A session is three laps. The first crossing of the line starts lap 1 (a short run-up from the grid); each lap must pass sector line 1 (a third of the way), sector line 2 and the line again, in order and going forward, so reversing over a line or cutting back counts nothing. Each crossing time is interpolated within the step, so a lap's time doesn't round to 1/120 s. After the third lap the session is done.
+- **Ghost recording.** While a lap runs, `record_frame` appends the pose ten times a second, quantised to centimetres and milliradians (three integers a frame, about 15 kB of JSON a minute).
+
+### Par: the racing line
+
+`racing_line(track)`, cached per track:
+
+1. **Minimum-curvature line** (`min_curvature`): every centreline sample slides along its normal, within the asphalt less half the car and 30 cm, to where the sum of squared second differences through its neighbours is least: projected Gauss–Seidel with over-relaxation (1.7), coarse to fine (every 16th point, then 8th, 4th, 2nd, every one; 400 sweeps each). Without the coarse passes it barely leaves the centreline.
+2. **Speed profile** (`speed_profile`): each point's cap is `min(top, √(A_LAT / κ))`; a forward pass with the car's acceleration (`accel · (1 − v / max_forward) − rolling`, as `step` computes it), a backward pass with its brakes (`brake + rolling`), each twice round so the lap joins up.
+3. **Par** is the flying lap's time on it, with the time at each sector line (`splits`).
+
+The model is the game's own, so par is honest: the proof driver (`autopilot`, pure pursuit of the line with its speed, through `advance` and the grip cap) laps every track clean within 0.2–1.3 % of par, and 5–6 % off at 95 % pace. It has a perfect hand on the wheel; a player on keys doesn't, so three stars allow 8 %.
+
+### Scoring and saved data
+
+- **Stars** per lap (`lap_stars`): a clean lap is one, within 20 % of par two, within 8 % three. A void lap earns none. The session's card shows its best clean lap and its stars, every lap's time (void ones marked), par and the saved best.
+- **Ghost** (`f1/ghost-{track}.json` in the app's data folder, ADR-035, through `storage.file`): `{ ms, splits, frames }` of the best clean lap ever on that track, written when a lap beats it (`beats`). It is the track's best: the start card and the HUD read Best from it. A session races the ghost saved when it started (beating it mid-session doesn't swap the car ahead); it's drawn at 32 % opacity under the player at the same lap time, interpolated between frames. The HUD shows each sector's delta to the ghost's split as it's passed (green ahead, warning behind).
+- **Daily**: the track of the day is `TRACK_IDS[daily_seed(day, "tight-spot/f1") % 3]`. Every clean lap on it is reported with `play.daily(day, ms, undefined, "f1")`; `daily_rank.f1` is `DailyRank.TIME`, so Game Hub keeps the quickest and lists "Drive Hub · F1".
+- **Achievements**: `f1-first` (a clean lap), `f1-on-pace` (three stars), `f1-ghost` (beat a saved ghost), `f1-clean-session` (three clean laps), `f1-tracks` (a ghost on every track, goal 3), `f1-daily` (a clean lap on the daily).
+
+### Camera
+
+Before the start and on the done card, the whole circuit (`fit_span`, 3 m margin) clear of the card. Driving, it follows the body centre with a look-ahead of 0.9 s of travel and widens with speed from the F1 car's parking span (`view_span`, about 34 m across the shorter side) to 72 m at top speed, so a bend shows two to three seconds ahead. The core's `frame` and `ease` do the rest.
+
+### Tests
+
+`track.test.ts`: every track closes, its bends are within the lock and its walls clear of the kerbs, the grid sits behind the line, the racing line stays on the asphalt and inside the lock. `game.test.ts`: the grip cap, the grass, a wall voiding the lap, a whole session's laps and splits, the proof (every track lapped clean at three-star pace by `autopilot`), stars, bests, ghost frames. Under 2 s in all.
+
+Played in the browser (Playwright, solo mode): keys from the grid over the line, onto the grass and into a wall (Void, rings), pause; a whole session and a second one against the saved ghost driven by the proof driver wired in for the check only (not shipped), on desktop and at 390 × 844 and 844 × 390 touch, Brand Dark and Brand Light.
+
 ## Data
 
+- `f1/ghost-meadow.json`, `f1/ghost-harbour.json`, `f1/ghost-ridge.json` in `/var/lib/apps/tight-spot/`: Hot Lap's best lap per track and its ghost (`{ ms, splits: [s1, s2], frames: [x cm, y cm, heading mrad, …] }` at 10 Hz).
+- `app.tight-spot.f1.track`: the last track picked.
 - `app.tight-spot.parking.best`: best `{ moves, ms, precision? }` per kind and vehicle, keyed `kind:vehicle` (`open:vehicle` for the open lot), fewer moves first, then time (`record_best`). `precision` is the best seen on that key, whichever run set it, so it can come from a slower park. The start card shows the best and its precision.
 - `app.tight-spot.parking.levels`: stars per parked level; the next level after the highest parked one is open. The ladder grew from 27 to 42 levels (three laps of the nine car kinds, then bus stop, end bay, driveway, depot and slipway); car levels kept their kind, difficulty and seed, so levels 1–9 kept their numbers and old 10–27 moved to 15–23 and 29–37, which left their stored stars on other levels. The camping pitch then closed each lap (levels 15, 30 and 45), so lap 2 and 3 moved up by one and two the same way, and the loading dock after it (levels 16, 32 and 48), which moved them again: 48 levels.
 - `app.tight-spot.parking.kinds`: kinds parked, for the achievement.
@@ -378,8 +438,8 @@ Played through in a browser from the arrow keys and F (the planner's level 1 tur
 - `app.tight-spot.last`: the id of the game entered last, which the switcher and the yard mark.
 - `app.tight-spot.yard_intro`: `true` once the yard's welcome card has been seen (shared by every window).
 - The yard keeps nothing: it starts at the gate in the hatchback, and its vehicle lives only as long as the window.
-- Props: `game` (`yard`, `parking`, `forklift`), `daily` (`YYYY-MM-DD`) and `mode` (`parking`, `forklift`: which game's daily). Game Hub passes `daily` and `mode`.
-- One daily per game (ADR-050): `daily_rank` is the record `{ parking: SCORE_ASC, forklift: SCORE_ASC }` (`DAILY_GAMES` in `games/index.ts`, in Game Hub's row order), so Game Hub lists "Drive Hub · Parking" and "Drive Hub · Forklift". Parking's daily (seed `daily_seed(day, "tight-spot")`, unchanged) goes to `plays.json` under `tight-spot/parking` with moves as the score; days before the split stay under `tight-spot`, which no row reads now. The Warehouse's (opened from Game Hub or the game's Daily) goes under `tight-spot/forklift`, scored as stars lost, so fewer lost rank first, then time.
+- Props: `game` (`yard`, `parking`, `forklift`, `f1`), `daily` (`YYYY-MM-DD`) and `mode` (`parking`, `forklift`, `f1`: which game's daily). Game Hub passes `daily` and `mode`.
+- One daily per game (ADR-050): `daily_rank` is the record `{ parking: SCORE_ASC, forklift: SCORE_ASC, f1: TIME }` (`DAILY_GAMES` in `games/index.ts`, in Game Hub's row order), so Game Hub lists "Drive Hub · Parking", "Drive Hub · Forklift" and "Drive Hub · F1". Parking's daily (seed `daily_seed(day, "tight-spot")`, unchanged) goes to `plays.json` under `tight-spot/parking` with moves as the score; days before the split stay under `tight-spot`, which no row reads now. The Warehouse's (opened from Game Hub or the game's Daily) goes under `tight-spot/forklift`, scored as stars lost, so fewer lost rank first, then time. Hot Lap's goes under `tight-spot/f1`, one result per clean lap, the quickest kept.
 
 ## Dependencies & licences
 

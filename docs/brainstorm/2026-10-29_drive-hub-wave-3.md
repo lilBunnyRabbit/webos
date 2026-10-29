@@ -81,7 +81,7 @@ Unchanged hub-wide rule: no commands; the `game` prop takes the new ids.
 ## Action items
 1. [x] `refactor:` move the open lot to `core/`; `feat:` the yard street (ADR-087 revision). One agent.
 2. [x] `feat:` the trailer rest angle (ADR-088 revision). One agent, in parallel with 1 (no shared files).
-3. In parallel at once: Ferry Loader, Mow Day, Rodeo, Hot Lap.
+3. In parallel at once: Ferry Loader, Mow Day, Rodeo, Hot Lap. Hot Lap built 2026-10-29.
 4. After 1 merges: Valet Rush. After 2 merges: Pushback.
 5. Each game: review, visual pass, then pushed in groups.
 

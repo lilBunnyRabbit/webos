@@ -98,3 +98,15 @@ Move pallets with a forklift. A job is one to four pallets, each to be taken fro
 - **Jobs:** a random warehouse and job of the size you pick, one to four pallets. **New** deals another.
 - **Levels:** 16 jobs, four of each size, the aisles and bays tighter as you go. Finish one to open the next.
 - **Daily:** the same three-pallet job for everyone today. Game Hub lists it as Drive Hub · Forklift, next to Tight Spot's daily.
+
+## Hot Lap: the race track
+
+Three laps in the F1 car on one of three circuits: **Meadow** (gentle), **Harbour** (a hairpin and a chicane) and **Ridge** (fast and flowing). Pick one at the top. The start card shows the whole track, its length, the par time and your best.
+
+- **The lap.** You start on the grid just behind the chequered line. Crossing it starts lap 1; the clock stops each time you cross it again. The dashed lines across the track split each lap into three sectors.
+- **Grip.** The faster you go, the less the wheels turn: brake before a bend, turn in, and accelerate out. The dashed racing line (shown with **Guides** in settings) is the quickest way round.
+- **Grass slows you** right down, but the lap still counts. The red and white kerbs are part of the track.
+- **A wall voids the lap.** The car stops dead where it touched; back away and carry on. The lap shows **Void** and won't count, but the next one starts clean at the line.
+- **Ghost.** Your best lap on each track is saved and drives with you, faint, on every lap after. Passing a sector line shows how far ahead (green) or behind you are against it.
+- **Stars** for your best clean lap: one for a clean lap, two within 20% of par, three within 8%. Par is the computer's lap on the racing line at the car's limit, so it's tight.
+- **Daily:** the track of the day for everyone, ranked by your quickest clean lap. Game Hub lists it as Drive Hub · F1.
