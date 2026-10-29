@@ -5,11 +5,15 @@ import {
   bodies,
   corners,
   create_car,
+  DriveKind,
   FORKLIFT,
+  FRAME_RAMP,
+  front_frame,
   Gear,
   HATCHBACK,
   HATCH_TRAILER,
   hitch_angles,
+  headings,
   hitch_point,
   jackknife,
   jackknifed,
@@ -18,12 +22,15 @@ import {
   REAR_STEER,
   rig_ends,
   rig_length,
+  set_crab,
   shift,
+  steer_base,
   SteerAxle,
   step,
   steer_boost,
   STEER_BOOST,
   trailer_pose,
+  travel,
   turn_centre,
   VEHICLES,
   wheels,
@@ -31,6 +38,7 @@ import {
   type Car,
   type Input,
   type VehicleSpec,
+  type Wheel,
 } from "./vehicle";
 
 const DT = 1 / 120;
@@ -268,8 +276,15 @@ describe("every vehicle", () => {
         spec
       );
       expect(car.steer).toBeCloseTo(max_steer(spec), 6);
-      const outer = wheels(car, spec)[spec.drive.steer_axle === SteerAxle.REAR ? 2 : 0];
-      expect(distance(outer.at, turn_centre(car, spec)!)).toBeCloseTo(spec.turning_radius, 2);
+      const centre = turn_centre(car, spec)!;
+      const all = wheels(car, spec);
+      if (spec.drive.kind === DriveKind.SKID) {
+        expect(distance(centre, car)).toBeCloseTo(0, 9);
+        continue;
+      }
+      const outer = Math.max(distance(all[0].at, centre), distance(all[2].at, centre));
+      const rear_steer = spec.drive.kind === DriveKind.ACKERMANN && spec.drive.steer_axle === SteerAxle.REAR;
+      expect(rear_steer ? distance(all[2].at, centre) : outer, `${spec.length}`).toBeCloseTo(spec.turning_radius, 2);
     }
   });
 });
@@ -526,5 +541,183 @@ describe("forklift", () => {
     const fast = run(create_car(START, Gear.DRIVE, FORKLIFT), { steer: null, throttle: 1, brake: 0 }, 20, FORKLIFT);
     expect(fast.speed).toBeLessThanOrEqual(3);
     expect(fast.speed).toBeGreaterThan(2.4);
+  });
+});
+
+describe("all-wheel steer", () => {
+  const spec = VEHICLES.ladder;
+
+  test("the rear wheels counter-steer, so the turn centre sits level with the middle and the circle is tighter", () => {
+    const car = run(create_car(START, Gear.DRIVE, spec), { steer: 1, throttle: 0, brake: 1 }, 3, spec);
+    const [fl, , rl] = wheels(car, spec);
+    expect(fl.angle).toBeGreaterThan(0);
+    expect(rl.angle).toBeCloseTo(-fl.angle, 9);
+    expect(steer_base(spec)).toBe(spec.wheelbase / 2);
+    const four = 1 / (Math.tan(max_steer(spec)) / steer_base(spec));
+    const two = 1 / (Math.tan(max_steer(spec)) / spec.wheelbase);
+    expect(four).toBeCloseTo(two / 2, 9);
+  });
+
+  test("the middle of the wheelbase only moves along the heading", () => {
+    let car = run(create_car(START, Gear.DRIVE, spec), { steer: 0.6, throttle: 0.5, brake: 0 }, 1, spec);
+    for (let i = 0; i < 300; i++) {
+      const next = step(car, { steer: Math.sin(i / 30), throttle: 0.5, brake: 0 }, DT, spec);
+      const moved = Math.atan2(next.y - car.y, next.x - car.x);
+      expect(angle_between(moved, (car.heading + next.heading) / 2)).toBeLessThan(1e-3);
+      car = next;
+    }
+  });
+});
+
+describe("crab steer", () => {
+  const spec = VEHICLES.telehandler;
+
+  test("only a vehicle with a crab mode switches, and only near a standstill", () => {
+    const parked = create_car(START, Gear.DRIVE, spec);
+    expect(set_crab(parked, true, spec).crab).toBe(true);
+    expect(set_crab(parked, true, VEHICLES.ladder)).toBe(parked);
+    expect(set_crab({ ...parked, speed: 2 }, true, spec).crab).toBeUndefined();
+  });
+
+  test("slides along its wheels without turning, every wheel at the same angle", () => {
+    const car = set_crab(create_car(START, Gear.DRIVE, spec), true, spec);
+    const moved = run(car, { steer: 1, throttle: 1, brake: 0 }, 3, spec);
+    expect(moved.heading).toBe(START.heading);
+    const way = Math.atan2(moved.y, moved.x);
+    expect(way).toBeGreaterThan(0.2);
+    expect(way).toBeLessThanOrEqual(max_steer(spec) + 1e-9);
+    expect(new Set(wheels(moved, spec).map((wheel) => wheel.angle)).size).toBe(1);
+    expect(turn_centre(moved, spec)).toBeNull();
+  });
+
+  test("out of crab mode it turns like an all-wheel steer", () => {
+    const car = run(create_car(START, Gear.DRIVE, spec), { steer: 1, throttle: 0.5, brake: 0 }, 2, spec);
+    expect(car.heading).toBeGreaterThan(0.2);
+  });
+});
+
+describe("skid steer", () => {
+  const spec = VEHICLES.bobcat;
+  const track = 1.6;
+
+  test("full lock spins it on the spot, the tracks running against each other", () => {
+    const locked = run(create_car(START, Gear.PARK, spec), { steer: 1, throttle: 0, brake: 0 }, 1, spec);
+    const car = run({ ...locked, gear: Gear.DRIVE }, { steer: 1, throttle: 1, brake: 0 }, 2, spec);
+    expect(Math.hypot(car.x, car.y)).toBeLessThan(1e-9);
+    expect(car.heading).toBeGreaterThan(1);
+    expect(car.roll[0]).toBeGreaterThan(0);
+    expect(car.roll[1]).toBeCloseTo(-car.roll[0], 9);
+    expect(distance(turn_centre(car, spec)!, car)).toBeLessThan(1e-9);
+  });
+
+  test("half lock turns about the inner track, which stands still", () => {
+    let car = run(create_car(START, Gear.PARK, spec), { steer: 0.5, throttle: 0, brake: 1 }, 1, spec);
+    car = { ...car, gear: Gear.DRIVE, speed: 1, brake: 0 };
+    const centre = turn_centre(car, spec)!;
+    expect(distance(centre, car)).toBeCloseTo(track / 2, 9);
+    const before = car.roll[1];
+    car = run(car, { steer: 0.5, throttle: 0.4, brake: 0 }, 1, spec);
+    expect(distance(car, centre)).toBeCloseTo(track / 2, 6);
+    expect(car.roll[1]).toBeCloseTo(before, 9);
+  });
+
+  test("straight it drives like anything else; in P the wheel spins nothing", () => {
+    const ahead = run(create_car(START, Gear.DRIVE, spec), { steer: 0, throttle: 1, brake: 0 }, 1, spec);
+    expect(ahead.heading).toBe(0);
+    expect(ahead.x).toBeGreaterThan(0.3);
+    const parked = run(create_car(START, Gear.PARK, spec), { steer: 1, throttle: 1, brake: 0 }, 1, spec);
+    expect(parked.heading).toBe(0);
+    expect(parked.x).toBe(0);
+  });
+
+  test("the mower pivots about its drive wheels, the deck swinging round", () => {
+    const mower = VEHICLES.mower;
+    expect(axles(mower)).toEqual({ front: 0, rear: -0 });
+    const locked = run(create_car(START, Gear.PARK, mower), { steer: -1, throttle: 0, brake: 0 }, 1, mower);
+    const car = run({ ...locked, gear: Gear.DRIVE }, { steer: -1, throttle: 1, brake: 0 }, 1, mower);
+    expect(Math.hypot(car.x, car.y)).toBeLessThan(1e-9);
+    expect(car.heading).toBeLessThan(-0.5);
+  });
+});
+
+describe("frame steer", () => {
+  const spec = VEHICLES.loader;
+  const DEG = Math.PI / 180;
+
+  function bent(side = 1): Car {
+    return run(create_car(START, Gear.PARK, spec), { steer: side, throttle: 0, brake: 1 }, spec.steer_time + 0.3, spec);
+  }
+
+  function middle(a: Wheel, b: Wheel) {
+    return { x: (a.at.x + b.at.x) / 2, y: (a.at.y + b.at.y) / 2 };
+  }
+
+  test("the wheel bends the joint up to its lock: about 40° for the loader, 47° for the dump truck", () => {
+    const car = bent();
+    expect(car.steer).toBeCloseTo(max_steer(spec), 9);
+    expect(max_steer(spec) / DEG).toBeCloseTo(40, 0);
+    expect(max_steer(VEHICLES.dumper) / DEG).toBeGreaterThan(44);
+    expect(max_steer(VEHICLES.dumper) / DEG).toBeLessThan(50);
+  });
+
+  test("bending at a standstill swings both frames about their axles, which stay put", () => {
+    const before = wheels(create_car(START, Gear.DRIVE, spec), spec);
+    const car = bent();
+    const after = wheels(car, spec);
+    expect(distance(middle(after[2], after[3]), middle(before[2], before[3]))).toBeLessThan(1e-9);
+    expect(car.heading).toBeLessThan(-5 * DEG);
+    expect(car.heading + car.steer).toBeGreaterThan(5 * DEG);
+  });
+
+  test("neither axle slides sideways while it drives and bends", () => {
+    let car = run(create_car(START, Gear.DRIVE, spec), { steer: 0.5, throttle: 0.6, brake: 0 }, 1, spec);
+    for (let i = 0; i < 300; i++) {
+      const next = step(car, { steer: Math.sin(i / 25), throttle: 0.6, brake: 0 }, DT, spec);
+      const rear = Math.atan2(next.y - car.y, next.x - car.x);
+      expect(angle_between(rear, (car.heading + next.heading) / 2)).toBeLessThan(2e-3);
+      const a = front_frame(car, spec);
+      const b = front_frame(next, spec);
+      const along = Math.atan2(b.y - a.y, b.x - a.x);
+      expect(Math.abs(Math.sin(along - (a.heading + b.heading) / 2))).toBeLessThan(2e-3);
+      car = next;
+    }
+  });
+
+  test("held bent, the rear axle circles the turn centre", () => {
+    let car: Car = { ...bent(), gear: Gear.DRIVE, brake: 0 };
+    const centre = turn_centre(car, spec)!;
+    const radius = distance(car, centre);
+    for (let i = 0; i < 600; i++) {
+      car = step(car, { steer: 1, throttle: 0.3, brake: 0 }, DT, spec);
+      expect(distance(car, centre)).toBeCloseTo(radius, 3);
+    }
+  });
+
+  test("two frames are two bodies; the front one must line up too", () => {
+    const car = bent();
+    expect(bodies(car, spec)).toHaveLength(2);
+    expect(headings(car, spec)).toEqual([car.heading, car.heading + car.steer]);
+    expect(headings(START, HATCHBACK)).toEqual([0]);
+  });
+
+  test("travel bends the joint as it rolls, at FRAME_RAMP per metre", () => {
+    expect(travel({ ...START, steer: 0 }, 1, 0.4, spec).steer).toBeCloseTo(0.4 * FRAME_RAMP, 9);
+    expect(travel({ ...START, steer: 0.3 }, 0.3, 2, spec).steer).toBe(0.3);
+  });
+});
+
+describe("skid, frame, all-wheel and crab steer", () => {
+  test("are deterministic, and a step of no time changes nothing", () => {
+    for (const id of ["bobcat", "mower", "tank", "loader", "dumper", "ladder", "telehandler"] as const) {
+      const spec = VEHICLES[id];
+      const input = { steer: -0.7, throttle: 0.5, brake: 0 };
+      const parked = create_car(START, Gear.REVERSE, spec);
+      const start = id === "telehandler" ? set_crab(parked, true, spec) : parked;
+      const a = run(start, input, 3, spec);
+      const b = run(start, input, 3, spec);
+      expect(a, id).toEqual(b);
+      expect(step(a, input, 0, spec)).toBe(a);
+      expect(step(a, input, -0.01, spec)).toBe(a);
+    }
   });
 });

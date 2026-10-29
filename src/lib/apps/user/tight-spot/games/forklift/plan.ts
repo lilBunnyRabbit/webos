@@ -78,7 +78,7 @@ function leg(
   if (!found) return null;
   const last = found.path[found.path.length - 1];
   const run = straight_in(last, done, blocked)!;
-  const moves = run > 0 ? [...found.moves, { curvature: 0, distance: run }] : found.moves;
+  const moves = run > 0 ? [...found.moves, { steer: 0, distance: run }] : found.moves;
   return { moves, end: arc(last, 0, run) };
 }
 

@@ -1,4 +1,29 @@
-import { Gear } from "./vehicle";
+import { can_crab, DriveKind, Gear, SteerAxle, type VehicleSpec } from "./vehicle";
+
+export const CRAB_KEY = "KeyX";
+
+export interface SteerHint {
+  key_name: string;
+  text: string;
+}
+
+export function steer_hints(spec: VehicleSpec): SteerHint[] {
+  const drive = spec.drive;
+  if (drive.kind === DriveKind.SKID) return [{ key_name: "← →", text: "turn" }];
+  if (drive.kind === DriveKind.FRAME) return [{ key_name: "← →", text: "bend" }];
+  if (can_crab(spec)) return [{ key_name: "← →", text: "steer" }, { key_name: "X", text: "crab" }];
+  return [{ key_name: "← →", text: "steer" }];
+}
+
+export function drive_note(spec: VehicleSpec): string | null {
+  const drive = spec.drive;
+  if (drive.kind === DriveKind.SKID) return "Skid steer: the wheel slows one side; at full lock it spins on the spot as you give it gas.";
+  if (drive.kind === DriveKind.FRAME) return "Frame steer: the wheel bends it in the middle, even standing still, and the back follows the front.";
+  if (can_crab(spec)) return "Four-wheel steer. Crab mode turns every wheel the same way, so it slides sideways without turning; stop to switch.";
+  if (drive.steer_axle === SteerAxle.ALL) return "All-wheel steer: the back wheels turn the other way, so it turns tight and the tail swings out.";
+  if (drive.steer_axle === SteerAxle.REAR) return "Rear steer: the back swings out as you turn.";
+  return null;
+}
 
 export const GEAR_KEYS: Record<string, Gear> = {
   KeyE: Gear.DRIVE,

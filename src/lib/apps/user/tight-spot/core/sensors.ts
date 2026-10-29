@@ -1,6 +1,19 @@
 import { bounds_of, bounds_overlap, type Pose, type Vec } from "./geometry";
 import type { Obstacles } from "./obstacles";
-import { body_ends, corners, rig_ends, HATCHBACK, trailer_corners, trailer_pose, type Placement, type VehicleSpec } from "./vehicle";
+import {
+  bodies,
+  body_ends,
+  corners,
+  DriveKind,
+  frame_ends,
+  front_frame,
+  rig_ends,
+  HATCHBACK,
+  trailer_corners,
+  trailer_pose,
+  type Placement,
+  type VehicleSpec,
+} from "./vehicle";
 
 export const SENSOR_RANGE = 1.6;
 const SIDE_REACH = 0.05;
@@ -52,6 +65,12 @@ export function sensor_frame(car: Placement, end: End, spec: VehicleSpec = HATCH
     const t = spec.hitches[last];
     const pose = trailer_pose(car, spec, last);
     return { pose, bumper: t.drawbar + t.box_length - t.axle, width: t.width, body: trailer_corners(car, spec, last) };
+  }
+  if (spec.drive.kind === DriveKind.FRAME) {
+    const [front, rear] = bodies(car, spec);
+    const ends = frame_ends(spec);
+    if (end === End.FRONT) return { pose: front_frame(car, spec), bumper: ends.front.front, width: spec.width, body: front };
+    return { pose: car, bumper: -ends.rear.rear, width: spec.width, body: rear };
   }
   const ends = body_ends(spec);
   const bumper = end === End.FRONT ? rig_ends(spec).front : -ends.rear;

@@ -7,8 +7,10 @@ import {
   bodies,
   create_car,
   Gear,
+  headings,
   hitch_point,
   jackknife,
+  set_crab,
   shift,
   step,
   Vehicle,
@@ -51,6 +53,10 @@ export { MAX_ANGLE };
 const CARS: readonly Vehicle[] = [Vehicle.HATCH, Vehicle.VAN, Vehicle.PICKUP];
 const CAR_LIKES: readonly Vehicle[] = [...CARS, Vehicle.CITY, Vehicle.SUV, Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.TUK_TUK, Vehicle.GOLF_CART];
 const ROOMY: readonly Vehicle[] = [...CAR_LIKES, Vehicle.LIMO, Vehicle.CAMPER];
+// The machines the planner proves in the car kinds: the skid steers everywhere, the tank and the telehandler where
+// their width still leaves room.
+const SKIDS: readonly Vehicle[] = [Vehicle.BOBCAT, Vehicle.MOWER];
+const WIDE_MACHINES: readonly Vehicle[] = [...SKIDS, Vehicle.TANK, Vehicle.TELEHANDLER];
 
 interface ScenarioInfo {
   name: string;
@@ -63,52 +69,63 @@ interface ScenarioInfo {
 }
 
 export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
-  parallel: { name: "Parallel", brief: "Slot in between the two cars along the kerb.", par: 2, vehicles: ROOMY, ladder: CARS },
-  forward: { name: "Nose in", brief: "Drive forward into the marked bay.", par: 0, vehicles: ROOMY, ladder: CARS },
-  reverse: { name: "Reverse in", brief: "Back into the marked bay, nose out.", par: 1, vehicles: ROOMY, ladder: CARS },
-  angled: { name: "Angled", brief: "Turn into the slanted bay, nose first.", par: 0, vehicles: CAR_LIKES, ladder: CARS },
+  parallel: { name: "Parallel", brief: "Slot in between the two cars along the kerb.", par: 2, vehicles: [...ROOMY, ...SKIDS, Vehicle.TELEHANDLER], ladder: CARS },
+  forward: { name: "Nose in", brief: "Drive forward into the marked bay.", par: 0, vehicles: [...ROOMY, ...WIDE_MACHINES], ladder: CARS },
+  reverse: { name: "Reverse in", brief: "Back into the marked bay, nose out.", par: 1, vehicles: [...ROOMY, ...WIDE_MACHINES], ladder: CARS },
+  angled: { name: "Angled", brief: "Turn into the slanted bay, nose first.", par: 0, vehicles: [...CAR_LIKES, ...SKIDS], ladder: CARS },
   garage: {
     name: "Garage",
     brief: "Drive in and stop close to the back wall. Listen to the sensors.",
     par: 0,
-    vehicles: ROOMY,
+    vehicles: [...ROOMY, ...WIDE_MACHINES],
     ladder: CARS,
   },
   pillars: {
     name: "Pillars",
     brief: "Squeeze past the pillar into the bay, either way round.",
     par: 1,
-    vehicles: ROOMY,
+    vehicles: [...ROOMY, ...WIDE_MACHINES],
     ladder: CARS,
   },
-  narrow: { name: "Narrow aisle", brief: "Cars on both sides and little room to swing.", par: 2, vehicles: ROOMY, ladder: CARS },
-  door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: [...CAR_LIKES, Vehicle.CAMPER], ladder: CARS },
+  narrow: { name: "Narrow aisle", brief: "Cars on both sides and little room to swing.", par: 2, vehicles: [...ROOMY, ...WIDE_MACHINES], ladder: CARS },
+  door: { name: "Garage door", brief: "Turn off a narrow alley through a tight door.", par: 2, vehicles: [...CAR_LIKES, Vehicle.CAMPER, ...SKIDS], ladder: CARS },
   "dead-end": {
     name: "Dead end",
     brief: "Turn round in the street and stop in the box facing out.",
     par: 2,
-    vehicles: [...CAR_LIKES, Vehicle.LIMO],
+    vehicles: [...CAR_LIKES, Vehicle.LIMO, ...SKIDS],
     ladder: CARS,
   },
   "end-bay": {
     name: "End bay",
     brief: "The last free bay is in the corner at the end of a full aisle. No room to swing: take it in turns.",
     par: 2,
-    vehicles: ROOMY,
+    vehicles: [...ROOMY, ...WIDE_MACHINES],
     ladder: CARS,
   },
   "bus-stop": {
     name: "Bus stop",
     brief: "Pull into the stop box along the kerb, short of anything parked ahead. The tail swings out as you straighten.",
     par: 1,
-    vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.ARTIC, Vehicle.BOX_TRUCK],
+    vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.ARTIC, Vehicle.BOX_TRUCK, Vehicle.LOADER],
     ladder: [Vehicle.BUS],
   },
   depot: {
     name: "Depot",
     brief: "Park in your lane between the parked buses, facing the way its arrow points.",
     par: 1,
-    vehicles: [Vehicle.BUS, Vehicle.COACH, Vehicle.DECKER, Vehicle.GARBAGE, Vehicle.FIRE, Vehicle.ARTIC, Vehicle.BOX_TRUCK],
+    vehicles: [
+      Vehicle.BUS,
+      Vehicle.COACH,
+      Vehicle.DECKER,
+      Vehicle.GARBAGE,
+      Vehicle.FIRE,
+      Vehicle.ARTIC,
+      Vehicle.BOX_TRUCK,
+      Vehicle.LOADER,
+      Vehicle.DUMPER,
+      Vehicle.LADDER,
+    ],
     ladder: [Vehicle.BUS],
   },
   driveway: {
@@ -135,7 +152,7 @@ export const SCENARIO_INFO: Record<Scenario, ScenarioInfo> = {
     name: "Loading dock",
     brief: "Line up at the free dock door between the trucks, the way its arrow points.",
     par: 2,
-    vehicles: [Vehicle.SEMI, Vehicle.BOX_TRUCK, Vehicle.DRAWBAR, Vehicle.ROAD_TRAIN],
+    vehicles: [Vehicle.SEMI, Vehicle.BOX_TRUCK, Vehicle.DRAWBAR, Vehicle.ROAD_TRAIN, Vehicle.LOADER, Vehicle.DUMPER, Vehicle.LADDER],
     ladder: [Vehicle.SEMI],
   },
 };
@@ -242,10 +259,10 @@ function inside(car: Placement, bay: Bay, spec: VehicleSpec): boolean {
   return bodies(car, spec).every((body) => body.every((corner) => inside_convex(corner, bay.shape)));
 }
 
-/** A trailer must be lined up with the bay too, not only the car in front of it. */
+/** A trailer, or a frame steer's front frame, must be lined up with the bay too, not only the vehicle's body. */
 export function parked_in(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES.hatch): boolean {
   if (!inside(car, bay, spec)) return false;
-  return lined_up(car.heading, bay) && (car.trailers ?? []).every((trailer) => lined_up(trailer.heading, bay));
+  return headings(car, spec).every((heading) => lined_up(heading, bay));
 }
 
 export function bay_for(car: Placement, world: World, spec: VehicleSpec = VEHICLES.hatch): Bay | null {
@@ -309,6 +326,12 @@ export function change_gear(state: GameState, gear: Gear): GameState {
   return bay ? { ...next, status: Status.PARKED, bay } : next;
 }
 
+export function toggle_crab(state: GameState): GameState {
+  if (state.status !== Status.DRIVING) return state;
+  const car = set_crab(state.car, !state.car.crab, spec_of(state.round));
+  return car === state.car ? state : { ...state, car };
+}
+
 export function par(round: Round): number {
   return round.scenario === null ? OPEN_INFO.par : SCENARIO_INFO[round.scenario].par;
 }
@@ -367,8 +390,7 @@ export { PERFECT, type Precision } from "../../core/precision";
 
 /** How well a parked rig sits in its bay: every corner of the car and its trailers' boxes, the worst of their headings. */
 export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES.hatch): Precision {
-  const headings = [car.heading, ...(car.trailers ?? []).map((trailer) => trailer.heading)];
-  return fit(bodies(car, spec).flat(), headings, bay);
+  return fit(bodies(car, spec).flat(), headings(car, spec), bay);
 }
 
 export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));

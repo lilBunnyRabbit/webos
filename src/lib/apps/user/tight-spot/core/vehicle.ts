@@ -18,10 +18,11 @@ export interface TrailerSpec {
   max_angle: number;
 }
 
-export const DriveKind = { ACKERMANN: "ackermann" } as const;
+export const DriveKind = { ACKERMANN: "ackermann", SKID: "skid", FRAME: "frame" } as const;
 export type DriveKind = (typeof DriveKind)[keyof typeof DriveKind];
 
-export const SteerAxle = { FRONT: "front", REAR: "rear" } as const;
+/** `all`: the rear wheels counter-steer for a tighter circle; `crab`: the same, plus a crab mode (`Car.crab`) in which both axles steer one way. */
+export const SteerAxle = { FRONT: "front", REAR: "rear", ALL: "all", CRAB: "crab" } as const;
 export type SteerAxle = (typeof SteerAxle)[keyof typeof SteerAxle];
 
 export interface AckermannDrive {
@@ -29,10 +30,24 @@ export interface AckermannDrive {
   steer_axle: SteerAxle;
 }
 
-export type Drive = AckermannDrive;
+export interface SkidDrive {
+  kind: typeof DriveKind.SKID;
+  /** The track the turn feels: wider than the wheels' or the tracks', since they scrub sideways as it turns. */
+  track: number;
+}
+
+export interface FrameDrive {
+  kind: typeof DriveKind.FRAME;
+  /** Front axle back to the joint. */
+  pivot: number;
+}
+
+export type Drive = AckermannDrive | SkidDrive | FrameDrive;
 
 export const FRONT_STEER: AckermannDrive = { kind: DriveKind.ACKERMANN, steer_axle: SteerAxle.FRONT };
 export const REAR_STEER: AckermannDrive = { kind: DriveKind.ACKERMANN, steer_axle: SteerAxle.REAR };
+export const ALL_STEER: AckermannDrive = { kind: DriveKind.ACKERMANN, steer_axle: SteerAxle.ALL };
+export const CRAB_STEER: AckermannDrive = { kind: DriveKind.ACKERMANN, steer_axle: SteerAxle.CRAB };
 
 export interface VehicleSpec {
   drive: Drive;
@@ -725,6 +740,173 @@ export const F1_CAR: VehicleSpec = {
   unlit: true,
 };
 
+// Skid steers: the pose is the middle of the wheels' or tracks' contact, and `turning_radius` is the circle the outer
+// wheel draws pivoting on the spot (lots size their room by it).
+export const BOBCAT: VehicleSpec = {
+  drive: { kind: DriveKind.SKID, track: 1.6 },
+  length: 3.2,
+  width: 1.7,
+  wheelbase: 1.05,
+  rear_overhang: 0.6,
+  track: 1.32,
+  wheel_diameter: 0.7,
+  wheel_width: 0.3,
+  turning_radius: 1.2,
+  steer_time: 0.6,
+  creep_speed: 0.8,
+  creep_accel: 0.6,
+  max_forward: 3.2,
+  max_reverse: 2.5,
+  accel: 2.2,
+  brake: 6,
+  rolling: 0.5,
+  park_speed: 0.3,
+  hitches: [],
+  reverse_beeper: true,
+};
+
+// A zero-turn mower pivots about its two driven rear wheels; the front casters only follow, so the contact is that one axle.
+export const MOWER: VehicleSpec = {
+  drive: { kind: DriveKind.SKID, track: 1.2 },
+  length: 2.1,
+  width: 1.55,
+  wheelbase: 0,
+  rear_overhang: 0.45,
+  track: 1.15,
+  wheel_diameter: 0.6,
+  wheel_width: 0.28,
+  turning_radius: 0.75,
+  steer_time: 0.45,
+  creep_speed: 1,
+  creep_accel: 0,
+  max_forward: 3.5,
+  max_reverse: 1.6,
+  accel: 2,
+  brake: 5,
+  rolling: 0.5,
+  park_speed: 0.3,
+  hitches: [],
+  unlit: true,
+};
+
+// The hull plus the gun's metre past it; `track` and `wheel_width` are the tracks' centres and width, `wheelbase` their contact.
+export const TANK: VehicleSpec = {
+  drive: { kind: DriveKind.SKID, track: 2.9 },
+  length: 6.6,
+  width: 3.0,
+  wheelbase: 4.2,
+  rear_overhang: 0.5,
+  track: 2.4,
+  wheel_diameter: 0.8,
+  wheel_width: 0.55,
+  turning_radius: 2.6,
+  steer_time: 0.9,
+  creep_speed: 1,
+  creep_accel: 0.5,
+  max_forward: 4,
+  max_reverse: 2.5,
+  accel: 1.2,
+  brake: 5,
+  rolling: 0.6,
+  park_speed: 0.3,
+  hitches: [],
+};
+
+// Frame steers: the pose is the rear axle and the joint sits `pivot` behind the front one.
+export const WHEEL_LOADER: VehicleSpec = {
+  drive: { kind: DriveKind.FRAME, pivot: 1.4 },
+  length: 7,
+  width: 2.5,
+  wheelbase: 2.8,
+  rear_overhang: 1.6,
+  track: 1.9,
+  wheel_diameter: 1.3,
+  wheel_width: 0.5,
+  turning_radius: 4.8,
+  steer_time: 1.3,
+  creep_speed: 1.2,
+  creep_accel: 0.7,
+  max_forward: 5,
+  max_reverse: 3,
+  accel: 1.4,
+  brake: 5,
+  rolling: 0.4,
+  park_speed: 0.3,
+  hitches: [],
+  reverse_beeper: true,
+};
+
+// The joint sits close behind the cab's axle; `wheelbase` runs to the middle of the rear bogie, whose two axles turn about it.
+export const DUMP_TRUCK: VehicleSpec = {
+  drive: { kind: DriveKind.FRAME, pivot: 1.6 },
+  length: 10.5,
+  width: 2.8,
+  wheelbase: 6,
+  rear_overhang: 1.9,
+  track: 2.3,
+  wheel_diameter: 1.5,
+  wheel_width: 0.6,
+  turning_radius: 8.6,
+  steer_time: 1.6,
+  creep_speed: 1.2,
+  creep_accel: 0.7,
+  max_forward: 6,
+  max_reverse: 2.5,
+  accel: 1.2,
+  brake: 4.5,
+  rolling: 0.35,
+  park_speed: 0.3,
+  hitches: [],
+  reverse_beeper: true,
+};
+
+// A tiller truck's rear driver steers the back so it tracks inside the front; all-wheel steer stands in for that.
+export const LADDER_TRUCK: VehicleSpec = {
+  drive: ALL_STEER,
+  length: 12.5,
+  width: 2.5,
+  wheelbase: 6.8,
+  rear_overhang: 2.4,
+  track: 2.05,
+  wheel_diameter: 1,
+  wheel_width: 0.32,
+  turning_radius: 8.5,
+  steer_time: 1.6,
+  creep_speed: 1.4,
+  creep_accel: 0.8,
+  max_forward: 7,
+  max_reverse: 2.2,
+  accel: 1.3,
+  brake: 5,
+  rolling: 0.3,
+  park_speed: 0.25,
+  hitches: [],
+};
+
+// Two-wheel, four-wheel and crab steer on a real one; here four-wheel and crab. The boom and the forks are in `length`.
+export const TELEHANDLER: VehicleSpec = {
+  drive: CRAB_STEER,
+  length: 5.6,
+  width: 2.35,
+  wheelbase: 2.9,
+  rear_overhang: 0.9,
+  track: 1.9,
+  wheel_diameter: 1,
+  wheel_width: 0.4,
+  turning_radius: 3.9,
+  steer_time: 1.1,
+  creep_speed: 1,
+  creep_accel: 0.6,
+  max_forward: 5,
+  max_reverse: 3,
+  accel: 1.5,
+  brake: 5,
+  rolling: 0.35,
+  park_speed: 0.3,
+  hitches: [],
+  reverse_beeper: true,
+};
+
 export const Vehicle = {
   HATCH: "hatch",
   VAN: "van",
@@ -760,6 +942,13 @@ export const Vehicle = {
   ROAD_TRAIN: "road-train",
   BAGGAGE: "baggage",
   TRACTOR_TWO: "tractor-two",
+  BOBCAT: "bobcat",
+  MOWER: "mower",
+  TANK: "tank",
+  LOADER: "loader",
+  DUMPER: "dumper",
+  LADDER: "ladder",
+  TELEHANDLER: "telehandler",
 } as const;
 export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
 
@@ -799,6 +988,13 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   "road-train": ROAD_TRAIN,
   baggage: BAGGAGE_TRAIN,
   "tractor-two": TRACTOR_TWO,
+  bobcat: BOBCAT,
+  mower: MOWER,
+  tank: TANK,
+  loader: WHEEL_LOADER,
+  dumper: DUMP_TRUCK,
+  ladder: LADDER_TRUCK,
+  telehandler: TELEHANDLER,
 };
 
 export const VEHICLE_NAMES: Record<Vehicle, string> = {
@@ -836,6 +1032,13 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   "road-train": "Road train",
   baggage: "Baggage train",
   "tractor-two": "Tractor and two trailers",
+  bobcat: "Skid-steer loader",
+  mower: "Zero-turn mower",
+  tank: "Tank",
+  loader: "Wheel loader",
+  dumper: "Articulated dump truck",
+  ladder: "Ladder truck",
+  telehandler: "Telehandler",
 };
 
 const coasting = new WeakMap<VehicleSpec, VehicleSpec>();
@@ -863,6 +1066,8 @@ export interface Car extends Pose {
   /** Metres each wheel has rolled, signed (negative in reverse), in `wheels()` order: front left, front right, rear left, rear right. */
   roll: Rolls;
   trailers?: Trailer[];
+  /** Only on a vehicle with a crab mode, while it is on. */
+  crab?: boolean;
 }
 
 export interface Trailer {
@@ -871,7 +1076,8 @@ export interface Trailer {
   roll: [number, number];
 }
 
-export type Placement = Pick<Car, "x" | "y" | "heading" | "trailers">;
+/** `steer` matters only to a frame steer, whose joint's bend is part of its shape; missing, the joint is straight. */
+export type Placement = Pick<Car, "x" | "y" | "heading" | "trailers"> & Partial<Pick<Car, "steer">>;
 
 export type Rolls = [number, number, number, number];
 
@@ -904,9 +1110,64 @@ export function steer_boost(held: number, against: boolean): number {
   return 1 + (STEER_BOOST - 1) * t * t * (3 - 2 * t);
 }
 
+const frame_locks = new WeakMap<VehicleSpec, number>();
+
+/** For a skid steer the wheel's share itself (1 at full lock), for a frame steer the joint's bend, else the wheel angle. */
 export function max_steer(spec: VehicleSpec): number {
-  const outer = Math.sqrt(spec.turning_radius ** 2 - spec.wheelbase ** 2);
-  return Math.atan(spec.wheelbase / (outer - spec.track / 2));
+  const drive = spec.drive;
+  if (drive.kind === DriveKind.SKID) return 1;
+  if (drive.kind === DriveKind.FRAME) {
+    let found = frame_locks.get(spec);
+    if (found === undefined) {
+      found = frame_lock(spec, drive);
+      frame_locks.set(spec, found);
+    }
+    return found;
+  }
+  const base = steer_base(spec);
+  const outer = Math.sqrt(spec.turning_radius ** 2 - base ** 2);
+  return Math.atan(base / (outer - spec.track / 2));
+}
+
+// The bend at which the outer wheel of whichever axle swings widest draws `turning_radius`: each axle's centre turns
+// on (its own arm · cos γ + the other's) / sin γ about the turn centre.
+function frame_lock(spec: VehicleSpec, drive: FrameDrive): number {
+  const front = drive.pivot;
+  const rear = spec.wheelbase - drive.pivot;
+  const radius = (gamma: number) =>
+    Math.max(rear * Math.cos(gamma) + front, front * Math.cos(gamma) + rear) / Math.sin(gamma) + spec.track / 2;
+  let lo = 1e-3;
+  let hi = Math.PI / 2;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (radius(mid) > spec.turning_radius) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+function four_wheel(spec: VehicleSpec): boolean {
+  const drive = spec.drive;
+  return drive.kind === DriveKind.ACKERMANN && (drive.steer_axle === SteerAxle.ALL || drive.steer_axle === SteerAxle.CRAB);
+}
+
+export function can_crab(spec: VehicleSpec): boolean {
+  return spec.drive.kind === DriveKind.ACKERMANN && spec.drive.steer_axle === SteerAxle.CRAB;
+}
+
+function crabbing(car: Pick<Car, "crab">, spec: VehicleSpec): boolean {
+  return !!car.crab && can_crab(spec);
+}
+
+/** Pose to the steered axle: the wheelbase, or half of it when both axles steer and the pose sits between them. */
+export function steer_base(spec: VehicleSpec): number {
+  return four_wheel(spec) ? spec.wheelbase / 2 : spec.wheelbase;
+}
+
+/** Crab mode switches only near a standstill, like P. */
+export function set_crab(car: Car, on: boolean, spec: VehicleSpec): Car {
+  if (!can_crab(spec) || !!car.crab === on || Math.abs(car.speed) > spec.park_speed) return car;
+  return { ...car, crab: on };
 }
 
 export function create_car(pose: Pose, gear: Gear = Gear.PARK, spec: VehicleSpec = HATCHBACK): Car {
@@ -974,10 +1235,10 @@ function resistance(car: Car, spec: VehicleSpec): number {
 }
 
 /**
- * One fixed step of the kinematic Ackermann (bicycle) model: no tyre slip, so the unsteered axle only moves along the
- * heading and the vehicle turns about a point on that axle's line. A positive wheel turns right on either drive:
- * steered at the rear, the rear wheels point left and the tail swings out. The arc is integrated exactly for the step;
- * a trailer follows it about the tow ball.
+ * One fixed step, dispatched on the drive. Ackermann is the kinematic bicycle model: no tyre slip, so the unsteered
+ * axle (or the middle, when both steer) only moves along the heading and the vehicle turns about a point on that line.
+ * A positive wheel turns right on every drive: steered at the rear, the rear wheels point left and the tail swings
+ * out. The arc is integrated exactly for the step; a trailer follows it about the tow ball.
  */
 export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HATCHBACK): Car {
   if (!(dt > 0)) return car;
@@ -995,7 +1256,14 @@ export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HAT
   const speed = Math.abs(driven) <= resist ? 0 : driven - Math.sign(driven) * resist;
   const distance = ((car.speed + speed) / 2) * dt;
 
-  const curvature = Math.tan(steer) / spec.wheelbase;
+  const drive = spec.drive;
+  let other: Moved | null = null;
+  if (drive.kind === DriveKind.SKID) other = skid_move(car, car.roll, steer, distance, drive.track);
+  else if (drive.kind === DriveKind.FRAME) other = frame_move(car, car.roll, car.steer, steer, car.speed * dt, speed * dt, spec, drive);
+  else if (crabbing(car, spec)) other = crab_move(car, car.roll, steer, distance);
+  if (other) return { ...next, ...other.pose, speed, roll: other.roll };
+
+  const curvature = Math.tan(steer) / steer_base(spec);
   const moved: Car = {
     ...next,
     ...arc(car, curvature, distance),
@@ -1004,6 +1272,133 @@ export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HAT
   };
   if (spec.hitches.length === 0 || !car.trailers) return moved;
   return { ...moved, trailers: tow(car, car.trailers, curvature, distance, spec.hitches) };
+}
+
+interface Moved {
+  pose: Pose;
+  roll: Rolls;
+}
+
+const NO_ROLL: Rolls = [0, 0, 0, 0];
+
+/**
+ * Differential steering: `distance` is what the outer track covers and `share` (the wheel, −1 to 1) slows the inner
+ * one, down to running it backwards at full lock. The body moves `distance · (1 − |share|)` ahead and turns
+ * `2 · distance · share / track`, so at half lock it turns about the inner track and at full lock on the spot.
+ */
+function skid_move(from: Pose, rolls: Rolls, share: number, distance: number, track: number): Moved {
+  const forward = distance * (1 - Math.abs(share));
+  const turn = (2 * distance * share) / track;
+  const heading = from.heading + turn;
+  const pose =
+    Math.abs(turn) < 1e-9
+      ? arc(from, 0, forward)
+      : {
+          x: from.x + (forward / turn) * (Math.sin(heading) - Math.sin(from.heading)),
+          y: from.y + (forward / turn) * (Math.cos(from.heading) - Math.cos(heading)),
+          heading,
+        };
+  const left = forward + (turn * track) / 2;
+  const right = forward - (turn * track) / 2;
+  return { pose, roll: [rolls[0] + left, rolls[1] + right, rolls[2] + left, rolls[3] + right] };
+}
+
+function crab_move(from: Pose, rolls: Rolls, steer: number, distance: number): Moved {
+  const way = from.heading + steer;
+  return {
+    pose: { x: from.x + Math.cos(way) * distance, y: from.y + Math.sin(way) * distance, heading: from.heading },
+    roll: [rolls[0] + distance, rolls[1] + distance, rolls[2] + distance, rolls[3] + distance],
+  };
+}
+
+const FRAME_STEP = 0.05;
+const FRAME_BEND_STEP = 0.02;
+
+/**
+ * A centre-articulated vehicle: the pose is the rear axle, `steer` the joint's bend γ, the front axle `a` ahead of the
+ * joint and the rear axle `b` behind it. Neither axle slides sideways, so the rear frame turns at
+ * dθ = (v·sin γ − a·dγ) / (b·cos γ + a) and the front axle covers v·cos γ + b·dθ·sin γ: bending at a standstill swings
+ * both frames about their axles. Over one call the bend and the rear axle's run (`run0` to `run1`, metres per call)
+ * change linearly; RK4 in pieces of at most 2.5 cm or 0.6°.
+ */
+function frame_move(
+  from: Pose,
+  rolls: Rolls,
+  from_bend: number,
+  to_bend: number,
+  run0: number,
+  run1: number,
+  spec: VehicleSpec,
+  drive: FrameDrive
+): Moved {
+  const ahead = drive.pivot;
+  const behind = spec.wheelbase - drive.pivot;
+  const bend = to_bend - from_bend;
+  const pieces = Math.max(
+    1,
+    Math.ceil(Math.max(Math.abs(run0), Math.abs(run1)) / FRAME_STEP),
+    Math.ceil(Math.abs(bend) / FRAME_BEND_STEP)
+  );
+  // State: rear heading, x, y, the rear axle's run, the front axle's run.
+  const slope = (u: number, heading: number, out: number[]) => {
+    const gamma = from_bend + bend * u;
+    const run = run0 + (run1 - run0) * u;
+    const turn = (run * Math.sin(gamma) - ahead * bend) / (behind * Math.cos(gamma) + ahead);
+    out[0] = turn;
+    out[1] = run * Math.cos(heading);
+    out[2] = run * Math.sin(heading);
+    out[3] = run;
+    out[4] = run * Math.cos(gamma) + behind * turn * Math.sin(gamma);
+  };
+  const state = [from.heading, from.x, from.y, 0, 0];
+  const k1 = [0, 0, 0, 0, 0];
+  const k2 = [0, 0, 0, 0, 0];
+  const k3 = [0, 0, 0, 0, 0];
+  const k4 = [0, 0, 0, 0, 0];
+  const du = 1 / pieces;
+  for (let p = 0; p < pieces; p++) {
+    const u = p * du;
+    slope(u, state[0], k1);
+    slope(u + du / 2, state[0] + (du / 2) * k1[0], k2);
+    slope(u + du / 2, state[0] + (du / 2) * k2[0], k3);
+    slope(u + du, state[0] + du * k3[0], k4);
+    for (let i = 0; i < 5; i++) state[i] += (du / 6) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]);
+  }
+  const half = spec.track / 2;
+  const rear_turn = state[0] - from.heading;
+  const front_turn = rear_turn + bend;
+  return {
+    pose: { x: state[1], y: state[2], heading: state[0] },
+    roll: [
+      rolls[0] + state[4] + half * front_turn,
+      rolls[1] + state[4] - half * front_turn,
+      rolls[2] + state[3] + half * rear_turn,
+      rolls[3] + state[3] - half * rear_turn,
+    ],
+  };
+}
+
+/** Radians per metre a frame steer's joint bends in `travel`: a driver bends it while rolling, lock to lock in about 3 m. */
+export const FRAME_RAMP = 0.5;
+
+/**
+ * Where `distance` of driving with the wheel at `steer` takes a placement, without the pedals' dynamics: the planner's
+ * moves and the guide lines. A frame steer's joint bends toward `steer` at `FRAME_RAMP` as it rolls; `crab` drives a
+ * vehicle that has a crab mode in it.
+ */
+export function travel(from: Placement, steer: number, distance: number, spec: VehicleSpec, crab = false): Placement {
+  const drive = spec.drive;
+  if (drive.kind === DriveKind.SKID) return skid_move(from, NO_ROLL, steer, distance, drive.track).pose;
+  if (drive.kind === DriveKind.FRAME) {
+    const was = from.steer ?? 0;
+    const bend = approach(was, steer, FRAME_RAMP, Math.abs(distance));
+    return { ...frame_move(from, NO_ROLL, was, bend, distance, distance, spec, drive).pose, steer: bend };
+  }
+  if (crab && can_crab(spec)) return crab_move(from, NO_ROLL, steer, distance).pose;
+  const curvature = Math.tan(steer) / steer_base(spec);
+  const pose = arc(from, curvature, distance);
+  if (spec.hitches.length === 0 || !from.trailers) return pose;
+  return { ...pose, trailers: tow(from, from.trailers, curvature, distance, spec.hitches) };
 }
 
 const TOW_STEP = 0.025;
@@ -1151,9 +1546,72 @@ export function fork_corners(pose: Pose, spec: VehicleSpec): Vec[] | null {
   ].map((point) => to_world(pose, point));
 }
 
-/** The body first, then the forks, then each trailer's box down the chain. */
+const JOINT_GAP = 0.12;
+
+function box(front: number, rear: number, half: number): Vec[] {
+  return [
+    { x: front, y: -half },
+    { x: front, y: half },
+    { x: rear, y: half },
+    { x: rear, y: -half },
+  ];
+}
+
+/** A frame steer's front frame as a pose: its axle, turned by the joint's bend. Any other vehicle's own pose. */
+export function front_frame(car: Placement, spec: VehicleSpec): Pose {
+  const drive = spec.drive;
+  if (drive.kind !== DriveKind.FRAME) return { x: car.x, y: car.y, heading: car.heading };
+  const joint = to_world(car, { x: spec.wheelbase - drive.pivot, y: 0 });
+  const heading = car.heading + (car.steer ?? 0);
+  return { x: joint.x + Math.cos(heading) * drive.pivot, y: joint.y + Math.sin(heading) * drive.pivot, heading };
+}
+
+export interface Ends {
+  front: number;
+  rear: number;
+}
+
+/** A frame steer's two frames along their own axes: the front one's from the front axle, the rear one's from the rear axle. */
+export function frame_ends(spec: VehicleSpec): { front: Ends; rear: Ends } {
+  const pivot = spec.drive.kind === DriveKind.FRAME ? spec.drive.pivot : spec.wheelbase / 2;
+  return {
+    front: { front: spec.length - spec.rear_overhang - spec.wheelbase, rear: -pivot + JOINT_GAP },
+    rear: { front: spec.wheelbase - pivot - JOINT_GAP, rear: -spec.rear_overhang },
+  };
+}
+
+function frame_bodies(car: Placement, spec: VehicleSpec): Vec[][] {
+  const ends = frame_ends(spec);
+  const half = spec.width / 2;
+  const ahead = front_frame(car, spec);
+  return [
+    box(ends.front.front, ends.front.rear, half).map((point) => to_world(ahead, point)),
+    box(ends.rear.front, ends.rear.rear, half).map((point) => to_world(car, point)),
+  ];
+}
+
+/** The leading and trailing corners in `body_local` order; a frame steer's front ones are on its front frame. */
+export function outline(car: Placement, spec: VehicleSpec): Vec[] {
+  if (spec.drive.kind !== DriveKind.FRAME) return corners(car, spec);
+  const [front, rear] = frame_bodies(car, spec);
+  return [front[0], front[1], rear[2], rear[3]];
+}
+
+/** Every heading a parked vehicle must line up: the body's, a frame steer's front frame, each trailer's. */
+export function headings(car: Placement, spec: VehicleSpec): number[] {
+  const own = spec.drive.kind === DriveKind.FRAME ? [car.heading, car.heading + (car.steer ?? 0)] : [car.heading];
+  return [...own, ...(car.trailers ?? []).map((trailer) => trailer.heading)];
+}
+
+/** The middle of the very front, fork tips included. */
+export function nose(car: Placement, spec: VehicleSpec): Vec {
+  if (spec.drive.kind === DriveKind.FRAME) return to_world(front_frame(car, spec), { x: frame_ends(spec).front.front, y: 0 });
+  return to_world(car, { x: rig_ends(spec).front, y: 0 });
+}
+
+/** The body first (a frame steer's front frame, then its rear one), then the forks, then each trailer's box down the chain. */
 export function bodies(car: Placement, spec: VehicleSpec = HATCHBACK): Vec[][] {
-  const found = [corners(car, spec)];
+  const found = spec.drive.kind === DriveKind.FRAME ? frame_bodies(car, spec) : [corners(car, spec)];
   const forks = fork_corners(car, spec);
   if (forks) found.push(forks);
   if (spec.hitches.length > 0) {
@@ -1162,8 +1620,12 @@ export function bodies(car: Placement, spec: VehicleSpec = HATCHBACK): Vec[][] {
   return found;
 }
 
-export function axles(spec: VehicleSpec): { front: number; rear: number } {
-  return spec.drive.steer_axle === SteerAxle.REAR ? { front: 0, rear: -spec.wheelbase } : { front: spec.wheelbase, rear: 0 };
+/** From the pose, straight: a frame steer's pose is its rear axle; all-wheel, crab and skid steers' the middle. */
+export function axles(spec: VehicleSpec): Ends {
+  const drive = spec.drive;
+  if (drive.kind === DriveKind.ACKERMANN && drive.steer_axle === SteerAxle.REAR) return { front: 0, rear: -spec.wheelbase };
+  if (drive.kind === DriveKind.FRAME || (drive.kind === DriveKind.ACKERMANN && drive.steer_axle === SteerAxle.FRONT)) return { front: spec.wheelbase, rear: 0 };
+  return { front: spec.wheelbase / 2, rear: -spec.wheelbase / 2 };
 }
 
 export function body_ends(spec: VehicleSpec): { front: number; rear: number } {
@@ -1246,30 +1708,67 @@ export interface Wheel {
   angle: number;
 }
 
+/** Angles are from the pose's heading; a frame steer's front pair turns with its front frame. */
 export function wheels(car: Car, spec: VehicleSpec = HATCHBACK): Wheel[] {
   const half = spec.track / 2;
-  const curvature = Math.tan(car.steer) / spec.wheelbase;
-  const rear_steer = spec.drive.steer_axle === SteerAxle.REAR;
+  const drive = spec.drive;
   const { front, rear } = axles(spec);
+  if (drive.kind === DriveKind.FRAME) {
+    const ahead = front_frame(car, spec);
+    return [
+      { at: to_world(ahead, { x: 0, y: -half }), angle: car.steer },
+      { at: to_world(ahead, { x: 0, y: half }), angle: car.steer },
+      { at: to_world(car, { x: rear, y: -half }), angle: 0 },
+      { at: to_world(car, { x: rear, y: half }), angle: 0 },
+    ];
+  }
+  if (drive.kind === DriveKind.SKID || crabbing(car, spec)) {
+    const angle = drive.kind === DriveKind.SKID ? 0 : car.steer;
+    return [
+      { at: to_world(car, { x: front, y: -half }), angle },
+      { at: to_world(car, { x: front, y: half }), angle },
+      { at: to_world(car, { x: rear, y: -half }), angle },
+      { at: to_world(car, { x: rear, y: half }), angle },
+    ];
+  }
+  const curvature = Math.tan(car.steer) / steer_base(spec);
+  const both = four_wheel(spec);
+  const rear_steer = drive.steer_axle === SteerAxle.REAR;
   // atan2, not atan: a forklift's turn centre lies inside its track, so its inner wheel turns past 90°.
   const angle = (x: number, side: number, steered: boolean) =>
     !steered || Math.abs(curvature) < 1e-9 ? 0 : Math.atan2(x * curvature, 1 - side * curvature);
   return [
-    { at: to_world(car, { x: front, y: -half }), angle: angle(front, -half, !rear_steer) },
-    { at: to_world(car, { x: front, y: half }), angle: angle(front, half, !rear_steer) },
-    { at: to_world(car, { x: rear, y: -half }), angle: angle(rear, -half, rear_steer) },
-    { at: to_world(car, { x: rear, y: half }), angle: angle(rear, half, rear_steer) },
+    { at: to_world(car, { x: front, y: -half }), angle: angle(front, -half, both || !rear_steer) },
+    { at: to_world(car, { x: front, y: half }), angle: angle(front, half, both || !rear_steer) },
+    { at: to_world(car, { x: rear, y: -half }), angle: angle(rear, -half, both || rear_steer) },
+    { at: to_world(car, { x: rear, y: half }), angle: angle(rear, half, both || rear_steer) },
   ];
 }
 
+/** Null driving straight, crabbing, or with a skid steer's tracks level. */
 export function turn_centre(car: Car, spec: VehicleSpec = HATCHBACK): Vec | null {
-  const curvature = Math.tan(car.steer) / spec.wheelbase;
-  if (Math.abs(curvature) < 1e-9) return null;
+  const drive = spec.drive;
+  let curvature: number;
+  if (drive.kind === DriveKind.SKID) curvature = (2 * car.steer) / (drive.track * (1 - Math.abs(car.steer)));
+  else if (drive.kind === DriveKind.FRAME) {
+    const behind = spec.wheelbase - drive.pivot;
+    curvature = Math.sin(car.steer) / (behind * Math.cos(car.steer) + drive.pivot);
+  } else if (crabbing(car, spec)) return null;
+  else curvature = Math.tan(car.steer) / steer_base(spec);
+  if (!(Math.abs(curvature) >= 1e-9)) return null;
   return to_world(car, { x: 0, y: 1 / curvature });
 }
 
 export function sweep(car: Car, distance: number, samples: number, spec: VehicleSpec = HATCHBACK): Vec[][] {
-  const curvature = Math.tan(car.steer) / spec.wheelbase;
+  if (spec.drive.kind !== DriveKind.ACKERMANN || crabbing(car, spec)) {
+    const paths: Vec[][] = [[], [], [], []];
+    for (let i = 0; i <= samples; i++) {
+      const placed = travel(car, car.steer, (distance * i) / samples, spec, car.crab);
+      outline(placed, spec).forEach((point, k) => paths[k].push(point));
+    }
+    return paths;
+  }
+  const curvature = Math.tan(car.steer) / steer_base(spec);
   const local = body_local(spec);
   const paths: Vec[][] = local.map(() => []);
   for (let i = 0; i <= samples; i++) {
@@ -1283,7 +1782,7 @@ export function sweep(car: Car, distance: number, samples: number, spec: Vehicle
 // Reversing, the last trailer's tail leads: its corners show the chain folding away well before it does.
 export function trailer_sweep(car: Car, distance: number, samples: number, vehicle: VehicleSpec): Vec[][] {
   const last = vehicle.hitches.length - 1;
-  const curvature = Math.tan(car.steer) / vehicle.wheelbase;
+  const curvature = Math.tan(car.steer) / steer_base(vehicle);
   const local = trailer_local(vehicle.hitches[last]).slice(2);
   const paths: Vec[][] = local.map(() => []);
   let placement: Placement = {

@@ -180,7 +180,7 @@ describe("rounds", () => {
 
 describe("sensors", () => {
   test("read the gap to the wall ahead in the garage", () => {
-    const state = park_in_bay(driving(scenario_round(Scenario.GARAGE, 21)));
+    const state = park_in_bay(driving(scenario_round(Scenario.GARAGE, 21, undefined, Vehicle.HATCH)));
     const front = sensor(state.car, obstacles(state.world), End.FRONT);
     expect(front).not.toBeNull();
     expect(front!).toBeLessThan(0.85);
@@ -226,7 +226,7 @@ describe("sensors", () => {
 describe("vehicles", () => {
   test("each kind's seed picks one of its vehicles; the open lot stays the hatchback", () => {
     for (const scenario of SCENARIOS) {
-      const seen = new Set(Array.from({ length: 40 }, (_, seed) => scenario_round(scenario, seed).vehicle));
+      const seen = new Set(Array.from({ length: 160 }, (_, seed) => scenario_round(scenario, seed).vehicle));
       expect([...seen].sort()).toEqual([...SCENARIO_INFO[scenario].vehicles].sort());
     }
     const open = new Set(Array.from({ length: 40 }, (_, seed) => open_round(seed).vehicle));

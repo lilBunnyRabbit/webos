@@ -21,7 +21,8 @@
   import GearStrip from "../core/gear-strip.svelte";
   import type { Vec } from "../core/geometry";
   import KeyHint from "../core/key-hint.svelte";
-  import { DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, zoom_step } from "../core/keys";
+  import CrabToggle from "../core/crab-toggle.svelte";
+  import { CRAB_KEY, drive_note, DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, steer_hints, zoom_step } from "../core/keys";
   import { frame_loop } from "../core/loop";
   import { obstacles } from "../core/obstacles";
   import RoundCard from "../core/round-card.svelte";
@@ -32,10 +33,12 @@
   import SpeedChip from "../core/speed-chip.svelte";
   import {
     body_centre,
+    can_crab,
     Gear,
     gear_direction,
     max_steer,
     rig_length,
+    set_crab,
     shift as shift_car,
     Vehicle,
     VEHICLE_NAMES,
@@ -96,6 +99,7 @@
 
   const spec = $derived(VEHICLES[vehicle]);
   const lock = $derived(max_steer(spec));
+  const note = $derived(drive_note(spec));
   // Wider than a round's view: the yard is for looking around, and its buildings should show from the gate.
   const span = $derived(Math.max(YARD_SPAN * Math.min(1, view_stretch(rig_length(spec))), view_span(rig_length(spec))));
   const blocked = $derived(!win.is_focused || !win.is_visible);
@@ -280,6 +284,13 @@
     if (want && Math.abs(car.speed) < STANDING) shift(want);
   }
 
+  function crab() {
+    const next = set_crab(car, !car.crab, spec);
+    if (next === car) return;
+    car = next;
+    wake();
+  }
+
   function set_wheel(value: number) {
     wake();
     input.set_wheel(value);
@@ -344,6 +355,11 @@
       set_wheel(0);
       return;
     }
+    if (code === CRAB_KEY && can_crab(spec)) {
+      event.preventDefault();
+      if (!event.repeat) crab();
+      return;
+    }
     const gear = GEAR_KEYS[code];
     if (gear && !event.repeat) {
       event.preventDefault();
@@ -364,6 +380,7 @@
   <div bind:clientHeight={hud_height} class="pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between gap-1.5">
     <div class="flex items-center gap-1.5">
       <GearStrip gear={car.gear} onshift={shift} />
+      {#if can_crab(spec)}<CrabToggle on={!!car.crab} onclick={crab} />{/if}
       <SpeedChip class="pointer-coarse:hidden" speed={car.speed} />
     </div>
     <div class="flex flex-col items-end gap-1.5">
@@ -400,12 +417,16 @@
         <p class="text-base font-semibold">Garage</p>
         <p class="text-ui text-foreground/80">Try any vehicle. It waits here, ready to drive off.</p>
       </div>
-      <Segmented size="sm" class="grid basis-full grid-cols-3 [&>label]:justify-center" label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={shelf} />
+      <Segmented size="sm" class="grid basis-full grid-cols-4 [&>label]:justify-center" label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={shelf} />
       <div class="flex basis-full flex-wrap gap-1.5" role="group" aria-label="Vehicle">
         {#each shelf_vehicles as each (each)}
           <Button size="sm" variant={each === vehicle ? "primary" : "quiet"} aria-pressed={each === vehicle} onclick={() => swap(each)}>{VEHICLE_NAMES[each]}</Button>
         {/each}
       </div>
+      {#if note}<p class="basis-full text-2xs text-foreground/65">{note}</p>{/if}
+      <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
+        <KeyHint key_name="↑" text="forward" /><KeyHint key_name="↓" text="back" />{#each steer_hints(spec) as hint (hint.key_name)}<KeyHint {...hint} />{/each}
+      </p>
     </RoundCard>
   {:else if card === "welcome"}
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>

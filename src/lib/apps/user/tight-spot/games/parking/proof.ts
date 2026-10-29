@@ -48,7 +48,7 @@ function pull_up(at: Placement, bay: Bay, near: Obstacles, spec: VehicleSpec, bo
   let pose = at;
   for (let s = 0; s <= Math.max(PULL_UP_RANGE, rig_length(spec)); s += PIECE) {
     if (parked_in(pose, bay, spec)) return s;
-    pose = drive(pose, { curvature: 0, distance: PIECE }, spec);
+    pose = drive(pose, { steer: 0, distance: PIECE }, spec);
     if (collide(pose, near, body)) return null;
   }
   return null;
@@ -83,7 +83,7 @@ export function reachable(state: GameState, from_start: boolean): boolean {
       (backs ? plan(start, pose, near, { spec, arrive }) : null);
     if (!found) return false;
     const end = straight ? pull_up(found.path.at(-1)!, bay, near, spec, body) : null;
-    const moves = end ? [...found.moves, { curvature: 0, distance: end }] : found.moves;
+    const moves = end ? [...found.moves, { steer: 0, distance: end }] : found.moves;
     if (!parks(state, moves)) throw new Error("the path the search found doesn't park when driven");
     return true;
   });
@@ -99,7 +99,7 @@ function parks(state: GameState, moves: readonly Move[]): boolean {
   for (const move of moves) {
     const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
     for (let k = 0; k < pieces; k++) {
-      at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, spec);
+      at = drive(at, { ...move, distance: move.distance / pieces }, spec);
       if (jackknifed(at, spec) || collide(at, near, spec)) return false;
     }
   }

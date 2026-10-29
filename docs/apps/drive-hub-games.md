@@ -34,20 +34,39 @@ The shell lazy-loads the component the first time it's entered, shows the game's
 
 | Need | Core |
 |------|------|
-| A vehicle | `VEHICLES`, `VehicleSpec` (`drive`, `hitches`, `forks?`, `reverse_beeper?`), `create_car`, `step`, `shift`, `bodies`, `fork_corners`, `axles`, `body_ends`, `rig_ends`, `body_centre`, `without_creep` (`core/vehicle.ts`) |
+| A vehicle | `VEHICLES`, `VehicleSpec` (`drive`, `hitches`, `forks?`, `reverse_beeper?`), `create_car`, `step`, `travel`, `shift`, `set_crab`/`can_crab`, `bodies`, `headings`, `nose`, `front_frame`, `frame_ends`, `fork_corners`, `axles`, `body_ends`, `rig_ends`, `body_centre`, `without_creep` (`core/vehicle.ts`) |
 | A hitch chain | `Car.trailers` (one per link), `trailer_poses`, `trailer_pose`, `trailer_corners`, `trailer_wheels`, `hitch_point` (each by link index), `hitch_angles`, `jackknife` (the first hinge past its `max_angle`, or −1), `jackknifed`, `trailer_sweep`, `tow` |
 | Collision | `obstacles(scene)` (bounds cached per scene object), `collide(car, near, spec)`, `collide_shape(shape, near)` for one body under a game's own rules, `overlaps`, `inside_convex`, `contact_point` |
 | Scene | `Solid` kinds (wall, pillar, post, kerb, shelf, water, car, rack, pallet), `Bay`, `Mark`, `Surface` (`core/scene.ts`) |
 | The frame | `drive-frame.svelte`: toolbar, board with canvas and its DPR resize, palette per theme, wheel and pinch zoom, touch wheel or buttons and pedals, keys from the whole window. Snippets `toolbar`, `overlay`, `status`, `pedal_top` (a game control over the pedals on touch); binds `board`, `canvas`, `size`, `palette`, `zoom`, `stage_rect`, `steer_box`, `pedal_box`; callbacks `engage`, `onpress`, `onsteer`, `onkeydown`, `onrelease` |
-| Input | `DriveInput` (`step_wheel`, `read`, `follow`, `set_wheel`, `press`/`lift`, `release`, `reset`), `GEAR_KEYS`, `DRIVE_KEYS`, `key_direction`, `STANDING`, `zoom_step`, `is_field` (`core/keys.ts`) |
+| Input | `DriveInput` (`step_wheel`, `read`, `follow`, `set_wheel`, `press`/`lift`, `release`, `reset`), `GEAR_KEYS`, `DRIVE_KEYS`, `CRAB_KEY`, `key_direction`, `STANDING`, `zoom_step`, `is_field`, `steer_hints(spec)` and `drive_note(spec)` for the cards (`core/keys.ts`) |
 | The loop | `frame_loop(run, render, going)`: each frame split into steps of at most 1/120 s |
 | Camera | `frame(bounds, focus, w, h, zoom, insets, span)`, `fit_span` (frame a whole area clear of insets), `view_span`, `ease`, `OVERLAY_ASPECT`, `OVERLAY_GAP` |
-| HUD and cards | `GearStrip` (`space_parks={false}` if the game takes Space), `SpeedChip`, `RoundCard` (bottom, or left on a wide board), `KeyHint`, `SettingsPanel` |
+| HUD and cards | `GearStrip` (`space_parks={false}` if the game takes Space), `CrabToggle` (beside the strip, for a vehicle `can_crab`), `SpeedChip`, `RoundCard` (bottom, or left on a wide board), `KeyHint`, `SettingsPanel` |
 | Drawing | `read_palette` (theme tokens only: ground, marks, walls, paint, `ink`/`glow`, target/free/parked, `steel`, `beam`, `upright`, `wood`, `load`, `load_edge`, `stock`, `beacon`), `begin_frame`, `ground`, `solids`, `outlined`, `union`, `fill`, `path`, `player(…, time)`, `pallet(…, PalletLoad.BOXES | WRAPPED, …)`, `guides`, `beams`, `sensor_arcs`, `bay_outline`, `bay_arrow`, `bay_pointer` (off-screen arrow inside the insets), `contact_rings` |
 | Sound | `Sounds`: `sensor`, `crash`, `parked(record)`, `shift`, `reverse_beeper(on)` (call every frame), `fork(up)`, `quiet`, `close` |
-| Proofs and par | `plan(from, to, near, options)` hybrid A* with `arrive`, `blocked`, `steering`, `switch_cost`, `directions`, `max_expansions`; `drive(pose, move, spec)`; `inflate` |
+| Proofs and par | `plan(from, to, near, options)` hybrid A* with `arrive`, `blocked`, `steering`, `crabbing`, `switch_cost`, `directions`, `max_expansions`; `drive(pose, move, spec)` with `Move` `{ steer, distance, crab? }`; `inflate` |
 | Scoring | `fit(points, headings, bay)` precision (`core/precision.ts`), `MAX_ANGLE`, `PERFECT` |
 | Seeds | `hash(seed, …values)` (`core/seed.ts`), `create_rng`, `daily_seed(day, key)` |
+
+## Drive kinds
+
+`VehicleSpec.drive` is how a vehicle steers. A game that takes any vehicle must not assume a car: read the body, the ends and the headings from the core, never from the pose and the spec's lengths.
+
+| Drive | Vehicles | Pose | `car.steer` | What changes for a game |
+|-------|----------|------|-------------|-------------------------|
+| `ackermann`, `front` | cars, buses, trucks, rigs | rear axle | wheel angle | nothing |
+| `ackermann`, `rear` | forklift | front axle | wheel angle | the tail swings out |
+| `ackermann`, `all` | ladder truck | middle of the wheelbase | front wheel angle; the rear counter-steers | half the turning circle, the tail swings the other way |
+| `ackermann`, `crab` | telehandler | middle | front wheel angle | `car.crab` (`set_crab`, X, the Crab chip) slides it along the wheels without turning |
+| `skid` (`track`) | skid-steer loader, mower, tank | middle of the contact (the mower's drive axle) | the wheel's share, −1 to 1 | full lock pivots on the spot with gas; `speed` is the outer side's |
+| `frame` (`pivot`) | wheel loader, dump truck | rear axle | the joint's bend | two bodies; the bend moves the vehicle at a standstill; the front frame must line up too |
+
+- Collide through `bodies()` and judge parked through `headings()` (it has the front frame's heading): a frame steer's front frame turns away from `car.heading`.
+- The front is `nose()` and the front frame's pose `front_frame()`; the rear sensor reads the rear frame (`sensor_frame` does both).
+- Stop a blocked step without taking the new bend (the yard's `drive` keeps `was.steer` for a frame steer), or the stopped vehicle bends into what it touched.
+- The planner handles every drive; give `plan` the spec. A frame steer's bend ramps as it rolls (`FRAME_RAMP`), so a found path starts from the placement's `steer`.
+- The touch wheel, Wheel° and `input.follow` divide by `max_steer(spec)`, which is 1 on a skid steer: keep using it rather than a constant.
 
 ## What a game owns
 
@@ -109,3 +128,4 @@ Restart the dev server first (gotcha 1). Then, with Playwright's Chromium and sc
 17. **Tracking needs margin.** The planner's paths keep 5 cm; a driver following one by keys wanders more than that around tight turns, so a replay that has to finish uses the gentlest level.
 18. **Caches are per object.** `obstacles(scene)` caches bounds in a WeakMap keyed by the scene: build the scene once per round, not per frame.
 19. **A rig is a chain.** `spec.hitches` can hold several links, so `trailers[0]` is not the tail: the rear sensor, the reversing lamps' glow and the guide lines read the last link, the parked check and precision every link. `jackknifed(car, spec)` and `jackknife(car, spec)` need the spec, since each hinge has its own `max_angle`; ring a jackknife at `hitch_point(car, spec, hinge)`. A search over a chain bins every hinge, so the state space grows with each link: a forward-only search (towed links straighten behind) is the cheap proof for two or more.
+20. **The drive isn't always a car's.** Since wave 3 a vehicle can pivot, slide sideways or bend (Drive kinds, above). `car.heading` is the rear frame's on a frame steer and stays put while crabbing; frame a camera on `body_centre`, not on what the heading predicts, and test a new rule with the bobcat, the telehandler in crab mode and the dump truck as well as the hatchback.

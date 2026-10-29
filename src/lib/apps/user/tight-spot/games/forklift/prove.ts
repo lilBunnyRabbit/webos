@@ -32,7 +32,7 @@ export function prove(state: GameState): Proof {
     for (const move of fetch.moves) {
       const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
       for (let k = 0; k < pieces; k++) {
-        at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, SPEC);
+        at = drive(at, { ...move, distance: move.distance / pieces }, SPEC);
         if (contact(near, poses, at, null)) return { plan: found, fault: `pallet ${i + 1}: touched on the way to it` };
       }
     }
@@ -42,7 +42,7 @@ export function prove(state: GameState): Proof {
     for (const move of deliver.moves) {
       const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
       for (let k = 0; k < pieces; k++) {
-        at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, SPEC);
+        at = drive(at, { ...move, distance: move.distance / pieces }, SPEC);
         if (contact(near, rest, at, load_pose(at, offset))) return { plan: found, fault: `pallet ${i + 1}: touched carrying it` };
       }
     }

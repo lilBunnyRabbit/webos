@@ -6,9 +6,11 @@ import {
   body_centre,
   rig_ends,
   create_car,
+  DriveKind,
   Gear,
   hitch_point,
   jackknife,
+  nose as vehicle_nose,
   pose_from_centre,
   rig_length,
   step,
@@ -39,10 +41,15 @@ export interface Shelf {
 /** The garage's vehicles in shelves, so a phone's card shows a handful at a time; every vehicle is on one. */
 export const GARAGE: readonly Shelf[] = [
   { id: "cars", name: "Cars", vehicles: [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.LIMO, Vehicle.VAN, Vehicle.PICKUP, Vehicle.CAMPER] },
-  { id: "service", name: "Service", vehicles: [Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.GARBAGE, Vehicle.FORKLIFT, Vehicle.BAGGAGE] },
+  { id: "service", name: "Service", vehicles: [Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.LADDER, Vehicle.GARBAGE, Vehicle.BAGGAGE] },
   { id: "buses", name: "Buses", vehicles: [Vehicle.BUS, Vehicle.DECKER, Vehicle.COACH, Vehicle.ARTIC] },
   { id: "trucks", name: "Trucks", vehicles: [Vehicle.BOX_TRUCK, Vehicle.SEMI, Vehicle.DRAWBAR, Vehicle.ROAD_TRAIN] },
   { id: "towing", name: "Towing", vehicles: [Vehicle.TOWING, Vehicle.CARAVAN, Vehicle.BOAT, Vehicle.HORSE_BOX, Vehicle.TRACTOR, Vehicle.TRACTOR_TWO, Vehicle.QUAD] },
+  {
+    id: "machines",
+    name: "Machines",
+    vehicles: [Vehicle.FORKLIFT, Vehicle.BOBCAT, Vehicle.TELEHANDLER, Vehicle.LOADER, Vehicle.DUMPER, Vehicle.MOWER, Vehicle.TANK],
+  },
   { id: "fun", name: "Fun", vehicles: [Vehicle.TUK_TUK, Vehicle.GOLF_CART, Vehicle.RESURFACER, Vehicle.TROLLEY, Vehicle.F1] },
 ];
 
@@ -185,7 +192,7 @@ export function pad_car(yard: Yard, spec: VehicleSpec): Car {
 }
 
 export function nose(car: Placement, spec: VehicleSpec): Vec {
-  return to_world(car, { x: rig_ends(spec).front, y: 0 });
+  return vehicle_nose(car, spec);
 }
 
 export function door_at(yard: Yard, car: Placement, spec: VehicleSpec): number | null {
@@ -213,11 +220,13 @@ export interface Bumped {
 export function drive(yard: Yard, car: Car, input: Input, dt: number, spec: VehicleSpec): Bumped {
   const next = step(car, input, dt, spec);
   const folded = jackknife(next, spec);
-  if (folded >= 0) return { car: stopped(car, next), hit: hitch_point(car, spec, folded) };
+  if (folded >= 0) return { car: stopped(car, next, spec), hit: hitch_point(car, spec, folded) };
   const hit = collide(next, obstacles(yard), spec);
-  return hit ? { car: stopped(car, next), hit: hit.at } : { car: next, hit: null };
+  return hit ? { car: stopped(car, next, spec), hit: hit.at } : { car: next, hit: null };
 }
 
-function stopped(was: Car, next: Car): Car {
-  return { ...was, steer: next.steer, throttle: next.throttle, brake: next.brake, speed: 0 };
+// A frame steer's bend is its shape, so a bend into something is stopped too.
+function stopped(was: Car, next: Car, spec: VehicleSpec): Car {
+  const steer = spec.drive.kind === DriveKind.FRAME ? was.steer : next.steer;
+  return { ...was, steer, throttle: next.throttle, brake: next.brake, speed: 0 };
 }

@@ -14,7 +14,8 @@
   import GearStrip from "../../core/gear-strip.svelte";
   import { bounds_of, centroid } from "../../core/geometry";
   import KeyHint from "../../core/key-hint.svelte";
-  import { DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, zoom_step } from "../../core/keys";
+  import CrabToggle from "../../core/crab-toggle.svelte";
+  import { CRAB_KEY, drive_note, DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, steer_hints, zoom_step } from "../../core/keys";
   import { frame_loop } from "../../core/loop";
   import { obstacles } from "../../core/obstacles";
   import RoundCard from "../../core/round-card.svelte";
@@ -22,7 +23,7 @@
   import SettingsPanel from "../../core/settings-panel.svelte";
   import { Sounds } from "../../core/sound";
   import SpeedChip from "../../core/speed-chip.svelte";
-  import { bodies, body_centre, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, without_creep } from "../../core/vehicle";
+  import { bodies, body_centre, can_crab, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, without_creep } from "../../core/vehicle";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
   import {
@@ -52,6 +53,7 @@
     spec_of,
     stars,
     Status,
+    toggle_crab,
     unlocked,
     verdict,
     vehicle_pick_schema,
@@ -111,6 +113,7 @@
 
   const spec = $derived(spec_of(game.round));
   const lock = $derived(max_steer(spec));
+  const note = $derived(drive_note(spec));
   const span = $derived(view_span(rig_length(spec)));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
@@ -435,6 +438,11 @@
     if (want && Math.abs(game.car.speed) < STANDING) shift(want);
   }
 
+  function crab() {
+    if (game.status === Status.READY) start();
+    game = toggle_crab(game);
+  }
+
   function set_wheel(value: number) {
     if (game.status === Status.READY) start();
     input.set_wheel(value);
@@ -497,6 +505,11 @@
     if (code === "KeyC") {
       event.preventDefault();
       set_wheel(0);
+      return;
+    }
+    if (code === CRAB_KEY && can_crab(spec)) {
+      event.preventDefault();
+      if (!event.repeat) crab();
       return;
     }
     const gear = GEAR_KEYS[code];
@@ -568,6 +581,7 @@
           {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
         </IconButton>
         <GearStrip gear={game.car.gear} onshift={shift} />
+        {#if can_crab(spec)}<CrabToggle on={!!game.car.crab} onclick={crab} />{/if}
         <SpeedChip class="pointer-coarse:hidden" speed={game.car.speed} />
         <!-- A phone held sideways folds the status bar away for board height; its time and moves come up here. -->
         <div class="ts-fold hidden rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">
@@ -618,9 +632,10 @@
       </div>
       <Button class="ml-auto" variant="primary" onclick={start}>Start</Button>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="↑" text="forward" /><KeyHint key_name="↓" text="back" /><KeyHint key_name="← →" text="steer" /><KeyHint key_name="E" text="drive" /><KeyHint key_name="R" text="reverse" /><KeyHint key_name="P" text="park" />
+        <KeyHint key_name="↑" text="forward" /><KeyHint key_name="↓" text="back" />{#each steer_hints(spec) as hint (hint.key_name)}<KeyHint {...hint} />{/each}<KeyHint key_name="E" text="drive" /><KeyHint key_name="R" text="reverse" /><KeyHint key_name="P" text="park" />
       </p>
       <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">Hold Gas to go forward and Brake to back up, steer, tap P at the top once you're in the bay.</p>
+      {#if note}<p class="basis-full text-2xs text-foreground/65">{note}</p>{/if}
     </RoundCard>
   {:else if game.status === Status.PAUSED}
     <BoardOverlay title="Paused" detail="{time} · Moves {game.moves}">

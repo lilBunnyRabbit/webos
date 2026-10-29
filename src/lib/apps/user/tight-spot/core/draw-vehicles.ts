@@ -18,7 +18,7 @@ import {
   type VehicleSpec,
 } from "./vehicle";
 
-function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, colour: string) {
+export function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, colour: string) {
   ctx.fillStyle = colour;
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
@@ -26,7 +26,7 @@ function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h:
 }
 
 // A lamp is a lens in a dark housing: on a light body the housing shows, on a dark one the lens does.
-function lamp(
+export function lamp(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -69,6 +69,7 @@ const Style = {
   CAB: "cab",
   BOX_TRUCK: "box-truck",
   TUG: "tug",
+  MACHINE: "machine",
 } as const;
 type Style = (typeof Style)[keyof typeof Style];
 
@@ -131,6 +132,13 @@ const LOOKS: Record<Vehicle, Look> = {
   "road-train": { style: Style.CAB, loads: [Load.SEMI, Load.DOLLY, Load.SEMI] },
   baggage: { style: Style.TUG, loads: [Load.CART, Load.CART, Load.CART] },
   "tractor-two": { style: Style.TRACTOR, loads: [Load.FARM, Load.FARM] },
+  bobcat: { style: Style.MACHINE },
+  mower: { style: Style.MACHINE },
+  tank: { style: Style.MACHINE },
+  loader: { style: Style.MACHINE },
+  dumper: { style: Style.MACHINE },
+  ladder: { style: Style.MACHINE },
+  telehandler: { style: Style.MACHINE },
 };
 
 /** A semi-trailer sits on a fifth wheel and a drawbar trailer's body on its dolly: drawn over what they ride on. */
@@ -180,6 +188,7 @@ const CORNERS: Record<Style, number[]> = {
   cab: [0.1, 0.35, 0.35, 0.1],
   "box-truck": [0.1, 0.35, 0.35, 0.1],
   tug: [0.2, 0.25, 0.25, 0.2],
+  machine: [0.2, 0.2, 0.2, 0.2],
 };
 
 // Taller vehicles throw a longer shadow: the sun is fixed, so the offset only grows with the roof.
@@ -209,6 +218,7 @@ const HEIGHT: Record<Style | Load, number> = {
   cab: 2,
   "box-truck": 1.9,
   tug: 0.8,
+  machine: 1.5,
   box: 0.5,
   horse: 1.4,
   farm: 0.9,
@@ -609,6 +619,7 @@ const PAINTERS: Record<Style, (ctx: CanvasRenderingContext2D, f: Frame) => void>
   resurfacer: () => {},
   trolley: () => {},
   f1: () => {},
+  machine: () => {},
 };
 
 const CAB_DEPTH = 2.3;
@@ -653,12 +664,12 @@ function body(ctx: CanvasRenderingContext2D, style: Style, length: number, width
 }
 
 /** Emergency lamps take turns while the vehicle is in gear; in P they glow steady and dim. */
-function beacon(ctx: CanvasRenderingContext2D, x: number, y: number, lens: string, halo: string, on: number, palette: Palette) {
+export function beacon(ctx: CanvasRenderingContext2D, x: number, y: number, lens: string, halo: string, on: number, palette: Palette) {
   if (on > 0.5) pill(ctx, x - 0.18, y - 0.26, 0.36, 0.52, 0.2, halo);
   lamp(ctx, x - 0.07, y - 0.15, 0.14, 0.3, lens, palette, on);
 }
 
-function flashes(time: number, active: boolean): [number, number] {
+export function flashes(time: number, active: boolean): [number, number] {
   if (!active) return [0.35, 0.35];
   return Math.floor(time * 5) % 2 ? [1, 0.25] : [0.25, 1];
 }
@@ -701,7 +712,7 @@ function livery(ctx: CanvasRenderingContext2D, kind: Livery, l: number, half: nu
   beacon(ctx, l / 2 - 1.29, 0.42, palette.info, palette.info_glow, lights[1], palette);
 }
 
-interface Lamps {
+export interface Lamps {
   braking: boolean;
   reversing: boolean;
   lit: number;
@@ -833,7 +844,7 @@ function a_frame(ctx: CanvasRenderingContext2D, left: Vec, right: Vec, ball: Vec
 }
 
 // Tyres are drawn over the body so the player sees where the front pair points; nudged out so they sit on its edge.
-const TYRE_SHOW = 0.08;
+export const TYRE_SHOW = 0.08;
 const TREAD_PITCH = 0.11;
 // A coach's drive and tag axles straddle the pose, which sits between them.
 const TAG_SPREAD = 0.7;
@@ -843,7 +854,7 @@ interface TyreSize {
   width: number;
 }
 
-function tyre(
+export function tyre(
   ctx: CanvasRenderingContext2D,
   at: Vec,
   angle: number,
@@ -875,7 +886,7 @@ function tyre(
 }
 
 // Past parking speed the stripes would strobe at 60 Hz and read as the car shaking; they fade out the way a spinning wheel blurs.
-function blur_of(car: Car): number {
+export function blur_of(car: Car): number {
   return Math.max(0, Math.min(1, 1 - (Math.abs(car.speed) - 1.2) / 1.8));
 }
 

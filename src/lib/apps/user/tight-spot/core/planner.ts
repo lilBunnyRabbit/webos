@@ -1,12 +1,13 @@
 import { angle_between } from "./geometry";
 import { collide, type Obstacles } from "./obstacles";
 import {
-  arc,
+  can_crab,
+  DriveKind,
   HATCHBACK,
   hitch_angles,
   jackknifed,
   max_steer,
-  tow,
+  travel,
   type Placement,
   type VehicleSpec,
 } from "./vehicle";
@@ -46,13 +47,17 @@ export interface PlanOptions {
   blocked?: (pose: Placement) => boolean;
   /** Steering per move as shares of full lock; finer ones let a long path line up within centimetres. */
   steering?: readonly number[];
+  /** Crab moves, as shares of full lock, for a vehicle with a crab mode; none turns it off. */
+  crabbing?: readonly number[];
   /** Added per change of direction; higher finds paths a driver would take, with fewer shuffles. */
   switch_cost?: number;
 }
 
+/** The wheel held at `steer` (the car's own steer: a wheel angle, a skid's share, a frame's bend) for `distance`. */
 export interface Move {
-  curvature: number;
+  steer: number;
   distance: number;
+  crab?: boolean;
 }
 
 export interface PlanResult {
@@ -122,24 +127,30 @@ const TURN_WEIGHT = 3;
 const GREED = 4;
 const HITCHES = 16;
 
+// Coarser than a hitch's: a bend that keeps changing as it rolls would otherwise split the closed set too finely.
+const BEND_BIN = Math.PI / 8;
+
 const hitch_bin = (angle: number) => Math.round((angle / Math.PI) * HITCHES) + HITCHES;
 
 // One hinge keeps the closed set's number; a chain's further hinges would overflow a safe integer, so it goes by string.
-function cell_key(pose: Placement, direction: number): number | string {
+// A frame steer has no hitch, so its joint's bend, part of its shape, takes that slot.
+function cell_key(pose: Placement, direction: number, bends: boolean): number | string {
   const ix = Math.round(pose.x / CELL) + 4096;
   const iy = Math.round(pose.y / CELL) + 4096;
   const turn = ((Math.round((pose.heading / (2 * Math.PI)) * HEADINGS) % HEADINGS) + HEADINGS) % HEADINGS;
   const angles = hitch_angles(pose);
-  const hitch = hitch_bin(angles[0] ?? 0);
+  const hitch = bends ? Math.round((pose.steer ?? 0) / BEND_BIN) + HITCHES : hitch_bin(angles[0] ?? 0);
   const key = (((ix * 8192 + iy) * HEADINGS + turn) * (HITCHES * 2 + 1) + hitch) * 2 + (direction > 0 ? 1 : 0);
   return angles.length > 1 ? `${key}:${angles.slice(1).map(hitch_bin).join(",")}` : key;
 }
 
 export function drive(from: Placement, move: Move, spec: VehicleSpec): Placement {
-  const pose = arc(from, move.curvature, move.distance);
-  if (spec.hitches.length === 0 || !from.trailers) return pose;
-  return { ...pose, trailers: tow(from, from.trailers, move.curvature, move.distance, spec.hitches) };
+  return travel(from, move.steer, move.distance, spec, move.crab);
 }
+
+// A skid steer's half lock already turns about the inner track, so its finer shares do the gentle curves.
+const SKID_STEERING = [-1, -0.5, -0.25, -0.1, 0, 0.1, 0.25, 0.5, 1];
+const CRABBING = [-1, -0.5, 0.5, 1];
 
 /**
  * Hybrid A*: poses stay exact, only the closed set is a coarse grid of position, heading, hitch angle and direction.
@@ -154,7 +165,10 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   const tolerance = options.heading_tolerance ?? Math.PI / 6;
   const limit = options.max_expansions ?? 200_000;
   const lock = max_steer(spec);
-  const curvatures = (options.steering ?? [-1, -0.5, 0, 0.5, 1]).map((share) => Math.tan(lock * share) / spec.wheelbase);
+  const bends = spec.drive.kind === DriveKind.FRAME;
+  const steering = options.steering ?? (spec.drive.kind === DriveKind.SKID ? SKID_STEERING : [-1, -0.5, 0, 0.5, 1]);
+  const primitives: Omit<Move, "distance">[] = steering.map((share) => ({ steer: lock * share }));
+  if (can_crab(spec)) primitives.push(...(options.crabbing ?? CRABBING).map((share) => ({ steer: lock * share, crab: true })));
   const switch_cost = options.switch_cost ?? SWITCH_COST;
   const distance = (pose: Placement) => Math.hypot(pose.x - to.x, pose.y - to.y);
   const turn_weight = tolerance < Math.PI ? TURN_WEIGHT : 0;
@@ -174,7 +188,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   let expansions = 0;
   while (open.size > 0 && expansions < limit) {
     const node = open.pop()!;
-    const key = cell_key(node.pose, node.direction);
+    const key = cell_key(node.pose, node.direction, bends);
     if (closed.has(key)) continue;
     closed.add(key);
     expansions++;
@@ -188,17 +202,17 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
       return { path: path.reverse(), moves: moves.reverse(), reversals: node.reversals, expansions };
     }
     for (const direction of options.directions ?? [1, -1]) {
-      for (const curvature of curvatures) {
+      for (const primitive of primitives) {
         // A move that runs into something stops short, the way a driver creeps up to a bumper in a tight spot.
         let pose = node.pose;
         let travelled = 0;
         for (let i = 0; i < SUBSTEPS; i++) {
-          const next = drive(pose, { curvature, distance: (direction * STEP) / SUBSTEPS }, spec);
+          const next = drive(pose, { ...primitive, distance: (direction * STEP) / SUBSTEPS }, spec);
           if (blocked(next)) break;
           pose = next;
           travelled += STEP / SUBSTEPS;
         }
-        if (travelled === 0 || closed.has(cell_key(pose, direction))) continue;
+        if (travelled === 0 || closed.has(cell_key(pose, direction, bends))) continue;
         const switched = node.direction !== 0 && node.direction !== direction;
         const cost = node.cost + travelled * (direction < 0 ? REVERSE_COST : 1) + (switched ? switch_cost : 0);
         open.push({
@@ -207,7 +221,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
           score: cost + heuristic(pose) * GREED,
           direction,
           reversals: node.reversals + (switched ? 1 : 0),
-          move: { curvature, distance: direction * travelled },
+          move: { ...primitive, distance: direction * travelled },
           parent: node,
         });
       }

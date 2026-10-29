@@ -24,6 +24,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Trucks arrive in Drive Hub: a semi-trailer truck, a box truck, a truck with a drawbar trailer and a road train, plus a baggage train and a tractor with two trailers, where every hinge can jackknife; Tight Spot adds a loading dock where you back the semi up to a free door or drive the long rigs down a dock lane.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "A Machines shelf in Drive Hub's garage brings vehicles that drive differently: a skid-steer loader, a zero-turn mower and a tank that spin on the spot, a wheel loader and an articulated dump truck that bend in the middle, a ladder truck whose back wheels steer too, and a telehandler that can crab sideways; Tight Spot parks them where they fit.",
+      },
     ],
   },
   {

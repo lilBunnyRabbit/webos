@@ -9,7 +9,7 @@ Driving games around one yard. The app opens on the whole yard, your car at the 
 ## The yard is a playground
 
 - Nothing is judged here. Touching something just stops you with a bump; back away and carry on.
-- Stop on the **Garage** pad to pick any of 34 vehicles, shelf by shelf: **Cars** (hatchback to camper van and a stretch limousine), **Service** (taxi, police car, ambulance, fire engine, garbage truck, forklift, baggage train), **Buses** (city bus, double-decker, coach, articulated bus), **Trucks** (box truck, semi-trailer truck, truck and drawbar trailer, road train), **Towing** (trailer, caravan, boat, horse box, tractor, tractor and two trailers, quad) and **Fun** (tuk-tuk, golf cart, ice resurfacer, shopping trolley, F1 car). It waits on the pad, ready to drive off, and stays yours in the yard until you close the window. The police car, ambulance and fire engine flash their lights while in gear.
+- Stop on the **Garage** pad to pick any of 41 vehicles, shelf by shelf: **Cars** (hatchback to camper van and a stretch limousine), **Service** (taxi, police car, ambulance, fire engine, ladder truck, garbage truck, baggage train), **Buses** (city bus, double-decker, coach, articulated bus), **Trucks** (box truck, semi-trailer truck, truck and drawbar trailer, road train), **Towing** (trailer, caravan, boat, horse box, tractor, tractor and two trailers, quad), **Machines** (forklift, skid-steer loader, telehandler, wheel loader, articulated dump truck, zero-turn mower, tank) and **Fun** (tuk-tuk, golf cart, ice resurfacer, shopping trolley, F1 car). It waits on the pad, ready to drive off, and stays yours in the yard until you close the window. The police car, ambulance and fire engine flash their lights while in gear.
 - The cones are for a slalom, the bays on the left wall for practice parking.
 - The gears, pedals, wheel, sensors and settings work as in every game below.
 
@@ -26,7 +26,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 
 ## Vehicles
 
-- Each spot hands you a vehicle, named on the start card. Car spots take the cars, the service cars, the tuk-tuk and the golf cart (some leave out the limousine or the camper van where they don't fit); the bus stop takes the city bus, the double-decker or the articulated bus; the depot those, the coach, the garbage truck and the fire engine (the articulated bus drives through its depot nose first); the driveway a trailer, a horse box or the quad; the slipway a trailer or the boat; the camping pitch the caravan; the loading dock the semi-trailer truck, the box truck, the drawbar truck or the road train (the box truck also takes the bus stop and the depot). Bigger ones need wider swings, and the bays and gaps grow to fit them. Levels keep the vehicle they always had.
+- Each spot hands you a vehicle, named on the start card. Car spots take the cars, the service cars, the tuk-tuk, the golf cart, the skid-steer loader and the mower, and most take the tank and the telehandler (some leave out the limousine, the camper van, the tank or the telehandler where they don't fit); the bus stop takes the city bus, the double-decker, the articulated bus or the wheel loader; the depot those, the coach, the garbage truck, the fire engine, the dump truck and the ladder truck (the articulated bus drives through its depot nose first); the driveway a trailer, a horse box or the quad; the slipway a trailer or the boat; the camping pitch the caravan; the loading dock the semi-trailer truck, the box truck, the drawbar truck, the road train, the wheel loader, the dump truck or the ladder truck (the box truck also takes the bus stop and the depot). Bigger ones need wider swings, and the bays and gaps grow to fit them. Levels keep the vehicle they always had.
 - Rather pick? In **Spots** with a kind chosen, and in the **Open lot**, the **Vehicle** picker next to the spot picker takes Any vehicle or one the spot allows (on a narrow window it sits on the start card). The open lot starts in the hatchback and also takes the van, the pickup, the car and trailer, the F1 car, the tuk-tuk or the golf cart. Levels and the daily keep their own vehicle.
 - The **F1 car** is fast and stops hard, but its wheels barely turn: it needs as much room to swing as a lorry.
 - The **bus** has a 12 m body and a long tail behind the rear wheels: when it turns, the tail swings out the other way.
@@ -34,12 +34,17 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - The **articulated bus** bends in the middle: its back half follows like a trailer, so it folds the same way when you reverse. The **coach** has a tag axle behind the drive axle; it turns about the middle of the two.
 - **Trains of trailers** (the drawbar truck's dolly and body, the road train, the baggage train, the tractor with two trailers) bend at every hinge. Forward they all fall in line behind you; reversing, each hinge swings the next one further, so a long one can't be backed far. Every hinge has its own limit (a semi's kingpin about 80°, a drawbar 60°, a drawbar trailer's turntable 45°, a baggage cart 75°), and folding any of them past it ends the round: the card says which hinge.
 - The **loading dock**: the semi starts set up on the apron, its trailer's tail at the free door. Back it in square, steering the other way to swing the trailer, and stop short of the dock bumpers. The drawbar truck and the road train can't be backed in: their dock has lanes you drive straight into, nose first.
+- **Machines that steer differently.** The start card and the garage card say how each one drives.
+  - **Skid steer** (the skid-steer loader, the mower, the tank): the wheel slows one side. Half lock turns about the inner side; full lock spins it on the spot as soon as you give it gas. The tank's tracks run against each other as it turns.
+  - **Frame steer** (the wheel loader, the dump truck): the wheel bends it in the middle, even standing still, and the back follows the front. Both halves have to be straight in the bay.
+  - **All-wheel steer** (the ladder truck): the back wheels turn the other way, so it turns in half the room and its tail swings out the other side.
+  - **Crab steer** (the telehandler): steers all four wheels like the ladder truck; stop and press **X** or tap **Crab** and every wheel turns the same way, so it slides sideways without turning. Press it again to steer normally.
 - The **camping pitch**: you start lined up on the track, the car swung out and the caravan's tail at the pitch. Back it in caravan first; steer the other way to swing it, and keep it off the hedges.
 
 ## Keyboard
 
 - **← →** or **A D** turn the wheel: a tap nudges it, and held a moment it turns faster. **↑** or **W** drives forward, **↓** or **S** backs up: against the way you're going it brakes, and pressing it again once the car stands switches to D or R.
-- **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel.
+- **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel. **X** switches the telehandler's crab mode (stopped).
 - **+** and **-** zoom. **Escape** pauses and resumes.
 - **Enter** starts, resumes, and once the round is over takes the card's main button: a new spot, the next level, or another try after a touch. **R** tries the same spot again.
 - The keys keep driving after you click a button or close the settings.
@@ -50,7 +55,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - Drag the **steering wheel** round by its rim; it stays where you leave it. Tap the middle to centre it.
 - Rather tap? Set **Steering** to **Buttons** in settings and hold **◀** or **▶**; like the keys, they wind the wheel back faster when you hold them against where it points. Settings also choose whether the wheel centres itself when you let go.
 - **Gas** drives forward and **Brake** backs up, like the arrow keys: against the way you're going it brakes, and pressing it again once the car stands switches to D or R. Brake in P reverses.
-- Tap **P**, **R**, **N** or **D** in the strip at the top to pick a gear; P parks.
+- Tap **P**, **R**, **N** or **D** in the strip at the top to pick a gear; P parks. On the telehandler **Crab** next to it switches crab mode when stopped.
 - Held sideways, the map fills the screen and the wheel and pedals sit over its sides; the time and moves move up next to the gears.
 - Pinch the map to zoom. **Back** pauses a round, then takes you to the yard.
 
@@ -68,7 +73,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 ## Tight Spot modes
 
 - **Spots:** a random spot of the kind you pick, or any. The daily is the same spot for everyone, and Game Hub keeps your results.
-- **Levels:** 45 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot, the slipway and the camping pitch. Park one to open the next.
+- **Levels:** 48 spots in three laps, each tighter and busier: the nine car spots, then the bus stop, the end bay, the driveway, the depot, the slipway, the camping pitch and the loading dock. Park one to open the next.
 - **Open lot:** a block of streets and car parks; park in any free bay.
 
 ## Warehouse: the forklift

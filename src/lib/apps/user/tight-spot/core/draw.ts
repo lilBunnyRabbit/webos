@@ -1,12 +1,26 @@
 import { resolve_token } from "$lib/core/utils";
 import type { Insets } from "./camera";
 import { against, dash_phase, darkest, lightest, wound, type Tone } from "./draw-math";
-import { parked_vehicle } from "./draw-vehicles";
+import { machine } from "./draw-machines";
+import { parked_vehicle, player as vehicle_player } from "./draw-vehicles";
 import type { Polygon, Pose, Vec } from "./geometry";
 import { End, sensor_frame } from "./sensors";
-import { body_centre, gear_direction, sweep, to_world, trailer_pose, trailer_sweep, type Car, type VehicleSpec } from "./vehicle";
+import {
+  body_centre,
+  DriveKind,
+  frame_ends,
+  front_frame,
+  Gear,
+  gear_direction,
+  sweep,
+  to_world,
+  trailer_pose,
+  trailer_sweep,
+  type Car,
+  type Vehicle,
+  type VehicleSpec,
+} from "./vehicle";
 
-export { player } from "./draw-vehicles";
 import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Solid, type Surface } from "./scene";
 
 export interface Paint {
@@ -299,7 +313,9 @@ export function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec
         ...to_world(trailer_pose(car, spec, last), { x: t.axle - t.drawbar - t.box_length / 2, y: 0 }),
         heading: trailer_pose(car, spec, last).heading,
       }
-    : { ...body_centre(car, spec), heading: car.heading };
+    : direction > 0 && spec.drive.kind === DriveKind.FRAME
+      ? { ...to_world(front_frame(car, spec), { x: frame_ends(spec).front.front - spec.length / 2, y: 0 }), heading: front_frame(car, spec).heading }
+      : { ...body_centre(car, spec), heading: car.heading };
   const l = (t ? t.box_length : spec.length) / 2;
   const width = t ? t.width : spec.width;
   const reach = direction > 0 ? BEAM : BEAM * 0.45;
@@ -648,4 +664,18 @@ export function contact_rings(ctx: CanvasRenderingContext2D, at: Vec, pulse: num
   ctx.beginPath();
   ctx.arc(at.x, at.y, 0.12, 0, Math.PI * 2);
   ctx.fill();
+}
+
+export function player(
+  ctx: CanvasRenderingContext2D,
+  car: Car,
+  vehicle: Vehicle,
+  spec: VehicleSpec,
+  braking: boolean,
+  scale: number,
+  palette: Palette,
+  time = 0
+) {
+  const lamps = { braking, reversing: car.gear === Gear.REVERSE, lit: 0.85 };
+  if (!machine(ctx, car, vehicle, spec, lamps, scale, palette, time)) vehicle_player(ctx, car, vehicle, spec, braking, scale, palette, time);
 }

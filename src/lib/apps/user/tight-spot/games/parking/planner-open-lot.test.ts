@@ -33,7 +33,7 @@ function drives_into(from: Placement, moves: readonly Move[], bay: Bay, world: W
   for (const move of moves) {
     const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
     for (let k = 0; k < pieces; k++) {
-      at = drive(at, { curvature: move.curvature, distance: move.distance / pieces }, spec);
+      at = drive(at, { ...move, distance: move.distance / pieces }, spec);
       if (jackknifed(at, spec) || collide(at, near, spec)) return false;
     }
   }

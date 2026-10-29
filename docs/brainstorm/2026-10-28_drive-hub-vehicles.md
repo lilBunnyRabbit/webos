@@ -37,6 +37,7 @@ Owner: "start working on the other ones when you can - the ones that actually ha
 - [x] ADR-088 (accepted)
 - [x] W1 agent alongside the forklift after Drive Hub ships (2026-10-29: see the ADR-088 revisions; the tractor is garage-only for now)
 - [x] W2 agent: hitch chains, the trucks and the loading dock (2026-10-29: see the ADR-088 revision; the road train is an A-double, the baggage train and the tractor with two trailers are garage-only)
+- [x] W3 agent: skid, frame, all-wheel and crab steer (2026-10-29: see the ADR-088 revision; crab is a mode of a four-wheel-steer telehandler, the ladder truck is all-wheel steer; ADR-088 implemented)
 
 ## Next session topics
 - Which parking kinds each new car-like vehicle joins; planner proofs for chains of hinges; skid-steer and frame-steer proofs.
