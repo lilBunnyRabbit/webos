@@ -159,6 +159,17 @@ Mow a garden with the zero-turn mower. It starts on the patio by the shed; mow a
 - A best is more stars, then a quicker time; it's kept per level, per daily, and once for random lawns.
 - **Lawns:** a random garden; **New** deals another. **Levels:** 12 gardens, bigger and fuller as you go. **Daily:** the same garden for everyone today; Game Hub lists it as Drive Hub · Mower.
 
+## Valet Rush
+
+Run a valet stand on the open lot. Cars pull up at the stand on the south road, faster and faster as the shift goes on; **four waiting ends the shift**.
+
+- At the stand, **T** (or **Take**) takes the first car in the queue. Drive it to any free bay and press **P** or **Space**, lined up within 5°. You walk back to the stand, and the clock runs on while you walk: far bays cost time.
+- Each owner comes back a while later; their car's chip counts down, then shows how long they've waited. **F** (or **Fetch**) walks out to the car of the owner who has waited longest; drive it into the box by the stand and press **P**.
+- **Tips** are paid when you hand a car back: 10, up to 10 more for a quick return (gone after a minute's wait), up to 5 for how neatly you parked it. The bus pays double; it only fits a coach bay up the north road, straight on from the stand, and you back it out again.
+- **A touch is a dent:** the car stops short, you lose 5 and that car's whole tip, and the shift goes on. Pressing on against the same thing is one dent.
+- **Enter** at the stand fetches if an owner is back, else takes the next car. Fetching while three wait is risky: the walk can let the fourth arrive.
+- **New** starts a random shift. **Daily** is the same lot and arrivals for everyone today, ranked by score; Game Hub lists it as Drive Hub · Valet.
+
 ## Pushback
 
 Push an airliner back off its stand with the tug. The card shows ATC's clearance, *push back approved, face west*, and reads it aloud when you start (with sound on). Push the aircraft tail first onto the taxiway and stop with its nose gear on the glowing **STOP** bar, on the yellow centreline, facing the way you were told. The dashed outline shows where it should end up.

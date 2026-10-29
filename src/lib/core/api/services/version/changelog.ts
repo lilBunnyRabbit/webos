@@ -44,6 +44,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub gains Rodeo: pick any vehicle from the garage and race a course sized to it, through gates, round a cone slalom, into a stop box and back out through a gate, with five seconds added for every cone you knock, and a daily course with a vehicle picked for everyone.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub gains Valet Rush: park customers' cars in any free bay, fetch them back when their owners return for a tip, and keep the queue at the stand from reaching four, where every bump is a dent off your score, with a daily shift.",
+      },
     ],
   },
   {

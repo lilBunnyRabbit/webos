@@ -97,6 +97,9 @@ Game `rodeo`, `Building.ARENA`, built from the wave 3 brainstorm's first cut (an
 - **Experimental group** (owner, review round). Rigs of two or more links have no proven course: the picker lists them on an Experimental shelf with a "course not proven, may be impossible" note, their runs keep bests but count toward no achievement, and the daily never deals one. A daily's best records its vehicle, so it counts toward the every-shelf achievement.
 - Saved data: `rodeo.json` in the app data folder. Details on the [Drive Hub page](../apps/tight-spot.md#rodeo).
 
+## Revision 2026-10-29 (Valet Rush)
+Game `valet`, `Building.VALET_STAND`, on the open lot from `core/lot.ts` as decided; customer cars swap in with `create_car`, parked ones are the game's solids, a contact is a dent (the car stops short, the score drops, that car's tip is lost, the shift goes on), no core change. What the build decided within scope: the lot is sized for the van, the biggest customer car; the stand, its queue lane and a return box are on the south road; the bus can't turn at the crossroads, so it gets coach bays up the north road (only in a lane with no lot gate beside it, bus only) and backs out to the stand; the walk is a jump of the clock at 2.5 m/s over the straight-line distance; an owner returns 70–150 s after the car is taken (the bus 50–80 s); the tip is 10, up to 10 for a quick return over 60 s, up to 5 for precision, doubled for the bus; a dent costs 5 and counts once until the car has moved 0.3 m; the daily ranks by score, higher first (`DailyRank.SCORE_DESC`); saved data is `valet.json` in the app's data folder. Details on the [Drive Hub page](../apps/tight-spot.md#valet-rush-valet).
+
 ## Consequences
 - One large app; folders keep games apart.
 - The id `tight-spot` stays even for games that aren't parking.
