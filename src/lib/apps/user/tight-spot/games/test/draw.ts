@@ -4,6 +4,7 @@ import type { Polygon, Vec } from "../../core/geometry";
 import type { Signal } from "../../core/signal";
 import { Gear, Vehicle } from "../../core/vehicle";
 import { SPEC, Status, type GameState } from "./game";
+import { route_span } from "./route";
 import {
   ControlKind,
   HALF,
@@ -401,21 +402,24 @@ function traffic_light(ctx: CanvasRenderingContext2D, post: LightPost, ms: numbe
   });
 }
 
+const ROUTE_DASH = 0.8;
+
+// Dashes keep their place on the road, like paint: their phase is the distance along the route, not the car.
 function route_ahead(ctx: CanvasRenderingContext2D, state: GameState, scale: number, palette: Palette) {
   const { route, at } = state;
+  const from = Math.max(0, at.s);
+  const to = Math.min(route.length, from + 90);
+  if (to <= from) return;
+  const span = route_span(route, from, to, at.index);
   ctx.strokeStyle = palette.guide;
   ctx.lineWidth = Math.max(0.12, 2 / scale);
-  ctx.setLineDash([0.8, 0.8]);
+  ctx.setLineDash([ROUTE_DASH, ROUTE_DASH]);
+  ctx.lineDashOffset = from % (ROUTE_DASH * 2);
   ctx.beginPath();
-  let started = false;
-  for (let i = at.index; i < route.points.length && route.ss[i] < at.s + 90; i += 2) {
-    const p = route.points[i];
-    if (!started) ctx.moveTo(p.x, p.y);
-    else ctx.lineTo(p.x, p.y);
-    started = true;
-  }
+  span.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.stroke();
   ctx.setLineDash([]);
+  ctx.lineDashOffset = 0;
 }
 
 function centre_text(ctx: CanvasRenderingContext2D, town: Town, scale: number, palette: Palette, font: string) {

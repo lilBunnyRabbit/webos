@@ -20,6 +20,11 @@ export const CHANGELOG: Release[] = [
         text: "Drive Hub's warehouse racks have upper shelves: stop at the rack face and a side view opens where you raise the forks, line them up with the pallet's pockets and drive in.",
       },
       {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "The Driving Test's dashed line along the route stays put on the road while you drive instead of twitching.",
+      },
+      {
         kind: IMPROVED,
         apps: ["tight-spot"],
         text: "The Warehouse never ends a round on a bump: you back off and it costs time, and lining the forks up with a pallet is more forgiving.",

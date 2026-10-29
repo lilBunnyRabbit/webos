@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { collide, obstacles } from "../../core/obstacles";
 import { create_car, Gear } from "../../core/vehicle";
 import { SPEC } from "./game";
-import { build_route, ROUTE_IDS } from "./route";
+import { build_route, ROUTE_IDS, route_span } from "./route";
 import { build_town, light_at, Light, on_road, town } from "./town";
 
 describe("the town", () => {
@@ -34,4 +34,15 @@ describe("the town", () => {
       expect(collide(car, obstacles(town()), SPEC)).toBeNull();
     });
   }
+
+  it("cuts a route span at exact distances, so the guide line slides instead of stepping", () => {
+    const route = build_route(town(), ROUTE_IDS[0], SPEC);
+    for (const from of [3.2, 3.45, 40.01]) {
+      const span = route_span(route, from, from + 20, 0);
+      let length = 0;
+      for (let i = 1; i < span.length; i++) length += Math.hypot(span[i].x - span[i - 1].x, span[i].y - span[i - 1].y);
+      expect(length).toBeCloseTo(20, 1);
+      expect(span.slice(1, -1)).toEqual(route.points.filter((_, i) => route.ss[i] > from && route.ss[i] < from + 20));
+    }
+  });
 });

@@ -259,6 +259,24 @@ export function locate(route: Route, p: Vec, hint: number, wide = false): Locate
   return { index: best, s: route.ss[best] + along, lateral: -dx * Math.sin(h) + dy * Math.cos(h) };
 }
 
+// Interpolated at both ends so the line grows and shrinks smoothly instead of a sample at a time.
+export function route_span(route: Route, from: number, to: number, hint = 0): Vec[] {
+  const { points, ss } = route;
+  const last = points.length - 1;
+  const at = (s: number, i: number): Vec => {
+    const k = Math.min(Math.max(i, 0), last - 1);
+    const t = Math.min(1, Math.max(0, (s - ss[k]) / (ss[k + 1] - ss[k])));
+    return { x: points[k].x + (points[k + 1].x - points[k].x) * t, y: points[k].y + (points[k + 1].y - points[k].y) * t };
+  };
+  let i = Math.min(Math.max(hint, 0), last);
+  while (i > 0 && ss[i] > from) i--;
+  while (i < last && ss[i + 1] <= from) i++;
+  const span = [at(from, i)];
+  for (i++; i <= last && ss[i] < to; i++) span.push(points[i]);
+  span.push(at(to, i - 1));
+  return span;
+}
+
 const cache = new Map<string, Route>();
 
 export function route_of(town: Town, id: RouteId, spec: VehicleSpec): Route {
