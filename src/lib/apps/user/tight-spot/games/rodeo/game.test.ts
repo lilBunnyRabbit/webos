@@ -1,7 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { collide, obstacles } from "../../core/obstacles";
+import { End, sensor } from "../../core/sensors";
 import { NO_INPUT, rig_ends, rig_length, Vehicle, VEHICLES, type Car } from "../../core/vehicle";
-import { build_course, StepKind } from "./course";
+import { build_course, CONE, StepKind } from "./course";
 import {
   advance,
   course_round,
@@ -14,6 +15,7 @@ import {
   knocked,
   PENALTY_MS,
   record_best,
+  sensed,
   shelves_done,
   Status,
   step_done,
@@ -105,6 +107,15 @@ describe("judging", () => {
     expect(total_ms(next)).toBeCloseTo(next.ms + PENALTY_MS);
     const again = advance(next, forward, 0.1, VEHICLES.hatch);
     expect(knocked(again)).toBe(1);
+  });
+
+  test("the sensors hear a standing cone, not a knocked one", () => {
+    const state = create_game(course_round(Vehicle.HATCH, 1));
+    const cone = state.cones[0].at;
+    const car = { ...state.car, x: cone.x - CONE / 2 - rig_ends(VEHICLES.hatch).front - 1, y: cone.y, heading: 0 };
+    expect(sensor(car, sensed(state), End.FRONT, VEHICLES.hatch)).toBeCloseTo(1);
+    const down = { ...state, cones: state.cones.map((each, i) => (i === 0 ? { ...each, down: { ...cone, heading: 0 } } : each)) };
+    expect(sensor(car, sensed(down), End.FRONT, VEHICLES.hatch) ?? Infinity).toBeGreaterThan(1.05);
   });
 
   test("the fence ends the run", () => {

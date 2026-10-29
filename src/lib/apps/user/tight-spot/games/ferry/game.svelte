@@ -24,6 +24,8 @@
   import { frame_loop } from "../../core/loop";
   import RoundCard from "../../core/round-card.svelte";
   import SettingsPanel from "../../core/settings-panel.svelte";
+  import { obstacles } from "../../core/obstacles";
+  import { End, sensor } from "../../core/sensors";
   import { Sounds } from "../../core/sound";
   import SpeedChip from "../../core/speed-chip.svelte";
   import { body_centre, Gear, max_steer, rig_length, without_creep } from "../../core/vehicle";
@@ -110,6 +112,7 @@
   const orphans = new Set<ParJob>();
   // Sailings recorded before their par was known: the par, when it lands, may still earn each the time star.
   let pending: Finished[] = [];
+  let readings: Record<End, number | null> = { front: null, rear: null };
   const sounds = new Sounds(() => settings);
 
   // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its par).
@@ -143,6 +146,12 @@
   const time = $derived(format_time(game.ms, { tenths: true }));
   const par_time = $derived(par ? format_time(par.ms) : null);
   const needle = $derived(Math.max(-1, Math.min(1, trim / GAUGE_RANGE)));
+  const facing_reading = $derived.by(() => {
+    if (game.status !== Status.DRIVING) return null;
+    if (game.car.gear === Gear.DRIVE) return readings.front;
+    if (game.car.gear === Gear.REVERSE) return readings.rear;
+    return null;
+  });
 
   interface Finished {
     state: GameState;
@@ -283,6 +292,10 @@
     if (!ctx) return;
     draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
       guides: settings.guides,
+      sensors: {
+        front: game.car.gear === Gear.DRIVE ? readings.front : null,
+        rear: game.car.gear === Gear.REVERSE ? readings.rear : null,
+      },
       time: performance.now() / 1000,
       insets: control_insets(),
       font: getComputedStyle(canvas).fontFamily,
@@ -297,6 +310,9 @@
       next = advance(next, input.read(next.car.gear), dt, settings.creep ? current : without_creep(current));
     }
     input.follow(next.car.steer / lock);
+    const near = obstacles(next.scene);
+    readings = { front: sensor(next.car, near, End.FRONT, current), rear: sensor(next.car, near, End.REAR, current) };
+    if (next.status === Status.DRIVING) sounds.sensor(next.car.gear === Gear.DRIVE ? readings.front : next.car.gear === Gear.REVERSE ? readings.rear : null);
     sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02 && !!current.reverse_beeper);
     if (next === game) return;
     const before = game.status;
@@ -407,6 +423,7 @@
     new_best = false;
     first_run = false;
     camera = null;
+    readings = { front: null, rear: null };
     game = create_game(round);
     focus_board();
   }
@@ -645,6 +662,18 @@
       </div>
       <div class="flex shrink-0 flex-col items-end gap-1.5">
         <SpeedChip class="hidden pointer-coarse:block" speed={game.car.speed} />
+        {#if facing_reading !== null}
+          <div
+            class={cn(
+              "rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]",
+              facing_reading < 0.5 ? "text-error" : "text-warning"
+            )}
+            aria-hidden="true"
+          >
+            {game.car.gear === Gear.REVERSE ? "Rear" : "Front"}
+            {facing_reading.toFixed(2)} m
+          </div>
+        {/if}
         {@render gauge("hidden @md/ts-app:flex")}
       </div>
     </div>

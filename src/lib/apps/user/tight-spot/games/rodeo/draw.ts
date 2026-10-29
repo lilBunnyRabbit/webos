@@ -1,13 +1,15 @@
 import type { Insets } from "../../core/camera";
-import { bay_arrow, bay_pointer, beams, begin_frame, contact_rings, fill, guides, outlined, path, player, type Palette, type View } from "../../core/draw";
+import { bay_arrow, bay_pointer, beams, begin_frame, contact_rings, fill, guides, outlined, path, player, sensor_arcs, type Palette, type View } from "../../core/draw";
 import { SolidKind } from "../../core/scene";
 import type { Pose, Vec } from "../../core/geometry";
+import type { End } from "../../core/sensors";
 import { Gear } from "../../core/vehicle";
 import { BOX_HEADING, StepKind, type Gate } from "./course";
 import { spec_of, Status, step_target, type GameState } from "./game";
 
 export interface Extras {
   guides: boolean;
+  sensors: Record<End, number | null>;
   time: number;
   insets: Insets;
   font: string;
@@ -206,6 +208,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   for (const each of state.cones) if (each.down) fallen(ctx, each.down, scale, palette);
   if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, spec, scale, palette);
   player(ctx, state.car, state.round.vehicle, spec, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
+  if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
   const next = playing ? course.steps[state.current] : undefined;
   const hot = new Set<Vec>(next?.gate ? (next.kind === StepKind.SLALOM ? [next.gate.a] : [next.gate.a, next.gate.b]) : []);
   for (const each of state.cones) if (!each.down) cone(ctx, each.at, scale, palette, hot.has(each.at));

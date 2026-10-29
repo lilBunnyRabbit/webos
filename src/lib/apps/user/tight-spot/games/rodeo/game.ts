@@ -2,7 +2,8 @@ import { z } from "zod";
 import { inside_convex, overlaps } from "../../core/collision";
 import { bounds_of, bounds_overlap, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
 import { STANDING } from "../../core/keys";
-import { collide, obstacles } from "../../core/obstacles";
+import { collide, obstacles, type Obstacles } from "../../core/obstacles";
+import { SolidKind } from "../../core/scene";
 import { hash } from "../../core/seed";
 import {
   bodies,
@@ -182,6 +183,23 @@ export function touched(cones: readonly Cone[], car: Placement, spec: VehicleSpe
     if (shapes.some((body, k) => bounds_overlap(boxes[k], box) && overlaps(body, shape))) hits.push(i);
   });
   return hits;
+}
+
+const sensed_cache = new WeakMap<readonly Cone[], Obstacles>();
+
+/** What the parking sensors hear: the fence and every cone still standing. */
+export function sensed(state: Pick<GameState, "course" | "cones">): Obstacles {
+  let found = sensed_cache.get(state.cones);
+  if (!found) {
+    const fence = obstacles(state.course);
+    const standing = state.cones.filter((cone) => !cone.down);
+    found = {
+      solids: [...fence.solids, ...standing.map((cone) => ({ kind: SolidKind.POST, shape: cone_shape(cone.at) }))],
+      bounds: [...fence.bounds, ...standing.map((cone) => bounds_of_cone(cone.at))],
+    };
+    sensed_cache.set(state.cones, found);
+  }
+  return found;
 }
 
 // A knocked cone rolls off the way the rig was going, so it lies clear of the vehicle that hit it.

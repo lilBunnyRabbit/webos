@@ -1,13 +1,15 @@
 import type { Insets } from "../../core/camera";
-import { begin_frame, contact_rings, fill, guides, outlined, path, player, solids, type Palette, type View } from "../../core/draw";
+import { begin_frame, contact_rings, fill, guides, outlined, path, player, sensor_arcs, solids, type Palette, type View } from "../../core/draw";
 import { rect, type Vec } from "../../core/geometry";
 import { SolidKind, type Solid } from "../../core/scene";
+import type { End } from "../../core/sensors";
 import { Gear, VEHICLES } from "../../core/vehicle";
 import { lane_centre, RAMP, type Deck } from "./deck";
 import { MAX_GAP, MIN_GAP, spec_of, Status, vehicle_of, verdict_of, type GameState, type Stowed } from "./game";
 
 export interface Extras {
   guides: boolean;
+  sensors: Record<End, number | null>;
   time: number;
   insets: Insets;
   font: string;
@@ -179,6 +181,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     const spec = spec_of(state);
     if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, spec, scale, palette);
     player(ctx, state.car, vehicle_of(state), spec, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
+    if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
   }
   if (state.status === Status.CRASHED && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
 }

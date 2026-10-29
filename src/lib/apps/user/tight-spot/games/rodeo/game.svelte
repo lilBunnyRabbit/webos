@@ -1,6 +1,7 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
   import { daily_seed, format_time } from "$kit/games";
+  import { cn } from "$lib/core/utils";
   import { Badge, BoardOverlay, Button, IconButton, Select } from "$lib/core/components/ui";
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
@@ -16,6 +17,7 @@
   import { frame_loop } from "../../core/loop";
   import RoundCard from "../../core/round-card.svelte";
   import SettingsPanel from "../../core/settings-panel.svelte";
+  import { End, sensor } from "../../core/sensors";
   import { Sounds } from "../../core/sound";
   import SpeedChip from "../../core/speed-chip.svelte";
   import { body_centre, can_crab, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, VEHICLES, without_creep } from "../../core/vehicle";
@@ -35,6 +37,7 @@
     PENALTY_MS,
     record_best,
     rodeo_shelf,
+    sensed,
     round_key,
     round_title,
     set_status,
@@ -83,6 +86,7 @@
   let hud_height = $state(0);
 
   let camera: Camera | null = null;
+  let readings: Record<End, number | null> = { front: null, rear: null };
   const sounds = new Sounds(() => settings);
 
   const spec = $derived(spec_of(game.round));
@@ -103,6 +107,13 @@
   const trial = $derived(experimental(game.round.vehicle));
   const vehicle_options = $derived(shelf.vehicles.map((each) => ({ value: each, label: VEHICLE_NAMES[each] })));
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
+
+  const facing_reading = $derived.by(() => {
+    if (game.status !== Status.DRIVING) return null;
+    if (game.car.gear === Gear.DRIVE) return readings.front;
+    if (game.car.gear === Gear.REVERSE) return readings.rear;
+    return null;
+  });
 
   function make_round(): Round {
     if (daily) return daily_round(daily, daily_seed(daily, `${app_id}/${DAILY_MODE}`));
@@ -195,6 +206,10 @@
     if (!ctx) return;
     draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
       guides: settings.guides,
+      sensors: {
+        front: game.car.gear === Gear.DRIVE ? readings.front : null,
+        rear: game.car.gear === Gear.REVERSE ? readings.rear : null,
+      },
       time: performance.now() / 1000,
       insets: control_insets(),
       font: getComputedStyle(canvas).fontFamily,
@@ -209,6 +224,9 @@
       next = advance(next, input.read(next.car.gear), dt, driven);
     }
     input.follow(next.car.steer / lock);
+    const near = sensed(next);
+    readings = { front: sensor(next.car, near, End.FRONT, spec), rear: sensor(next.car, near, End.REAR, spec) };
+    if (next.status === Status.DRIVING) sounds.sensor(next.car.gear === Gear.DRIVE ? readings.front : next.car.gear === Gear.REVERSE ? readings.rear : null);
     sounds.reverse_beeper(!!spec.reverse_beeper && next.status === Status.DRIVING && next.car.speed < -0.02);
     if (next === game) return;
     const before = game;
@@ -270,6 +288,7 @@
     new_best = false;
     first_run = false;
     camera = null;
+    readings = { front: null, rear: null };
     game = create_game(round);
     focus_board();
   }
@@ -474,7 +493,21 @@
           {/if}
         </div>
       </div>
-      <SpeedChip class="hidden shrink-0 pointer-coarse:block" speed={game.car.speed} />
+      <div class="flex shrink-0 flex-col items-end gap-1.5">
+        <SpeedChip class="hidden pointer-coarse:block" speed={game.car.speed} />
+        {#if facing_reading !== null}
+          <div
+            class={cn(
+              "rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]",
+              facing_reading < 0.5 ? "text-error" : "text-warning"
+            )}
+            aria-hidden="true"
+          >
+            {game.car.gear === Gear.REVERSE ? "Rear" : "Front"}
+            {facing_reading.toFixed(2)} m
+          </div>
+        {/if}
+      </div>
     </div>
   {/if}
 
