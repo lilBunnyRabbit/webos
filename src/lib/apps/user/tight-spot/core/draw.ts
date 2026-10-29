@@ -12,6 +12,7 @@ import {
   front_frame,
   Gear,
   gear_direction,
+  hangs_ahead,
   sweep,
   to_world,
   trailer_pose,
@@ -306,7 +307,7 @@ export function beams(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpec
   const direction = gear_direction(car.gear);
   if (direction === 0 || spec.unlit) return;
   const last = spec.hitches.length - 1;
-  const t = direction < 0 && last >= 0 ? spec.hitches[last] : undefined;
+  const t = direction < 0 && last >= 0 && !hangs_ahead(spec) ? spec.hitches[last] : undefined;
   // Reversing with a trailer, the light comes off the last trailer's tail.
   const frame: Pose = t
     ? {
@@ -346,7 +347,7 @@ export function guides(ctx: CanvasRenderingContext2D, car: Car, spec: VehicleSpe
   if (direction === 0) return;
   // Front corners going forwards, rear corners backwards: the corners that lead, where a reversing camera draws its lines.
   let leading: Vec[][];
-  if (direction < 0 && spec.hitches.length > 0) leading = trailer_sweep(car, -5, 40, spec);
+  if (spec.hitches.length > 0 && (direction < 0) !== hangs_ahead(spec)) leading = trailer_sweep(car, direction * 5, 40, spec);
   else {
     const paths = sweep(car, direction * 5, 40, spec);
     leading = direction > 0 ? [paths[0], paths[1]] : [paths[2], paths[3]];

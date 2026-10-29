@@ -6,6 +6,7 @@ import {
   body_centre,
   CARAVAN_TRAILER,
   Gear,
+  hangs_ahead,
   hitch_point,
   to_world,
   TRACTOR,
@@ -1654,7 +1655,7 @@ function vehicle_body(
   if (style === Style.GARBAGE) beacon(ctx, l - 1.85, 0, palette.warning, palette.warning_glow, Math.max(lights[0], 0.35), palette);
   head_lamps(ctx, l, w, style, palette, 1);
   // Towing, the last trailer's lamps take over at the back; an articulated bus's front section has none of its own.
-  if (style !== Style.ARTIC) tail_lamps(ctx, l, w, palette, spec.hitches.length > 0 ? dim : lamps, style === Style.TRACTOR || style === Style.QUAD);
+  if (style !== Style.ARTIC) tail_lamps(ctx, l, w, palette, spec.hitches.length > 0 && !hangs_ahead(spec) ? dim : lamps, style === Style.TRACTOR || style === Style.QUAD);
   ctx.restore();
   tyres(ctx, car, spec, style, scale, palette);
 }

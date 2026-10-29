@@ -7,6 +7,7 @@ import {
   DriveKind,
   frame_ends,
   front_frame,
+  hangs_ahead,
   rig_ends,
   HATCHBACK,
   trailer_corners,
@@ -58,13 +59,14 @@ export interface SensorFrame {
   body: Vec[];
 }
 
-/** Towing, the rear sensors are the last trailer's: its tail is what reverses into things. */
+/** Towing, the rear sensors are the last trailer's: its tail is what reverses into things. A chain hanging ahead has the front ones. */
 export function sensor_frame(car: Placement, end: End, spec: VehicleSpec = HATCHBACK): SensorFrame {
   const last = spec.hitches.length - 1;
-  if (end === End.REAR && last >= 0) {
+  if (last >= 0 && (end === End.FRONT) === hangs_ahead(spec)) {
     const t = spec.hitches[last];
     const pose = trailer_pose(car, spec, last);
-    return { pose, bumper: t.drawbar + t.box_length - t.axle, width: t.width, body: trailer_corners(car, spec, last) };
+    const facing = end === End.FRONT ? { ...pose, heading: pose.heading + Math.PI } : pose;
+    return { pose: facing, bumper: t.drawbar + t.box_length - t.axle, width: t.width, body: trailer_corners(car, spec, last) };
   }
   if (spec.drive.kind === DriveKind.FRAME) {
     const [front, rear] = bodies(car, spec);

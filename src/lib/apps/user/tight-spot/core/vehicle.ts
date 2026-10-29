@@ -16,6 +16,8 @@ export interface TrailerSpec {
   wheel_diameter: number;
   wheel_width: number;
   max_angle: number;
+  /** The hinge angle the link hangs at, which `max_angle` is measured from: 0 (the default) trails behind the body ahead, π hangs ahead of it, like a towbar off a pushback tug's front. */
+  rest?: number;
 }
 
 export const DriveKind = { ACKERMANN: "ackermann", SKID: "skid", FRAME: "frame" } as const;
@@ -1183,7 +1185,23 @@ export function create_car(pose: Pose, gear: Gear = Gear.PARK, spec: VehicleSpec
     roll: [0, 0, 0, 0],
   };
   if (spec.hitches.length === 0) return car;
-  return { ...car, trailers: spec.hitches.map(() => ({ heading: pose.heading, roll: [0, 0] })) };
+  return { ...car, trailers: rest_trailers(pose.heading, spec) };
+}
+
+/** Each link's heading turned from the vehicle's by the rest angles down the chain to it. */
+export function chain_rests(spec: VehicleSpec): number[] {
+  let total = 0;
+  return spec.hitches.map((link) => (total += link.rest ?? 0));
+}
+
+/** The chain at rest behind a vehicle heading `heading`. */
+export function rest_trailers(heading: number, spec: VehicleSpec): Trailer[] {
+  return chain_rests(spec).map((rest) => ({ heading: heading - rest, roll: [0, 0] }));
+}
+
+/** The last link hangs ahead of the vehicle, so it leads going forward and the vehicle's own tail leads in reverse. */
+export function hangs_ahead(spec: VehicleSpec): boolean {
+  return Math.cos(chain_rests(spec).at(-1) ?? 0) < 0;
 }
 
 export function gear_direction(gear: Gear): -1 | 0 | 1 {
@@ -1478,9 +1496,17 @@ export function hitch_angles(car: Placement): number[] {
   return car.trailers.map((trailer, i) => wrap_angle((i === 0 ? car.heading : car.trailers![i - 1].heading) - trailer.heading));
 }
 
+/** Each hinge's angle away from its link's rest angle. */
+export function folds(car: Placement, spec: VehicleSpec): number[] {
+  return hitch_angles(car).map((angle, i) => {
+    const rest = spec.hitches[i]?.rest;
+    return rest ? wrap_angle(angle - rest) : angle;
+  });
+}
+
 /** The first hinge folded past its link's limit, or −1. */
 export function jackknife(car: Placement, spec: VehicleSpec): number {
-  const angles = hitch_angles(car);
+  const angles = folds(car, spec);
   return spec.hitches.findIndex((link, i) => Math.abs(angles[i] ?? 0) > link.max_angle);
 }
 
@@ -1488,13 +1514,13 @@ export function jackknifed(car: Placement, spec: VehicleSpec): boolean {
   return jackknife(car, spec) >= 0;
 }
 
-/** Each link's axle as a pose, first link first; a placement without trailers has them straight behind. */
+/** Each link's axle as a pose, first link first; a placement without trailers has them at rest. */
 export function trailer_poses(car: Placement, spec: VehicleSpec): Pose[] {
   const poses: Pose[] = [];
   let ahead: Pose = car;
   spec.hitches.forEach((link, i) => {
     const ball = to_world(ahead, { x: -link.hitch, y: 0 });
-    const heading = car.trailers?.[i]?.heading ?? ahead.heading;
+    const heading = car.trailers?.[i]?.heading ?? ahead.heading - (link.rest ?? 0);
     ahead = { x: ball.x - Math.cos(heading) * link.axle, y: ball.y - Math.sin(heading) * link.axle, heading };
     poses.push(ahead);
   });
@@ -1597,10 +1623,11 @@ export function outline(car: Placement, spec: VehicleSpec): Vec[] {
   return [front[0], front[1], rear[2], rear[3]];
 }
 
-/** Every heading a parked vehicle must line up: the body's, a frame steer's front frame, each trailer's. */
+/** Every heading a parked vehicle must line up: the body's, a frame steer's front frame, each trailer's turned back by its rest. */
 export function headings(car: Placement, spec: VehicleSpec): number[] {
   const own = spec.drive.kind === DriveKind.FRAME ? [car.heading, car.heading + (car.steer ?? 0)] : [car.heading];
-  return [...own, ...(car.trailers ?? []).map((trailer) => trailer.heading)];
+  const rests = chain_rests(spec);
+  return [...own, ...(car.trailers ?? []).map((trailer, i) => trailer.heading + (rests[i] ?? 0))];
 }
 
 /** The middle of the very front, fork tips included. */
@@ -1633,10 +1660,14 @@ export function body_ends(spec: VehicleSpec): { front: number; rear: number } {
   return { front: rear + spec.length, rear };
 }
 
-/** The whole rig's ends from the pose, straight: fork tips at the front, the furthest trailer's tail at the back. */
+/** The whole rig's ends from the pose, at rest: fork tips at the front, the furthest trailer's tail at the back. */
 export function rig_ends(spec: VehicleSpec): { front: number; rear: number } {
   const { front, rear } = body_ends(spec);
   if (spec.hitches.length === 0) return { front: front + (spec.forks?.length ?? 0), rear };
+  if (spec.hitches.some((link) => link.rest)) {
+    const xs = bodies({ x: 0, y: 0, heading: 0 }, spec).flatMap((body) => body.map((point) => point.x));
+    return { front: Math.max(...xs), rear: Math.min(...xs) };
+  }
   let ball = 0;
   let tail = Infinity;
   spec.hitches.forEach((link, i) => {
@@ -1779,7 +1810,7 @@ export function sweep(car: Car, distance: number, samples: number, spec: Vehicle
   return paths;
 }
 
-// Reversing, the last trailer's tail leads: its corners show the chain folding away well before it does.
+// The last trailer's tail leads reversing, or forward when it hangs ahead: its corners show the chain folding away well before it does.
 export function trailer_sweep(car: Car, distance: number, samples: number, vehicle: VehicleSpec): Vec[][] {
   const last = vehicle.hitches.length - 1;
   const curvature = Math.tan(car.steer) / steer_base(vehicle);
@@ -1789,7 +1820,7 @@ export function trailer_sweep(car: Car, distance: number, samples: number, vehic
     x: car.x,
     y: car.y,
     heading: car.heading,
-    trailers: car.trailers ?? vehicle.hitches.map(() => ({ heading: car.heading, roll: [0, 0] })),
+    trailers: car.trailers ?? rest_trailers(car.heading, vehicle),
   };
   for (let i = 0; i <= samples; i++) {
     const placed = trailer_pose(placement, vehicle, last);

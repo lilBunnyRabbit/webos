@@ -6,6 +6,7 @@ import {
   corners,
   create_car,
   DriveKind,
+  folds,
   FORKLIFT,
   FRAME_RAMP,
   front_frame,
@@ -30,6 +31,7 @@ import {
   steer_boost,
   STEER_BOOST,
   trailer_pose,
+  trailer_poses,
   travel,
   turn_centre,
   VEHICLES,
@@ -40,6 +42,7 @@ import {
   type VehicleSpec,
   type Wheel,
 } from "./vehicle";
+import { plan } from "./planner";
 
 const DT = 1 / 120;
 const START = { x: 0, y: 0, heading: 0 };
@@ -434,6 +437,86 @@ describe("hitch chain", () => {
     expect(a).toEqual(b);
     expect(step(a, input, 0, spec)).toBe(a);
     expect(step(a, input, -0.01, spec)).toBe(a);
+  });
+});
+
+describe("rest angle", () => {
+  const DEG = Math.PI / 180;
+  // A tug facing a towed body hung off its front: the hinge 2.4 m ahead of its rear axle, the body's axle 6 m further on.
+  const spec: VehicleSpec = {
+    ...VEHICLES.baggage,
+    hitches: [
+      {
+        hitch: -2.4,
+        axle: 6,
+        drawbar: 1,
+        box_length: 8,
+        width: 3,
+        track: 2.4,
+        wheel_diameter: 0.8,
+        wheel_width: 0.3,
+        max_angle: 60 * DEG,
+        rest: Math.PI,
+      },
+    ],
+  };
+
+  function swung(fold: number): Car {
+    const car = create_car(START, Gear.PARK, spec);
+    return { ...car, trailers: [{ ...car.trailers![0], heading: START.heading - Math.PI - fold }] };
+  }
+
+  test("a link at rest π hangs ahead of the vehicle, placed or created", () => {
+    const car = create_car(START, Gear.PARK, spec);
+    for (const pose of [trailer_pose(car, spec), trailer_poses(START, spec)[0]]) {
+      expect(pose.x).toBeCloseTo(8.4, 9);
+      expect(angle_between(pose.heading, Math.PI)).toBeLessThan(1e-12);
+    }
+    expect(folds(car, spec)).toEqual([0]);
+    expect(rig_ends(spec).front).toBeCloseTo(11.4, 9);
+    expect(rig_ends(spec).rear).toBeCloseTo(-VEHICLES.baggage.rear_overhang, 9);
+  });
+
+  test("pushing straight keeps it at rest, ahead of the vehicle", () => {
+    const car = run(
+      { ...create_car(START, Gear.PARK, spec), gear: Gear.DRIVE },
+      { steer: 0, throttle: 0.5, brake: 0 },
+      4,
+      spec
+    );
+    expect(car.x).toBeGreaterThan(3);
+    expect(Math.abs(folds(car, spec)[0])).toBeLessThan(1e-9);
+    expect(trailer_pose(car, spec).x).toBeCloseTo(car.x + 8.4, 6);
+  });
+
+  test("it jackknifes past max_angle either side of rest", () => {
+    expect(jackknife(swung(55 * DEG), spec)).toBe(-1);
+    expect(jackknife(swung(-55 * DEG), spec)).toBe(-1);
+    expect(jackknife(swung(65 * DEG), spec)).toBe(0);
+    expect(jackknife(swung(-65 * DEG), spec)).toBe(0);
+  });
+
+  test("the planner turns the rig round into a pose box", { timeout: 10_000 }, () => {
+    const box = { x0: 3, x1: 5, y0: 5, y1: 7 };
+    const south = -Math.PI / 2;
+    const found = plan(
+      create_car(START, Gear.PARK, spec),
+      { x: 4, y: 6, heading: south },
+      { solids: [], bounds: [] },
+      {
+        spec,
+        max_expansions: 20_000,
+        arrive: (pose) =>
+          pose.x >= box.x0 &&
+          pose.x <= box.x1 &&
+          pose.y >= box.y0 &&
+          pose.y <= box.y1 &&
+          angle_between(pose.heading, south) < 10 * DEG &&
+          Math.abs(folds(pose, spec)[0]) < 10 * DEG,
+      }
+    );
+    expect(found).not.toBeNull();
+    for (const pose of found!.path) expect(jackknife(pose, spec)).toBe(-1);
   });
 });
 

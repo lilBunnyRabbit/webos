@@ -3,10 +3,11 @@ import { collide, type Obstacles } from "./obstacles";
 import {
   can_crab,
   DriveKind,
+  folds,
   HATCHBACK,
-  hitch_angles,
   jackknifed,
   max_steer,
+  rest_trailers,
   travel,
   type Placement,
   type VehicleSpec,
@@ -133,12 +134,12 @@ const BEND_BIN = Math.PI / 8;
 const hitch_bin = (angle: number) => Math.round((angle / Math.PI) * HITCHES) + HITCHES;
 
 // One hinge keeps the closed set's number; a chain's further hinges would overflow a safe integer, so it goes by string.
-// A frame steer has no hitch, so its joint's bend, part of its shape, takes that slot.
-function cell_key(pose: Placement, direction: number, bends: boolean): number | string {
+// A frame steer has no hitch, so its joint's bend, part of its shape, takes that slot. A hinge bins around its rest angle.
+function cell_key(pose: Placement, direction: number, bends: boolean, spec: VehicleSpec): number | string {
   const ix = Math.round(pose.x / CELL) + 4096;
   const iy = Math.round(pose.y / CELL) + 4096;
   const turn = ((Math.round((pose.heading / (2 * Math.PI)) * HEADINGS) % HEADINGS) + HEADINGS) % HEADINGS;
-  const angles = hitch_angles(pose);
+  const angles = folds(pose, spec);
   const hitch = bends ? Math.round((pose.steer ?? 0) / BEND_BIN) + HITCHES : hitch_bin(angles[0] ?? 0);
   const key = (((ix * 8192 + iy) * HEADINGS + turn) * (HITCHES * 2 + 1) + hitch) * 2 + (direction > 0 ? 1 : 0);
   return angles.length > 1 ? `${key}:${angles.slice(1).map(hitch_bin).join(",")}` : key;
@@ -172,8 +173,9 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   const switch_cost = options.switch_cost ?? SWITCH_COST;
   const distance = (pose: Placement) => Math.hypot(pose.x - to.x, pose.y - to.y);
   const turn_weight = tolerance < Math.PI ? TURN_WEIGHT : 0;
+  const settled = rest_trailers(to.heading, spec);
   const folded = (pose: Placement) =>
-    pose.trailers ? pose.trailers.reduce((sum, trailer) => sum + angle_between(trailer.heading, to.heading), 0) : 0;
+    pose.trailers ? pose.trailers.reduce((sum, trailer, i) => sum + angle_between(trailer.heading, settled[i].heading), 0) : 0;
   const heuristic = (pose: Placement) =>
     distance(pose) + turn_weight * (angle_between(pose.heading, to.heading) + folded(pose));
   const arrived =
@@ -188,7 +190,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
   let expansions = 0;
   while (open.size > 0 && expansions < limit) {
     const node = open.pop()!;
-    const key = cell_key(node.pose, node.direction, bends);
+    const key = cell_key(node.pose, node.direction, bends, spec);
     if (closed.has(key)) continue;
     closed.add(key);
     expansions++;
@@ -212,7 +214,7 @@ export function plan(from: Placement, to: Placement, near: Obstacles, options: P
           pose = next;
           travelled += STEP / SUBSTEPS;
         }
-        if (travelled === 0 || closed.has(cell_key(pose, direction, bends))) continue;
+        if (travelled === 0 || closed.has(cell_key(pose, direction, bends, spec))) continue;
         const switched = node.direction !== 0 && node.direction !== direction;
         const cost = node.cost + travelled * (direction < 0 ? REVERSE_COST : 1) + (switched ? switch_cost : 0);
         open.push({
