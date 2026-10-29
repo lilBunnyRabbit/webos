@@ -35,7 +35,7 @@ import { bounds_of } from "../../core/geometry";
 import { beep_period, End, sensor, sensor_frame, SENSOR_RANGE } from "../../core/sensors";
 import { corners, create_car, Gear, NO_INPUT, pose_from_centre, Vehicle, VEHICLES, type Placement } from "../../core/vehicle";
 import { centroid } from "../../core/geometry";
-import { SCENARIOS, Scenario, SolidKind } from "./world";
+import { hash, SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;
 
@@ -144,6 +144,14 @@ describe("rounds", () => {
     expect(rounds[0].difficulty).toBe(0);
     expect(rounds[LEVEL_COUNT - 1].difficulty).toBe(1);
     expect(rounds.every((round) => round.mode === Mode.LEVELS)).toBe(true);
+  });
+
+  test("the big kinds' levels keep the seeds they had before the camping pitch joined the laps", () => {
+    for (let lap = 0; lap < 3; lap++) {
+      for (let k = 0; k < 5; k++) {
+        expect(level_round(lap * 15 + 9 + k + 1).seed, `lap ${lap} kind ${k}`).toBe(hash(0x7195, 100 + lap * 5 + k));
+      }
+    }
   });
 
   test("a level picks its vehicle from what its kind had when the ladder was laid out", () => {

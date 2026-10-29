@@ -375,6 +375,7 @@ const BIG_LAP: readonly Scenario[] = [
   Scenario.SLIPWAY,
   Scenario.CAMPING,
 ];
+const BIG_KINDS_BEFORE = 5;
 const LAPS = 3;
 const PER_LAP = LAP.length + BIG_LAP.length;
 const CAR_LEVELS = LAP.length * LAPS;
@@ -397,7 +398,8 @@ export function level_round(level: number): Round {
   }
   const k = at - LAP.length;
   const scenario = BIG_LAP[k];
-  const seed = hash(0x7195, 100 + lap * BIG_LAP.length + k);
+  // The seeds stay those of the five big kinds the ladder had before the camping pitch; it gets its own.
+  const seed = k < BIG_KINDS_BEFORE ? hash(0x7195, 100 + lap * BIG_KINDS_BEFORE + k) : hash(0x7195, 200 + lap);
   const difficulty = Math.min(1, (lap * LAP.length + 1.5 + k * 1.75) / (CAR_LEVELS - 1));
   return { ...base, scenario, difficulty, seed, vehicle: ladder_vehicle(scenario, seed) };
 }

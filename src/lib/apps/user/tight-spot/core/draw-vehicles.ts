@@ -17,7 +17,7 @@ import {
   type VehicleSpec,
 } from "./vehicle";
 
-export function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, colour: string) {
+function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, colour: string) {
   ctx.fillStyle = colour;
   ctx.beginPath();
   ctx.roundRect(x, y, w, h, Math.min(r, w / 2, h / 2));
@@ -25,7 +25,7 @@ export function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
 }
 
 // A lamp is a lens in a dark housing: on a light body the housing shows, on a dark one the lens does.
-export function lamp(
+function lamp(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,

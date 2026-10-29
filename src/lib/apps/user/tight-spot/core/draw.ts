@@ -6,7 +6,7 @@ import type { Polygon, Pose, Vec } from "./geometry";
 import { End, sensor_frame } from "./sensors";
 import { body_centre, gear_direction, sweep, to_world, trailer_pose, trailer_sweep, type Car, type VehicleSpec } from "./vehicle";
 
-export { lamp, pill, player } from "./draw-vehicles";
+export { player } from "./draw-vehicles";
 import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Solid, type Surface } from "./scene";
 
 export interface Paint {
@@ -466,6 +466,23 @@ export function solids(ctx: CanvasRenderingContext2D, items: Solid[], scale: num
 
 const LEAF = 0.42;
 
+function visible(ctx: CanvasRenderingContext2D): { x0: number; y0: number; x1: number; y1: number } {
+  const inverse = ctx.getTransform().inverse();
+  const { width, height } = ctx.canvas;
+  const corners = [
+    [0, 0],
+    [width, 0],
+    [0, height],
+    [width, height],
+  ].map(([x, y]) => inverse.transformPoint({ x, y }));
+  return {
+    x0: Math.min(...corners.map((p) => p.x)),
+    y0: Math.min(...corners.map((p) => p.y)),
+    x1: Math.max(...corners.map((p) => p.x)),
+    y1: Math.max(...corners.map((p) => p.y)),
+  };
+}
+
 // Clumps on a grid, nudged by where they sit, so a hedge reads as foliage and stays the same every frame.
 function hedges(ctx: CanvasRenderingContext2D, shapes: Polygon[], scale: number, palette: Palette) {
   if (shapes.length === 0) return;
@@ -476,6 +493,9 @@ function hedges(ctx: CanvasRenderingContext2D, shapes: Polygon[], scale: number,
   ctx.stroke();
   ctx.fillStyle = palette.hedge;
   ctx.fill();
+  // Far out the clumps are a pixel or two and only cost; close in, only the ones on screen are built.
+  if (LEAF * scale < 4) return;
+  const view = visible(ctx);
   ctx.save();
   ctx.clip();
   ctx.fillStyle = palette.hedge_leaf;
@@ -483,8 +503,14 @@ function hedges(ctx: CanvasRenderingContext2D, shapes: Polygon[], scale: number,
   for (const shape of shapes) {
     const xs = shape.map((p) => p.x);
     const ys = shape.map((p) => p.y);
-    for (let x = Math.min(...xs) + LEAF / 2; x < Math.max(...xs); x += LEAF)
-      for (let y = Math.min(...ys) + LEAF / 2; y < Math.max(...ys); y += LEAF) {
+    const x0 = Math.min(...xs);
+    const y0 = Math.min(...ys);
+    const from_x = x0 + LEAF / 2 + Math.max(0, Math.ceil((view.x0 - x0 - LEAF) / LEAF)) * LEAF;
+    const from_y = y0 + LEAF / 2 + Math.max(0, Math.ceil((view.y0 - y0 - LEAF) / LEAF)) * LEAF;
+    const to_x = Math.min(Math.max(...xs), view.x1 + LEAF);
+    const to_y = Math.min(Math.max(...ys), view.y1 + LEAF);
+    for (let x = from_x; x < to_x; x += LEAF)
+      for (let y = from_y; y < to_y; y += LEAF) {
         const jitter = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453;
         const nudge = jitter - Math.floor(jitter);
         const r = LEAF * (0.3 + nudge * 0.22);

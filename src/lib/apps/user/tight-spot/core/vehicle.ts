@@ -194,7 +194,7 @@ export const FORKLIFT: VehicleSpec = {
   reverse_beeper: true,
 };
 
-export const CITY_CAR: VehicleSpec = {
+const CITY_CAR: VehicleSpec = {
   ...HATCHBACK,
   length: 3.6,
   width: 1.65,
@@ -207,7 +207,7 @@ export const CITY_CAR: VehicleSpec = {
   steer_time: 1,
 };
 
-export const SUV: VehicleSpec = {
+const SUV: VehicleSpec = {
   ...HATCHBACK,
   length: 4.75,
   width: 1.95,
@@ -221,7 +221,7 @@ export const SUV: VehicleSpec = {
   accel: 2.3,
 };
 
-export const LIMO: VehicleSpec = {
+const LIMO: VehicleSpec = {
   ...HATCHBACK,
   length: 8.2,
   width: 1.95,
@@ -239,7 +239,7 @@ export const LIMO: VehicleSpec = {
   accel: 1.8,
 };
 
-export const CAMPER: VehicleSpec = {
+const CAMPER: VehicleSpec = {
   ...VAN,
   length: 6.6,
   width: 2.1,
@@ -270,7 +270,7 @@ const TRUCK = {
   park_speed: 0.25,
 };
 
-export const GARBAGE_TRUCK: VehicleSpec = {
+const GARBAGE_TRUCK: VehicleSpec = {
   ...TRUCK,
   length: 9.4,
   wheelbase: 4.5,
@@ -279,7 +279,7 @@ export const GARBAGE_TRUCK: VehicleSpec = {
   steer_time: 1.5,
 };
 
-export const FIRE_ENGINE: VehicleSpec = {
+const FIRE_ENGINE: VehicleSpec = {
   ...TRUCK,
   length: 8.8,
   wheelbase: 4.2,
@@ -291,7 +291,7 @@ export const FIRE_ENGINE: VehicleSpec = {
 };
 
 /** Its tag axle trails the drive axle; the pose sits between the two, where a rigid pair turns without slip. */
-export const COACH: VehicleSpec = {
+const COACH: VehicleSpec = {
   ...BUS,
   length: 13.7,
   wheelbase: 7,
@@ -303,7 +303,7 @@ export const COACH: VehicleSpec = {
   accel: 1.3,
 };
 
-export const DOUBLE_DECKER: VehicleSpec = {
+const DOUBLE_DECKER: VehicleSpec = {
   ...BUS,
   length: 11.2,
   rear_overhang: 2.9,
@@ -332,7 +332,7 @@ export const TRACTOR: VehicleSpec = {
   park_speed: 0.3,
 };
 
-export const QUAD: VehicleSpec = {
+const QUAD: VehicleSpec = {
   drive: FRONT_STEER,
   length: 2.1,
   width: 1.2,
@@ -422,13 +422,13 @@ const BUS_REAR: TrailerSpec = {
 
 const TOWING = { max_forward: 6, max_reverse: 2.1, accel: 1.8 };
 
-export const HORSE_BOX_RIG: VehicleSpec = { ...SUV, ...TOWING, trailer: HORSE_BOX };
-export const TRACTOR_RIG: VehicleSpec = { ...TRACTOR, accel: 1.4, trailer: FARM_TRAILER };
-export const QUAD_RIG: VehicleSpec = { ...QUAD, max_forward: 5, max_reverse: 1.8, accel: 2, trailer: SMALL_TRAILER };
-export const BOAT_RIG: VehicleSpec = { ...PICKUP, ...TOWING, trailer: BOAT_TRAILER };
-export const CARAVAN_RIG: VehicleSpec = { ...HATCHBACK, ...TOWING, max_forward: 5.5, accel: 1.6, trailer: CARAVAN_TRAILER };
+const HORSE_BOX_RIG: VehicleSpec = { ...SUV, ...TOWING, trailer: HORSE_BOX };
+const TRACTOR_RIG: VehicleSpec = { ...TRACTOR, accel: 1.4, trailer: FARM_TRAILER };
+const QUAD_RIG: VehicleSpec = { ...QUAD, max_forward: 5, max_reverse: 1.8, accel: 2, trailer: SMALL_TRAILER };
+const BOAT_RIG: VehicleSpec = { ...PICKUP, ...TOWING, trailer: BOAT_TRAILER };
+const CARAVAN_RIG: VehicleSpec = { ...HATCHBACK, ...TOWING, max_forward: 5.5, accel: 1.6, trailer: CARAVAN_TRAILER };
 
-export const ARTICULATED_BUS: VehicleSpec = {
+const ARTICULATED_BUS: VehicleSpec = {
   ...BUS,
   length: 10.35,
   rear_overhang: 1.75,
