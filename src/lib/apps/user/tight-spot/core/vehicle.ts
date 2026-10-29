@@ -782,7 +782,7 @@ export const GT_CAR: VehicleSpec = {
   max_forward: 38,
   max_reverse: 3,
   accel: 8.5,
-  brake: 11,
+  brake: 18,
   rolling: 0.3,
   park_speed: 0.3,
   hitches: [],
