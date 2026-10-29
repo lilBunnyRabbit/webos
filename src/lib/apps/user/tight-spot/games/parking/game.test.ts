@@ -235,6 +235,19 @@ describe("vehicles", () => {
     expect(vehicles_for(null)).toContain(Vehicle.TOWING);
   });
 
+  test("the daily picks from the vehicles a kind's levels have, so new vehicles never change it", () => {
+    const picks = [104729, 209458, 418916, 523645, 628374, 942561, 1256748].map((seed) => {
+      const round = scenario_round(ANY, seed, "2026-10-29");
+      return `${round.scenario}:${round.vehicle}`;
+    });
+    expect(picks).toEqual(["narrow:hatch", "dead-end:van", "parallel:hatch", "narrow:pickup", "camping:caravan", "bus-stop:bus", "depot:bus"]);
+    for (let seed = 1; seed <= 200; seed++) {
+      const round = scenario_round(ANY, seed, "2026-10-29");
+      const info = SCENARIO_INFO[round.scenario!];
+      expect(info.ladder ?? info.vehicles).toContain(round.vehicle);
+    }
+  });
+
   test("a picked vehicle wins when the kind allows it; the seed still makes the rest", () => {
     const picked = scenario_round(Scenario.PARALLEL, 31, undefined, Vehicle.VAN);
     expect(picked.vehicle).toBe(Vehicle.VAN);

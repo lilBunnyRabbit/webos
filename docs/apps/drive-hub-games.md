@@ -92,7 +92,7 @@ Start from `games/forklift/game.svelte`. The pieces every game repeats:
 ## Testing and proofs
 
 - Pure logic in `.ts` with Node tests next to it: the builder (determinism, every slot fits and touches nothing, the start is clear), the rules (each action's conditions at their edges, contacts), scoring, levels.
-- **Prove it can be done from the real start.** Plan the whole round from the vehicle as `create_game` places it, with the bodies grown 5 cm, then replay every move in 15 cm pieces with the real bodies and no margin and judge the ends as a round would (`prove()`). Parking's cheaper "out of the bay" search is only sound with no trailer and only for one goal.
+- **Prove it can be done from the real start.** Plan the whole round from the vehicle as `create_game` places it, with the bodies grown 5 cm, then replay every move in 15 cm pieces with the real bodies and no margin and judge the ends as a round would (`prove()`). Parking's cheaper "out of the bay" search is only sound with no trailer and only for one goal, and a frame steer's way out must end with the joint straight (the round starts straight, and a bend at a standstill moves both frames).
 - **Search for a region, finish analytically.** A goal window of centimetres (forks in a pallet's pockets) is hard for a coarse search; `arrive` on "lined up with it" and a straight run in at the end found every leg.
 - **Test time:** each test at most a quarter of its timeout on the owner's machine (CI is two to three times slower); split long proofs over files so they run side by side. The forklift: 16 levels in two files at 0.7–10 s each, eight jobs and a daily in a third, 60 s timeouts.
 - Every level is proven; random rounds are sampled over fixed seeds.

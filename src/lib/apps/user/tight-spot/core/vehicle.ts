@@ -1319,7 +1319,7 @@ const FRAME_BEND_STEP = 0.02;
  * joint and the rear axle `b` behind it. Neither axle slides sideways, so the rear frame turns at
  * dθ = (v·sin γ − a·dγ) / (b·cos γ + a) and the front axle covers v·cos γ + b·dθ·sin γ: bending at a standstill swings
  * both frames about their axles. Over one call the bend and the rear axle's run (`run0` to `run1`, metres per call)
- * change linearly; RK4 in pieces of at most 2.5 cm or 0.6°.
+ * change linearly; RK4 in pieces of at most 5 cm or 1.1°.
  */
 function frame_move(
   from: Pose,

@@ -463,7 +463,7 @@ export function scenario_round(pick: ScenarioPick, seed: number, daily?: string,
     scenario,
     difficulty,
     seed,
-    vehicle: vehicle_for(scenario, seed, daily ? ANY : vehicle),
+    vehicle: daily ? ladder_vehicle(scenario, seed) : vehicle_for(scenario, seed, vehicle),
     ...(daily ? { daily } : {}),
   };
 }

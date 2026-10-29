@@ -71,13 +71,19 @@ export function reachable(state: GameState, from_start: boolean): boolean {
   const arrive = straight
     ? (at: Placement) => pull_up(at, bay, near, spec, body) !== null
     : (at: Placement) => parked_in(at, bay, spec);
+  // The round starts with a frame steer's joint straight, and bending standing still swings both frames, so the way out
+  // has to end straight too for its reverse to start where the round does.
+  const near_start = (at: Placement) =>
+    Math.hypot(at.x - world.start.x, at.y - world.start.y) <= OUT_REACH &&
+    angle_between(at.heading, world.start.heading) <= OUT_TURN &&
+    Math.abs(at.steer ?? 0) < 1e-9;
   // A few of the most central poses per way round: the search's coarse closed set can miss with one and not the next.
   const tried = new Map<number, number>();
   return parked_poses(bay, near, 0.05, spec).some((pose) => {
     const count = tried.get(pose.heading) ?? 0;
     if (count >= 3) return false;
     tried.set(pose.heading, count + 1);
-    if (!from_start && spec.hitches.length === 0) return plan(pose, world.start, near, { spec }) !== null;
+    if (!from_start && spec.hitches.length === 0) return plan(pose, world.start, near, { spec, arrive: near_start }) !== null;
     const found =
       plan(start, pose, near, { spec, arrive, directions: straight ? [1] : backs ? [-1] : undefined }) ??
       (backs ? plan(start, pose, near, { spec, arrive }) : null);
@@ -90,6 +96,8 @@ export function reachable(state: GameState, from_start: boolean): boolean {
 }
 
 const PIECE = 0.15;
+const OUT_REACH = 1.5;
+const OUT_TURN = Math.PI / 6;
 
 /** Drives the moves from the round's start in the search's own pieces and judges where they end as a round would. */
 function parks(state: GameState, moves: readonly Move[]): boolean {
