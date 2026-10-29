@@ -97,7 +97,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["tight-spot"],
-        text: "Drive Hub's open lot, in Tight Spot and Valet Rush, gains parallel bays let into the kerb along its side streets and underground garages with a ramp down and a pillar between every bay.",
+        text: "Drive Hub's open lot, in Tight Spot and Valet Rush, gains parallel bays let into the kerb along its side streets and underground garages with a ramp down and a pillar between every bay, and Tight Spot gains an Underground spot: down the ramp and in between two pillars with cars parked either side.",
       },
     ],
   },

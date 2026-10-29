@@ -69,6 +69,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - Bests are kept per spot and vehicle: fewest moves, then the quickest, plus the best precision you've reached there.
 - In **P** outside a bay the line at the bottom says what's off: not inside a bay, not straight, or facing the wrong way.
 - Parking sensors watch the bumper you're driving towards: the beeps quicken as it closes in on something and go steady under 30 cm. The garage is where you'll lean on them.
+- The **underground** garage: down the ramp, along the aisle and in between two pillars, with cars parked either side. Either way round counts.
 - The **end bay** sits in the corner of a full, narrow aisle with no room past it: get in with a few short moves, back and forth. Par allows two.
 
 ## Tight Spot modes

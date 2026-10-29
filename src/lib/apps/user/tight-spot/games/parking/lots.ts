@@ -619,6 +619,8 @@ export function build_lot(
       return rows(difficulty, rng, open, RowsKind.REVERSE, fit);
     case Scenario.PILLARS:
       return rows(difficulty, rng, open, RowsKind.PILLARS, fit);
+    case Scenario.UNDERGROUND:
+      return rows(difficulty, rng, open, RowsKind.GARAGE, fit);
     case Scenario.ANGLED:
       return angled(difficulty, rng, open, fit);
     case Scenario.GARAGE:

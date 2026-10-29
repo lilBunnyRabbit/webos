@@ -138,9 +138,11 @@ describe("rounds", () => {
     expect(seen.size).toBe(SCENARIOS.length);
   });
 
-  test("levels cover every scenario and get harder", () => {
+  test("levels cover every scenario but the underground garage, and get harder", () => {
     const rounds = Array.from({ length: LEVEL_COUNT }, (_, i) => level_round(i + 1));
-    expect(new Set(rounds.map((round) => round.scenario)).size).toBe(SCENARIOS.length);
+    const kinds = new Set(rounds.map((round) => round.scenario));
+    expect(kinds.has(Scenario.UNDERGROUND)).toBe(false);
+    expect(kinds.size).toBe(SCENARIOS.length - 1);
     expect(rounds[0].difficulty).toBe(0);
     expect(rounds[LEVEL_COUNT - 1].difficulty).toBe(1);
     expect(rounds.every((round) => round.mode === Mode.LEVELS)).toBe(true);
@@ -235,12 +237,13 @@ describe("vehicles", () => {
     expect(vehicles_for(null)).toContain(Vehicle.TOWING);
   });
 
+  // A new kind joins the pool and so moves every day's pick; a new vehicle never does.
   test("the daily picks from the vehicles a kind's levels have, so new vehicles never change it", () => {
     const picks = [104729, 209458, 418916, 523645, 628374, 942561, 1256748].map((seed) => {
       const round = scenario_round(ANY, seed, "2026-10-29");
       return `${round.scenario}:${round.vehicle}`;
     });
-    expect(picks).toEqual(["narrow:hatch", "dead-end:van", "parallel:hatch", "narrow:pickup", "camping:caravan", "bus-stop:bus", "depot:bus"]);
+    expect(picks).toEqual(["driveway:towing", "garage:van", "underground:pickup", "narrow:pickup", "garage:van", "pillars:van", "bus-stop:bus"]);
     for (let seed = 1; seed <= 200; seed++) {
       const round = scenario_round(ANY, seed, "2026-10-29");
       const info = SCENARIO_INFO[round.scenario!];
