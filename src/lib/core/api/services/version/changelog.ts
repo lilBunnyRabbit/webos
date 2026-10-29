@@ -7,7 +7,7 @@ export const CHANGELOG: Release[] = [
   {
     version: "3.88.0",
     date: "2026-10-29",
-    title: "Main street",
+    title: "Small town",
     changes: [
       {
         kind: IMPROVED,
@@ -47,7 +47,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["tight-spot"],
-        text: "Drive Hub's yard is now a street with a building for every game, and it grows longer as new games arrive.",
+        text: "Drive Hub's yard is now a small town round a square with the garage in the middle: every game has its own building shaped like what it is, signed at the door, in a district that grows as new games arrive.",
       },
       {
         kind: IMPROVED,

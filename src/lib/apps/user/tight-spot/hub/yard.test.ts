@@ -3,16 +3,39 @@ import { inside_convex, overlaps } from "../core/collision";
 import { bounds_of } from "../core/geometry";
 import { collide, obstacles } from "../core/obstacles";
 import { plan } from "../core/planner";
-import { bodies, Gear, NO_INPUT, rig_length, Vehicle, VEHICLES, type Car } from "../core/vehicle";
-import { build_yard, door_at, door_car, drive, GARAGE, gate_car, nose, on_pad, pad_car, pairs, place, type Yard } from "./yard";
+import { bodies, Gear, NO_INPUT, rig_length, Vehicle, VEHICLES, type Car, type VehicleSpec } from "../core/vehicle";
+import { Building } from "../games/define";
+import { build_yard, District, district_of, door_at, door_car, drive, GARAGE, gate_car, nose, on_pad, pad_car, place, type Yard } from "./yard";
 
-const YARD = build_yard(2);
-const STREET = build_yard(7, 1);
+const GAMES = [
+  { id: "parking", building: Building.CAR_PARK },
+  { id: "forklift", building: Building.WAREHOUSE },
+  { id: "f1", building: Building.TRACK },
+  { id: "ferry", building: Building.FERRY },
+  { id: "mower", building: Building.GARDEN },
+  { id: "airport", building: Building.APRON },
+  { id: "rodeo", building: Building.ARENA },
+  { id: "valet", building: Building.VALET_STAND },
+  { id: "test", building: Building.TEST_CENTRE },
+];
+const TOWN = build_yard(GAMES);
+// A grown town: a fifth Town game and a third Sport one (ids reused, only the district counts), two games no district
+// names and a shut lot.
+const GROWN = build_yard(
+  [
+    ...GAMES,
+    { id: "valet", building: Building.CAR_PARK },
+    { id: "rodeo", building: Building.TRACK },
+    { id: "zoo", building: Building.GARDEN },
+    { id: "mine", building: Building.WAREHOUSE },
+  ],
+  1
+);
 
 const SPECS = Object.entries(VEHICLES);
-const near = obstacles(YARD);
+const near = obstacles(TOWN);
 
-function clear(yard: Yard, car: Car, spec: (typeof VEHICLES)[keyof typeof VEHICLES]): boolean {
+function clear(yard: Yard, car: Car, spec: VehicleSpec): boolean {
   return collide(car, obstacles(yard), spec) === null;
 }
 
@@ -23,32 +46,50 @@ function in_doorway(yard: Yard, index: number): Car {
   return place({ x: mouth.x + Math.cos(facing) * back, y: mouth.y + Math.sin(facing) * back, heading: facing + Math.PI }, spec);
 }
 
+function doorway_goal(yard: Yard, index: number) {
+  const { mouth, facing } = yard.plots[index];
+  return { x: mouth.x + Math.cos(facing) * 3, y: mouth.y + Math.sin(facing) * 3, heading: facing + Math.PI };
+}
+
 describe("yard", () => {
-  test("a pair of buildings per two places, every game's open, the street growing east", () => {
-    for (let games = 1; games <= 9; games++) {
-      const yard = build_yard(games);
-      expect(yard.plots, `${games} games`).toHaveLength(pairs(games) * 2);
-      expect(yard.plots.filter((plot) => plot.open)).toHaveLength(games);
-      expect(yard.bounds.x1).toBeGreaterThan(Math.max(...yard.plots.flatMap((plot) => plot.shape.map((p) => p.x))));
-      for (let i = 0; i < yard.plots.length; i++) {
-        for (let j = i + 1; j < yard.plots.length; j++) expect(overlaps(yard.plots[i].shape, yard.plots[j].shape)).toBe(false);
-      }
-    }
-    expect(build_yard(4).bounds.x1).toBeGreaterThan(build_yard(2).bounds.x1);
-    expect(build_yard(3).bounds.x1).toBe(build_yard(4).bounds.x1);
+  test("each district has its row, the airport on the waterfront, an unnamed game a lot by the gate", () => {
+    expect(district_of("airport")).toBe(District.WATERFRONT);
+    expect(district_of("zoo")).toBe(District.LOTS);
+    const facing: Record<District, number> = { town: Math.PI / 2, sport: Math.PI, waterfront: -Math.PI / 2, industrial: 0, lots: 0 };
+    for (const plot of TOWN.plots) expect(plot.facing, plot.game ?? "").toBeCloseTo(facing[plot.district]);
+    expect(TOWN.plots.map((plot) => plot.game)).toEqual(GAMES.map((game) => game.id));
   });
 
-  test("the landing frames the gate and the first pair, not the whole street", () => {
-    for (const yard of [YARD, STREET]) {
+  test("a district grows along its row and the court with it; nothing overlaps", () => {
+    expect(GROWN.plots.filter((plot) => plot.district === District.TOWN)).toHaveLength(5);
+    expect(GROWN.plots.filter((plot) => plot.district === District.SPORT)).toHaveLength(3);
+    expect(GROWN.plots.filter((plot) => plot.district === District.LOTS)).toHaveLength(3);
+    expect(GROWN.court.x1 - GROWN.court.x0).toBeGreaterThan(TOWN.court.x1 - TOWN.court.x0);
+    expect(GROWN.court.y1 - GROWN.court.y0).toBeGreaterThan(TOWN.court.y1 - TOWN.court.y0);
+    for (const yard of [TOWN, GROWN]) {
+      const shapes = [...yard.plots.map((plot) => plot.shape), ...yard.houses.map((house) => house.shape)];
+      for (let i = 0; i < shapes.length; i++) {
+        for (let j = i + 1; j < shapes.length; j++) expect(overlaps(shapes[i], shapes[j]), `${i} and ${j}`).toBe(false);
+      }
+      for (const solid of yard.solids) {
+        const box = bounds_of(solid.shape);
+        expect(box.x0 >= yard.bounds.x0 - 1e-9 && box.x1 <= yard.bounds.x1 + 1e-9 && box.y0 >= yard.bounds.y0 - 1e-9 && box.y1 <= yard.bounds.y1 + 0.3).toBe(true);
+      }
+    }
+  });
+
+  test("the landing frames the gate and the plaza, not the whole town", () => {
+    for (const yard of [TOWN, GROWN]) {
       const { landing } = yard;
       expect(landing.x0).toBeLessThanOrEqual(yard.gate.x);
-      for (const plot of yard.plots.slice(0, 2)) expect(bounds_of(plot.shape).x1).toBeLessThanOrEqual(landing.x1);
+      const pad = bounds_of(yard.pad);
+      expect(pad.x1).toBeLessThanOrEqual(landing.x1);
+      expect(landing.x1 - landing.x0).toBeLessThan(yard.bounds.x1 - yard.bounds.x0);
     }
-    expect(STREET.landing.x1).toBeLessThan(STREET.bounds.x1 / 2);
   });
 
   test("every vehicle fits at the gate, out of each doorway and on the garage pad", () => {
-    for (const yard of [YARD, STREET]) {
+    for (const yard of [TOWN, GROWN]) {
       for (const [name, spec] of SPECS) {
         expect(clear(yard, gate_car(yard, spec), spec), `${name} at the gate`).toBe(true);
         expect(clear(yard, pad_car(yard, spec), spec), `${name} on the pad`).toBe(true);
@@ -57,6 +98,7 @@ describe("yard", () => {
           const car = door_car(yard, i, spec);
           expect(clear(yard, car, spec), `${name} out of door ${i}`).toBe(true);
           expect(door_at(yard, car, spec), `${name} out of door ${i} is past its apron`).toBeNull();
+          expect(on_pad(yard, car, spec), `${name} out of door ${i} isn't on the pad`).toBe(false);
         }
       }
     }
@@ -68,53 +110,58 @@ describe("yard", () => {
   });
 
   test("the pad sits on open ground, so a new vehicle never lands on something", () => {
-    for (const solid of YARD.solids) expect(overlaps(solid.shape, YARD.pad)).toBe(false);
+    for (const solid of TOWN.solids) expect(overlaps(solid.shape, TOWN.pad)).toBe(false);
   });
 
-  test("a doorway on either side of the street offers its game", () => {
-    for (let i = 0; i < STREET.plots.length - 1; i++) expect(door_at(STREET, in_doorway(STREET, i), VEHICLES.hatch)).toBe(i);
-  });
-
-  test("a closed building's doorway is shut and offers nothing", () => {
-    const spec = VEHICLES.hatch;
-    const closed = build_yard(1);
-    const at = in_doorway(closed, 1);
-    expect(door_at(YARD, at, spec)).toBe(1);
-    expect(door_at(closed, at, spec)).toBeNull();
-    expect(collide(at, obstacles(closed), spec)).not.toBeNull();
-    expect(collide(at, near, spec)).toBeNull();
-    expect(STREET.plots[7].open).toBe(false);
-  });
-
-  test("from the gate the hatchback reaches every doorway and the pad", () => {
-    const spec = VEHICLES.hatch;
-    const start = gate_car(YARD, spec);
-    for (let i = 0; i < YARD.plots.length; i++) {
-      const { mouth, facing } = YARD.plots[i];
-      const goal = { x: mouth.x + Math.cos(facing) * 3, y: mouth.y + Math.sin(facing) * 3, heading: facing + Math.PI };
-      const found = plan(start, goal, near, { spec, arrive: (pose) => door_at(YARD, pose, spec) === i });
-      expect(found, `door ${i}`).not.toBeNull();
-      expect(door_at(YARD, found!.path.at(-1)!, spec)).toBe(i);
+  test("every open doorway offers its game; a shut lot offers nothing", () => {
+    for (const yard of [TOWN, GROWN]) {
+      yard.plots.forEach((plot, i) => {
+        const at = in_doorway(yard, i);
+        if (plot.open) expect(door_at(yard, at, VEHICLES.hatch), plot.game ?? "").toBe(i);
+        else {
+          expect(door_at(yard, at, VEHICLES.hatch)).toBeNull();
+          expect(collide(at, obstacles(yard), VEHICLES.hatch)).not.toBeNull();
+        }
+      });
     }
-    const pad = plan(start, pad_car(YARD, spec), near, { spec, arrive: (pose) => on_pad(YARD, pose, spec) });
+    expect(GROWN.plots.at(-1)?.open).toBe(false);
+  });
+
+  // About 15 s at the yard's pace (the hatchback tops out at 8.4 m/s); the planner's path shuffles a little more than a driver.
+  test("from the gate the hatchback and the bus reach every doorway, the hatchback the pad, all a short drive", () => {
+    for (const [name, spec] of [
+      ["hatch", VEHICLES.hatch],
+      ["bus", VEHICLES.bus],
+    ] as const) {
+      const start = gate_car(TOWN, spec);
+      for (let i = 0; i < TOWN.plots.length; i++) {
+        const found = plan(start, doorway_goal(TOWN, i), near, { spec, arrive: (pose) => door_at(TOWN, pose, spec) === i });
+        expect(found, `${name} to door ${i}`).not.toBeNull();
+        expect(door_at(TOWN, found!.path.at(-1)!, spec)).toBe(i);
+        if (name === "hatch") expect(found!.moves.reduce((sum, move) => sum + Math.abs(move.distance), 0), `door ${i}`).toBeLessThan(110);
+      }
+    }
+    const spec = VEHICLES.hatch;
+    const pad = plan(gate_car(TOWN, spec), pad_car(TOWN, spec), near, { spec, arrive: (pose) => on_pad(TOWN, pose, spec) });
     expect(pad).not.toBeNull();
   });
 
   test("driving into a cone stops the car short of it and says where, and it backs away again", () => {
     const spec = VEHICLES.hatch;
-    const cone = YARD.cones[2];
-    expect(inside_convex(cone, YARD.pad)).toBe(false);
+    const cone = TOWN.cones[2];
+    expect(inside_convex(cone, TOWN.pad)).toBe(false);
     let car: Car = { ...place({ x: cone.x, y: cone.y + 6, heading: -Math.PI / 2 }, spec), gear: Gear.DRIVE };
+    expect(clear(TOWN, car, spec)).toBe(true);
     let hit = null;
-    for (let i = 0; i < 120 * 20 && !hit; i++) ({ car, hit } = drive(YARD, car, { ...NO_INPUT, throttle: 1 }, 1 / 120, spec));
+    for (let i = 0; i < 120 * 20 && !hit; i++) ({ car, hit } = drive(TOWN, car, { ...NO_INPUT, throttle: 1 }, 1 / 120, spec));
     expect(hit).not.toBeNull();
     expect(car.speed).toBe(0);
-    expect(clear(YARD, car, spec)).toBe(true);
+    expect(clear(TOWN, car, spec)).toBe(true);
     expect(nose(car, spec).y).toBeGreaterThan(cone.y);
     for (const body of bodies(car, spec)) expect(body.every((corner) => corner.y > cone.y - 1)).toBe(true);
     car = { ...car, gear: Gear.REVERSE };
     const before = car.y;
-    for (let i = 0; i < 120; i++) ({ car, hit } = drive(YARD, car, { ...NO_INPUT, throttle: 1 }, 1 / 120, spec));
+    for (let i = 0; i < 120; i++) ({ car, hit } = drive(TOWN, car, { ...NO_INPUT, throttle: 1 }, 1 / 120, spec));
     expect(hit).toBeNull();
     expect(car.y).toBeGreaterThan(before);
   });

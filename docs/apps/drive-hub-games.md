@@ -7,7 +7,7 @@ How to add a game to Drive Hub (`tight-spot`): the contract, what the driving co
 1. A brainstorm and the owner's grill for the game (round, scoring, controls, shell), as the forklift had.
 2. Any core change it needs lands first, in its own commit, with its own tests (the forklift's rear steer did).
 3. `games/{id}/`: `index.ts` (`define_game`), `game.svelte` (lazy), the world, the round model, `draw.ts`, tests and proofs.
-4. Register it in `games/index.ts` (`GAMES`, in yard order) and add its id to `GAME_CHOICES` if the `game` prop doesn't list it yet. Pick its `Building` kind (`games/define.ts`; the wave-3 kinds and the Test Centre have their roofs in `hub/draw.ts`; a new kind adds its roof there). The yard needs nothing: the street gets a plot per registered game and grows east on its own.
+4. Register it in `games/index.ts` (`GAMES`, in yard order) and add its id to `GAME_CHOICES` if the `game` prop doesn't list it yet. Pick its `Building` kind (`games/define.ts`); a new kind gets its plan in `hub/blueprints.ts` and its look in `hub/buildings.ts`. Give its id a district in `DISTRICTS` (`hub/yard.ts`): Town, Sport, Waterfront or Industrial; without one it gets a lot by the gate. The town needs nothing else: its district's row grows by a slot.
 5. Guide section, a section on [Drive Hub](tight-spot.md), changelog, ROADMAP line, ADR-087 revision.
 6. Visual check (below), then review.
 

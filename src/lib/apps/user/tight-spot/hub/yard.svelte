@@ -2,9 +2,8 @@
   import { GAMES, UPCOMING } from "../games";
   import { build_yard } from "./yard";
 
-  const YARD = build_yard(GAMES.length, UPCOMING.length);
+  const YARD = build_yard(GAMES, UPCOMING.length);
   const NAMES = YARD.plots.map((_, index) => GAMES[index]?.name ?? UPCOMING[index - GAMES.length] ?? null);
-  const BUILDINGS = YARD.plots.map((_, index) => GAMES[index]?.building ?? null);
 </script>
 
 <script lang="ts">
@@ -46,7 +45,7 @@
     without_creep,
     type Car,
   } from "../core/vehicle";
-  import { draw_yard } from "./draw";
+  import { draw_yard, StaticLayer } from "./draw";
   import { icon_image } from "./icons";
   import { door_at, door_car, drive, GARAGE, gate_car, on_pad, pad_car, shelf_of } from "./yard";
 
@@ -94,6 +93,7 @@
   let icons_ready = $state(0);
 
   let camera: Camera | null = null;
+  const layer = new StaticLayer();
   let readings = $state.raw<Record<End, number | null>>({ front: null, rear: null });
   let touching = false;
 
@@ -188,7 +188,7 @@
     return { ...insets, right: pedal_box.width + OVERLAY_GAP, left: Math.max(card_left, steer_box.width + OVERLAY_GAP) };
   }
 
-  // Until the first input the gate and the nearest buildings show; the street runs on east past them.
+  // Until the first input the gate, the square and the buildings nearest it show, not the whole town.
   function target_camera(): Camera {
     const insets = control_insets();
     if (!moved) {
@@ -222,7 +222,7 @@
         spec,
         names: NAMES,
         icons,
-        buildings: BUILDINGS,
+        layer,
         last: last_plot >= 0 ? last_plot : null,
         at_door: door,
         on_pad: at_pad,
@@ -435,7 +435,7 @@
       <div class="min-w-0 basis-full">
         <p class="text-base font-semibold">Drive Hub</p>
         <p class="text-ui text-foreground/80">
-          Drive into a lit doorway to play; each game has a building along the street. The garage pad by the gate swaps your vehicle, and the cones and bays are for practice.
+          Drive into a lit doorway to play; each game has a building round the square. The garage pad in the middle swaps your vehicle, and the practice lot on the quay has cones and bays.
         </p>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">

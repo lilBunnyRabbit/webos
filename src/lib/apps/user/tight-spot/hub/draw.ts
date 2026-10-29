@@ -1,24 +1,15 @@
-import type { Polygon, Vec } from "../core/geometry";
-import {
-  beams,
-  begin_frame,
-  contact_rings,
-  ground,
-  guides,
-  outlined,
-  path,
-  player,
-  sensor_arcs,
-  solids,
-  type Palette,
-  type View,
-} from "../core/draw";
+import { bounds_of, type Bounds, type Vec } from "../core/geometry";
+import { beams, begin_frame, contact_rings, ground, guides, path, player, sensor_arcs, solids, type Palette, type View } from "../core/draw";
 import type { End } from "../core/sensors";
 import { Gear, type Car, type Vehicle, type VehicleSpec } from "../core/vehicle";
-import { Building } from "../games/define";
-import type { Plot, Yard } from "./yard";
+import { RECESS } from "./blueprints";
+import { building, house, in_plan, shadow_of, tree } from "./buildings";
+import { District, to_town, type Plot, type Yard } from "./yard";
 
 const SOON = "Soon";
+// From this many pixels a metre the doorway's own sign reads, and the roof names give way to the buildings' look.
+const CLOSE = 14;
+const ROOF_ROOM = 15;
 
 export interface YardScene {
   yard: Yard;
@@ -29,13 +20,13 @@ export interface YardScene {
   names: (string | null)[];
   /** Per plot: the game's icon once it has decoded. */
   icons: (HTMLImageElement | null)[];
-  buildings: (Building | null)[];
   /** The plot of the game played last, whose door glows. */
   last: number | null;
   at_door: number | null;
   on_pad: boolean;
   /** `fade` runs from 1 at the touch down to 0. */
   contact: { at: Vec; fade: number } | null;
+  layer: StaticLayer;
 }
 
 export interface YardExtras {
@@ -43,6 +34,55 @@ export interface YardExtras {
   sensors: Record<End, number | null>;
   time: number;
   font: string;
+}
+
+/**
+ * The town that doesn't move (ground, buildings, houses, props), drawn once into a canvas a margin bigger than the
+ * view and copied each frame; it's drawn again when the view leaves it or the zoom, theme or font changes.
+ */
+export class StaticLayer {
+  private canvas: HTMLCanvasElement | null = null;
+  private key = "";
+  private palette: Palette | null = null;
+  private area: Bounds = { x0: 0, y0: 0, x1: 0, y1: 0 };
+
+  draw(ctx: CanvasRenderingContext2D, view: View, palette: Palette, key: string, limits: Bounds, paint: (layer: CanvasRenderingContext2D) => void) {
+    const { scale, dpr, width, height } = view;
+    const half_w = width / 2 / scale;
+    const half_h = height / 2 / scale;
+    const seen = {
+      x0: Math.max(limits.x0, view.x - half_w),
+      y0: Math.max(limits.y0, view.y - half_h),
+      x1: Math.min(limits.x1, view.x + half_w),
+      y1: Math.min(limits.y1, view.y + half_h),
+    };
+    if (seen.x0 >= seen.x1 || seen.y0 >= seen.y1) return;
+    const full_key = `${scale}|${dpr}|${key}`;
+    const { area } = this;
+    const fits = this.canvas && this.palette === palette && this.key === full_key && seen.x0 >= area.x0 && seen.y0 >= area.y0 && seen.x1 <= area.x1 && seen.y1 <= area.y1;
+    if (!fits) {
+      this.area = {
+        x0: Math.max(limits.x0, seen.x0 - half_w * 0.5),
+        y0: Math.max(limits.y0, seen.y0 - half_h * 0.5),
+        x1: Math.min(limits.x1, seen.x1 + half_w * 0.5),
+        y1: Math.min(limits.y1, seen.y1 + half_h * 0.5),
+      };
+      this.key = full_key;
+      this.palette = palette;
+      this.canvas ??= document.createElement("canvas");
+      this.canvas.width = Math.ceil((this.area.x1 - this.area.x0) * scale * dpr);
+      this.canvas.height = Math.ceil((this.area.y1 - this.area.y0) * scale * dpr);
+      const layer = this.canvas.getContext("2d");
+      if (!layer) return;
+      layer.setTransform(dpr * scale, 0, 0, dpr * scale, -this.area.x0 * scale * dpr, -this.area.y0 * scale * dpr);
+      paint(layer);
+    }
+    if (!this.canvas) return;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.canvas, dpr * (width / 2 + (this.area.x0 - view.x) * scale), dpr * (height / 2 + (this.area.y0 - view.y) * scale));
+    ctx.restore();
+  }
 }
 
 function to_screen(at: Vec, view: View): Vec {
@@ -55,338 +95,115 @@ function screen_text(ctx: CanvasRenderingContext2D, view: View, font: string) {
   ctx.textBaseline = "middle";
 }
 
-function label(ctx: CanvasRenderingContext2D, at: Vec, text: string, view: View, size: number, colour: string, font: string) {
-  const { x, y } = to_screen(at, view);
-  ctx.save();
-  screen_text(ctx, view, `600 ${size}px ${font}`);
-  ctx.textAlign = "center";
-  ctx.fillStyle = colour;
-  ctx.fillText(text, x, y);
-  ctx.restore();
+function plot_centre(plot: Plot): Vec {
+  const box = bounds_of(plot.shape);
+  const depth = Math.abs(Math.sin(plot.facing)) > 0.5 ? box.y1 - box.y0 : box.x1 - box.x0;
+  return to_town(plot, 0, -(depth + RECESS) / 2);
 }
 
-const extent = (shape: Polygon, axis: "x" | "y") => ({
-  min: Math.min(...shape.map((p) => p[axis])),
-  max: Math.max(...shape.map((p) => p[axis])),
-});
+// Far out a name on each roof, one size for all so the longest fits a building and neighbours never touch; close in a
+// lit sign in the doorway at a fixed size, so the building is named however near the camera is.
+function roof_size(ctx: CanvasRenderingContext2D, scene: YardScene, view: View, font: string): number {
+  const base = Math.max(9, Math.min(30, view.scale * 1.9));
+  ctx.save();
+  screen_text(ctx, view, `700 ${base}px ${font}`);
+  const widest = Math.max(...scene.names.map((name) => ctx.measureText(name ?? SOON).width + base * 1.45));
+  ctx.restore();
+  return Math.min(base, (base * ROOF_ROOM * view.scale) / widest);
+}
 
-// Sized to the building rather than the screen, like a name painted on its roof, so it reads from across the yard.
-function sign(ctx: CanvasRenderingContext2D, scene: YardScene, index: number, view: View, palette: Palette, font: string) {
+function sign(ctx: CanvasRenderingContext2D, scene: YardScene, index: number, view: View, palette: Palette, font: string, roof: number) {
   const plot = scene.yard.plots[index];
-  const across = extent(plot.shape, "x");
-  const depth = extent(plot.shape, "y");
-  const recess = extent(plot.recess, "y");
-  const roof = plot.facing > 0 ? { min: depth.min, max: recess.min } : { min: recess.max, max: depth.max };
-  const centre = to_screen({ x: plot.mouth.x, y: (roof.min + roof.max) / 2 }, view);
-  const room = (across.max - across.min) * view.scale * 0.86;
   const icon = plot.open ? scene.icons[index] : null;
   const name = scene.names[index] ?? SOON;
-  const subtitle = !plot.open && scene.names[index] !== null;
-  let size = Math.max(13, Math.min(44, view.scale * 2.2));
+  const close = view.scale >= CLOSE;
+  const size = close ? Math.max(12, Math.min(15, view.scale * 0.5)) : roof;
   ctx.save();
   screen_text(ctx, view, `700 ${size}px ${font}`);
-  const measure = () => ctx.measureText(name).width + (icon ? size * 1.5 : 0);
-  const wide = measure();
-  if (wide > room) {
-    size = Math.max(8, size * (room / wide));
-    ctx.font = `700 ${size}px ${font}`;
+  const width = ctx.measureText(name).width + (icon ? size * 1.45 : 0);
+  const centre = to_screen(close ? to_town(plot, 0, -RECESS / 2) : plot_centre(plot), view);
+  const shut = !plot.open && scene.names[index] !== null;
+  // Too far out for a name that won't run into the next roof's: the icon alone, still the building's own.
+  if (!close && size < 8) {
+    if (icon && icon.complete && icon.naturalWidth) {
+      const side = Math.max(10, Math.min(16, view.scale * 3));
+      ctx.beginPath();
+      ctx.arc(centre.x, centre.y, side * 0.75, 0, Math.PI * 2);
+      ctx.fillStyle = palette.void;
+      ctx.globalAlpha = 0.75;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.drawImage(icon, centre.x - side / 2, centre.y - side / 2, side, side);
+    }
+    ctx.restore();
+    return;
   }
-  const width = measure();
-  const sub = subtitle ? size * 0.62 : 0;
-  const y = centre.y - sub * 0.6;
-  let x = centre.x - width / 2;
+  const x0 = centre.x - width / 2;
+  if (close) {
+    const pad = size * 0.5;
+    ctx.beginPath();
+    ctx.roundRect(x0 - pad, centre.y - size * 0.95, width + pad * 2, size * 1.9, size * 0.5);
+    ctx.fillStyle = palette.void;
+    ctx.globalAlpha = 0.86;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = plot.open ? palette.target : palette.faint;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
   if (icon && icon.complete && icon.naturalWidth) {
-    const box = size * 1.2;
-    ctx.drawImage(icon, x, y - box / 2, box, box);
+    const side = size * 1.15;
+    ctx.drawImage(icon, x0, centre.y - side / 2, side, side);
   }
-  if (icon) x += size * 1.5;
   ctx.textAlign = "left";
+  const x = x0 + (icon ? size * 1.45 : 0);
+  if (!close) {
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(2, size * 0.22);
+    ctx.strokeStyle = palette.void;
+    ctx.globalAlpha = 0.75;
+    ctx.strokeText(name, x, centre.y);
+    ctx.globalAlpha = 1;
+  }
   ctx.fillStyle = plot.open ? palette.paint : palette.faint;
-  ctx.fillText(name, x, y);
-  if (subtitle) {
-    ctx.font = `600 ${sub}px ${font}`;
+  ctx.fillText(name, x, centre.y);
+  if (shut) {
+    ctx.font = `600 ${size * 0.62}px ${font}`;
     ctx.textAlign = "center";
-    ctx.fillText(SOON, centre.x, y + size * 0.62 + sub * 0.5);
+    ctx.fillText(SOON, centre.x, centre.y + size * 1.05);
   }
-  ctx.restore();
-}
-
-interface Local {
-  plot: Plot;
-  x0: number;
-  x1: number;
-  top: number;
-  front: number;
-}
-
-// Buildings are drawn as if on the north side, doorway facing south; one on the south side is drawn through a mirror
-// across the street, so every roof and doorway is written once.
-function upright(ctx: CanvasRenderingContext2D, scene: YardScene, index: number, draw: (local: Local) => void) {
-  const plot = scene.yard.plots[index];
-  const { y0, y1 } = scene.yard.bounds;
-  const south = plot.facing < 0;
-  const flip = (p: Vec) => (south ? { x: p.x, y: y0 + y1 - p.y } : p);
-  const local = {
-    ...plot,
-    shape: plot.shape.map(flip),
-    door: plot.door.map(flip),
-    recess: plot.recess.map(flip),
-    mouth: flip(plot.mouth),
-  };
-  const across = extent(local.shape, "x");
-  ctx.save();
-  if (south) {
-    ctx.translate(0, y0 + y1);
-    ctx.scale(1, -1);
-  }
-  draw({ plot: local, x0: across.min, x1: across.max, top: extent(local.shape, "y").min, front: local.mouth.y });
   ctx.restore();
 }
 
 // The light inside a doorway spills out over its apron, so an open building shows where to drive in.
 function doorway(ctx: CanvasRenderingContext2D, scene: YardScene, index: number, scale: number, pulse: number, palette: Palette) {
+  const plot = scene.yard.plots[index];
   const active = scene.at_door === index;
   const glow = active || scene.last === index;
-  upright(ctx, scene, index, ({ plot }) => {
-    const back = extent(plot.recess, "y").min;
-    const light = ctx.createLinearGradient(0, back, 0, extent(plot.door, "y").max);
+  in_plan(ctx, plot, () => {
+    const light = ctx.createLinearGradient(0, -RECESS, 0, 4);
     light.addColorStop(0, palette.target);
     light.addColorStop(1, palette.glow_clear);
-    ctx.globalAlpha = glow ? 0.5 + 0.2 * pulse : 0.36;
-    path(ctx, plot.door);
+    ctx.globalAlpha = glow ? 0.5 + 0.2 * pulse : 0.3;
     ctx.fillStyle = light;
-    ctx.fill();
+    ctx.fillRect(-3, -RECESS, 6, RECESS + 4);
     ctx.globalAlpha = 1;
-    const side = extent(plot.recess, "x");
     ctx.strokeStyle = palette.target;
     ctx.lineCap = "round";
-    ctx.lineWidth = Math.max(0.3, 4 / scale);
+    ctx.lineWidth = Math.max(0.25, 4 / scale);
     ctx.beginPath();
-    ctx.moveTo(side.min + 0.6, back + 0.15);
-    ctx.lineTo(side.max - 0.6, back + 0.15);
+    ctx.moveTo(-2.4, -RECESS + 0.15);
+    ctx.lineTo(2.4, -RECESS + 0.15);
     ctx.stroke();
     ctx.globalAlpha = glow ? 0.7 + 0.3 * pulse : 1;
-    path(ctx, plot.door);
     ctx.strokeStyle = glow ? palette.target : palette.free;
     ctx.lineJoin = "round";
     ctx.lineWidth = Math.max(0.12, 2 / scale);
     ctx.setLineDash(active ? [] : [0.6, 0.4]);
-    ctx.stroke();
+    ctx.strokeRect(-3, -RECESS, 6, RECESS + 4);
     ctx.setLineDash([]);
     ctx.globalAlpha = 1;
   });
-}
-
-function shutter(ctx: CanvasRenderingContext2D, { plot }: Local, scale: number, palette: Palette) {
-  const { mouth } = plot;
-  ctx.strokeStyle = palette.wall_edge;
-  ctx.lineWidth = Math.max(0.06, 1 / scale);
-  ctx.beginPath();
-  for (let y = mouth.y - 4.6; y < mouth.y; y += 0.5) {
-    ctx.moveTo(mouth.x - 2.9, y);
-    ctx.lineTo(mouth.x + 2.9, y);
-  }
-  ctx.stroke();
-}
-
-const WING_TOP = 5.4;
-const WING_BOTTOM = 10.8;
-const DOOR_CLEAR = 3.4;
-
-function wings(local: Local): { x0: number; x1: number }[] {
-  const mid = local.plot.mouth.x;
-  return [
-    { x0: local.x0 + 0.6, x1: mid - DOOR_CLEAR },
-    { x0: mid + DOOR_CLEAR, x1: local.x1 - 0.6 },
-  ];
-}
-
-// A car park reads from above by the bays painted on its roof deck.
-function roof_bays(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { x0, x1, top, plot } = local;
-  ctx.strokeStyle = palette.faint;
-  ctx.lineWidth = Math.max(0.08, 1.25 / scale);
-  ctx.beginPath();
-  for (let x = x0 + 1; x <= x1 - 1 + 1e-9; x += 2.5) {
-    if (Math.abs(x - plot.mouth.x) < 3.6) continue;
-    ctx.moveTo(x, top + 5.2);
-    ctx.lineTo(x, top + 10.4);
-  }
-  ctx.stroke();
-}
-
-// A warehouse reads from above by its ribbed roof and a row of skylights either side of the sign.
-function roof_ribs(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { x0, x1, top, plot } = local;
-  ctx.strokeStyle = palette.faint;
-  ctx.lineWidth = Math.max(0.05, 1 / scale);
-  ctx.beginPath();
-  for (let x = x0 + 0.6; x < x1 - 0.3; x += 0.6) {
-    if (Math.abs(x - plot.mouth.x) < 3.3) continue;
-    ctx.moveTo(x, top + 5.6);
-    ctx.lineTo(x, top + 10.8);
-  }
-  ctx.stroke();
-  ctx.fillStyle = palette.faint;
-  ctx.globalAlpha = 0.5;
-  for (const x of [x0 + 1.2, x1 - 3.2]) ctx.fillRect(x, top + 6.6, 2, 3.2);
-  ctx.globalAlpha = 1;
-}
-
-function awning(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { top } = local;
-  ctx.fillStyle = palette.faint;
-  ctx.globalAlpha = 0.55;
-  for (const wing of wings(local)) {
-    for (let x = wing.x0; x + 0.6 <= wing.x1 + 1e-9; x += 1.2) ctx.fillRect(x, top + WING_TOP, 0.6, WING_BOTTOM - WING_TOP);
-  }
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = palette.faint;
-  ctx.lineWidth = Math.max(0.06, 1 / scale);
-  for (const wing of wings(local)) ctx.strokeRect(wing.x0, top + WING_TOP, wing.x1 - wing.x0, WING_BOTTOM - WING_TOP);
-}
-
-function apron(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { top } = local;
-  const [left, right] = wings(local);
-  const cy = top + (WING_TOP + WING_BOTTOM) / 2;
-  const r = Math.min((left.x1 - left.x0) / 2, (WING_BOTTOM - WING_TOP) / 2) - 0.2;
-  const cx = (left.x0 + left.x1) / 2;
-  ctx.lineWidth = Math.max(0.06, 1.25 / scale);
-  ctx.strokeStyle = palette.faint;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + r * Math.cos(-0.7), cy + r * Math.sin(-0.7));
-  ctx.stroke();
-  ctx.beginPath();
-  for (let y = top + WING_TOP + 0.4; y < top + WING_BOTTOM; y += 1.2) {
-    ctx.moveTo(right.x0, y);
-    ctx.lineTo(right.x1, y);
-  }
-  ctx.setLineDash([0.8, 0.5]);
-  ctx.stroke();
-  ctx.setLineDash([]);
-}
-
-function waves(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { top } = local;
-  ctx.strokeStyle = palette.water_edge;
-  ctx.lineWidth = Math.max(0.08, 1.5 / scale);
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  for (const wing of wings(local)) {
-    for (let y = top + WING_TOP + 0.8; y < top + WING_BOTTOM; y += 1.6) {
-      ctx.moveTo(wing.x0, y);
-      for (let x = wing.x0; x + 1 <= wing.x1 + 1e-9; x += 1) ctx.quadraticCurveTo(x + 0.5, y + ((x - wing.x0) % 2 < 1 ? -0.45 : 0.45), x + 1, y);
-    }
-  }
-  ctx.stroke();
-}
-
-function shrubs(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { top } = local;
-  ctx.lineWidth = Math.max(0.05, 1 / scale);
-  for (const wing of wings(local)) {
-    for (let row = 0, y = top + WING_TOP + 0.9; y < top + WING_BOTTOM - 0.5; row++, y += 1.7) {
-      for (let x = wing.x0 + 0.8 + (row % 2) * 0.85; x < wing.x1 - 0.5; x += 1.7) {
-        ctx.beginPath();
-        ctx.arc(x, y, 0.65, 0, Math.PI * 2);
-        ctx.fillStyle = palette.hedge;
-        ctx.fill();
-        ctx.strokeStyle = palette.hedge_edge;
-        ctx.stroke();
-      }
-    }
-  }
-}
-
-function stands(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { top } = local;
-  ctx.strokeStyle = palette.faint;
-  ctx.lineWidth = Math.max(0.06, 1 / scale);
-  ctx.beginPath();
-  for (const wing of wings(local)) {
-    for (let y = top + WING_TOP + 0.3; y < top + WING_BOTTOM; y += 1.1) {
-      ctx.moveTo(wing.x0, y);
-      ctx.lineTo(wing.x1, y);
-    }
-  }
-  ctx.stroke();
-  ctx.fillStyle = palette.faint;
-  for (const wing of wings(local)) {
-    for (let y = top + WING_TOP + 0.85; y < top + WING_BOTTOM; y += 1.1) {
-      for (let x = wing.x0 + 0.3; x < wing.x1; x += 0.7) ctx.fillRect(x - 0.15, y - 0.15, 0.3, 0.3);
-    }
-  }
-}
-
-function chequers(ctx: CanvasRenderingContext2D, local: Local, palette: Palette) {
-  const { top } = local;
-  const square = 0.8;
-  const y0 = top + (WING_TOP + WING_BOTTOM) / 2 - square;
-  ctx.fillStyle = palette.faint;
-  for (const wing of wings(local)) {
-    for (let i = 0, x = wing.x0; x + square <= wing.x1 + 1e-9; i++, x += square) {
-      ctx.fillRect(x, y0 + (i % 2) * square, square, square);
-    }
-  }
-}
-
-// A test centre's roof is painted like the road it examines: a dashed centre line and a zebra on each wing.
-function crossing(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
-  const { top } = local;
-  const y = top + (WING_TOP + WING_BOTTOM) / 2;
-  ctx.strokeStyle = palette.faint;
-  ctx.lineWidth = Math.max(0.12, 1.5 / scale);
-  ctx.setLineDash([1, 0.8]);
-  ctx.beginPath();
-  for (const wing of wings(local)) {
-    ctx.moveTo(wing.x0, y);
-    ctx.lineTo(wing.x1, y);
-  }
-  ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = palette.faint;
-  for (const wing of wings(local)) {
-    const middle = (wing.x0 + wing.x1) / 2;
-    for (let x = middle - 2.1; x < middle + 2; x += 0.9) ctx.fillRect(x, top + WING_TOP + 0.3, 0.45, WING_BOTTOM - WING_TOP - 0.6);
-  }
-}
-
-// The new games' roofs: a valet stand's striped awning, an apron's radar dome and lead-in lines, a ferry deck's water,
-// a garden's shrubs, an arena's tiers of seats, a race track's chequers, a test centre's road markings.
-function roof(ctx: CanvasRenderingContext2D, building: Building | null, local: Local, scale: number, palette: Palette) {
-  switch (building) {
-    case Building.CAR_PARK:
-      return roof_bays(ctx, local, scale, palette);
-    case Building.WAREHOUSE:
-      return roof_ribs(ctx, local, scale, palette);
-    case Building.VALET_STAND:
-      return awning(ctx, local, scale, palette);
-    case Building.APRON:
-      return apron(ctx, local, scale, palette);
-    case Building.FERRY:
-      return waves(ctx, local, scale, palette);
-    case Building.GARDEN:
-      return shrubs(ctx, local, scale, palette);
-    case Building.ARENA:
-      return stands(ctx, local, scale, palette);
-    case Building.TRACK:
-      return chequers(ctx, local, palette);
-    case Building.TEST_CENTRE:
-      return crossing(ctx, local, scale, palette);
-  }
-}
-
-function buildings(ctx: CanvasRenderingContext2D, scene: YardScene, scale: number, palette: Palette) {
-  outlined(ctx, scene.yard.structures, palette.pavement, palette.wall_edge, 3 / scale);
-  scene.yard.plots.forEach((plot, index) =>
-    upright(ctx, scene, index, (local) => {
-      if (!plot.open) shutter(ctx, local, scale, palette);
-      else roof(ctx, scene.buildings[index], local, scale, palette);
-    })
-  );
 }
 
 // Drawn bigger than they are when the view is far out (a cone the size of a pixel is no slalom), but never into each other.
@@ -426,27 +243,115 @@ function cones(ctx: CanvasRenderingContext2D, at: Vec[], scale: number, palette:
   }
 }
 
-function bollards(ctx: CanvasRenderingContext2D, at: Vec[], scale: number, palette: Palette) {
-  const r = Math.max(0.24, Math.min(0.75, 5.5 / scale));
-  const line = Math.max(0.05, 1.25 / scale);
-  for (const post of at) {
+// The ground tells the districts apart: grass round the sport grounds, hatching on the industrial yard, planks on the quay.
+function districts(ctx: CanvasRenderingContext2D, yard: Yard, scale: number, palette: Palette) {
+  const line = Math.max(0.05, 1 / scale);
+  for (const { district, area } of yard.districts) {
+    const { x0, y0, x1, y1 } = area;
+    if (district === District.SPORT) {
+      ctx.fillStyle = palette.grass;
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    } else if (district === District.INDUSTRIAL) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(x0, y0, x1 - x0, y1 - y0);
+      ctx.clip();
+      ctx.strokeStyle = palette.warning;
+      ctx.globalAlpha = 0.18;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      for (let d = x0 - (y1 - y0); d < x1; d += 2.2) {
+        ctx.moveTo(d, y1);
+        ctx.lineTo(d + (y1 - y0), y0);
+      }
+      ctx.stroke();
+      ctx.restore();
+    } else if (district === District.WATERFRONT) {
+      ctx.fillStyle = palette.wood;
+      ctx.globalAlpha = 0.18;
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.globalAlpha = 0.3;
+      ctx.strokeStyle = palette.wood;
+      ctx.lineWidth = line;
+      ctx.beginPath();
+      for (let x = x0 + 1.2; x < x1; x += 1.2) {
+        ctx.moveTo(x, y0);
+        ctx.lineTo(x, y1);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+  }
+  const r = Math.max(0.22, Math.min(0.5, 4 / scale));
+  for (let x = 2; x < yard.bounds.x1 - 1; x += 6) {
     ctx.beginPath();
-    ctx.arc(post.x + r * 0.25, post.y + r * 0.35, r, 0, Math.PI * 2);
-    ctx.fillStyle = palette.shadow;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(post.x, post.y, r, 0, Math.PI * 2);
+    ctx.arc(x, yard.quay - 0.6, r, 0, Math.PI * 2);
     ctx.fillStyle = palette.pillar;
     ctx.fill();
     ctx.strokeStyle = palette.ink;
-    ctx.lineWidth = line;
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(post.x, post.y, r * 0.62, 0, Math.PI * 2);
-    ctx.strokeStyle = palette.warning;
-    ctx.lineWidth = r * 0.34;
+    ctx.lineWidth = Math.max(0.04, 1 / scale);
     ctx.stroke();
   }
+}
+
+function plaza(ctx: CanvasRenderingContext2D, yard: Yard, scale: number, palette: Palette) {
+  const { plaza: square } = yard;
+  const centre = { x: (square.x0 + square.x1) / 2, y: (square.y0 + square.y1) / 2 };
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(square.x0, square.y0, square.x1 - square.x0, square.y1 - square.y0);
+  ctx.clip();
+  ctx.strokeStyle = palette.faint;
+  ctx.globalAlpha = 0.3;
+  ctx.lineWidth = Math.max(0.05, 1 / scale);
+  ctx.beginPath();
+  for (let r = 9; r < 30; r += 2.5) {
+    ctx.moveTo(centre.x + r, centre.y);
+    ctx.arc(centre.x, centre.y, r, 0, Math.PI * 2);
+  }
+  ctx.stroke();
+  ctx.restore();
+  ctx.strokeStyle = palette.kerb;
+  ctx.lineWidth = Math.max(0.15, 3 / scale);
+  ctx.strokeRect(square.x0, square.y0, square.x1 - square.x0, square.y1 - square.y0);
+  path(ctx, yard.pad);
+  ctx.fillStyle = palette.asphalt;
+  ctx.fill();
+}
+
+function town(ctx: CanvasRenderingContext2D, yard: Yard, scale: number, palette: Palette, font: string) {
+  ground(ctx, yard.surfaces, yard.marks, scale, palette);
+  districts(ctx, yard, scale, palette);
+  plaza(ctx, yard, scale, palette);
+  solids(ctx, yard.props, scale, palette);
+  ctx.fillStyle = palette.shadow;
+  for (const shape of [...yard.plots.flatMap(shadow_of), ...yard.houses.map((each) => each.shape)]) {
+    ctx.beginPath();
+    shape.forEach((p, i) => (i ? ctx.lineTo(p.x + 0.45, p.y + 0.6) : ctx.moveTo(p.x + 0.45, p.y + 0.6)));
+    ctx.closePath();
+    ctx.fill();
+  }
+  for (const each of yard.houses) house(ctx, each, scale, palette);
+  for (const at of yard.trees) tree(ctx, at, scale, palette);
+  for (const plot of yard.plots) building(ctx, plot, scale, palette);
+  cones(ctx, yard.cones, scale, palette);
+  const box = bounds_of(yard.pad);
+  const size = Math.max(10, Math.min(15, scale * 0.9));
+  // Far out a 1.4 m drop is less than the text's own height, so the name would sit on the pad's edge.
+  const drop = Math.max(1.4, (size * 0.5 + 5) / scale);
+  label(ctx, { x: (box.x0 + box.x1) / 2, y: box.y0 + drop }, "Garage", size, palette.paint, font, scale);
+}
+
+function label(ctx: CanvasRenderingContext2D, at: Vec, text: string, size: number, colour: string, font: string, scale: number) {
+  ctx.save();
+  ctx.translate(at.x, at.y);
+  ctx.scale(1 / scale, 1 / scale);
+  ctx.font = `600 ${size}px ${font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = colour;
+  ctx.fillText(text, 0, 0);
+  ctx.restore();
 }
 
 function pad(ctx: CanvasRenderingContext2D, scene: YardScene, scale: number, pulse: number, palette: Palette) {
@@ -463,24 +368,15 @@ export function draw_yard(ctx: CanvasRenderingContext2D, scene: YardScene, view:
   const { scale } = view;
   const { yard, car, spec } = scene;
   begin_frame(ctx, view, palette);
-  ground(ctx, yard.surfaces, yard.marks, scale, palette);
+  scene.layer.draw(ctx, view, palette, extras.font, yard.bounds, (layer) => town(layer, yard, scale, palette, extras.font));
   const pulse = 0.5 + 0.5 * Math.sin(extras.time * 3);
   pad(ctx, scene, scale, pulse, palette);
-  const top = yard.pad.reduce((min, p) => Math.min(min, p.y), Infinity);
-  const mid = yard.pad.reduce((sum, p) => sum + p.x, 0) / yard.pad.length;
-  const garage_size = Math.max(10, Math.min(15, scale * 0.9));
-  // Far out a 1.4 m drop is less than the text's own height, so the name would sit on the pad's edge.
-  const drop = Math.max(1.4, (garage_size * 0.5 + 5) / scale);
-  label(ctx, { x: mid, y: top + drop }, "Garage", view, garage_size, palette.paint, extras.font);
   yard.plots.forEach((plot, index) => {
     if (plot.open) doorway(ctx, scene, index, scale, pulse, palette);
   });
-
   if (palette.beams) beams(ctx, car, spec, palette);
-  buildings(ctx, scene, scale, palette);
-  solids(ctx, yard.props, scale, palette);
-  cones(ctx, yard.cones, scale, palette);
-  bollards(ctx, yard.bollards, scale, palette);
+  const roof = roof_size(ctx, scene, view, extras.font);
+  yard.plots.forEach((_, index) => sign(ctx, scene, index, view, palette, extras.font, roof));
 
   if (extras.guides && car.gear !== Gear.PARK) guides(ctx, car, spec, scale, palette);
   player(ctx, car, scene.vehicle, spec, car.brake > 0.05 && car.gear !== Gear.PARK, scale, palette, extras.time);
@@ -491,6 +387,4 @@ export function draw_yard(ctx: CanvasRenderingContext2D, scene: YardScene, view:
     contact_rings(ctx, scene.contact.at, pulse, scale, palette);
     ctx.globalAlpha = 1;
   }
-
-  yard.plots.forEach((_, index) => sign(ctx, scene, index, view, palette, extras.font));
 }
