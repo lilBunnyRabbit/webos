@@ -11,9 +11,11 @@
     onmute: () => void;
     onfocus: () => void;
     panel?: HTMLDivElement;
+    /** Only the games that honour it show the Turn view switch. */
+    turn_view?: boolean;
   }
 
-  let { settings, input, onmute, onfocus, panel = $bindable() }: Props = $props();
+  let { settings, input, onmute, onfocus, panel = $bindable(), turn_view = false }: Props = $props();
 
   const uid = $props.id();
   const WHEEL_OPTIONS = [
@@ -73,6 +75,12 @@
       <span class="flex flex-col">Zoom with speed <span class="text-2xs text-foreground/65">The view pulls back as you go faster</span></span>
       <Switch bind:checked={() => settings.speed_zoom, (value: boolean) => toggle("speed_zoom", value)} />
     </label>
+    {#if turn_view}
+      <label class="flex items-center justify-between gap-3 text-ui">
+        <span class="flex flex-col">Turn view with car <span class="text-2xs text-foreground/65">The car points up and the track turns round it</span></span>
+        <Switch bind:checked={() => settings.turn_view, (value: boolean) => toggle("turn_view", value)} />
+      </label>
+    {/if}
     <p class="mt-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Driving</p>
     <label class="flex items-center justify-between gap-3 text-ui">
       <span class="flex flex-col">Creep <span class="text-2xs text-foreground/65">D and R roll without gas, like an automatic</span></span>

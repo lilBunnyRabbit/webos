@@ -56,8 +56,10 @@
     type GameState,
     type Shift,
   } from "./game";
+  import { overview, overview_focus } from "./street";
 
   const OVERVIEW_MARGIN = 2;
+  const UNBOUNDED = { x0: -Infinity, y0: -Infinity, x1: Infinity, y1: Infinity };
   const DAILY_MODE = "valet";
   const SHOWN_TICKETS = 4;
   const NOTE_MS = 3500;
@@ -196,19 +198,24 @@
     return { ...insets, right: pedal_box.width + OVERLAY_GAP, left: Math.max(card_left, steer_box.width + OVERLAY_GAP) };
   }
 
-  // Between cars the whole street shows, so the waiting owners' cars are in sight; with a car in hand it follows.
+  // Between cars the whole street shows, so the waiting owners' cars are in sight, and as much of the garage floors
+  // with cars on them as that leaves room for; with a car in hand it follows.
   function target_camera(): Camera {
     const insets = control_insets();
-    const { bounds } = game.street.world;
     const following = game.job && (game.status === Status.DRIVING || (game.status === Status.PAUSED && game.resume === Status.DRIVING));
     if (!following) {
-      const middle = { x: (bounds.x0 + bounds.x1) / 2, y: (bounds.y0 + bounds.y1) / 2 };
-      return frame(bounds, middle, board_size.width, board_size.height, zoom, insets, fit_span(bounds, board_size.width, board_size.height, insets, OVERVIEW_MARGIN));
+      const parked = game.tickets.flatMap((ticket) => (ticket.parked ? [ticket.parked] : []));
+      const view = overview(game.street.world, parked);
+      const span = fit_span(view.street, board_size.width, board_size.height, insets, OVERVIEW_MARGIN);
+      const scale = Math.max(1, Math.min(board_size.width, board_size.height)) / (span / zoom);
+      const half_width = Math.max(1, board_size.width - insets.left - insets.right) / 2 / scale - OVERVIEW_MARGIN;
+      const half_height = Math.max(1, board_size.height - insets.top - insets.bottom) / 2 / scale - OVERVIEW_MARGIN;
+      return frame(UNBOUNDED, overview_focus(view, half_width, half_height), board_size.width, board_size.height, zoom, insets, span);
     }
     const centre = body_centre(game.car, spec);
     const ahead = game.car.speed * 0.8;
     const focus = { x: centre.x + Math.cos(game.car.heading) * ahead, y: centre.y + Math.sin(game.car.heading) * ahead };
-    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, view_span(rig_length(spec)));
+    return frame(game.street.world.bounds, focus, board_size.width, board_size.height, zoom, insets, view_span(rig_length(spec)));
   }
 
   function render(dt: number) {

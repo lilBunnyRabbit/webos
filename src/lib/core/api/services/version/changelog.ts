@@ -24,6 +24,16 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Tight Spot's level and spot achievements count the right number, and the hardest levels have an achievement of their own.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Hot Lap has a Turn view with car setting: the track turns round the car so its nose always points up the screen.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Valet Rush's view of the street between cars stays big and centred on a phone when the lot has underground garages.",
+      },
     ],
   },
   {

@@ -43,6 +43,7 @@
   import { ghost_pose, ghost_schema, type Ghost } from "./ghost";
   import { SPEC } from "./spec";
   import { track_id_schema, TRACK_IDS, track_name, TrackId } from "./tracks";
+  import { ease_turn, heading_up, unturn } from "./turn";
 
   const TRACK_OPTIONS = TRACK_IDS.map((value) => ({ value, label: track_name(value) }));
   // Slow, the view is a parking game's; flat out it pulls back only as far as keeps the car readable (about 30 px long
@@ -87,6 +88,7 @@
 
   let camera: Camera | null = null;
   let pace = 0;
+  let turn = 0;
   // The ghost a session races is the one saved when it started: beating it mid-session doesn't swap the car ahead.
   let racing: Ghost | null = untrack(() => ghosts[game.round.track].value);
   const sounds = new Sounds(() => settings);
@@ -160,7 +162,7 @@
   });
 
   $effect(() => {
-    void [game, palette, board_size, zoom, settings.guides, settings.speed_zoom, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
+    void [game, palette, board_size, zoom, settings.guides, settings.speed_zoom, settings.turn_view, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -190,11 +192,21 @@
     const span = settings.speed_zoom ? SPAN_SLOW + (SPAN_FAST - SPAN_SLOW) * pace : SPAN_SLOW;
     const scale = Math.max(1, Math.min(board_size.width, board_size.height)) / (span / zoom);
     const direction = game.car.speed < 0 ? -1 : 1;
+    if (settings.turn_view) return turned_camera(centre, direction, insets, scale);
     const along = { x: Math.cos(game.car.heading) * direction, y: Math.sin(game.car.heading) * direction };
     const ahead = Math.min(pace * top_speed(SPEC) * LOOK_AHEAD, reach(along, insets, scale) * LEAD);
     const focus = { x: centre.x + along.x * ahead, y: centre.y + along.y * ahead };
     // Not kept inside the track's bounds: clamping pushed the car off the board's centre line next to an outer straight.
     return frame(UNBOUNDED, focus, board_size.width, board_size.height, zoom, insets, span);
+  }
+
+  // Heading up, the look-ahead runs up the board (down it reversing) by the eased turn, and the clear part's middle,
+  // a screen offset, is turned back into the world.
+  function turned_camera(centre: { x: number; y: number }, direction: number, insets: Insets, scale: number): Camera {
+    const screen_along = { x: 0, y: -direction };
+    const ahead = Math.min(pace * top_speed(SPEC) * LOOK_AHEAD, reach(screen_along, insets, scale) * LEAD);
+    const shift = unturn({ x: (insets.left - insets.right) / 2 / scale - screen_along.x * ahead, y: (insets.top - insets.bottom) / 2 / scale - screen_along.y * ahead }, turn);
+    return { x: centre.x - shift.x, y: centre.y - shift.y, scale };
   }
 
   /** Metres from the middle of the clear part of the board to its edge along `along`. */
@@ -219,12 +231,15 @@
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
     if (dt > 0) pace += (Math.min(1, Math.abs(game.car.speed) / top_speed(SPEC)) - pace) * (1 - Math.exp(-dt * PACE_RATE));
+    const target_turn = settings.turn_view && game.status !== Status.READY && game.status !== Status.DONE ? heading_up(game.car.heading) : 0;
+    turn = dt > 0 ? ease_turn(turn, target_turn, dt) : target_turn;
     camera = follow(target_camera(), dt);
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const lap_ms = lap_time(game);
     draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
       guides: settings.guides,
+      turn,
       time: performance.now() / 1000,
       ghost: racing && lap_ms !== null ? ghost_pose(racing.frames, lap_ms) : null,
     });
@@ -306,6 +321,7 @@
     new_best = false;
     camera = null;
     pace = 0;
+    turn = 0;
     game = create_game(next);
     racing = ghosts[next.track].value;
     focus_board();
@@ -431,7 +447,7 @@
   {#if daily}<span class="truncate px-1 text-ui font-medium">Daily</span>{/if}
   <div class="flex-1"></div>
   {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}
-  <SettingsPanel {settings} {input} bind:panel={settings_panel} onmute={() => sounds.quiet()} onfocus={focus_board} />
+  <SettingsPanel {settings} {input} turn_view bind:panel={settings_panel} onmute={() => sounds.quiet()} onfocus={focus_board} />
   <IconButton size="sm" class="hidden @md:inline-flex" label={play_label} disabled={!can_pause} onclick={toggle_pause}>
     {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
   </IconButton>

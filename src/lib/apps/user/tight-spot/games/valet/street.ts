@@ -1,5 +1,5 @@
-import { CHUNK, open_world, type World } from "../../core/lot";
-import { rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { CHUNK, chunk_at, ChunkKind, open_world, type Chunk, type World } from "../../core/lot";
+import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
 import type { Bay } from "../../core/scene";
 import { pose_from_centre, VAN, VEHICLES, type Vehicle } from "../../core/vehicle";
 
@@ -67,4 +67,39 @@ export function arrival_pose(vehicle: Vehicle): Pose {
 
 export function distance(a: Vec, b: Vec): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+export interface Overview {
+  /** The 3 × 3 street, always whole in view. */
+  street: Bounds;
+  /** The street and every garage floor a customer car is parked on: shown as far as the street's fit leaves room. */
+  wanted: Bounds;
+}
+
+function chunk_corners(cx: number, cy: number): Vec[] {
+  return [
+    { x: cx * CHUNK, y: cy * CHUNK },
+    { x: (cx + 1) * CHUNK, y: (cy + 1) * CHUNK },
+  ];
+}
+
+// Fitting every floor laid beside the lot shrank a phone's view to about 60 %: only the floors with cars on them count.
+export function overview(world: World, cars: readonly Vec[]): Overview {
+  const street = world.chunks.filter((each) => each.kind !== ChunkKind.FLOOR).flatMap((each) => chunk_corners(each.cx, each.cy));
+  const floors = new Set(cars.map((car) => chunk_at(world, car)).filter((each): each is Chunk => each?.kind === ChunkKind.FLOOR));
+  const wanted = [...street, ...[...floors].flatMap((each) => chunk_corners(each.cx, each.cy))];
+  return { street: bounds_of(street), wanted: bounds_of(wanted) };
+}
+
+function settle(street_lo: number, street_hi: number, wanted_lo: number, wanted_hi: number, half: number): number {
+  if (half * 2 < street_hi - street_lo) return (street_lo + street_hi) / 2;
+  return Math.min(street_lo + half, Math.max(street_hi - half, (wanted_lo + wanted_hi) / 2));
+}
+
+/** The middle of the clear part of the board: the wanted area's, moved only as far as keeps the street whole. */
+export function overview_focus({ street, wanted }: Overview, half_width: number, half_height: number): Vec {
+  return {
+    x: settle(street.x0, street.x1, wanted.x0, wanted.x1, half_width),
+    y: settle(street.y0, street.y1, wanted.y0, wanted.y1, half_height),
+  };
 }

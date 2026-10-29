@@ -11,6 +11,8 @@ export interface DrawExtras {
   /** The racing line, under the guides setting. */
   guides: boolean;
   ghost: Pose | null;
+  /** Radians the board is turned about its middle (Turn view with car); 0 is north up. */
+  turn: number;
 }
 
 const CONTACT_FADE_MS = 1200;
@@ -48,7 +50,11 @@ function surface(ctx: CanvasRenderingContext2D, track: Track, view: View, overvi
   const { bounds } = track;
   ctx.fillStyle = palette.grass;
   if (overview) ctx.fillRect(bounds.x0, bounds.y0, bounds.x1 - bounds.x0, bounds.y1 - bounds.y0);
-  else ctx.fillRect(view.x - view.width / 2 / view.scale, view.y - view.height / 2 / view.scale, view.width / view.scale, view.height / view.scale);
+  else {
+    // Turned, the board's corners reach out to its half-diagonal in any direction.
+    const reach = Math.hypot(view.width, view.height) / 2 / view.scale;
+    ctx.fillRect(view.x - reach, view.y - reach, reach * 2, reach * 2);
+  }
   const n = track.centre.length;
   ctx.beginPath();
   for (const side of [-1, 1]) {
@@ -189,6 +195,11 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   const { scale } = view;
   const { track, car } = state;
   begin_frame(ctx, view, palette);
+  if (extras.turn !== 0) {
+    ctx.translate(view.x, view.y);
+    ctx.rotate(extras.turn);
+    ctx.translate(-view.x, -view.y);
+  }
   surface(ctx, track, view, state.status === Status.READY || state.status === Status.DONE, palette);
   kerbs(ctx, track, palette);
   edge_lines(ctx, track, scale, palette);

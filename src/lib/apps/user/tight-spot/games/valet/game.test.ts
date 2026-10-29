@@ -29,7 +29,7 @@ import {
   type Customer,
   type GameState,
 } from "./game";
-import { arrival_pose, build_street, queue_poses } from "./street";
+import { arrival_pose, build_street, overview, overview_focus, queue_poses } from "./street";
 
 const CUSTOMERS: readonly Customer[] = [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.BUS];
 const GAS: Input = { steer: 0, throttle: 1, brake: 0 };
@@ -307,5 +307,23 @@ describe("par valet", () => {
     expect(state.status, `seed ${seed}: ended at ${Math.round(state.ms / 1000)} s`).not.toBe(Status.OVER);
     expect(most).toBeLessThan(QUEUE_LIMIT);
     expect(state.handed).toBeGreaterThan(0);
+  });
+});
+
+describe("overview", () => {
+  // Seed 6 lays a garage floor west of the street and one east of it.
+  const world = build_street(6).world;
+  const STREET = { x0: -32, y0: -32, x1: 64, y1: 64 };
+
+  test("fits the street, and a floor only when a customer car is parked on it", () => {
+    expect(overview(world, [])).toEqual({ street: STREET, wanted: STREET });
+    expect(overview(world, [{ x: 80, y: -16 }]).wanted).toEqual({ ...STREET, x1: 96 });
+  });
+
+  test("leans toward a wanted floor only as far as keeps the street whole", () => {
+    const view = overview(world, [{ x: 80, y: -16 }]);
+    expect(overview_focus(view, 48, 48)).toEqual({ x: 16, y: 16 });
+    expect(overview_focus(view, 60, 48).x).toBe(28);
+    expect(overview_focus(view, 100, 48).x).toBe(32);
   });
 });

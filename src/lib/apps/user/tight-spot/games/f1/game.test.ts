@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { create_car, Gear, steer_base } from "../../core/vehicle";
 import { drive_session } from "./autopilot";
+import { ease_turn, heading_up, unturn } from "./turn";
 import {
   advance,
   beats,
@@ -134,5 +135,20 @@ describe("ghost", () => {
 
   it("keeps centimetres and milliradians", () => {
     expect(quantise({ x: 1.234, y: -5.678, heading: Math.PI * 2 + 0.1 })).toEqual([123, -568, 100]);
+  });
+});
+
+describe("turn view", () => {
+  it("puts the car's nose up the board and eases there the short way round", () => {
+    const turn = heading_up(0.4);
+    expect(Math.cos(0.4 + turn)).toBeCloseTo(0);
+    expect(Math.sin(0.4 + turn)).toBeCloseTo(-1);
+    expect(Math.abs(ease_turn(Math.PI - 0.1, -Math.PI + 0.1, 0.1))).toBeGreaterThan(Math.PI - 0.1);
+  });
+
+  it("turns a screen offset back into the world", () => {
+    const back = unturn({ x: 0, y: -10 }, heading_up(0));
+    expect(back.x).toBeCloseTo(10);
+    expect(back.y).toBeCloseTo(0);
   });
 });

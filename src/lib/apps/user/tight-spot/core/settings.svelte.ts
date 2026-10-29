@@ -9,7 +9,7 @@ export const SteeringMode = { WHEEL: "wheel", BUTTONS: "buttons" } as const;
 export type SteeringMode = (typeof SteeringMode)[keyof typeof SteeringMode];
 export const steering_schema = z.enum([SteeringMode.WHEEL, SteeringMode.BUTTONS]);
 
-export type Toggle = "sound" | "rumble" | "guides" | "creep" | "speed_zoom";
+export type Toggle = "sound" | "rumble" | "guides" | "creep" | "speed_zoom" | "turn_view";
 
 // Per window, like every other choice in the app: two windows don't change each other's settings until reopened.
 export class DriveSettings {
@@ -18,6 +18,7 @@ export class DriveSettings {
   guides = $state(true);
   creep = $state(false);
   speed_zoom = $state(true);
+  turn_view = $state(false);
   wheel = $state<WheelMode>(WheelMode.CENTRES);
   steering = $state<SteeringMode>(SteeringMode.WHEEL);
 
@@ -27,6 +28,7 @@ export class DriveSettings {
     this.guides = storage.get("guides", z.boolean()) ?? true;
     this.creep = storage.get("creep", z.boolean()) ?? false;
     this.speed_zoom = storage.get("speed_zoom", z.boolean()) ?? true;
+    this.turn_view = storage.get("turn_view", z.boolean()) ?? false;
     this.wheel = storage.get("wheel", wheel_schema) ?? WheelMode.CENTRES;
     this.steering = storage.get("steering", steering_schema) ?? SteeringMode.WHEEL;
   }
