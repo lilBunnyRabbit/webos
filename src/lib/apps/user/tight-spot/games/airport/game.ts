@@ -185,7 +185,10 @@ export function contact(near: Near, apron: Apron, car: Placement, margin = 0, sp
   if (tug) return { at: tug.at, hit: { kind: apron.parts.get(tug.solid) ?? Part.TERMINAL, by: Ours.TUG } };
   const parts = aircraft_parts(aircraft_pose(car, spec), margin);
   for (let i = parts.length - 1; i >= 0; i--) {
-    const found = collide_shape(parts[i], is_high(i) ? near.high : near.low);
+    // The fuselage stands taller than a neighbour's wing root, so it meets both heights.
+    const found =
+      collide_shape(parts[i], is_high(i) ? near.high : near.low) ??
+      (SHAPES[i].part === AircraftPart.FUSELAGE ? collide_shape(parts[i], near.high) : null);
     if (found)
       return { at: found.at, hit: { kind: apron.parts.get(found.solid) ?? Part.TERMINAL, by: SHAPES[i].part } };
   }

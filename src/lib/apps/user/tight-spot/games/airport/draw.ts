@@ -290,6 +290,10 @@ function overhead(ctx: CanvasRenderingContext2D, pose: Pose, fin: string, scale:
   ctx.translate(pose.x, pose.y);
   ctx.rotate(pose.heading);
   wingtips(ctx, fin);
+  // The main gear legs are solid to a tug under the wing, so they stay as visible as before the overlay.
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = palette.ink;
+  for (const side of [-1, 1]) ctx.fillRect(-0.6, side * 3.8 - 0.35, 1.2, 0.7);
   ctx.restore();
 }
 
