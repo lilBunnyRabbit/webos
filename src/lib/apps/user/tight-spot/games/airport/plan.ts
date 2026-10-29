@@ -9,6 +9,7 @@ import {
   is_done,
   Job,
   judge,
+  near_of,
   Phase,
   SPEC,
   STEERING_LIMIT,
@@ -109,7 +110,7 @@ export function follow(state: GameState, radius: number): PushPlan | null {
   const path = track(state, radius);
   if (!path) return null;
   const { apron } = state;
-  const near = obstacles(apron);
+  const near = near_of(state);
   const h = -AIRLINER.hitch;
   const L = AIRLINER.axle;
   const lock = max_steer(SPEC);
@@ -248,7 +249,7 @@ export function follow_tow(state: GameState, radius: number): PushPlan | null {
   if (!path) return null;
   const way = tug_track(path);
   const { apron } = state;
-  const near = obstacles(apron);
+  const near = near_of(state);
   const lock = max_steer(TOW);
   const limit = STEERING_LIMIT - FOLD_MARGIN;
   let at: Placement = state.car;

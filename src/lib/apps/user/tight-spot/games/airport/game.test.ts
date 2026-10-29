@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { overlaps } from "../../core/collision";
 import { collide, obstacles } from "../../core/obstacles";
-import { create_car, folds, Gear, NO_INPUT, type Car } from "../../core/vehicle";
-import { aircraft_parts, nose_gear, pose_from_nose_gear } from "./aircraft";
+import { create_car, folds, Gear, NO_INPUT, to_world, type Car, type VehicleSpec } from "../../core/vehicle";
+import { aircraft_parts, NOSE_GEAR, nose_gear, pose_from_nose_gear } from "./aircraft";
 import { build_apron, Face, Part, TOWBAR } from "./apron";
 import {
   advance,
@@ -17,6 +17,7 @@ import {
   Job,
   judge,
   level_round,
+  near_of,
   Ours,
   Phase,
   phase_done,
@@ -58,7 +59,7 @@ describe("apron", () => {
   test("the rig starts clear, the aircraft hanging ahead of the tug with its nose gear on the stand", () => {
     for (const seed of [1, 2, 3]) {
       const state = create_game(level_round(seed * 4));
-      expect(contact(obstacles(state.apron), state.apron, state.car, 0.3)).toBeNull();
+      expect(contact(near_of(state), state.apron, state.car, 0.3)).toBeNull();
       const gear = nose_gear(aircraft_pose(state.car));
       const stand = state.apron.stands.find((each) => each.mine)!;
       expect(Math.hypot(gear.x - stand.at.x, gear.y - stand.at.y)).toBeLessThan(1e-9);
@@ -185,7 +186,7 @@ describe("baggage run", () => {
     expect(next.loaded).toBe(true);
     expect(next.ms).toBe(61_000);
     expect(next.moves).toBe(1);
-    expect(contact(obstacles(next.scene), next.apron, next.car, 0.3)).toBeNull();
+    expect(contact(near_of(next), next.apron, next.car, 0.3)).toBeNull();
   });
 
   test("a folded cart reads as a jackknife", () => {
@@ -194,11 +195,52 @@ describe("baggage run", () => {
   });
 });
 
+describe("heights", () => {
+  const TUG: VehicleSpec = { ...BAGGAGE, hitches: [] };
+  const { apron } = create_game(level_round(6));
+  const parked = apron.parked[0];
+  const ground = obstacles(apron);
+  const tug_at = (x: number, y: number) =>
+    create_car({ ...to_world(parked, { x, y }), heading: parked.heading }, Gear.DRIVE, TUG);
+
+  test("a tug drives under a parked aircraft's wing and tailplane", () => {
+    expect(collide(tug_at(-1.5, 11), ground, TUG)).toBeNull();
+    expect(collide(tug_at(-17.5, 4.5), ground, TUG)).toBeNull();
+    expect(collide(tug_at(-1.5, 11), obstacles(apron.high), TUG)).not.toBeNull();
+    expect(collide(tug_at(-17.5, 4.5), obstacles(apron.high), TUG)).not.toBeNull();
+  });
+
+  test("a tug into a parked aircraft's fuselage, engine or main gear is a hit", () => {
+    for (const [x, y] of [
+      [-8, 0],
+      [4.8, 5.75],
+      [0, 3.8],
+    ]) {
+      const hit = collide(tug_at(x, y), ground, TUG);
+      expect(hit && apron.parts.get(hit.solid), `${x}, ${y}`).toBe(Part.AIRCRAFT);
+    }
+  });
+
+  test("our wingtip into a neighbour's wing is a hit", () => {
+    const ours = { ...parked, x: parked.x - Math.sign(parked.x) * 34 };
+    const gear = to_world(ours, { x: NOSE_GEAR, y: 0 });
+    const tug = ours.heading + Math.PI;
+    const car = create_car(
+      { x: gear.x - Math.cos(tug) * TOWBAR, y: gear.y - Math.sin(tug) * TOWBAR, heading: tug },
+      Gear.DRIVE,
+      SPEC
+    );
+    const wings_only = { low: obstacles({ solids: [] }), high: obstacles(apron.high) };
+    expect(contact(wings_only, apron, car)?.hit).toEqual({ kind: Part.AIRCRAFT, by: Ours.WING });
+    expect(contact({ ...wings_only, high: wings_only.low }, apron, car)).toBeNull();
+  });
+});
+
 describe("tow to gate", () => {
   test("the aircraft waits on a remote stand behind the tug, clear; the gate is empty", () => {
     for (const level of [1, 8]) {
       const state = create_game(level_round(level, Job.TOW));
-      expect(contact(obstacles(state.scene), state.apron, state.car, 0.3, TOW)).toBeNull();
+      expect(contact(near_of(state), state.apron, state.car, 0.3, TOW)).toBeNull();
       const pose = aircraft_pose(state.car, TOW);
       expect(pose.y).toBeGreaterThan(state.apron.centreline);
       expect(state.apron.stands.some((stand) => stand.remote)).toBe(true);

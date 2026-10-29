@@ -14,7 +14,7 @@ import { obstacles } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "../../core/seed";
 import { bodies, create_car, Gear, rig_ends, to_world } from "../../core/vehicle";
-import { aircraft_parts, grow, NOSE, NOSE_GEAR, pose_from_nose_gear, SPAN, TAIL } from "./aircraft";
+import { aircraft_parts, grow, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, SPAN, TAIL } from "./aircraft";
 import {
   finish_apron,
   frame_apron,
@@ -157,8 +157,9 @@ export interface BaggageOptions {
 
 /**
  * The baggage run's apron: Pushback's, with a baggage hall in one stand's place, our aircraft parked, and its aft hold
- * door. The route is driven by the baggage driver before any kit is placed; kit only goes where the train never comes
- * within the difficulty's clearance, so every run can be driven forward only.
+ * door. The route is driven by the baggage driver before any kit is placed, against what stands on the ground (the
+ * train fits under wings and tailplanes); kit only goes where the train never comes within the difficulty's clearance
+ * and touches no part of any aircraft, so every run can be driven forward only.
  */
 export function build_baggage(seed: number, difficulty: number, options: BaggageOptions = {}, attempt = 0): Apron {
   const rng = create_rng(hash(seed, 0xba66));
@@ -182,8 +183,9 @@ export function build_baggage(seed: number, difficulty: number, options: Baggage
       .slice(0, 3),
     kit_between({ x: HALF + 0.15, y: door.y }, { x: lane - 1.5, y: door.y + 0.9 }),
   ];
+  const our_parts = aircraft_parts(ours);
   frame.ours = [
-    ...aircraft_parts(ours).map((shape) => ({ kind: SolidKind.CAR, shape, part: Part.OURS })),
+    ...our_parts.filter((_, i) => !is_high(i)).map((shape) => ({ kind: SolidKind.CAR, shape, part: Part.OURS })),
     ...ours_kit.map(added),
   ];
   frame.ours_kit = ours_kit;
@@ -194,6 +196,7 @@ export function build_baggage(seed: number, difficulty: number, options: Baggage
   const fixed = finish_apron(frame, false);
   const solids: Solid[] = [...fixed.solids, ...fixed.ours];
   const near = obstacles({ solids });
+  const standing = [...solids, ...fixed.high.solids, ...our_parts.map((shape) => ({ shape }))];
   const blocked_by = (shape: Polygon) => {
     const grown = grow(shape, ROUTE_MARGIN);
     const box = bounds_of(grown);
@@ -240,7 +243,7 @@ export function build_baggage(seed: number, difficulty: number, options: Baggage
 
   const keep = (kit: Kit, margin: number) => {
     if (!clear_of(chosen.sweep, kit.shape, margin)) return false;
-    if (touches(kit.shape, solids) || touches(kit.shape, frame.kit)) return false;
+    if (touches(kit.shape, standing) || touches(kit.shape, frame.kit)) return false;
     if (options.push && in_push(frame, kit.shape)) return false;
     return true;
   };

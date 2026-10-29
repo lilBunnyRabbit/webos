@@ -121,6 +121,7 @@ Owner, on a tug "hitting" a parked aircraft's wing: "is this really a hit? the c
 7. [x] Forklift: every contact a bump (5 s, never a fail), forgiving pockets (10°, 15 cm), the face stop on the floor stock under an upper slot.
 8. [x] Mow Day: a tree, the shed, the pond or the hedge is a bump (5 s, never a fail); flowers keep their cost and the flattened end.
 9. [x] Pushback becomes Airport: the rename (`refactor:`), then the Baggage run, Tow to gate and Turnaround jobs; the daily is a turnaround.
+10. [x] Airport: two collision heights, ground vehicles pass under wings and tailplanes.
 
 ## Next session topics
 - The boat: where a dynamic (non-kinematic) model lives, shared with F1's later slip model.

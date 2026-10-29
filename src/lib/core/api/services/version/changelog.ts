@@ -72,7 +72,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["tight-spot"],
-        text: "Drive Hub gains Airport, four jobs on the apron: push an airliner back onto the taxiway, weave the baggage train between parked aircraft to a hold door, tow an aircraft from a remote stand to its gate, or do a whole turnaround, each with levels, plus a daily turnaround.",
+        text: "Drive Hub gains Airport, four jobs on the apron: push an airliner back onto the taxiway, weave the baggage train between parked aircraft and under their wings to a hold door, tow an aircraft from a remote stand to its gate, or do a whole turnaround, each with levels, plus a daily turnaround.",
       },
       {
         kind: NEW,

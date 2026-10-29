@@ -45,8 +45,33 @@ const TAILPLANE: Vec[] = [
   { x: -18.7, y: 0.6 },
 ];
 
-export const AircraftPart = { FUSELAGE: "fuselage", WING: "wing", ENGINE: "engine", TAILPLANE: "tailplane" } as const;
+const GEAR: Vec[] = [
+  { x: 0.6, y: 3.45 },
+  { x: 0.6, y: 4.15 },
+  { x: -0.6, y: 4.15 },
+  { x: -0.6, y: 3.45 },
+];
+
+export const AircraftPart = {
+  FUSELAGE: "fuselage",
+  WING: "wing",
+  ENGINE: "engine",
+  TAILPLANE: "tailplane",
+  GEAR: "gear",
+} as const;
 export type AircraftPart = (typeof AircraftPart)[keyof typeof AircraftPart];
+
+/** Ground vehicles drive under what's high; an aircraft's high parts meet only other high things. */
+export const Height = { LOW: "low", HIGH: "high" } as const;
+export type Height = (typeof Height)[keyof typeof Height];
+
+export const HEIGHT: Record<AircraftPart, Height> = {
+  fuselage: Height.LOW,
+  engine: Height.LOW,
+  gear: Height.LOW,
+  wing: Height.HIGH,
+  tailplane: Height.HIGH,
+};
 
 export interface Shape {
   part: AircraftPart;
@@ -54,6 +79,8 @@ export interface Shape {
 }
 
 export const SHAPES: readonly Shape[] = [
+  { part: AircraftPart.GEAR, local: GEAR },
+  { part: AircraftPart.GEAR, local: mirror(GEAR) },
   { part: AircraftPart.ENGINE, local: ENGINE },
   { part: AircraftPart.ENGINE, local: mirror(ENGINE) },
   { part: AircraftPart.WING, local: WING },
@@ -96,6 +123,10 @@ function locals(margin: number): Vec[][] {
 
 export function aircraft_parts(pose: Pose, margin = 0): Polygon[] {
   return locals(margin).map((local) => local.map((point) => to_world(pose, point)));
+}
+
+export function is_high(index: number): boolean {
+  return HEIGHT[SHAPES[index].part] === Height.HIGH;
 }
 
 export function nose_gear(pose: Pose): Vec {

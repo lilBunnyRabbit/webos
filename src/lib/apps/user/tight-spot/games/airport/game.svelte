@@ -153,7 +153,7 @@
   );
   const brief = $derived(
     game.phase === Phase.BAGS
-      ? `Drive the train from the baggage hall to the aircraft, middle cart beside the aft hold door. Forward only: three carts don't back up.${game.round.job === Job.TURNAROUND ? " Then push it back." : ""} Any touch ends the round.`
+      ? `Drive the train from the baggage hall to the aircraft, middle cart beside the aft hold door. Forward only: three carts don't back up.${game.round.job === Job.TURNAROUND ? " Then push it back." : ""} The train fits under wings and tailplanes; any other touch ends the round.`
       : game.phase === Phase.TOW
         ? "Tow the aircraft to the gate, nose gear on the stop mark, lined up with the lead-in. Any touch ends the tow."
         : game.loaded

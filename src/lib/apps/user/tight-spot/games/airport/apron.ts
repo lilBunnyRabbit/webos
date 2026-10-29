@@ -1,8 +1,9 @@
 import { create_rng, pick, random_int, type Rng } from "$lib/core/utils/random";
 import { lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import type { Scene } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "../../core/seed";
-import { aircraft_parts, NOSE, NOSE_GEAR, pose_from_nose_gear, TAIL } from "./aircraft";
+import { aircraft_parts, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, TAIL } from "./aircraft";
 
 export const Face = { WEST: "west", EAST: "east" } as const;
 export type Face = (typeof Face)[keyof typeof Face];
@@ -72,14 +73,17 @@ export interface Apron {
   stop: Vec;
   start: Pose;
   aircraft: Pose;
+  /** What stands on the ground: the tug, the train and an aircraft's fuselage, engines and gear meet these. */
   solids: Solid[];
+  /** What reaches wing height: an aircraft's wings and tailplanes meet these. Tall things are in both. */
+  high: Scene;
   parts: Map<Solid, Part>;
   bounds: Bounds;
   callsign: string;
   hall: Hall | null;
   kit: Kit[];
   train: Train | null;
-  /** Our aircraft and its ground kit while it's parked, for the baggage run: they leave before the push. */
+  /** Our aircraft's low parts and its ground kit while it's parked, for the baggage run: they leave before the push. */
   ours: Solid[];
   ours_kit: Kit[];
 }
@@ -250,23 +254,28 @@ export function finish_apron(frame: Frame, mirror = frame.face === Face.EAST): A
   const { point, polygon, pose, heading } = mirrorer(mirror);
 
   const solids: Solid[] = [];
+  const high: Solid[] = [];
   const parts = new Map<Solid, Part>();
-  const add = (kind: SolidKind, shape: Polygon, part: Part) => {
+  const add = (kind: SolidKind, shape: Polygon, part: Part, low = true, tall = false) => {
     const solid = { kind, shape: polygon(shape) };
-    solids.push(solid);
+    if (low) solids.push(solid);
+    if (tall) high.push(solid);
     parts.set(solid, part);
   };
-  add(SolidKind.WALL, terminal, Part.TERMINAL);
-  for (const fence of fences) add(SolidKind.WALL, fence, Part.FENCE);
+  add(SolidKind.WALL, terminal, Part.TERMINAL, true, true);
+  for (const fence of fences) add(SolidKind.WALL, fence, Part.FENCE, true, true);
   for (const bridge of frame.bridges) {
     add(
       SolidKind.POST,
       rect(bridge.from.x - ROTUNDA, bridge.from.y - ROTUNDA, bridge.from.x + ROTUNDA, bridge.from.y + ROTUNDA),
-      Part.BRIDGE
+      Part.BRIDGE,
+      true,
+      true
     );
-    add(SolidKind.SHELF, tunnel(bridge), Part.BRIDGE);
+    add(SolidKind.SHELF, tunnel(bridge), Part.BRIDGE, true, true);
   }
-  for (const each of frame.parked) for (const shape of aircraft_parts(each)) add(SolidKind.CAR, shape, Part.AIRCRAFT);
+  for (const each of frame.parked)
+    aircraft_parts(each).forEach((shape, i) => add(SolidKind.CAR, shape, Part.AIRCRAFT, !is_high(i), is_high(i)));
   for (const each of frame.added) add(each.kind, each.shape, each.part);
   const ours = frame.ours.map((each) => {
     const solid = { kind: each.kind, shape: polygon(each.shape) };
@@ -297,6 +306,7 @@ export function finish_apron(frame: Frame, mirror = frame.face === Face.EAST): A
     start: pose(frame.start),
     aircraft: pose(frame.aircraft),
     solids,
+    high: { solids: high },
     parts,
     bounds: { x0: Math.min(...ends), y0: -TERMINAL_DEPTH, x1: Math.max(...ends), y1: fence_y + 12 },
     callsign: `${pick(AIRLINES, rng)} ${random_int(102, 989, rng)}`,

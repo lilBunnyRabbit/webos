@@ -18,7 +18,7 @@ import {
   type Placement,
   type VehicleSpec,
 } from "../../core/vehicle";
-import { AircraftPart, aircraft_parts, grow, nose_gear, SHAPES } from "./aircraft";
+import { AircraftPart, aircraft_parts, grow, is_high, nose_gear, SHAPES } from "./aircraft";
 import { build_apron, my_stand, Part, type Apron } from "./apron";
 import { build_baggage, build_tow, remote_stand } from "./ramp";
 import { BAGGAGE, judge_train, PARALLEL, train_done } from "./train";
@@ -169,18 +169,23 @@ export interface Contact {
   hit: Hit;
 }
 
-export function contact(
-  near: Obstacles,
-  apron: Apron,
-  car: Placement,
-  margin = 0,
-  spec: VehicleSpec = SPEC
-): Contact | null {
-  const tug = collide_shape(grow(corners(car, spec), margin), near);
+/** The ground and wing height, each its own broad phase. */
+export interface Near {
+  low: Obstacles;
+  high: Obstacles;
+}
+
+export function near_of({ scene, apron }: Pick<GameState, "scene" | "apron">): Near {
+  return { low: obstacles(scene), high: obstacles(apron.high) };
+}
+
+/** The tug and the aircraft's fuselage, engines and gear against the ground; its wings and tailplanes at wing height. */
+export function contact(near: Near, apron: Apron, car: Placement, margin = 0, spec: VehicleSpec = SPEC): Contact | null {
+  const tug = collide_shape(grow(corners(car, spec), margin), near.low);
   if (tug) return { at: tug.at, hit: { kind: apron.parts.get(tug.solid) ?? Part.TERMINAL, by: Ours.TUG } };
   const parts = aircraft_parts(aircraft_pose(car, spec), margin);
   for (let i = parts.length - 1; i >= 0; i--) {
-    const found = collide_shape(parts[i], near);
+    const found = collide_shape(parts[i], is_high(i) ? near.high : near.low);
     if (found)
       return { at: found.at, hit: { kind: apron.parts.get(found.solid) ?? Part.TERMINAL, by: SHAPES[i].part } };
   }
@@ -209,9 +214,10 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
       hit: aircraft ? { kind: STEERING, by: Ours.TUG } : { kind: JACKKNIFE, by: Ours.TRAIN, hinge: folded },
     };
   }
-  const near = obstacles(state.scene);
   const found =
-    state.phase === Phase.BAGS ? train_contact(near, state.apron, car) : contact(near, state.apron, car, 0, state.spec);
+    state.phase === Phase.BAGS
+      ? train_contact(obstacles(state.scene), state.apron, car)
+      : contact(near_of(state), state.apron, car, 0, state.spec);
   if (!found) return { ...state, car, ms };
   return { ...state, car: { ...car, speed: 0 }, ms, status: Status.CRASHED, contact: found.at, hit: found.hit };
 }
@@ -417,6 +423,7 @@ const OURS: Record<Ours, string> = {
   wing: "A wingtip",
   engine: "An engine",
   tailplane: "The tailplane",
+  gear: "The main gear",
 };
 
 const ORDINALS = ["first", "second", "third"];

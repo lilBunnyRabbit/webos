@@ -14,7 +14,7 @@ import {
 import { flashes } from "../../core/draw-vehicles";
 import { oriented_box, type Polygon, type Pose, type Vec } from "../../core/geometry";
 import { Gear, to_world, Vehicle, type VehicleSpec } from "../../core/vehicle";
-import { AircraftPart, aircraft_parts, NOSE, NOSE_GEAR, pose_from_nose_gear, SHAPES, TAIL } from "./aircraft";
+import { AircraftPart, aircraft_parts, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, SHAPES, TAIL } from "./aircraft";
 import { KitKind, tunnel, type Apron, type Kit } from "./apron";
 import { aircraft_pose, Phase, SPEC, Status, type GameState } from "./game";
 import { BAGGAGE, MIDDLE } from "./train";
@@ -179,7 +179,8 @@ function aircraft(
   palette: Palette,
   ghost = false
 ) {
-  const parts = aircraft_parts(pose);
+  const parts = aircraft_parts(pose).filter((_, i) => SHAPES[i].part !== AircraftPart.GEAR);
+  const kinds = SHAPES.filter((shape) => shape.part !== AircraftPart.GEAR).map((shape) => shape.part);
   if (ghost) {
     ctx.strokeStyle = palette.free;
     ctx.lineWidth = Math.max(0.12, 1.5 / scale);
@@ -202,7 +203,7 @@ function aircraft(
   const body = palette.cars[4];
   const edge = Math.max(0.05, 1 / scale);
   parts.forEach((shape, i) => {
-    const part = SHAPES[i].part;
+    const part = kinds[i];
     const colour =
       part === AircraftPart.ENGINE ? palette.steel : part === AircraftPart.FUSELAGE ? body.body : palette.pavement;
     outlined(ctx, [shape], colour, palette.edge, edge);
@@ -219,7 +220,7 @@ function aircraft(
   ctx.lineTo(-12.5, 0.18);
   ctx.closePath();
   ctx.fill();
-  for (const side of [-1, 1]) ctx.fillRect(-4.2, side * 17.9 - (side > 0 ? 0.35 : 0), 1.6, 0.35);
+  wingtips(ctx, livery.fin);
   for (const side of [-1, 1]) {
     ctx.beginPath();
     ctx.ellipse(7.3, side * 5.75, 0.25, 0.95, 0, 0, Math.PI * 2);
@@ -258,6 +259,37 @@ function aircraft(
     ctx.arc(1.5, 0, 0.35, 0, Math.PI * 2);
     ctx.fill();
   }
+  ctx.restore();
+}
+
+function wingtips(ctx: CanvasRenderingContext2D, fin: string) {
+  ctx.fillStyle = fin;
+  for (const side of [-1, 1]) ctx.fillRect(-4.2, side * 17.9 - (side > 0 ? 0.35 : 0), 1.6, 0.35);
+}
+
+const OVERHEAD = 0.6;
+
+/**
+ * The wings and tailplanes again over a ground vehicle that drove under them, see-through so it reads as passing
+ * beneath. The fuselage is clipped out: the tailplanes' roots overlap it.
+ */
+function overhead(ctx: CanvasRenderingContext2D, pose: Pose, fin: string, scale: number, palette: Palette) {
+  const parts = aircraft_parts(pose);
+  const fuselage = parts[SHAPES.findIndex((shape) => shape.part === AircraftPart.FUSELAGE)];
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(pose.x - 40, pose.y - 40, 80, 80);
+  fuselage.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.closePath();
+  ctx.clip("evenodd");
+  ctx.globalAlpha = OVERHEAD;
+  const edge = Math.max(0.05, 1 / scale);
+  parts.forEach((shape, i) => {
+    if (is_high(i)) outlined(ctx, [shape], palette.pavement, palette.edge, edge);
+  });
+  ctx.translate(pose.x, pose.y);
+  ctx.rotate(pose.heading);
+  wingtips(ctx, fin);
   ctx.restore();
 }
 
@@ -405,7 +437,8 @@ export function draw_scene(
     );
   if (!bags) stop_mark(ctx, apron, scale, palette, pulse, playing);
 
-  apron.parked.forEach((pose, i) => aircraft(ctx, pose, { fin: palette.cars[i % 2].body, beacon: 0 }, scale, palette));
+  const fin = (i: number) => palette.cars[i % 2].body;
+  apron.parked.forEach((pose, i) => aircraft(ctx, pose, { fin: fin(i), beacon: 0 }, scale, palette));
   kit(ctx, apron.kit, scale, palette);
   bridges(ctx, apron, scale, palette);
 
@@ -434,6 +467,9 @@ export function draw_scene(
       extras.time
     );
   }
+
+  apron.parked.forEach((pose, i) => overhead(ctx, pose, fin(i), scale, palette));
+  if (bags) overhead(ctx, apron.aircraft, palette.player.body, scale, palette);
 
   if (state.status === Status.CRASHED && state.contact)
     contact_rings(ctx, state.contact, pulse, Math.min(scale, 12), palette);

@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import { daily_seed } from "$kit/games";
-import { obstacles } from "../../core/obstacles";
 import { drive, type Move } from "../../core/planner";
 import { jackknifed, type Placement, type VehicleSpec } from "../../core/vehicle";
 import {
@@ -11,6 +10,7 @@ import {
   Job,
   judge,
   level_round,
+  near_of,
   phase_done,
   random_round,
   SPEC,
@@ -24,7 +24,7 @@ const PIECE = 0.15;
 
 // The driver's moves again in 15 cm pieces with the real bodies and no margin, judged as a round is.
 function replay(state: GameState, moves: Move[], spec: VehicleSpec): string | null {
-  const near = obstacles(state.scene);
+  const near = near_of(state);
   let at: Placement = state.car;
   for (const move of moves) {
     const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
