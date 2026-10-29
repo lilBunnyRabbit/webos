@@ -4,7 +4,7 @@ Id `tight-spot` · Source: `src/lib/apps/user/tight-spot/` (`core/` the shared d
 
 ## What it does
 
-A hub for top-down driving games on one driving core: vehicles that steer like real ones at low speed (they turn about the rear axle, the front swings wide, the turning circle comes from the wheelbase and the steering lock), polygon collision, a following camera, a steering wheel and pedals on touch, parking sensors. The app opens in a yard, a street with a building per game to drive into, a garage pad swaps the vehicle, and the yard is a playground where nothing is judged. The garage holds 41 vehicles: cars (hatchback, city car, SUV, limousine, van, pickup, camper van), service vehicles (taxi, police car, ambulance, fire engine, ladder truck, garbage truck, baggage train), buses (city bus, double-decker, coach, articulated bus), trucks (box truck, semi-trailer truck, truck and drawbar trailer, road train), towing rigs (box trailer, caravan, boat, horse box, tractor and farm trailer, tractor and two trailers, quad and trailer), machines (forklift, skid-steer loader, telehandler, wheel loader, articulated dump truck, zero-turn mower, tank) and fun ones (tuk-tuk, golf cart, ice resurfacer, shopping trolley, F1 car). They steer five ways: front, rear, all-wheel (with a crab mode on the telehandler), skid (pivots on the spot) and frame (bends in the middle). Two games so far. The **Warehouse** moves pallets with a rear-steering forklift (below). **Tight Spot** is parking: spots generated from a seed (parallel at a kerb, nose in, reverse in, angled, a garage up to the wall, bays between pillars, a narrow aisle, a tight garage door, a dead-end turnaround, the end bay of a full dead-end aisle, a bus stop, a bus depot, a driveway, a slipway, a camping pitch and a loading dock), each with the vehicles the planner proves it with, a random spot of a picked kind (or any) with a seeded daily, a 48-level ladder, and a 3 × 3 open lot where any free bay counts. The app was Tight Spot before the hub; its id stayed `tight-spot`, so achievements, the daily and links carried over.
+A hub for top-down driving games on one driving core: vehicles that steer like real ones at low speed (they turn about the rear axle, the front swings wide, the turning circle comes from the wheelbase and the steering lock), polygon collision, a following camera, a steering wheel and pedals on touch, parking sensors. The app opens in a yard, a street with a building per game to drive into, a garage pad swaps the vehicle, and the yard is a playground where nothing is judged. The garage holds 41 vehicles: cars (hatchback, city car, SUV, limousine, van, pickup, camper van), service vehicles (taxi, police car, ambulance, fire engine, ladder truck, garbage truck, baggage train), buses (city bus, double-decker, coach, articulated bus), trucks (box truck, semi-trailer truck, truck and drawbar trailer, road train), towing rigs (box trailer, caravan, boat, horse box, tractor and farm trailer, tractor and two trailers, quad and trailer), machines (forklift, skid-steer loader, telehandler, wheel loader, articulated dump truck, zero-turn mower, tank) and fun ones (tuk-tuk, golf cart, ice resurfacer, shopping trolley, F1 car). They steer five ways: front, rear, all-wheel (with a crab mode on the telehandler), skid (pivots on the spot) and frame (bends in the middle). Five games so far. **Hot Lap** laps the F1 car round a race track, **Ferry Loader** stows a queue of vehicles on a ferry deck, **Mow Day** mows a seeded garden in stripes (all below). The **Warehouse** moves pallets with a rear-steering forklift (below). **Tight Spot** is parking: spots generated from a seed (parallel at a kerb, nose in, reverse in, angled, a garage up to the wall, bays between pillars, a narrow aisle, a tight garage door, a dead-end turnaround, the end bay of a full dead-end aisle, a bus stop, a bus depot, a driveway, a slipway, a camping pitch and a loading dock), each with the vehicles the planner proves it with, a random spot of a picked kind (or any) with a seeded daily, a 48-level ladder, and a 3 × 3 open lot where any free bay counts. The app was Tight Spot before the hub; its id stayed `tight-spot`, so achievements, the daily and links carried over.
 
 Three layers, each replaceable on its own (the parking brainstorm's later steps):
 
@@ -30,7 +30,8 @@ tight-spot/
     ├── define.ts          define_game and GameProps
     ├── index.ts           the registry (GAMES) and the `game` prop's values
     ├── parking/           Tight Spot: index.ts (define_game), game.svelte (lazy), its model and tests
-    └── forklift/          Warehouse: index.ts, game.svelte (lazy), warehouse.ts, game.ts, plan.ts, par.worker.ts, draw.ts, proofs
+    ├── forklift/          Warehouse: index.ts, game.svelte (lazy), warehouse.ts, game.ts, plan.ts, par.worker.ts, draw.ts, proofs
+    └── mower/             Mow Day: index.ts, game.svelte (lazy), garden.ts, deck.ts, coverage.ts, reach.ts, game.ts, measure.worker.ts, draw.ts
 ```
 
 **The game contract.** `games/{id}/index.ts` default-exports `define_game({ id, name, icon, building, achievements, load })`: `icon` a Phosphor icon (the switcher and the doorway card show it), `building` how its building looks in the yard (`Building.CAR_PARK`, `WAREHOUSE`, `VALET_STAND`, `APRON`, `FERRY`, `GARDEN`, `ARENA`, `TRACK`), `achievements` merged into the manifest's list (ids stay unique across games; parking kept its old ids), `load` the lazy `game.svelte`. `games/index.ts` lists the games in yard order, and `UPCOMING` the names shut buildings after them carry (empty: every game gets its own open building). A game component takes `GameProps`: `settings` (the shared `DriveSettings`), `daily` (the day of the daily the app was opened with, given only to the game it names), `menu` (the switcher snippet, first in its toolbar), `play` (the window's Game Hub tracker; a game reports its daily results through `play.daily`) and `onexit` (back to the yard). It builds from the core components and keeps its own state; nothing is shared through a context. Each game stores under `app.tight-spot.{game}.*`.
@@ -465,6 +466,48 @@ Each vehicle comes onto the quay in P, nose 1.5 m short of the ramp's foot, line
 
 Played through in a browser from the arrow keys and P under Playwright's fake clock: level 1 loaded down the middle lane with one undo, two stars, the achievement.
 
+## Mow Day (mower)
+
+`games/mower/`: the garden builder (`garden.ts`), the cutting deck (`deck.ts`), the coverage grid (`coverage.ts`), the coverable lawn (`reach.ts`), the round model (`game.ts`), the measuring worker (`measure.ts`, `measure.worker.ts`), the frame and the lawn layer (`draw.ts`), the component (`game.svelte`). Decided in [the wave 3 brainstorm](../brainstorm/2026-10-29_drive-hub-wave-3.md) ("Mower deck", "First cuts › Mow Day"). The vehicle is the garage's zero-turn mower, unchanged.
+
+### The garden
+
+`build_garden(seed, difficulty)`, pure. A rectangle of lawn inside a 0.7 m hedge, 11–21 m by 9–15 m by difficulty and seed; a 3.6 × 4.4 m paved patio in one south corner with the 2.4 × 2 m shed against the hedges, the mower starting on the patio in front of the shed's doors facing the lawn. The lawn is the garden less the patio, as two convex rectangles. On it: one or two flower beds along the hedges, up to three island beds (round or oblong), one to three trees and maybe a pond (an ellipse, more likely at higher difficulty). Everything but the border beds keeps `gap` (3 m easy, 2 m hard, always over the mower's width) from the others and from the hedges, and nothing goes near the patio or the run-out in front of it. The hedges, the shed (`SolidKind.WALL`), each trunk (a 12-gon `POST`, 0.25–0.4 m) and the pond (`WATER`) are solids; the beds are not.
+
+**Contact.** The core's `collide()`; any solid ends the round ("Hit a tree", "Into the pond", "Hit the shed", "Into the hedge"). A bed under any part of the mower's body is flattened instead (below).
+
+### The deck
+
+Game-owned, so `VehicleSpec` stays as it is: `DECKS` maps a vehicle to its cutting rectangle in its own frame, the zero-turn's three blades 0.54–1.02 m ahead of its drive axle and 1.44 m across. Each physics step cuts `swept(from, to)`, the convex hull of the deck's two footprints (exact for a straight step, close enough for the 8 ms steps of a pivot).
+
+### Coverage
+
+A grid of 15 cm cells over the garden (`create_grid`), typed arrays: the ground (none, lawn, bed, by cell centre; cells under a solid are none), coverable, cut (long, light, dark), the odometer at the first cut, overlapped, trampled, plus a `dirty` list for the drawing.
+
+- **Stripes.** A cut cell takes the shade of the way the deck was moving along whichever axis it mostly moved: east or south light, west or north dark, so up-and-down passes alternate whichever way the lawn is mown.
+- **Overlap.** A cell cut again once the deck has gone more than 1.2 m (`REPASS`) since its first cut counts as overlapped, once; less is the same pass going over it. The overlap is overlapped coverable cells over coverable cells.
+- **Flowers.** A bed cell under the body is trampled once and costs three cells of mown lawn (`BED_COST`).
+- **Coverage** = (mown coverable cells − 3 × trampled) / coverable cells.
+
+### The coverable lawn
+
+`flood` runs the planner's lattice from the start, breadth first: straight steps of 0.4 m both ways and pivots of one 15° heading bin (checked halfway too), the body grown by the planner's 5 cm, solids and beds both blocking; states are binned by 0.4 m and 24 headings. The lawn under the deck at every pose it reached is coverable. A step is shorter than the deck and a pivot's swing shorter than its width, so the footprints join. A skid steer's pivot is why the coarse lattice is enough (it throws for any other drive). It leaves out what the mower can't reach without the flowers: the last 10–15 cm along a hedge, corners the long nose can't get into, lawn shut in by beds; 85–93 % of the lawn is coverable. The flood takes 60–300 ms, so the game runs it in a one-shot worker per round (`work_out_lawn`, keyed on `$derived(game.round)` like the Warehouse's par); the round may start before it lands, and `apply_mask` counts what was already mown. Again reuses the mask.
+
+### Scoring
+
+- **Finish** (F, Space, or the Finish button over the pedals on touch, bottom right on a fine pointer) is lit from 90 % coverage. Every coverable cell mown with no flowers flattened ends the round by itself.
+- Stars: one for finishing, one for an overlap of 25 % or less (`OVERLAP_LIMIT`), one for the time at or under par.
+- **Par** (`par_time`): the coverable area in passes 1.2 m apart (a half-lock turn's shift) at 2.6 m/s, 4 s a turn at the end of each pass along the garden's longer side, 8 s round each tree, island bed and pond, 6 s off the patio, then ×1.25 and up to the next 5 s. An ideal up-and-down run over a bare lawn of the same size takes about 65–70 % of it with 12–13 % overlap.
+- Past 80 % an arrow on the edge of the view points to the nearest long grass left (every 0.4 s). Running over flowers shows "Off the flowers" for 1.5 s.
+- Best per `level:N`, `daily:YYYY-MM-DD` and one for random lawns: more stars, then time; the best coverage and least overlap are kept separately.
+- Levels (`level_round`): 12, difficulty 0 → 1, seeds `hash(0x3077, index)`. Lawns (`lawn_round`): difficulty 0.1–0.9 from the seed. Daily: difficulty 0.3–0.8, seed `daily_seed(day, "tight-spot/mower")`, reported through `play.daily(day, ms, 3 − stars, "mower")`.
+
+### Drawing
+
+`LawnLayer` keeps the grid as an image, one pixel a cell, drawn scaled and smoothed under the lawn's outline; a step only writes back the cells it changed (`putImageData` over their bounding box), a new grid or a theme change repaints it. Colours are theme tokens resolved per theme (`read_lawn`): the cut lawn takes less of `--success` than the long grass (54 and 47 % for the two tones of long grass, 7 and 32 % for the stripes), so cut reads paler on a light theme and duller on a dark one and the two stripes stay apart on both. Beds are soil with flowers in the theme's accent tokens; flattened cells are drawn over them. Crowns are drawn over the mower at 70 % so it shows under the branches; trunks under it. The shed is a pitched board roof.
+
+`garden.test.ts` (determinism, the start is clear and on the patio, nothing overlaps), `coverage.test.ts` (cells, stripes, overlap once and only after `REPASS`, trampling, the sweep), `game.test.ts` (every level at least 85 % coverable, the daily's garden, driving off the patio mows a dark stripe, a solid ends it, finishing and stars, bests and levels). Played end to end in Chromium from keys (level 1: a closed-loop driver over `DriveInput` and `advance` in Node turned into key presses, replayed under Playwright's clock) to 90 % and the done card.
+
 ## Data
 
 - `f1/ghost-meadow.json`, `f1/ghost-harbour.json`, `f1/ghost-ridge.json` in `/var/lib/apps/tight-spot/`: Hot Lap's best lap per track and its ghost (`{ ms, splits: [s1, s2], frames: [x cm, y cm, heading mrad, …] }` at 10 Hz).
@@ -478,13 +521,15 @@ Played through in a browser from the arrow keys and P under Playwright's fake cl
 - `app.tight-spot.forklift.mode`, `.size`, `.level`: last choices.
 - `/var/lib/apps/tight-spot/ferry.json` (the app's data folder, ADR-035): Ferry Loader's `{ bests, levels }`: best `{ stars, ms }` per `level:N`, `sailing:N` and `daily:YYYY-MM-DD`, and stars per finished level (the next one after the highest is open). Shared by every window of the app.
 - `app.tight-spot.ferry.mode`, `.level`: Ferry Loader's last choices.
+- `/var/lib/apps/tight-spot/mower.json` (the app data folder, ADR-035): `{ best, levels }`, best `{ stars, ms, coverage, overlap }` per `level:N`, `daily:YYYY-MM-DD` and `lawns`, and stars per finished level.
+- `app.tight-spot.mower.mode`, `.level`: last choices.
 - `app.tight-spot.sound`, `.guides`, `.creep`, `.wheel`, `.steering`: settings every game shares.
 - Parking data before the split (`app.tight-spot.best` and the rest at the top level) is left behind, not migrated.
 - `app.tight-spot.last`: the id of the game entered last, which the switcher and the yard mark.
 - `app.tight-spot.yard_intro`: `true` once the yard's welcome card has been seen (shared by every window).
 - The yard keeps nothing: it starts at the gate in the hatchback, and its vehicle lives only as long as the window.
-- Props: `game` (`yard`, `parking`, `forklift`, `f1`, `ferry`), `daily` (`YYYY-MM-DD`) and `mode` (`parking`, `forklift`, `f1`, `ferry`: which game's daily). Game Hub passes `daily` and `mode`.
-- One daily per game (ADR-050): `daily_rank` is the record `{ parking: SCORE_ASC, forklift: SCORE_ASC, f1: TIME, ferry: SCORE_ASC }` (`DAILY_GAMES` in `games/index.ts`, in Game Hub's row order), so Game Hub lists "Drive Hub · Parking", "Drive Hub · Forklift" and "Drive Hub · F1". Parking's daily (seed `daily_seed(day, "tight-spot")`, unchanged) goes to `plays.json` under `tight-spot/parking` with moves as the score; days before the split stay under `tight-spot`, which no row reads now. The Warehouse's (opened from Game Hub or the game's Daily) goes under `tight-spot/forklift`, scored as stars lost, so fewer lost rank first, then time. Hot Lap's goes under `tight-spot/f1`, one result per clean lap, the quickest kept.
+- Props: `game` (`yard`, `parking`, `forklift`, `f1`, `ferry`, `mower`), `daily` (`YYYY-MM-DD`) and `mode` (`parking`, `forklift`, `f1`, `ferry`, `mower`: which game's daily). Game Hub passes `daily` and `mode`.
+- One daily per game (ADR-050): `daily_rank` is the record `{ parking: SCORE_ASC, forklift: SCORE_ASC, f1: TIME, ferry: SCORE_ASC, mower: SCORE_ASC }` (`DAILY_GAMES` in `games/index.ts`, in Game Hub's row order), so Game Hub lists "Drive Hub · Parking", "Drive Hub · Forklift" and "Drive Hub · F1". Parking's daily (seed `daily_seed(day, "tight-spot")`, unchanged) goes to `plays.json` under `tight-spot/parking` with moves as the score; days before the split stay under `tight-spot`, which no row reads now. The Warehouse's (opened from Game Hub or the game's Daily) goes under `tight-spot/forklift`, scored as stars lost, so fewer lost rank first, then time. Hot Lap's goes under `tight-spot/f1`, one result per clean lap, the quickest kept.
 
 ## Dependencies & licences
 
@@ -499,6 +544,7 @@ None.
 - Precision isn't comparable across kinds: it's a share of each bay's room, and the rooms differ.
 - The bus stop has no tapered lay-by: a 32 m lot has no room for one with cars at both ends.
 - The street only grows east; with many games the far buildings are a long drive from the gate (no shortcut but the Games switcher).
+- Mow Day's coverable lawn is a coarse lattice's reach, not every cell a driver could get to: a careful driver can cut a little more than counts, never less than the 90 % needed. The overlap and the par are formulas tuned on an ideal up-and-down run, not on players.
 - The Warehouse's par time takes the planner one to six seconds in a worker; the card shows "…" meanwhile. A job finished first is recorded straight away and gets its time star when the par arrives; a second job finished before the first's par arrives replaces the wait, so the first never gets that star.
 - Parking's dailies from before the per-game split stay under `tight-spot` in `plays.json`; Game Hub no longer shows them.
 - The tractor, the tractor with two trailers and the baggage train have no spot yet. A chain doesn't collide with itself: a body folding into the one ahead shows overlapping until the hinge's limit ends the round. The coach only takes the depot (some bus-stop seeds failed).

@@ -24,6 +24,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub gains Ferry Loader: drive a queue of cars, vans, trucks and buses up the ramp onto a ferry, park each one snugly in a lane, keep the ship balanced, and undo the last one if it won't all fit, with levels and a daily.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub gains Mow Day: mow seeded gardens with the zero-turn mower, laying light and dark stripes, around trees, a pond and flower beds you must keep off, with levels and a daily.",
+      },
     ],
   },
   {

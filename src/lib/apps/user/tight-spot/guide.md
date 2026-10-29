@@ -3,6 +3,8 @@
 Driving games along one street. The app opens on the gate and the first buildings, your car at the gate; the view follows the car once you drive, and the street runs on east with a building for every game.
 
 - Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway. The car park holds **Tight Spot**, the **Warehouse** the forklift game, the ferry deck **Ferry Loader**.
+
+- Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway. The car park holds **Tight Spot**, the **Warehouse** the forklift game. **Mow Day** is in the Games menu.
 - **Games** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
 - **Back** in a game returns you to the yard, out of that game's doorway.
 
@@ -131,3 +133,19 @@ Load a ferry. A queue of three to six vehicles waits behind the quay: cars, vans
 - **Sailings:** a random ferry and queue, three to six vehicles. **New** deals another.
 - **Levels:** 12 sailings, three each of three to six vehicles, the lanes and the stern tighter as you go. Finish one to open the next.
 - **Daily:** the same five-vehicle queue for everyone today. Game Hub lists it as Drive Hub · Ferry.
+
+## Mow Day: the mower
+
+Mow a garden with the zero-turn mower. It starts on the patio by the shed; mow at least 90% of the lawn, then press **F** or **Space**, or tap **Finish**. Mowing every last bit of it finishes on its own.
+
+- **It steers like a skid steer.** The wheel slows one side: a little turns gently, half lock turns about the inner wheel (a neat way to come back down the next stripe), full lock spins it on the spot about its rear wheels, so the deck swings round.
+- **Stripes.** The grass lies the way you mowed it: passes one way come out light, passes back the other way dark. Long grass is the richer green.
+- **Keep off the flowers.** Driving over a flower bed flattens it, and every bit flattened costs three times as much lawn from your score. Trees, the pond, the shed and the hedge end the round.
+- The chip at the top shows how much is mown (the bar fills at 90%) and the **overlap**: grass you cut a second time. Past 80% an arrow on the edge points to the nearest long grass left.
+- The lawn counted is what the mower can reach without touching the flowers; the thin edge right against a hedge doesn't count.
+
+## Mow Day scoring
+
+- Three stars: one for finishing, one for an overlap of 25% or less, one for the par time. Par assumes tidy up-and-down passes at a steady speed with a turn at each end.
+- A best is more stars, then a quicker time; it's kept per level, per daily, and once for random lawns.
+- **Lawns:** a random garden; **New** deals another. **Levels:** 12 gardens, bigger and fuller as you go. **Daily:** the same garden for everyone today; Game Hub lists it as Drive Hub · Mower.
