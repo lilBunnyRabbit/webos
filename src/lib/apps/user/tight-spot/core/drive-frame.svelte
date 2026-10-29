@@ -7,8 +7,10 @@
   import type { Snippet } from "svelte";
   import { clamp_zoom } from "./camera";
   import { read_palette, type Palette } from "./draw";
+  import { BUTTON_KEYS, first_pad, PadButton, pressed, read_pad } from "./gamepad";
   import type { DriveInput, Hold } from "./drive-input.svelte";
-  import { SteeringMode, type DriveSettings } from "./settings.svelte";
+  import { rumble_to } from "./rumble";
+  import { SteeringMode, WheelMode, type DriveSettings } from "./settings.svelte";
   import SteeringWheel from "./steering-wheel.svelte";
 
   interface Box {
@@ -74,6 +76,9 @@
   const system = $derived(kernel.service<SettingsService>("settings"));
   const { window: win } = get_app_context();
 
+  const HINT_MS = 2500;
+  let pad_hint = $state(false);
+
   const pinch = new Map<number, { x: number; y: number }>();
   let pinch_start: { distance: number; zoom: number } | null = null;
 
@@ -102,6 +107,69 @@
     const probe = canvas;
     const frame_id = requestAnimationFrame(() => (palette = read_palette(probe)));
     return () => cancelAnimationFrame(frame_id);
+  });
+
+  // A controller is polled only while one is connected, a frame at a time; the round's own loop reads what it left in the input.
+  $effect(() => {
+    let frame_id = 0;
+    let hint_timer = 0;
+    let before: boolean[] = [];
+    let steering = false;
+
+    function poll() {
+      frame_id = 0;
+      const pad = first_pad(navigator.getGamepads());
+      const front = win.is_focused && document.visibilityState === "visible";
+      if (!pad || !front) {
+        input.set_pad(0, 0);
+        if (front) rumble_to(null);
+        before = pad ? read_pad(pad).buttons : [];
+        if (pad) frame_id = requestAnimationFrame(poll);
+        return;
+      }
+      const state = read_pad(pad);
+      const edges = pressed(before, state.buttons);
+      before = state.buttons;
+      rumble_to(settings.rumble ? state.index : null);
+      input.set_pad(state.gas, state.brake);
+      if (state.steer !== null) {
+        if (!steering || Math.abs(input.wheel - state.steer) > 1e-3) onsteer(state.steer);
+        steering = true;
+      } else if (steering) {
+        steering = false;
+        if (settings.wheel === WheelMode.CENTRES) input.let_go();
+      }
+      for (const index of edges) {
+        if (index === PadButton.RT || index === PadButton.LT) {
+          if (engage()) onpress(index === PadButton.RT ? "gas" : "brake");
+          continue;
+        }
+        const code = BUTTON_KEYS[index];
+        if (code) onkeydown(new KeyboardEvent("keydown", { code, key: code === "Space" ? " " : code.slice(3).toLowerCase() }));
+      }
+      frame_id = requestAnimationFrame(poll);
+    }
+
+    function start() {
+      if (!frame_id) frame_id = requestAnimationFrame(poll);
+    }
+
+    function on_connected() {
+      start();
+      if (!win.is_focused) return;
+      pad_hint = true;
+      clearTimeout(hint_timer);
+      hint_timer = window.setTimeout(() => (pad_hint = false), HINT_MS);
+    }
+
+    if (first_pad(navigator.getGamepads())) start();
+    window.addEventListener("gamepadconnected", on_connected);
+    return () => {
+      window.removeEventListener("gamepadconnected", on_connected);
+      cancelAnimationFrame(frame_id);
+      clearTimeout(hint_timer);
+      if (win.is_focused) rumble_to(null);
+    };
   });
 
   // Closing the guide or a shell menu drops the focus to the page; the front window still owns the keys.
@@ -182,6 +250,11 @@
       >
         <canvas bind:this={canvas} class="block size-full"></canvas>
         {@render overlay()}
+        {#if pad_hint}
+          <p class="ts-pad-hint pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 rounded-full bg-background-lighter px-3 py-1.5 text-ui whitespace-nowrap shadow-popover" role="status">
+            Controller connected
+          </p>
+        {/if}
       </div>
 
       <div
@@ -392,6 +465,21 @@
       .ts-root :global(.ts-fold) {
         display: block;
       }
+    }
+  }
+
+  .ts-pad-hint {
+    animation: ts-pad-hint 2.5s ease both;
+  }
+
+  @keyframes ts-pad-hint {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    8%,
+    85% {
+      opacity: 1;
     }
   }
 

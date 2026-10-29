@@ -13,4 +13,4 @@ Owner: "can we have controller support?" No gamepad code exists in the repo. Dri
 - **Shell:** nothing (Drive Hub's rule: no commands).
 
 ## Action items
-1. One build: `core/gamepad.ts`, `DriveInput` and `drive-frame` polling, the rumble setting, a "controller connected" hint, docs in `docs/apps/tight-spot.md` "Controls".
+1. [x] One build: `core/gamepad.ts`, `DriveInput` and `drive-frame` polling, the rumble setting, a "controller connected" hint, docs in `docs/apps/tight-spot.md` "Controls".

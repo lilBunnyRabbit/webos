@@ -62,6 +62,10 @@
       <Switch bind:checked={() => settings.sound, (value: boolean) => toggle("sound", value)} />
     </label>
     <label class="flex items-center justify-between gap-3 text-ui">
+      <span class="flex flex-col">Rumble <span class="text-2xs text-foreground/65">A controller buzzes on a bump and close to things</span></span>
+      <Switch bind:checked={() => settings.rumble, (value: boolean) => toggle("rumble", value)} />
+    </label>
+    <label class="flex items-center justify-between gap-3 text-ui">
       <span class="flex flex-col">Guide lines <span class="text-2xs text-foreground/65">Where the front corners will go</span></span>
       <Switch bind:checked={() => settings.guides, (value: boolean) => toggle("guides", value)} />
     </label>

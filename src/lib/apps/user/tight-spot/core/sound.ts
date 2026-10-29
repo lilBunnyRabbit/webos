@@ -1,3 +1,4 @@
+import { rumble, Rumble } from "./rumble";
 import { beep_period } from "./sensors";
 
 const PITCH = 1750;
@@ -6,12 +7,16 @@ const VOLUME = 0.06;
 const ALARM_PITCH = 1040;
 const ALARM_BEEP = 0.32;
 const ALARM_PERIOD = 0.7;
+// Only the last stretch buzzes a controller: the steady tone and the fastest beeps.
+const TICK_BELOW = 0.3;
+const TONE_TICK = 0.12;
 
 export class Sounds {
   private context: AudioContext | null = null;
   private tone: { oscillator: OscillatorNode; gain: GainNode } | null = null;
   private next_beep = 0;
   private next_alarm = 0;
+  private next_tick = 0;
 
   private audio(): AudioContext | null {
     if (!this.context) {
@@ -56,6 +61,10 @@ export class Sounds {
         oscillator.start();
         this.tone = { oscillator, gain };
       }
+      if (audio.currentTime >= this.next_tick) {
+        rumble(Rumble.TICK);
+        this.next_tick = audio.currentTime + TONE_TICK;
+      }
       return;
     }
     this.stop_tone();
@@ -69,11 +78,13 @@ export class Sounds {
       return;
     }
     this.blip(PITCH, now, BEEP);
+    if (period < TICK_BELOW) rumble(Rumble.TICK);
     this.next_beep = now + BEEP + period;
   }
 
   crash() {
     this.quiet();
+    rumble(Rumble.HIT);
     const audio = this.audio();
     if (!audio) return;
     const at = audio.currentTime;
@@ -141,6 +152,7 @@ export class Sounds {
     this.stop_tone();
     this.next_beep = 0;
     this.next_alarm = 0;
+    this.next_tick = 0;
   }
 
   close() {

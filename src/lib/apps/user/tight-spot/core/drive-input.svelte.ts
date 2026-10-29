@@ -17,6 +17,7 @@ export class DriveInput {
   private steering_by_keys = false;
   private steer_way = 0;
   private steer_held = 0;
+  private pad = { gas: 0, brake: 0 };
 
   step_wheel(dt: number, spec: VehicleSpec, mode: WheelMode) {
     const right = this.keys.has("ArrowRight") || this.keys.has("KeyD") || this.holds.right.size > 0;
@@ -42,12 +43,13 @@ export class DriveInput {
 
   read(gear: Gear): Input {
     // The arrows and the pedals mean a direction (Gas forward, Brake back): toward the gear's way is gas, against it the brake.
-    const forward = FORWARD_KEYS.some((code) => this.keys.has(code)) || this.holds.gas.size > 0;
-    const back = BACK_KEYS.some((code) => this.keys.has(code)) || this.holds.brake.size > 0;
+    // A controller's triggers mean the same directions, analog: RT forward, LT back, the larger of pad and keys wins.
+    const keyed_forward = FORWARD_KEYS.some((code) => this.keys.has(code)) || this.holds.gas.size > 0;
+    const keyed_back = BACK_KEYS.some((code) => this.keys.has(code)) || this.holds.brake.size > 0;
+    const forward = Math.max(keyed_forward ? 1 : 0, this.pad.gas);
+    const back = Math.max(keyed_back ? 1 : 0, this.pad.brake);
     const reversing = gear === Gear.REVERSE;
-    const gas = reversing ? back : forward;
-    const brake = reversing ? forward : back;
-    return { steer: this.hands ? this.wheel : null, throttle: gas ? 1 : 0, brake: brake ? 1 : 0 };
+    return { steer: this.hands ? this.wheel : null, throttle: reversing ? back : forward, brake: reversing ? forward : back };
   }
 
   follow(share: number) {
@@ -58,6 +60,16 @@ export class DriveInput {
     this.hands = true;
     this.steering_by_keys = false;
     this.wheel = value;
+  }
+
+  set_pad(gas: number, brake: number) {
+    this.pad = { gas, brake };
+  }
+
+  /** The stick came back to rest: hands off, so the wheel self-centres as the car rolls, like letting go of the arrows. */
+  let_go() {
+    this.hands = false;
+    this.steering_by_keys = false;
   }
 
   press(which: Hold, pointer: number): boolean {
@@ -80,11 +92,12 @@ export class DriveInput {
   }
 
   busy(): boolean {
-    return this.keys.size > 0 || Object.values(this.holds).some((pointers) => pointers.size > 0);
+    return this.keys.size > 0 || this.pad.gas > 0 || this.pad.brake > 0 || Object.values(this.holds).some((pointers) => pointers.size > 0);
   }
 
   release() {
     this.keys.clear();
+    this.pad = { gas: 0, brake: 0 };
     for (const pointers of Object.values(this.holds)) pointers.clear();
     this.held = { ...RELEASED };
   }

@@ -631,4 +631,13 @@ export const FEATURES: Feature[] = [
     min: min("81", null, "17"),
     probe: () => "setAppBadge" in navigator,
   },
+  {
+    id: "gamepad-rumble",
+    name: "Controller rumble",
+    lost: "Drive Hub's controller doesn't buzz on a bump or close to things.",
+    level: Level.COSMETIC,
+    apps: ["tight-spot"],
+    min: min("68", null, "16.4"),
+    probe: () => proto("Gamepad", "vibrationActuator"),
+  },
 ];

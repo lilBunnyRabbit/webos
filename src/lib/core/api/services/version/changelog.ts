@@ -29,6 +29,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub gains Mow Day: mow seeded gardens with the zero-turn mower, laying light and dark stripes, around trees, a pond and flower beds you must keep off, with levels and a daily.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub plays with a game controller: steer with the stick, drive with the triggers, and feel the bumps if it rumbles.",
+      },
     ],
   },
   {

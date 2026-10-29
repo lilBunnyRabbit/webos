@@ -200,3 +200,4 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `content-visibility` | content-visibility | Long lists and hidden windows render slower. | `csv-viewer` `gw2` | 85 | 125 | 18 |
 | `backdrop-filter` | Backdrop blur | No frosted-glass blur behind dialogs, docks and widgets. |  | 76 | 103 | 18 |
 | `badging` | App badge | The missed-alarm count on the installed app's icon. |  | 81 | no | 17 |
+| `gamepad-rumble` | Controller rumble | Drive Hub's controller doesn't buzz on a bump or close to things. | `tight-spot` | 68 | no | 16.4 |
