@@ -181,6 +181,25 @@ describe("a shift", () => {
     expect(state.out).toEqual([]);
   });
 
+  test("cars standing in the queue stay on the street when the valet pulls sideways out of the lane", () => {
+    const BRAKE: Input = { steer: 0, throttle: 0, brake: 1 };
+    let state = take(start(create_game({ seed: 3 })));
+    const mine = state.job!.ticket.vehicle;
+    const spec = VEHICLES[mine];
+    state = tick(advance(state, BRAKE, 1 / 120), state.schedule[2].at);
+    state = advance(state, BRAKE, 1 / 120);
+    expect(state.lined.map((each) => each.index)).toEqual([1, 2]);
+    const solids = state.scene.solids.length;
+    state = advance(put(state, { ...arrival_pose(mine), x: 14.6 }), BRAKE, 1 / 120);
+    expect(state.held).toBe(false);
+    expect(state.out).toEqual([]);
+    expect(state.lined.map((each) => each.index)).toEqual([1, 2]);
+    expect(state.scene.solids).toHaveLength(solids);
+    const queued = state.scene.solids.slice(state.street.world.solids.length);
+    expect(queued.some((solid) => bodies(state.car, spec).some((body) => overlaps(body, solid.shape)))).toBe(false);
+    expect(state.dents).toBe(0);
+  });
+
   test("a fetched car left in a bay is parked again, its owner still waiting, and the valet takes the next car", () => {
     let state = start(create_game({ seed: 3 }));
     state = take(state);

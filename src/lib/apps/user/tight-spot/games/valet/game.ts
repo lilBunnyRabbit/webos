@@ -196,10 +196,6 @@ export function queued(state: Pick<GameState, "queue" | "schedule">): Customer[]
 // Room a queued car keeps from the car in hand to pull up: never into it, never right beside it.
 const ARRIVAL_CLEAR = 0.8;
 
-function same_pose(a: Pose, b: Pose): boolean {
-  return Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) < 1e-6 && Math.abs(a.heading - b.heading) < 1e-6;
-}
-
 /** Where a queued car is, and the lane behind it to the street's end, grown by the room it keeps. */
 function approach(vehicle: Customer, pose: Pose): Polygon[] {
   const spec = VEHICLES[vehicle];
@@ -211,26 +207,43 @@ function approach(vehicle: Customer, pose: Pose): Polygon[] {
   ];
 }
 
+/** The place a standing car moves up into and the gap ahead of it, back to where it stands, grown by the room it keeps. */
+function move_up(vehicle: Customer, from: Pose, to: Pose): Polygon {
+  const spec = VEHICLES[vehicle];
+  const ahead = body_centre(to, spec);
+  const behind = body_centre(from, spec);
+  return rect(ahead.x - spec.width / 2 - ARRIVAL_CLEAR, ahead.y - spec.length / 2 - ARRIVAL_CLEAR, ahead.x + spec.width / 2 + ARRIVAL_CLEAR, behind.y + spec.length / 2);
+}
+
+/**
+ * A car that has pulled up never leaves the street and never backs up: it moves up only into a clear place behind a
+ * car that has, else it stands where it is. Only a car still on its way waits off the street for the lane to clear.
+ */
 function queue_solids(state: GameState): { solids: Solid[]; out: number[]; lined: Standing[] } {
   const vehicles = queued(state);
   const poses = queue_poses(vehicles, state.held && state.job ? state.job.ticket.vehicle : null);
   const mine = state.status === Status.DRIVING || state.status === Status.PAUSED ? bodies(state.car, spec_of(state)) : [];
+  const clear = (zones: Polygon[]) => !zones.some((zone) => mine.some((body) => overlaps(body, zone)));
   const solids: Solid[] = [];
   const out: number[] = [];
   const lined: Standing[] = [];
-  poses.forEach((pose, i) => {
-    if (!pose) return;
+  let behind = false;
+  poses.forEach((target, i) => {
     const index = state.queue[i];
     const was = state.lined.find((each) => each.index === index);
-    if (was && same_pose(was.pose, pose)) {
-      lined.push(was);
-      solids.push(...was.solids);
+    if (was) {
+      const up = target !== null && target.y < was.pose.y - 1e-6;
+      if (!up || behind || !clear([move_up(vehicles[i], was.pose, target)])) {
+        if (up) behind = true;
+        lined.push(was);
+        solids.push(...was.solids);
+        return;
+      }
+    } else if (!target || behind || !clear(approach(vehicles[i], target))) {
+      if (target) out.push(index);
       return;
     }
-    if (approach(vehicles[i], pose).some((zone) => mine.some((body) => overlaps(body, zone)))) {
-      out.push(index);
-      return;
-    }
+    const pose = target!;
     const car = car_solids(vehicles[i], pose, state.schedule[index].paint);
     const end = { ...pose, y: STREET_END + VEHICLES[vehicles[i]].length };
     lined.push({ index, pose, since: state.status === Status.READY ? -Infinity : state.ms, from: was?.pose ?? end, solids: car });
@@ -254,6 +267,15 @@ function with_scene(state: GameState): GameState {
   const parked = state.tickets.flatMap((ticket) => ticket.solids);
   const queue = queue_solids(state);
   return { ...state, out: queue.out, lined: queue.lined, scene: { solids: [...state.street.world.solids, ...parked, ...queue.solids] } };
+}
+
+/** A standing car still short of its place, waiting for the car in hand to clear the way up. */
+function unsettled(state: GameState): boolean {
+  const poses = queue_poses(queued(state), state.held && state.job ? state.job.ticket.vehicle : null);
+  return state.lined.some((each) => {
+    const target = poses[state.queue.indexOf(each.index)];
+    return target !== null && target !== undefined && target.y < each.pose.y - 1e-6;
+  });
 }
 
 function in_lane(car: Placement, spec: VehicleSpec): boolean {
@@ -524,9 +546,10 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
   }
   const held = in_lane(next.car, spec);
   if (held !== next.held) next = with_scene({ ...next, held });
-  else if (next.out.length > 0) {
-    const out = queue_solids(next).out;
-    if (out.length !== next.out.length || out.some((index, i) => index !== next.out[i])) next = with_scene(next);
+  else if (next.out.length > 0 || unsettled(next)) {
+    const queue = queue_solids(next);
+    const changed = queue.out.length !== next.out.length || queue.out.some((index, i) => index !== next.out[i]) || queue.lined.length !== next.lined.length || queue.lined.some((each, i) => each !== next.lined[i]);
+    if (changed) next = with_scene(next);
   }
   return tick(next, state.ms + dt * 1000);
 }
