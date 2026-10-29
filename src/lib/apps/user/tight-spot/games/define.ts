@@ -13,6 +13,7 @@ export const Building = {
   GARDEN: "garden",
   ARENA: "arena",
   TRACK: "track",
+  TEST_CENTRE: "test-centre",
 } as const;
 export type Building = (typeof Building)[keyof typeof Building];
 

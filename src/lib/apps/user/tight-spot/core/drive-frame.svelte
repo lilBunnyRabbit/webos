@@ -267,7 +267,7 @@
         class={cn("ts-wheel hidden touch-none place-items-center gap-2 select-none pointer-coarse:grid", wheel_idle && "ts-idle")}
       >
         {#if signals}
-          <div class="flex gap-3" role="group" aria-label="Turn signals">
+          <div class="ts-signals flex gap-3" role="group" aria-label="Turn signals">
             {#each [{ side: Signal.LEFT, label: "Signal left" }, { side: Signal.RIGHT, label: "Signal right" }] as button (button.side)}
               {@const on = input.signal === button.side}
               <button
@@ -424,6 +424,14 @@
 
       .ts-wheel {
         left: 0.75rem;
+        grid-auto-flow: column;
+        align-items: end;
+      }
+
+      /* Beside the wheel rather than over it, so they stay clear of the HUD along the top. */
+      .ts-signals {
+        order: 2;
+        flex-direction: column;
       }
 
       .ts-pedals {

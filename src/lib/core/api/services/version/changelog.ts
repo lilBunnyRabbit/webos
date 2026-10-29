@@ -69,6 +69,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub's telehandler switches crab steer with V now, since Z and X work the new turn signals.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub gains the Driving Test: drive three routes through a town with lights, a roundabout, signs and a car park while an examiner tells you where to go, signal with Z and X, park in a bay and pull up, and get a pass or fail with a sheet explaining every fault.",
+      },
     ],
   },
   {

@@ -333,8 +333,29 @@ function chequers(ctx: CanvasRenderingContext2D, local: Local, palette: Palette)
   }
 }
 
+// A test centre's roof is painted like the road it examines: a dashed centre line and a zebra on each wing.
+function crossing(ctx: CanvasRenderingContext2D, local: Local, scale: number, palette: Palette) {
+  const { top } = local;
+  const y = top + (WING_TOP + WING_BOTTOM) / 2;
+  ctx.strokeStyle = palette.faint;
+  ctx.lineWidth = Math.max(0.12, 1.5 / scale);
+  ctx.setLineDash([1, 0.8]);
+  ctx.beginPath();
+  for (const wing of wings(local)) {
+    ctx.moveTo(wing.x0, y);
+    ctx.lineTo(wing.x1, y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = palette.faint;
+  for (const wing of wings(local)) {
+    const middle = (wing.x0 + wing.x1) / 2;
+    for (let x = middle - 2.1; x < middle + 2; x += 0.9) ctx.fillRect(x, top + WING_TOP + 0.3, 0.45, WING_BOTTOM - WING_TOP - 0.6);
+  }
+}
+
 // The new games' roofs: a valet stand's striped awning, an apron's radar dome and lead-in lines, a ferry deck's water,
-// a garden's shrubs, an arena's tiers of seats, a race track's chequers.
+// a garden's shrubs, an arena's tiers of seats, a race track's chequers, a test centre's road markings.
 function roof(ctx: CanvasRenderingContext2D, building: Building | null, local: Local, scale: number, palette: Palette) {
   switch (building) {
     case Building.CAR_PARK:
@@ -353,6 +374,8 @@ function roof(ctx: CanvasRenderingContext2D, building: Building | null, local: L
       return stands(ctx, local, scale, palette);
     case Building.TRACK:
       return chequers(ctx, local, palette);
+    case Building.TEST_CENTRE:
+      return crossing(ctx, local, scale, palette);
   }
 }
 

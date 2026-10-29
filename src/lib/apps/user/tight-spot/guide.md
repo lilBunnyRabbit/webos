@@ -45,7 +45,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 ## Keyboard
 
 - **← →** or **A D** turn the wheel: a tap nudges it, and held a moment it turns faster. **↑** or **W** drives forward, **↓** or **S** backs up: against the way you're going it brakes, and pressing it again once the car stands switches to D or R.
-- **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel. **V** switches the telehandler's crab mode (stopped).
+- **E** drive, **R** or **Q** reverse, **N** neutral, **P** or **Space** park, or click a gear at the top left. **C** centres the wheel. **V** switches the telehandler's crab mode (stopped). **Z** and **X** are the turn signals in the Driving Test.
 - **+** and **-** zoom. **Escape** pauses and resumes.
 - **Enter** starts, resumes, and once the round is over takes the card's main button: a new spot, the next level, or another try after a touch. **R** tries the same spot again.
 - The keys keep driving after you click a button or close the settings.
@@ -182,3 +182,14 @@ Push an airliner back off its stand with the tug. The card shows ATC's clearance
 - **Wings collide with everything:** a wingtip, an engine, the tail or the tug touching a parked aircraft, a jet bridge, the terminal or the blast fence ends the push.
 - Stop on the mark and press **P** or **Space** (or **Enter**). Off the mark, a line at the bottom says what's off.
 - Three stars: one for the push, one for never changing direction, one for the time at or under par. **Pushes** are random stands, **Levels** are 12 tighter and tighter, and the **Daily** is the same push for everyone; Game Hub lists it as Drive Hub · Pushback.
+
+## Driving Test
+
+A driving exam in a small town, driven on the right. The examiner tells you where to go a few seconds before each junction, in a bubble at the top and out loud with sound on. Pick a route (**Market**, **Station** or **School**) from the toolbar.
+
+- **Follow the road** unless told to turn. Signal before every turn with **Z** (left) and **X** (right), or the arrows over the wheel on touch. The signal turns itself off as you straighten up after the turn; press the same side again to cancel it.
+- **Signs and lights:** keep to the limit in the red circle (50 in town, 30 by the school, 10 in the car park; the HUD shows the one you're on). Stop at a **STOP** sign, slow right down at a give-way line (the triangle), wait for green at the lights. A solid line is not to be crossed. On the two-lane one-way street, the arrows say which lane goes where.
+- **The bay park:** you'll be asked to turn into the test centre car park. Park in the highlighted bay, inside the lines and straight, and press **P** or **Space**. Then drive out the other gate.
+- **Pull up:** at the end, pull up close to the right-hand kerb with a right signal and press **P**. That ends the test.
+- **Faults:** minor, serious or dangerous. More than **15 minors**, or any serious or dangerous fault, fails. Hitting a parked car or a building ends the test; so does leaving the route. The sheet at the end lists every fault and why it matters.
+- The faster you go, the less the wheel turns. Your best result per route is kept.

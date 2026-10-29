@@ -19,9 +19,9 @@ Owner, earlier: the Driving Test is "the best one" and gets focus. Overnight pla
 - **Shell:** nothing; the `game` prop takes `test`.
 
 ## Action items
-1. `refactor:` Hot Lap's grip to `core/grip.ts`.
-2. `feat:` indicators in core (input, keys, pad, touch, sound, blinkers); crab to V.
-3. `feat:` the Driving Test, first cut.
+1. [x] `refactor:` Hot Lap's grip to `core/grip.ts`.
+2. [x] `feat:` indicators in core (input, keys, pad, touch, sound, blinkers); crab to V.
+3. [x] `feat:` the Driving Test, first cut.
 
 ## Next session topics
 - AI traffic (v2), pedestrians (v3), a daily, more towns, licence categories (van, bus, truck, trailer).
