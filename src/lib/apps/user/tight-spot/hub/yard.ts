@@ -194,11 +194,14 @@ export function door_at(yard: Yard, car: Placement, spec: VehicleSpec): number |
   return index < 0 ? null : index;
 }
 
-// A long rig's vehicle sits past the pad when the rig's middle is on it, so either counts.
+// A rig longer than the pad can't get its vehicle onto it while straight, so its middle counts instead; a shorter rig
+// counts only with the vehicle itself on the pad (a caravan on the pad with the car off it doesn't swap).
 export function on_pad(yard: Yard, car: Placement, spec: VehicleSpec): boolean {
+  if (inside_convex(body_centre(car, spec), yard.pad)) return true;
   const { front, rear } = rig_ends(spec);
-  const middle = to_world(car, { x: (front + rear) / 2, y: 0 });
-  return inside_convex(body_centre(car, spec), yard.pad) || inside_convex(middle, yard.pad);
+  const ys = yard.pad.map((point) => point.y);
+  if (front - rear <= Math.max(...ys) - Math.min(...ys)) return false;
+  return inside_convex(to_world(car, { x: (front + rear) / 2, y: 0 }), yard.pad);
 }
 
 export interface Bumped {

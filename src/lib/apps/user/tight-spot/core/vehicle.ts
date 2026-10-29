@@ -1083,10 +1083,6 @@ export function hitch_angles(car: Placement): number[] {
   return car.trailers.map((trailer, i) => wrap_angle((i === 0 ? car.heading : car.trailers![i - 1].heading) - trailer.heading));
 }
 
-export function hitch_angle(car: Placement, index = 0): number {
-  return hitch_angles(car)[index] ?? 0;
-}
-
 /** The first hinge folded past its link's limit, or −1. */
 export function jackknife(car: Placement, spec: VehicleSpec): number {
   const angles = hitch_angles(car);

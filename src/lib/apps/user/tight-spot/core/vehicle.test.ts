@@ -9,7 +9,6 @@ import {
   Gear,
   HATCHBACK,
   HATCH_TRAILER,
-  hitch_angle,
   hitch_angles,
   hitch_point,
   jackknife,
@@ -287,25 +286,25 @@ describe("trailer", () => {
   test("starts straight behind the car", () => {
     const car = create_car(START, Gear.PARK, spec);
     expect(car.trailers?.[0].heading).toBe(START.heading);
-    expect(hitch_angle(car)).toBe(0);
+    expect(hitch_angles(car)[0]).toBe(0);
   });
 
   test("towing forwards straightens it", () => {
     const car = run(towing(30 * DEG, Gear.DRIVE), { steer: 0, throttle: 0.5, brake: 0 }, 6, spec);
     expect(car.x).toBeGreaterThan(8);
-    expect(Math.abs(hitch_angle(car))).toBeLessThan(2 * DEG);
+    expect(Math.abs(hitch_angles(car)[0])).toBeLessThan(2 * DEG);
   });
 
   test("reversing amplifies the hitch angle, and past 70° it has jackknifed", () => {
     const start = towing(5 * DEG, Gear.REVERSE);
     let car = start;
-    let previous = Math.abs(hitch_angle(car));
+    let previous = Math.abs(hitch_angles(car)[0]);
     for (let i = 0; i < 120 * 4; i++) {
       car = step(car, { steer: 0, throttle: 0.5, brake: 0 }, DT, spec);
-      expect(Math.abs(hitch_angle(car))).toBeGreaterThanOrEqual(previous - 1e-12);
-      previous = Math.abs(hitch_angle(car));
+      expect(Math.abs(hitch_angles(car)[0])).toBeGreaterThanOrEqual(previous - 1e-12);
+      previous = Math.abs(hitch_angles(car)[0]);
     }
-    expect(Math.abs(hitch_angle(car))).toBeGreaterThan(10 * DEG);
+    expect(Math.abs(hitch_angles(car)[0])).toBeGreaterThan(10 * DEG);
     for (let i = 0; i < 120 * 20 && !jackknifed(car, spec); i++)
       car = step(car, { steer: 0, throttle: 0.5, brake: 0 }, DT, spec);
     expect(jackknifed(car, spec)).toBe(true);
