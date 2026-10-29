@@ -161,7 +161,7 @@
   });
 
   $effect(() => {
-    void [game, palette, board_size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, input.signal];
+    void [game, palette, board_size, zoom, settings.guides, settings.speed_zoom, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, input.signal];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -189,7 +189,7 @@
     const pace = Math.min(1, Math.abs(game.car.speed) / top_speed(SPEC));
     const ahead = game.car.speed * LOOK_AHEAD;
     const focus = { x: centre.x + Math.cos(game.car.heading) * ahead, y: centre.y + Math.sin(game.car.heading) * ahead };
-    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, SPAN_SLOW + (SPAN_FAST - SPAN_SLOW) * pace);
+    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, settings.speed_zoom ? SPAN_SLOW + (SPAN_FAST - SPAN_SLOW) * pace : SPAN_SLOW);
   }
 
   function render(dt: number) {

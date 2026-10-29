@@ -69,6 +69,10 @@
       <span class="flex flex-col">Guide lines <span class="text-2xs text-foreground/65">Where the front corners will go</span></span>
       <Switch bind:checked={() => settings.guides, (value: boolean) => toggle("guides", value)} />
     </label>
+    <label class="flex items-center justify-between gap-3 text-ui">
+      <span class="flex flex-col">Zoom with speed <span class="text-2xs text-foreground/65">The view pulls back as you go faster</span></span>
+      <Switch bind:checked={() => settings.speed_zoom, (value: boolean) => toggle("speed_zoom", value)} />
+    </label>
     <p class="mt-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Driving</p>
     <label class="flex items-center justify-between gap-3 text-ui">
       <span class="flex flex-col">Creep <span class="text-2xs text-foreground/65">D and R roll without gas, like an automatic</span></span>

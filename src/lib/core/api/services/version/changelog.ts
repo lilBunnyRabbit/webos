@@ -10,6 +10,11 @@ export const CHANGELOG: Release[] = [
     title: "Main street",
     changes: [
       {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub has a Zoom with speed setting: turn it off and the view stays at your own zoom however fast you go.",
+      },
+      {
         kind: NEW,
         apps: ["tight-spot"],
         text: "Drive Hub's warehouse racks have upper shelves: stop at the rack face and a side view opens where you raise the forks, line them up with the pallet's pockets and drive in.",
