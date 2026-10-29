@@ -422,6 +422,49 @@ Before the start and on the done card, the whole circuit (`fit_span`, 3 m margin
 
 Played in the browser (Playwright, solo mode): keys from the grid over the line, onto the grass and into a wall (Void, rings), pause; a whole session and a second one against the saved ghost driven by the proof driver wired in for the check only (not shipped), on desktop and at 390 × 844 and 844 × 390 touch, Brand Dark and Brand Light.
 
+## Ferry Loader (ferry)
+
+`games/ferry/`: the deck and queue generator (`deck.ts`), the round model and its rules (`game.ts`), the sailing planner and par (`plan.ts`, `par.worker.ts`, `par.ts`), the frame (`draw.ts`), the component (`game.svelte`), the proof (`prove.ts`, `planner.test.ts`). Decided in [the wave 3 brainstorm](../brainstorm/2026-10-29_drive-hub-wave-3.md) ("First cuts › Ferry Loader").
+
+### The deck
+
+`build_deck(seed, difficulty, count)`, pure. The ship runs west to east: a drive-through deck of three or four lanes (x from 0 at the stern to the bow wall, y from 0 on the port side), steel hull walls, a closed bow, a ramp 6 m long at the stern whose opening stops short of each side, water either side of the ramp, a quay behind it with fences, and marshalling lanes past the quay fence where the queue waits (drawn only, out of reach). Port is the top of the screen, starboard the bottom.
+
+**The packing comes first.** The queue's 3–6 vehicles are drawn from the garage (city car, hatchback, SUV, pickup, van, box truck, city bus; at most one bus and two heavies). Every assignment of vehicles to lanes is enumerated (4⁶ = 4096 at most); the ones balanced within 60 % of the limit are kept, the shortest longest lane wins (one picked by the seed among those within 0.5 m of it), each lane's vehicles in a seeded order nose to tail with 0.7 m gaps (`PACK_GAP`) from the bow. A set with no balanced packing is dealt again. The deck is that longest lane plus an apron at the stern to swing in. The queue is the packing's slots frontmost first, so each vehicle has the open stern behind the ones already aboard. `Deck.plan` keeps the packing for the planner; the player may put any vehicle in any lane.
+
+| | Roomy (0) | Tight (1) |
+|---|---|---|
+| Lanes | 3 (4 from five vehicles) | 4 |
+| Lane width | 3.5 m (+0–0.1) | 3.1 m (+0–0.1) |
+| Apron at the stern | 8 m | 4 m |
+| Ramp opening short of each side | 0.2 m | 0.9 m |
+
+Each vehicle comes onto the quay in P, nose 1.5 m short of the ramp's foot, lined up with the ramp's middle (`spawn_pose`): with an even number of lanes that's a lane line, so every vehicle has to be steered into its lane.
+
+### Stowing
+
+- `judge()` says whether the vehicle could stay where it stands: every body corner on the deck (off the ramp), within 5° of the bow, inside one lane, its body centre within 25 cm of the lane's middle (`CENTRED`), and its nose 0.3–1 m (`MIN_GAP`, `MAX_GAP`) short of the rear of the vehicle ahead in that lane, or of the bow wall when it's the first.
+- **Shifting into P** after a drive (the first P on the quay counts for nothing, as in parking) stows it if `judge()` has no fault: it becomes game-owned solids (`SolidKind.CAR` with the vehicle's look, drawn by the core's parked-vehicle drawing), the scene is rebuilt once (one `Scene` object per stow, so the obstacle cache holds), and the next vehicle in the queue comes onto the quay with `create_car`. Otherwise P only parks, and the hint at the bottom says why: *Not on the deck yet*, *Not straight: 6.2° off*, *Across two lanes*, *Off centre: 32 cm to port*, *Too close: 12 cm to the van*, *Pull up: 1.8 m to the bow*. Enter does the same as P once it stands where it would stow.
+- **Undo** (U, Backspace, or the Undo button: bottom right on a fine pointer, over the pedals on touch) takes the last stowed vehicle back to the quay. Each stow pushes a `Snapshot` (the spawn car, the queue index, the stowed list and the scene as they were when that vehicle came onto the quay) on `GameState.history`; undo pops one and spreads it over the state. The clock keeps running; the round counts the undos.
+- **Contact ends the sailing**, like parking: the hull, the bow, the ramp's edges into the water, the quay fences and any stowed vehicle, through the core's `collide()`. The card names it ("Touched the ship's side", "Touched the city bus").
+- Each lane shows its stop window, the 0.3–1 m behind what's ahead, dashed; the one the vehicle is in fills and pulses.
+
+### Balance and scoring
+
+- **Balance** (`moment`): the load's turning moment about the centre line as a share of the most it could be, Σ w·(y − W/2) / (Σ w · W/2), from −1 (all on the port edge) to 1. Weights in tonnes: city car 1.0, hatchback 1.3, SUV 2.2, pickup 2.3, van 2.8, box truck 7.5, bus 12. The gauge (P–S, top right; under the gear strip on a phone) reads it live with the vehicle in hand counted once it's on the deck; the green band is the limit, `BALANCE_LIMIT` = 12 %.
+- **Stars** (`stars`): one for all aboard, one for the balance within the limit at the end, one for the time at or under the par time.
+- **Par time** (`par_of`): `plan_sailing` drives the queue in order from the quay to its packing lanes; its path length at 1.8 m/s, plus 2.5 s per change of direction and 4 s per vehicle, times 1.25 for slack, rounded up to 5 s. It runs in a one-shot worker per round like the Warehouse's, keyed on `$derived(game.round)`; a sailing finished first is recorded at once and again with the time star when the par lands.
+- Best: more stars, then time, per `level:N`, `sailing:N` (vehicles) and `daily:YYYY-MM-DD` (`record`).
+- Levels (`level_round`): 12, three each of three to six vehicles, difficulty 0 → 1, seeds `hash(0xfe22, index)`. Sailings (`sailing_round`): 3–6 vehicles and difficulty 0.15–0.85 from the seed. Daily (`daily_round`): five vehicles, difficulty 0.3–0.8, seed `daily_seed(day, "tight-spot/ferry")`, the same queue for everyone; it goes to Game Hub under `tight-spot/ferry` scored as stars lost, then time.
+
+### Every sailing can be loaded
+
+`plan_leg` searches each vehicle from its spawn with hybrid A* only until it is lined up behind its packing slot (within 1°, its centre within 8 cm of the lane's middle, short of the slot) and a straight run up stops it 0.6–0.65 m short of what's ahead (`straight_in`), with the bodies grown 5 cm, the vehicles before it where their legs left them. `prove()` drives every leg again in 15 cm pieces with the real bodies and no margin, judges each stop with `judge()`, and checks the balance at the end. `planner.test.ts`: levels 1, 4, 8 and 12, two random sailings and the daily of 2026-10-29, 0.1–3 s each. All 12 levels and 60 sampled sailings proved while the generator was tuned.
+
+`game.test.ts`: the same seed builds the same ferry; every level's packing is balanced, on the deck and touches nothing; each spawn is clear and on the ramp's middle; tighter levels have narrower lanes; the gap window's edges, off centre, crooked, across a line and off the deck; P stows and the next comes on, the gap measured to the one ahead; P before a drive only parks; undo restores the snapshot and keeps the clock; contact; balance, stars, bests and levels.
+
+Played through in a browser from the arrow keys and P under Playwright's fake clock: level 1 loaded down the middle lane with one undo, two stars, the achievement.
+
 ## Data
 
 - `f1/ghost-meadow.json`, `f1/ghost-harbour.json`, `f1/ghost-ridge.json` in `/var/lib/apps/tight-spot/`: Hot Lap's best lap per track and its ghost (`{ ms, splits: [s1, s2], frames: [x cm, y cm, heading mrad, …] }` at 10 Hz).
@@ -433,13 +476,15 @@ Played in the browser (Playwright, solo mode): keys from the grid over the line,
 - `app.tight-spot.forklift.best`: best `{ stars, ms, precision? }` per `level:N`, `jobs:N` (pallets) and `daily:YYYY-MM-DD`, more stars first, then time; precision is the best average seen there.
 - `app.tight-spot.forklift.levels`: stars per finished level; the next one after the highest is open.
 - `app.tight-spot.forklift.mode`, `.size`, `.level`: last choices.
+- `/var/lib/apps/tight-spot/ferry.json` (the app's data folder, ADR-035): Ferry Loader's `{ bests, levels }`: best `{ stars, ms }` per `level:N`, `sailing:N` and `daily:YYYY-MM-DD`, and stars per finished level (the next one after the highest is open). Shared by every window of the app.
+- `app.tight-spot.ferry.mode`, `.level`: Ferry Loader's last choices.
 - `app.tight-spot.sound`, `.guides`, `.creep`, `.wheel`, `.steering`: settings every game shares.
 - Parking data before the split (`app.tight-spot.best` and the rest at the top level) is left behind, not migrated.
 - `app.tight-spot.last`: the id of the game entered last, which the switcher and the yard mark.
 - `app.tight-spot.yard_intro`: `true` once the yard's welcome card has been seen (shared by every window).
 - The yard keeps nothing: it starts at the gate in the hatchback, and its vehicle lives only as long as the window.
-- Props: `game` (`yard`, `parking`, `forklift`, `f1`), `daily` (`YYYY-MM-DD`) and `mode` (`parking`, `forklift`, `f1`: which game's daily). Game Hub passes `daily` and `mode`.
-- One daily per game (ADR-050): `daily_rank` is the record `{ parking: SCORE_ASC, forklift: SCORE_ASC, f1: TIME }` (`DAILY_GAMES` in `games/index.ts`, in Game Hub's row order), so Game Hub lists "Drive Hub · Parking", "Drive Hub · Forklift" and "Drive Hub · F1". Parking's daily (seed `daily_seed(day, "tight-spot")`, unchanged) goes to `plays.json` under `tight-spot/parking` with moves as the score; days before the split stay under `tight-spot`, which no row reads now. The Warehouse's (opened from Game Hub or the game's Daily) goes under `tight-spot/forklift`, scored as stars lost, so fewer lost rank first, then time. Hot Lap's goes under `tight-spot/f1`, one result per clean lap, the quickest kept.
+- Props: `game` (`yard`, `parking`, `forklift`, `f1`, `ferry`), `daily` (`YYYY-MM-DD`) and `mode` (`parking`, `forklift`, `f1`, `ferry`: which game's daily). Game Hub passes `daily` and `mode`.
+- One daily per game (ADR-050): `daily_rank` is the record `{ parking: SCORE_ASC, forklift: SCORE_ASC, f1: TIME, ferry: SCORE_ASC }` (`DAILY_GAMES` in `games/index.ts`, in Game Hub's row order), so Game Hub lists "Drive Hub · Parking", "Drive Hub · Forklift" and "Drive Hub · F1". Parking's daily (seed `daily_seed(day, "tight-spot")`, unchanged) goes to `plays.json` under `tight-spot/parking` with moves as the score; days before the split stay under `tight-spot`, which no row reads now. The Warehouse's (opened from Game Hub or the game's Daily) goes under `tight-spot/forklift`, scored as stars lost, so fewer lost rank first, then time. Hot Lap's goes under `tight-spot/f1`, one result per clean lap, the quickest kept.
 
 ## Dependencies & licences
 

@@ -19,6 +19,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub gains Hot Lap, a race track for the F1 car: three circuits with kerbs, grass and walls, sector and lap times, a ghost of your best lap to chase, a par time from the ideal racing line, and a track of the day.",
       },
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub gains Ferry Loader: drive a queue of cars, vans, trucks and buses up the ramp onto a ferry, park each one snugly in a lane, keep the ship balanced, and undo the last one if it won't all fit, with levels and a daily.",
+      },
     ],
   },
   {

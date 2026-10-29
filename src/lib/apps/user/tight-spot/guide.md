@@ -2,7 +2,7 @@
 
 Driving games along one street. The app opens on the gate and the first buildings, your car at the gate; the view follows the car once you drive, and the street runs on east with a building for every game.
 
-- Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway. The car park holds **Tight Spot**, the **Warehouse** the forklift game.
+- Each building carries its game's name and icon on the roof. Drive into its lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway. The car park holds **Tight Spot**, the **Warehouse** the forklift game, the ferry deck **Ferry Loader**.
 - **Games** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
 - **Back** in a game returns you to the yard, out of that game's doorway.
 
@@ -110,3 +110,24 @@ Three laps in the F1 car on one of three circuits: **Meadow** (gentle), **Harbou
 - **Ghost.** Your best lap on each track is saved and drives with you, faint, on every lap after. Passing a sector line shows how far ahead (green) or behind you are against it.
 - **Stars** for your best clean lap: one for a clean lap, two within 20% of par, three within 8%. Par is the computer's lap on the racing line at the car's limit, so it's tight.
 - **Daily:** the track of the day for everyone, ranked by your quickest clean lap. Game Hub lists it as Drive Hub · F1.
+
+## Ferry Loader
+
+Load a ferry. A queue of three to six vehicles waits behind the quay: cars, vans, box trucks, now and then a bus. Each one in turn comes onto the quay; drive it up the ramp at the stern and park it in any lane on the deck. The start card lists the queue, and the chip at the top says which one you're driving and what's next.
+
+- **Stow it:** straight in its lane, centred (within 25 cm of the lane's middle), its nose 0.3 to 1 m behind the vehicle ahead, or the bow if the lane is empty. Then shift into **P** (or press **Space** or **Enter**). The window to stop in is painted across each lane; the lane you're in lights up. Not quite there, the line at the bottom says what's off: *Pull up: 1.8 m to the bow*, *Off centre: 32 cm to port*, *Across two lanes*.
+- **The next one** comes onto the quay as soon as one is stowed. It starts lined up with the middle of the ramp, so on a four-lane deck you steer into a lane.
+- **Undo** (**U**, or the **Undo** button) takes the last vehicle off again and back to the quay, to try another lane. The clock keeps running.
+- **Balance:** the gauge at the top shows how the load leans, to port (left, facing the bow) or starboard. A bus weighs as much as twelve city cars. Stay inside the green band.
+- **Contact ends the sailing:** the ship's side, the bow, the water by the ramp, the quay fence or a vehicle already aboard.
+
+## Ferry Loader scoring
+
+- Three stars: one for getting every vehicle aboard, one for the balance within 12 % at the end, one for the time at or under the par time. The par comes from the computer loading the same queue at a careful pace; it appears on the card a moment after the sailing does.
+- A best is more stars, then a quicker time; it's kept per level, per number of vehicles and per daily.
+
+## Ferry Loader modes
+
+- **Sailings:** a random ferry and queue, three to six vehicles. **New** deals another.
+- **Levels:** 12 sailings, three each of three to six vehicles, the lanes and the stern tighter as you go. Finish one to open the next.
+- **Daily:** the same five-vehicle queue for everyone today. Game Hub lists it as Drive Hub · Ferry.

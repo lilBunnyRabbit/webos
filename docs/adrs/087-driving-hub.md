@@ -78,6 +78,9 @@ Built from the wave 3 brainstorm ("F1 grip", "First cuts › Hot Lap"); game `f1
 - **Camera.** Game-owned within the core's `frame`: a 0.9 s look-ahead and a span from 34 m standing to 72 m at top speed.
 - **Daily.** The track of the day from `daily_seed(day, "tight-spot/f1")`, every clean lap reported, `daily_rank.f1` = `TIME`.
 
+## Revision 2026-10-29 (Ferry Loader)
+Built from the wave 3 brainstorm's first cut: game id `ferry`, `Building.FERRY` (lanes painted on its roof in the yard). Contact ends the sailing; parked vehicles become the game's own solids and the next vehicle swaps in with `create_car`, as decided, with no core change. Decided while building, inside the game: stowing is shifting into P where the vehicle may stay (as parking's park); undo restores a snapshot pushed per stow and keeps the clock running; the balance is the load's moment as a share of the most it could be, with a 12 % limit; random rounds are "Sailings" of 3–6 vehicles with no size picker; 12 levels; the par runs in a worker like the Warehouse's. Bests and level stars live in `/var/lib/apps/tight-spot/ferry.json` (the decided data folder), last choices in `app.tight-spot.ferry.*`. Details on [Drive Hub](../apps/tight-spot.md#ferry-loader-ferry).
+
 ## Consequences
 - One large app; folders keep games apart.
 - The id `tight-spot` stays even for games that aren't parking.

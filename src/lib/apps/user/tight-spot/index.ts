@@ -23,13 +23,14 @@ export default define_app({
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
     game: z.enum(GAME_CHOICES).optional(),
-    /** With `daily`, which game's daily (ADR-050): parking, the Warehouse or Hot Lap. */
+    /** With `daily`, which game's daily (ADR-050): parking, the Warehouse, Hot Lap or Ferry Loader. */
     mode: z.enum(DAILY_GAMES).optional(),
   }),
   daily_rank: {
     parking: DailyRank.SCORE_ASC,
     forklift: DailyRank.SCORE_ASC,
     f1: DailyRank.TIME,
+    ferry: DailyRank.SCORE_ASC,
   },
   achievements: GAMES.flatMap((game) => game.achievements),
   component: () => import("./tight-spot.app.svelte"),
