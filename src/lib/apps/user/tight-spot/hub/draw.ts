@@ -45,6 +45,7 @@ export class StaticLayer {
   private key = "";
   private palette: Palette | null = null;
   private area: Bounds = { x0: 0, y0: 0, x1: 0, y1: 0 };
+  private last_scale = 0;
 
   draw(ctx: CanvasRenderingContext2D, view: View, palette: Palette, key: string, limits: Bounds, paint: (layer: CanvasRenderingContext2D) => void) {
     const { scale, dpr, width, height } = view;
@@ -60,6 +61,16 @@ export class StaticLayer {
     const full_key = `${scale}|${dpr}|${key}`;
     const { area } = this;
     const fits = this.canvas && this.palette === palette && this.key === full_key && seen.x0 >= area.x0 && seen.y0 >= area.y0 && seen.x1 <= area.x1 && seen.y1 <= area.y1;
+    const zooming = scale !== this.last_scale;
+    this.last_scale = scale;
+    // Mid-zoom (an ease or a pinch) a cache would be redrawn every frame anyway, so paint straight to the board.
+    if (!fits && zooming) {
+      ctx.save();
+      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (width / 2 - view.x * scale), dpr * (height / 2 - view.y * scale));
+      paint(ctx);
+      ctx.restore();
+      return;
+    }
     if (!fits) {
       this.area = {
         x0: Math.max(limits.x0, seen.x0 - half_w * 0.5),
@@ -80,7 +91,12 @@ export class StaticLayer {
     if (!this.canvas) return;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.drawImage(this.canvas, dpr * (width / 2 + (this.area.x0 - view.x) * scale), dpr * (height / 2 + (this.area.y0 - view.y) * scale));
+    // Whole device pixels: a fractional offset would resample the whole town and soften its hairlines as the view moves.
+    ctx.drawImage(
+      this.canvas,
+      Math.round(dpr * (width / 2 + (this.area.x0 - view.x) * scale)),
+      Math.round(dpr * (height / 2 + (this.area.y0 - view.y) * scale))
+    );
     ctx.restore();
   }
 }
