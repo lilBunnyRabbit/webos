@@ -108,7 +108,7 @@
   let orphan: ParJob | null = null;
   // A finished job recorded before its par was known: the par, when it lands, may still earn it the time star.
   let awaiting: Finished | null = null;
-  const sounds = new Sounds();
+  const sounds = new Sounds(() => settings);
 
   // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its par).
   const round = $derived(game.round);
@@ -289,7 +289,7 @@
       next = advance(next, input.read(next.car.gear), dt, settings.creep ? SPEC : without_creep(SPEC));
     }
     input.follow(next.car.steer / lock);
-    if (settings.sound) sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02);
+    sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02);
     if (next === game) return;
     const before = game.status;
     game = next;
@@ -298,7 +298,7 @@
 
   function crashed() {
     release_all();
-    if (settings.sound) sounds.crash();
+    sounds.crash();
   }
 
   function finish(state: GameState) {
@@ -306,7 +306,7 @@
     const result = record(state, stars(state, par?.ms ?? null));
     new_best = result.improved;
     first_job = result.first;
-    if (settings.sound) sounds.parked(new_best && !first_job);
+    sounds.parked(new_best && !first_job);
     awaiting = !par && !par_failed && result.stars < 3 ? { state, stars: result.stars } : null;
   }
 
@@ -350,7 +350,7 @@
     if (next === game) return;
     input.release();
     game = next;
-    if (settings.sound) sounds.fork(action === ForkAction.LIFT);
+    sounds.fork(action === ForkAction.LIFT);
     if (next.status === Status.DONE) finish(next);
     const drop = next.drops.length > 0 && action === ForkAction.LOWER ? next.drops[next.drops.length - 1] : null;
     if (drop && Math.round(drop.score) >= PERFECT) achievements.achieve("forklift-perfect");
@@ -448,7 +448,7 @@
     const next = change_gear(game, gear);
     if (next === game) return;
     game = next;
-    if (settings.sound) sounds.shift();
+    sounds.shift();
   }
 
   function choose_direction(want: Gear | null) {

@@ -83,7 +83,7 @@
   let camera: Camera | null = null;
   // The ghost a session races is the one saved when it started: beating it mid-session doesn't swap the car ahead.
   let racing: Ghost | null = untrack(() => ghosts[game.round.track].value);
-  const sounds = new Sounds();
+  const sounds = new Sounds(() => settings);
 
   const round = $derived(game.round);
   const lock = $derived(max_steer(SPEC));
@@ -220,7 +220,7 @@
   }
 
   function touched() {
-    if (settings.sound) sounds.crash();
+    sounds.crash();
   }
 
   function finished(lap: LapResult, state: GameState) {
@@ -241,7 +241,7 @@
       achievements.progress("f1-tracks", TRACK_IDS.filter((each) => ghosts[each].value).length);
       new_best = true;
     }
-    if (settings.sound) sounds.parked(improved);
+    sounds.parked(improved);
     if (state.status === Status.DONE) {
       release_all();
       if (state.laps.every((each) => each.clean)) achievements.achieve("f1-clean-session");
@@ -307,7 +307,7 @@
     const next = change_gear(game, gear);
     if (next === game) return;
     game = next;
-    if (settings.sound) sounds.shift();
+    sounds.shift();
   }
 
   function choose_direction(want: Gear | null) {

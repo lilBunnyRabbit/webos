@@ -109,7 +109,7 @@
   let orphan: ParJob | null = null;
   // A sailing recorded before its par was known: the par, when it lands, may still earn it the time star.
   let awaiting: Finished | null = null;
-  const sounds = new Sounds();
+  const sounds = new Sounds(() => settings);
 
   // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its par).
   const round = $derived(game.round);
@@ -286,7 +286,7 @@
       next = advance(next, input.read(next.car.gear), dt, settings.creep ? current : without_creep(current));
     }
     input.follow(next.car.steer / lock);
-    if (settings.sound) sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02 && !!current.reverse_beeper);
+    sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02 && !!current.reverse_beeper);
     if (next === game) return;
     const before = game.status;
     game = next;
@@ -295,7 +295,7 @@
 
   function crashed() {
     release_all();
-    if (settings.sound) sounds.crash();
+    sounds.crash();
   }
 
   function finish(state: GameState) {
@@ -303,7 +303,7 @@
     const result = save(state, stars(state, par?.ms ?? null));
     new_best = result.improved;
     first_run = result.first;
-    if (settings.sound) sounds.parked(new_best && !first_run);
+    sounds.parked(new_best && !first_run);
     awaiting = !par && !par_failed && result.stars < 3 ? { state, stars: result.stars } : null;
   }
 
@@ -342,7 +342,7 @@
     const last = next.stowed[next.stowed.length - 1];
     if (last && is_bus(last.vehicle)) achievements.achieve("ferry-bus");
     if (next.status === Status.DONE) finish(next);
-    else if (settings.sound) sounds.parked(false);
+    else sounds.parked(false);
   }
 
   function take_back() {
@@ -350,7 +350,7 @@
     game = undo(game);
     input.reset();
     camera = null;
-    if (settings.sound) sounds.shift();
+    sounds.shift();
     focus_board();
   }
 
@@ -441,7 +441,7 @@
     const stows = next.stowed.length > game.stowed.length;
     game = next;
     if (stows) stowed(next);
-    else if (settings.sound) sounds.shift();
+    else sounds.shift();
   }
 
   function choose_direction(want: Gear | null) {

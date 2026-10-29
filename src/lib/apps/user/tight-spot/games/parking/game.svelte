@@ -109,7 +109,7 @@
 
   let camera: Camera | null = null;
   let readings: Record<End, number | null> = { front: null, rear: null };
-  const sounds = new Sounds();
+  const sounds = new Sounds(() => settings);
 
   const spec = $derived(spec_of(game.round));
   const lock = $derived(max_steer(spec));
@@ -289,7 +289,7 @@
     input.follow(next.car.steer / lock);
     const near = obstacles(next.world);
     readings = { front: sensor(next.car, near, End.FRONT, spec), rear: sensor(next.car, near, End.REAR, spec) };
-    if (settings.sound && next.status === Status.DRIVING) {
+    if (next.status === Status.DRIVING) {
       const reading = next.car.gear === Gear.DRIVE ? readings.front : next.car.gear === Gear.REVERSE ? readings.rear : null;
       sounds.sensor(reading);
     }
@@ -301,7 +301,7 @@
 
   function crashed() {
     release_all();
-    if (settings.sound) sounds.crash();
+    sounds.crash();
   }
 
   function parked(state: GameState) {
@@ -312,7 +312,7 @@
     bests.value = recorded.bests;
     new_best = recorded.improved;
     first_park = recorded.first;
-    if (settings.sound) sounds.parked(new_best && !first_park);
+    sounds.parked(new_best && !first_park);
     earned = stars(state.round, state.moves);
     achievements.achieve("first-park");
     if (percent !== undefined && percent >= PERFECT) achievements.achieve("perfect-park");
@@ -430,7 +430,7 @@
     const next = change_gear(game, gear);
     if (next === game) return;
     game = next;
-    if (settings.sound && next.status === Status.DRIVING) sounds.shift();
+    if (next.status === Status.DRIVING) sounds.shift();
     if (next.status === Status.PARKED) parked(next);
   }
 

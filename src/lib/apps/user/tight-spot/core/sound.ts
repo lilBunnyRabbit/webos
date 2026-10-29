@@ -11,6 +11,12 @@ const ALARM_PERIOD = 0.7;
 const TICK_BELOW = 0.3;
 const TONE_TICK = 0.12;
 
+interface SoundSettings {
+  sound: boolean;
+  rumble: boolean;
+}
+
+/** The window's sounds and controller rumble, each behind its own setting. */
 export class Sounds {
   private context: AudioContext | null = null;
   private tone: { oscillator: OscillatorNode; gain: GainNode } | null = null;
@@ -18,7 +24,11 @@ export class Sounds {
   private next_alarm = 0;
   private next_tick = 0;
 
+  // A getter: the window's settings object is a prop, read fresh on every call.
+  constructor(private readonly settings: () => SoundSettings) {}
+
   private audio(): AudioContext | null {
+    if (!this.settings().sound) return null;
     if (!this.context) {
       try {
         this.context = new AudioContext();
@@ -47,9 +57,10 @@ export class Sounds {
   }
 
   sensor(distance: number | null) {
+    const period = distance === null ? null : beep_period(distance);
+    this.tick(period);
     const audio = distance === null ? this.context : this.audio();
     if (!audio) return;
-    const period = distance === null ? null : beep_period(distance);
     if (period === 0) {
       if (!this.tone) {
         const oscillator = audio.createOscillator();
@@ -60,10 +71,6 @@ export class Sounds {
         oscillator.connect(gain).connect(audio.destination);
         oscillator.start();
         this.tone = { oscillator, gain };
-      }
-      if (audio.currentTime >= this.next_tick) {
-        rumble(Rumble.TICK);
-        this.next_tick = audio.currentTime + TONE_TICK;
       }
       return;
     }
@@ -78,13 +85,12 @@ export class Sounds {
       return;
     }
     this.blip(PITCH, now, BEEP);
-    if (period < TICK_BELOW) rumble(Rumble.TICK);
     this.next_beep = now + BEEP + period;
   }
 
   crash() {
     this.quiet();
-    rumble(Rumble.HIT);
+    this.buzz(Rumble.HIT);
     const audio = this.audio();
     if (!audio) return;
     const at = audio.currentTime;
@@ -159,6 +165,22 @@ export class Sounds {
     this.quiet();
     void this.context?.close();
     this.context = null;
+  }
+
+  // Paced on the page's clock rather than the audio's, so a muted window still ticks the controller.
+  private tick(period: number | null) {
+    const now = performance.now() / 1000;
+    if (period === null || period >= TICK_BELOW) {
+      this.next_tick = 0;
+      return;
+    }
+    if (now < this.next_tick) return;
+    this.buzz(Rumble.TICK);
+    this.next_tick = now + (period === 0 ? TONE_TICK : BEEP + period);
+  }
+
+  private buzz(kind: Rumble) {
+    if (this.settings().rumble) rumble(kind);
   }
 
   private stop_tone() {

@@ -9,7 +9,6 @@
   import { read_palette, type Palette } from "./draw";
   import { BUTTON_KEYS, first_pad, PadButton, pressed, read_pad } from "./gamepad";
   import type { DriveInput, Hold } from "./drive-input.svelte";
-  import { rumble_to } from "./rumble";
   import { SteeringMode, WheelMode, type DriveSettings } from "./settings.svelte";
   import SteeringWheel from "./steering-wheel.svelte";
 
@@ -122,7 +121,6 @@
       const front = win.is_focused && document.visibilityState === "visible";
       if (!pad || !front) {
         input.set_pad(0, 0);
-        if (front) rumble_to(null);
         before = pad ? read_pad(pad).buttons : [];
         if (pad) frame_id = requestAnimationFrame(poll);
         return;
@@ -130,7 +128,6 @@
       const state = read_pad(pad);
       const edges = pressed(before, state.buttons);
       before = state.buttons;
-      rumble_to(settings.rumble ? state.index : null);
       input.set_pad(state.gas, state.brake);
       if (state.steer !== null) {
         if (!steering || Math.abs(input.wheel - state.steer) > 1e-3) onsteer(state.steer);
@@ -145,7 +142,7 @@
           continue;
         }
         const code = BUTTON_KEYS[index];
-        if (code) onkeydown(new KeyboardEvent("keydown", { code, key: code === "Space" ? " " : code.slice(3).toLowerCase() }));
+        if (code) onkeydown(new KeyboardEvent("keydown", { code, key: code === "Space" ? " " : code === "Enter" ? code : code.slice(3).toLowerCase() }));
       }
       frame_id = requestAnimationFrame(poll);
     }
@@ -168,7 +165,6 @@
       window.removeEventListener("gamepadconnected", on_connected);
       cancelAnimationFrame(frame_id);
       clearTimeout(hint_timer);
-      if (win.is_focused) rumble_to(null);
     };
   });
 

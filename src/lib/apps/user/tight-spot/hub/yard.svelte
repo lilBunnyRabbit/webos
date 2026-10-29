@@ -72,7 +72,7 @@
   const { window: win, storage } = get_app_context();
   const intro_seen = storage.persisted("yard_intro", false, z.boolean());
   const input = new DriveInput();
-  const sounds = new Sounds();
+  const sounds = new Sounds(() => settings);
 
   const start_door = untrack(() => (from ? GAMES.findIndex((game) => game.id === from) : -1));
   let car = $state.raw<Car>(untrack(() => (start_door >= 0 ? door_car(YARD, start_door, VEHICLES[vehicle]) : gate_car(YARD, VEHICLES[vehicle]))));
@@ -253,12 +253,12 @@
     input.follow(next.steer / lock);
     const near = obstacles(YARD);
     readings = { front: sensor(next, near, End.FRONT, spec), rear: sensor(next, near, End.REAR, spec) };
-    if (settings.sound) sounds.sensor(next.gear === Gear.DRIVE ? readings.front : next.gear === Gear.REVERSE ? readings.rear : null);
-    if (settings.sound) sounds.reverse_beeper(!!spec.reverse_beeper && next.speed < -0.02);
+    sounds.sensor(next.gear === Gear.DRIVE ? readings.front : next.gear === Gear.REVERSE ? readings.rear : null);
+    sounds.reverse_beeper(!!spec.reverse_beeper && next.speed < -0.02);
     // A touch is a bump, not the end: one thunk as it starts, and the ring fades while the vehicle stays put.
     if (hit && !touching) {
       contact = { at: hit, since: performance.now() };
-      if (settings.sound) sounds.crash();
+      sounds.crash();
     }
     touching = hit !== null;
     car = next;
@@ -278,7 +278,7 @@
     if (next === car) return;
     car = next;
     wake();
-    if (settings.sound) sounds.shift();
+    sounds.shift();
   }
 
   function choose_direction(want: Gear | null) {

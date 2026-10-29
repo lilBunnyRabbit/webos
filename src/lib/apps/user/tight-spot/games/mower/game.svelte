@@ -107,7 +107,7 @@
   let uncut: { x: number; y: number } | null = null;
   let uncut_at = 0;
   let flowers_at = -Infinity;
-  const sounds = new Sounds();
+  const sounds = new Sounds(() => settings);
 
   // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its measure).
   const round = $derived(game.round);
@@ -293,7 +293,7 @@
 
   function crashed() {
     release_all();
-    if (settings.sound) sounds.crash();
+    sounds.crash();
   }
 
   function done(state: GameState) {
@@ -309,7 +309,7 @@
     saved.value = outcome.saved;
     new_best = outcome.improved;
     first_lawn = outcome.first;
-    if (settings.sound) sounds.parked(new_best && !first_lawn);
+    sounds.parked(new_best && !first_lawn);
     achievements.achieve("mower-first");
     if (overlap(state.tally) < 0.1) achievements.achieve("mower-tidy");
     if (score === 3) achievements.achieve("mower-by-the-book");
@@ -419,7 +419,7 @@
     const next = change_gear(game, gear);
     if (next === game) return;
     game = next;
-    if (settings.sound) sounds.shift();
+    sounds.shift();
   }
 
   function choose_direction(want: Gear | null) {

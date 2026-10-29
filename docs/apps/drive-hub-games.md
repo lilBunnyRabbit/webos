@@ -44,7 +44,7 @@ The shell lazy-loads the component the first time it's entered, shows the game's
 | Camera | `frame(bounds, focus, w, h, zoom, insets, span)`, `fit_span` (frame a whole area clear of insets), `view_span`, `ease`, `OVERLAY_ASPECT`, `OVERLAY_GAP` |
 | HUD and cards | `GearStrip` (`space_parks={false}` if the game takes Space), `CrabToggle` (beside the strip, for a vehicle `can_crab`), `SpeedChip`, `RoundCard` (bottom, or left on a wide board), `KeyHint`, `SettingsPanel` |
 | Drawing | `read_palette` (theme tokens only: ground, marks, walls, paint, `ink`/`glow`, target/free/parked, `steel`, `beam`, `upright`, `wood`, `load`, `load_edge`, `stock`, `beacon`), `begin_frame`, `ground`, `solids`, `outlined`, `union`, `fill`, `path`, `player(…, time)`, `pallet(…, PalletLoad.BOXES | WRAPPED, …)`, `guides`, `beams`, `sensor_arcs`, `bay_outline`, `bay_arrow`, `bay_pointer` (off-screen arrow inside the insets), `contact_rings` |
-| Sound | `Sounds`: `sensor`, `crash`, `parked(record)`, `shift`, `reverse_beeper(on)` (call every frame), `fork(up)`, `quiet`, `close` |
+| Sound | `new Sounds(() => settings)`: call it unguarded, it checks Sound and Rumble itself; `sensor`, `crash`, `parked(record)`, `shift`, `reverse_beeper(on)` (call every frame), `fork(up)`, `quiet`, `close` |
 | Proofs and par | `plan(from, to, near, options)` hybrid A* with `arrive`, `blocked`, `steering`, `crabbing`, `switch_cost`, `directions`, `max_expansions`; `drive(pose, move, spec)` with `Move` `{ steer, distance, crab? }`; `inflate` |
 | Scoring | `fit(points, headings, bay)` precision (`core/precision.ts`), `MAX_ANGLE`, `PERFECT` |
 | Seeds | `hash(seed, …values)` (`core/seed.ts`), `create_rng`, `daily_seed(day, key)` |
