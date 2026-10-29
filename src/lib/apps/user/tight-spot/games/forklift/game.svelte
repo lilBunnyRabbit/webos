@@ -18,6 +18,7 @@
   import { untrack } from "svelte";
   import { z } from "zod";
   import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, type Camera, type Insets } from "../../core/camera";
+  import { first_pad, read_pad } from "../../core/gamepad";
   import type { Palette } from "../../core/draw";
   import DriveFrame from "../../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../../core/drive-input.svelte";
@@ -83,6 +84,7 @@
   // Close enough to see the forks line up with a pallet's pockets, far enough to see down an aisle.
   const SPAN = 17;
   const OVERVIEW_MARGIN = 0.6;
+  const SIDE_STICK = 0.5;
   const DAILY_MODE = "forklift";
 
   const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
@@ -258,6 +260,10 @@
   $effect(() =>
     win.on_back(() => {
       if (settings_panel?.matches(":popover-open")) return (settings_panel.hidePopover(), true);
+      if (game.status === Status.DRIVING && game.side && !side_in) {
+        leave_side();
+        return true;
+      }
       if (game.status === Status.DRIVING) {
         toggle_pause();
         return true;
@@ -347,11 +353,15 @@
   }
 
   // At the rack the arrows (and the pedals, and the steer buttons) work the forks: up and down raise and lower, right and left drive in and out.
+  // A controller's triggers raise and lower like the pedals, and the stick pushed past halfway drives in and out.
   function side_controls() {
-    const up = held(["ArrowUp", "KeyW"], input.held.gas || side_held.up.size > 0);
-    const down = held(["ArrowDown", "KeyS"], input.held.brake || side_held.down.size > 0);
-    const forward = held(["ArrowRight", "KeyD"], input.held.right || side_held.in.size > 0);
-    const back = held(["ArrowLeft", "KeyA"], input.held.left || side_held.out.size > 0);
+    const pad = document.hasFocus() ? first_pad(navigator.getGamepads()) : null;
+    const state = pad ? read_pad(pad) : null;
+    const stick = state?.steer ?? 0;
+    const up = held(["ArrowUp", "KeyW"], input.held.gas || side_held.up.size > 0 || (state?.gas ?? 0) > 0);
+    const down = held(["ArrowDown", "KeyS"], input.held.brake || side_held.down.size > 0 || (state?.brake ?? 0) > 0);
+    const forward = held(["ArrowRight", "KeyD"], input.held.right || side_held.in.size > 0 || stick > SIDE_STICK);
+    const back = held(["ArrowLeft", "KeyA"], input.held.left || side_held.out.size > 0 || stick < -SIDE_STICK);
     return { lift: (up ? 1 : 0) - (down ? 1 : 0), drive: (forward ? 1 : 0) - (back ? 1 : 0) };
   }
 
@@ -432,7 +442,7 @@
     if (next.status === Status.DONE) finish(next);
     const drop = next.drops.length > 0 && action === ForkAction.LOWER ? next.drops[next.drops.length - 1] : null;
     if (drop && Math.round(drop.score) >= PERFECT) achievements.achieve("forklift-perfect");
-    if (drop && view?.slot.tier === 2 && drop.miss <= CLEAN) achievements.achieve("forklift-top-shelf");
+    if (drop && view && view.slot.tier > 0 && view.slot.tier === view.slot.tiers - 1 && drop.miss <= CLEAN) achievements.achieve("forklift-top-shelf");
     focus_board();
   }
 
@@ -715,9 +725,12 @@
 {/snippet}
 
 {#snippet side_view(view: SideView)}
+  {@const insets = control_insets()}
   <section
-    class="absolute inset-x-2 bottom-2 flex flex-col overflow-hidden rounded-lg bg-background ring-1 ring-foreground/15 shadow-lg"
+    class="absolute bottom-2 flex flex-col overflow-hidden rounded-lg bg-background ring-1 ring-foreground/15 shadow-lg"
     style:top="{hud_height + 16}px"
+    style:left="{Math.max(8, insets.left)}px"
+    style:right="{Math.max(8, insets.right)}px"
     aria-label="Side view at {slot_label(view.slot)}"
   >
     <div bind:clientWidth={side_box.width} bind:clientHeight={side_box.height} class="relative min-h-0 flex-1">

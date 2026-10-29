@@ -104,7 +104,7 @@ export function layout(seed: number, difficulty: number): Layout {
   const bays = random_int(6, 8, rng);
   const rows = t < 0.3 && rng() < 0.75 ? 1 : 2;
   const main = lerp(5.6, 4.8, t) + rng() * 0.3;
-  // A rng of its own, so the floors and jobs of the seeds from before the tiers stay as they were.
+  // A rng of its own, so the tiers leave the layout's other draws alone (the floors still changed when the aisle widened for them).
   const tall = create_rng(hash(seed, 0x7e75));
   const tiers = Array.from({ length: 1 + rows * 2 }, () => (tall() < lerp(0.35, 0.8, t) ? 3 : 2));
   return { aisle, clear, bays, rows, main, tiers };
