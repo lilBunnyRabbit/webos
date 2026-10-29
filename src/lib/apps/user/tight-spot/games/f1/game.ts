@@ -2,8 +2,7 @@ import type { Vec } from "../../core/geometry";
 import { collide, obstacles } from "../../core/obstacles";
 import { body_centre, create_car, Gear, shift, step, type Car, type Input } from "../../core/vehicle";
 import { record_frame, type Ghost } from "./ghost";
-import { with_grip } from "../../core/grip";
-import { A_LAT, GRASS_SPEC, SPEC } from "./spec";
+import { GRASS_SPEC, SPEC } from "./spec";
 import { racing_line } from "./line";
 import { locate, passes, progress, type Located, type Track } from "./track";
 import { TRACK_IDS, track_of, type TrackId } from "./tracks";
@@ -93,14 +92,14 @@ function new_lap(start_ms: number): Lap {
 }
 
 /**
- * One step. Before it the wheel is held to what the grip allows at this speed; on the grass the car drags. A wall stops
+ * One step. The core holds the wheel to the race spec's grip; on the grass the car drags. A wall stops
  * the car where it was and voids the lap; the laps run from the start/finish line through both sector lines in order.
  */
 export function advance(state: GameState, input: Input, dt: number): GameState {
   if (state.status !== Status.DRIVING) return state;
   const { track } = state;
   const spec = state.grass ? GRASS_SPEC : SPEC;
-  let car = step(state.car, with_grip(input, state.car.speed, spec, A_LAT), dt, spec);
+  let car = step(state.car, input, dt, spec);
   const ms = state.ms + dt * 1000;
   let lap = state.lap;
   let contact = state.contact;

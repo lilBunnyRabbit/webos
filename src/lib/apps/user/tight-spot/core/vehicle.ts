@@ -80,6 +80,8 @@ export interface VehicleSpec {
   reverse_beeper?: boolean;
   /** No lamps, so no headlight beams either. */
   unlit?: boolean;
+  /** The sideways acceleration the tyres hold (m/s²); `step()` keeps the turn within a_lat / v². Absent, any lock at any speed. */
+  a_lat?: number;
 }
 
 export interface Forks {
@@ -760,10 +762,10 @@ export const F1_CAR: VehicleSpec = {
   park_speed: 0.3,
   hitches: [],
   unlit: true,
+  a_lat: 12,
 };
 
-// Staggered tyres: `wheel_width` is the rears', the drawing narrows the fronts. With no slip in the model yet, the full
-// lock bites at any pace.
+// Staggered tyres: `wheel_width` is the rears', the drawing narrows the fronts.
 export const GT_CAR: VehicleSpec = {
   drive: FRONT_STEER,
   length: 4.5,
@@ -784,6 +786,7 @@ export const GT_CAR: VehicleSpec = {
   rolling: 0.3,
   park_speed: 0.3,
   hitches: [],
+  a_lat: 8,
 };
 
 // Skid steers: the pose is the middle of the wheels' or tracks' contact, and `turning_radius` is the circle the outer
@@ -1274,8 +1277,34 @@ function pedal(value: number, target: number, dt: number): number {
   return approach(value, clamp(target, 0, 1), target > value ? PEDAL_RATE : RELEASE_RATE, dt);
 }
 
-function steer_target(car: Car, input: Input, limit: number): number {
-  if (input.steer !== null) return clamp(input.steer, -1, 1) * limit;
+/**
+ * The most wheel (or bend) the tyres take at this speed. A kinematic car has no slip to slide on, so the turn's
+ * curvature stays within a_lat / v² for a spec that sets `a_lat` (the fast ones); every other vehicle keeps its full
+ * lock. A skid steer and crab mode draw no such curve and keep it too.
+ */
+export function grip_lock(speed: number, spec: VehicleSpec, crab = false): number {
+  const limit = max_steer(spec);
+  const drive = spec.drive;
+  const v2 = speed * speed;
+  if (spec.a_lat === undefined || drive.kind === DriveKind.SKID || crab || v2 < 1e-6) return limit;
+  const k = spec.a_lat / v2;
+  if (drive.kind === DriveKind.FRAME) {
+    // The axle on the shorter arm turns tightest, on (long · cos γ + short) / sin γ.
+    const short = Math.min(drive.pivot, spec.wheelbase - drive.pivot);
+    const long = spec.wheelbase - short;
+    const bend = Math.atan(k * long) + Math.asin(Math.min(1, (k * short) / Math.hypot(1, k * long)));
+    return Math.min(limit, bend);
+  }
+  return Math.min(limit, Math.atan(steer_base(spec) * k));
+}
+
+/** The steady speed the throttle holds against rolling resistance. */
+export function top_speed(spec: VehicleSpec): number {
+  return spec.max_forward * (1 - spec.rolling / spec.accel);
+}
+
+function steer_target(car: Car, input: Input, limit: number, grip: number): number {
+  if (input.steer !== null) return clamp(clamp(input.steer, -1, 1) * limit, -grip, grip);
   return Math.abs(car.speed) > STILL ? 0 : car.steer;
 }
 
@@ -1310,7 +1339,8 @@ function resistance(car: Car, spec: VehicleSpec): number {
 export function step(car: Car, input: Input, dt: number, spec: VehicleSpec = HATCHBACK): Car {
   if (!(dt > 0)) return car;
   const limit = max_steer(spec);
-  const steer = approach(car.steer, steer_target(car, input, limit), steer_rate(car, input, limit, spec), dt);
+  const grip = grip_lock(car.speed, spec, crabbing(car, spec));
+  const steer = approach(car.steer, steer_target(car, input, limit, grip), steer_rate(car, input, limit, spec), dt);
   const next: Car = {
     ...car,
     steer,

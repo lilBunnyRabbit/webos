@@ -1,6 +1,5 @@
 import type { Vec } from "../../core/geometry";
-import { max_steer, steer_base } from "../../core/vehicle";
-import { top_speed } from "../../core/grip";
+import { max_steer, steer_base, top_speed } from "../../core/vehicle";
 import { A_LAT, SPEC } from "./spec";
 import { curvature_of, DS, HALF_WIDTH, type Track } from "./track";
 

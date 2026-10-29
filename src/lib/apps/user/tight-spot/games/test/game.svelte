@@ -11,7 +11,6 @@
   import DriveFrame from "../../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../../core/drive-input.svelte";
   import GearStrip from "../../core/gear-strip.svelte";
-  import { top_speed } from "../../core/grip";
   import KeyHint from "../../core/key-hint.svelte";
   import { DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, zoom_step } from "../../core/keys";
   import { frame_loop } from "../../core/loop";
@@ -21,7 +20,7 @@
   import { Signal, SIGNAL_KEYS } from "../../core/signal";
   import { Sounds } from "../../core/sound";
   import SpeedChip from "../../core/speed-chip.svelte";
-  import { body_centre, Gear, max_steer, without_creep } from "../../core/vehicle";
+  import { body_centre, Gear, max_steer, top_speed, without_creep } from "../../core/vehicle";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
   import {

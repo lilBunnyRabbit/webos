@@ -17,7 +17,7 @@
   import SettingsPanel from "../../core/settings-panel.svelte";
   import { Sounds } from "../../core/sound";
   import SpeedChip from "../../core/speed-chip.svelte";
-  import { body_centre, Gear, max_steer } from "../../core/vehicle";
+  import { body_centre, Gear, max_steer, top_speed } from "../../core/vehicle";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
   import {
@@ -41,7 +41,6 @@
     type Round,
   } from "./game";
   import { ghost_pose, ghost_schema, type Ghost } from "./ghost";
-  import { top_speed } from "../../core/grip";
   import { SPEC } from "./spec";
   import { track_id_schema, TRACK_IDS, track_name, TrackId } from "./tracks";
 

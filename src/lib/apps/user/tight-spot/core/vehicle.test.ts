@@ -9,6 +9,7 @@ import {
   folds,
   FORKLIFT,
   FRAME_RAMP,
+  grip_lock,
   front_frame,
   Gear,
   GT_CAR,
@@ -309,6 +310,42 @@ describe("GT car", () => {
     expect(GT_CAR.turning_radius * 2).toBeGreaterThan(11);
     expect(GT_CAR.turning_radius * 2).toBeLessThan(12);
     expect(max_steer(GT_CAR)).toBeGreaterThan(max_steer(VEHICLES.f1));
+  });
+});
+
+describe("speed-limited steering", () => {
+  const held = (spec: VehicleSpec, speed: number) =>
+    run({ ...create_car(START, Gear.DRIVE, spec), speed }, { steer: 1, throttle: 0, brake: 0 }, 1.5, spec);
+
+  test("a GT car at 30 m/s holds the turn to what its tyres take, far from full lock", () => {
+    const car = held(GT_CAR, 30);
+    const v = car.speed;
+    expect(car.steer).toBeLessThan(max_steer(GT_CAR) * 0.2);
+    expect((Math.tan(car.steer) / steer_base(GT_CAR)) * v * v).toBeLessThanOrEqual(GT_CAR.a_lat! + 1e-6);
+    expect(held(GT_CAR, 4).steer).toBeCloseTo(max_steer(GT_CAR), 9);
+  });
+
+  test("a vehicle without a_lat keeps full lock at any speed", () => {
+    expect(HATCHBACK.a_lat).toBeUndefined();
+    expect(held(HATCHBACK, 8).steer).toBeCloseTo(max_steer(HATCHBACK), 9);
+    expect(grip_lock(40, HATCHBACK)).toBe(max_steer(HATCHBACK));
+  });
+
+  test("a skid steer keeps its full lock at speed, a_lat or not", () => {
+    const bobcat = { ...VEHICLES.bobcat, a_lat: 7 };
+    expect(held(bobcat, bobcat.max_forward).steer).toBe(1);
+  });
+
+  test("a frame steer's tighter axle turns at most a_lat / v²", () => {
+    const spec = { ...VEHICLES.dumper, a_lat: 7 };
+    const drive = spec.drive;
+    if (drive.kind !== DriveKind.FRAME) throw new Error("the dumper is frame-steered");
+    const v = 12;
+    const bend = grip_lock(v, spec);
+    expect(bend).toBeLessThan(max_steer(spec));
+    const short = Math.min(drive.pivot, spec.wheelbase - drive.pivot);
+    const radius = ((spec.wheelbase - short) * Math.cos(bend) + short) / Math.sin(bend);
+    expect((v * v) / radius).toBeCloseTo(7, 6);
   });
 });
 

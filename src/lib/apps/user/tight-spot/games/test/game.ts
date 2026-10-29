@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { inside_convex } from "../../core/collision";
 import type { Vec } from "../../core/geometry";
-import { with_grip } from "../../core/grip";
 import { collide, obstacles } from "../../core/obstacles";
 import { fit, MAX_ANGLE } from "../../core/precision";
 import { Signal } from "../../core/signal";
@@ -153,7 +152,7 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
   const t = town();
   const signal = input.signal ?? Signal.NONE;
   const ms = state.ms + dt * 1000;
-  const car = step(state.car, with_grip(input, state.car.speed, spec), dt, spec);
+  const car = step(state.car, input, dt, spec);
   const hit = collide(car, obstacles(t), SPEC);
   if (hit) {
     const stopped = { ...state.car, speed: 0 };

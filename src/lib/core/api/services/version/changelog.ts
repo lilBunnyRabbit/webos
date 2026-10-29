@@ -12,6 +12,11 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["tight-spot"],
+        text: "The GT and F1 cars turn less sharply at speed.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
         text: "Drive Hub has a Zoom with speed setting: turn it off and the view stays at your own zoom however fast you go.",
       },
       {
