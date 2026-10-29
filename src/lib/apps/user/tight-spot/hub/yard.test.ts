@@ -5,7 +5,7 @@ import { collide, obstacles } from "../core/obstacles";
 import { plan } from "../core/planner";
 import { bodies, Gear, NO_INPUT, rig_length, Vehicle, VEHICLES, type Car, type VehicleSpec } from "../core/vehicle";
 import { Building } from "../games/define";
-import { build_yard, District, district_of, door_at, door_car, drive, GARAGE, gate_car, nose, on_pad, pad_car, place, type Yard } from "./yard";
+import { build_yard, District, district_of, door_at, door_car, drive, GARAGE, gate_car, nose, on_pad, pad_car, place, swap_car, type Yard } from "./yard";
 
 const GAMES = [
   { id: "parking", building: Building.CAR_PARK },
@@ -144,6 +144,19 @@ describe("yard", () => {
     const spec = VEHICLES.hatch;
     const pad = plan(gate_car(TOWN, spec), pad_car(TOWN, spec), near, { spec, arrive: (pose) => on_pad(TOWN, pose, spec) });
     expect(pad).not.toBeNull();
+  });
+
+  test("a vehicle swapped from the toolbar takes the old one's place, or the nearest clear spot when it doesn't fit", () => {
+    const hatch = VEHICLES.hatch;
+    const train = VEHICLES["road-train"];
+    const open = swap_car(TOWN, pad_car(TOWN, hatch), hatch, train);
+    expect(open.moved).toBe(false);
+    expect(Math.hypot(open.car.x - pad_car(TOWN, train).x, open.car.y - pad_car(TOWN, train).y)).toBeLessThan(1e-6);
+    for (let i = 0; i < TOWN.plots.length; i++) {
+      const tight = swap_car(TOWN, in_doorway(TOWN, i), hatch, train);
+      expect(tight.moved, `door ${i}`).toBe(true);
+      expect(clear(TOWN, tight.car, train), `door ${i}`).toBe(true);
+    }
   });
 
   test("driving into a cone stops the car short of it and says where, and it backs away again", () => {

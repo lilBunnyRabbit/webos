@@ -9,7 +9,7 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
-  import { Button, Segmented } from "$lib/core/components/ui";
+  import { Button, Segmented, Select } from "$lib/core/components/ui";
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
@@ -47,7 +47,7 @@
   } from "../core/vehicle";
   import { draw_yard, StaticLayer } from "./draw";
   import { icon_image } from "./icons";
-  import { door_at, door_car, drive, GARAGE, gate_car, on_pad, pad_car, shelf_of } from "./yard";
+  import { door_at, door_car, drive, GARAGE, gate_car, on_pad, pad_car, shelf_of, swap_car } from "./yard";
 
   interface Props {
     settings: DriveSettings;
@@ -67,6 +67,11 @@
   const SHELF_OPTIONS = GARAGE.map((each) => ({ value: each.id, label: each.name }));
   let shelf = $state(untrack(() => shelf_of(vehicle).id));
   const shelf_vehicles = $derived(GARAGE.find((each) => each.id === shelf)?.vehicles ?? []);
+  const MOVED_NOTE = 2.5;
+  const vehicle_shelf = $derived(shelf_of(vehicle));
+  const vehicle_options = $derived(vehicle_shelf.vehicles.map((each) => ({ value: each, label: VEHICLE_NAMES[each] })));
+  let moved_note = $state(false);
+  let moved_timer: ReturnType<typeof setTimeout> | undefined;
 
   const { window: win, storage } = get_app_context();
   const intro_seen = storage.persisted("yard_intro", false, z.boolean());
@@ -319,6 +324,30 @@
     focus_board();
   }
 
+  // From the toolbar the new vehicle takes the old one's place wherever it is; the pad stays the in-world way.
+  function swap_here(next: Vehicle) {
+    if (next === vehicle) return;
+    const swapped = swap_car(YARD, car, spec, VEHICLES[next]);
+    vehicle = next;
+    shelf = shelf_of(next).id;
+    input.reset();
+    sounds.quiet();
+    contact = null;
+    car = swapped.car;
+    wake();
+    moved_note = swapped.moved;
+    clearTimeout(moved_timer);
+    if (swapped.moved) moved_timer = setTimeout(() => (moved_note = false), MOVED_NOTE * 1000);
+    focus_board();
+  }
+
+  function swap_shelf(id: string) {
+    const found = GARAGE.find((each) => each.id === id);
+    if (found && found !== vehicle_shelf) swap_here(found.vehicles[0]);
+  }
+
+  $effect(() => () => clearTimeout(moved_timer));
+
   function enter() {
     if (door_game) onenter(door_game.id);
   }
@@ -372,8 +401,9 @@
 
 {#snippet toolbar()}
   {@render menu()}
-  <span class="truncate px-1 text-ui font-medium">Yard</span>
-  <span class="hidden truncate text-ui text-foreground/65 @sm:inline">{VEHICLE_NAMES[vehicle]}</span>
+  <span class="hidden truncate px-1 text-ui font-medium @md:inline">Yard</span>
+  <Select class="w-[6.5rem] min-w-0 @md:w-28" size="sm" aria-label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={() => vehicle_shelf.id, swap_shelf} />
+  <Select class="w-[7.5rem] min-w-0 @md:w-48" size="sm" aria-label="Vehicle" options={vehicle_options} bind:value={() => vehicle, swap_here} />
   <div class="flex-1"></div>
   <SettingsPanel {settings} {input} bind:panel={settings_panel} onmute={() => sounds.quiet()} onfocus={focus_board} />
 {/snippet}
@@ -387,6 +417,9 @@
     </div>
     <div class="flex flex-col items-end gap-1.5">
       <SpeedChip class="hidden pointer-coarse:block" speed={car.speed} />
+      {#if moved_note}
+        <div class="rounded-md bg-background/85 px-1.5 py-0.5 text-ui backdrop-blur-[2px]" role="status">Moved to the nearest clear spot</div>
+      {/if}
       {#if facing_reading !== null}
         <div
           class={cn("rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", facing_reading < 0.5 ? "text-error" : "text-warning")}
@@ -435,7 +468,7 @@
       <div class="min-w-0 basis-full">
         <p class="text-base font-semibold">Drive Hub</p>
         <p class="text-ui text-foreground/80">
-          Drive into a lit doorway to play; each game has a building round the square. The garage pad in the middle swaps your vehicle, and the practice lot on the quay has cones and bays.
+          Drive into a lit doorway to play; each game has a building round the square. The garage pad in the middle, or the lists at the top, swap your vehicle, and the practice lot on the quay has cones and bays.
         </p>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">

@@ -10,6 +10,7 @@ Driving games in one small town. The app opens on the gate and the town square, 
 
 - Nothing is judged here. Touching something just stops you with a bump; back away and carry on.
 - Stop on the **Garage** pad to pick any of 42 vehicles, shelf by shelf: **Cars** (hatchback to camper van, a stretch limousine and a GT car), **Service** (taxi, police car, ambulance, fire engine, ladder truck, garbage truck, baggage train), **Buses** (city bus, double-decker, coach, articulated bus), **Trucks** (box truck, semi-trailer truck, truck and drawbar trailer, road train), **Towing** (trailer, caravan, boat, horse box, tractor, tractor and two trailers, quad), **Machines** (forklift, skid-steer loader, telehandler, wheel loader, articulated dump truck, zero-turn mower, tank) and **Fun** (tuk-tuk, golf cart, ice resurfacer, shopping trolley, F1 car). It waits on the pad, ready to drive off, and stays yours in the yard until you close the window. The police car, ambulance and fire engine flash their lights while in gear.
+- Or swap anywhere: pick a shelf and a vehicle at the top of the window and it takes your place on the spot. If it doesn't fit there, it moves to the nearest clear spot and says so.
 - The garage pad is in the middle of the square. The practice lot on the quay, by the harbour, has a cone slalom and bays for parking practice.
 - The gears, pedals, wheel, sensors and settings work as in every game below.
 

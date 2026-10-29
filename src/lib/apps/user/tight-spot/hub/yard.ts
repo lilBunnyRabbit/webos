@@ -3,6 +3,7 @@ import { bounds_of, oriented_box, rect, type Bounds, type Polygon, type Pose, ty
 import { collide, obstacles } from "../core/obstacles";
 import { MarkKind, SolidKind, SurfaceKind, type Mark, type Solid, type Surface } from "../core/scene";
 import {
+  bodies,
   body_centre,
   rig_ends,
   create_car,
@@ -410,6 +411,46 @@ export function door_car(yard: Yard, index: number, spec: VehicleSpec): Car {
 
 export function pad_car(yard: Yard, spec: VehicleSpec): Car {
   return place(yard.pad_pose, spec);
+}
+
+export interface Swapped {
+  car: Car;
+  /** The new rig didn't fit where the old one stood: it went to the nearest clear spot, or the pad. */
+  moved: boolean;
+}
+
+const SEARCH_RADIUS = 30;
+const TURN_COST = 8;
+
+/**
+ * Another vehicle where this one stands: the same middle and heading. One that doesn't fit there goes to the nearest
+ * clear spot inside the town, in rings a metre apart; a turned placement counts 8 m further than one facing the same way.
+ */
+export function swap_car(yard: Yard, car: Placement, from: VehicleSpec, to: VehicleSpec): Swapped {
+  const ends = rig_ends(from);
+  const middle = to_world(car, { x: (ends.front + ends.rear) / 2, y: 0 });
+  const near = obstacles(yard);
+  const fits = (candidate: Car) =>
+    collide(candidate, near, to) === null &&
+    bodies(candidate, to).every((body) => body.every((p) => p.x > yard.bounds.x0 && p.x < yard.bounds.x1 && p.y > yard.bounds.y0 && p.y < yard.quay));
+  const ring = (r: number, turns: number[]): Car | null => {
+    const steps = r === 0 ? 1 : Math.ceil((Math.PI * 2 * r) / 1.5);
+    for (const turn of turns) {
+      for (let i = 0; i < steps; i++) {
+        const angle = car.heading + (i / steps) * Math.PI * 2;
+        const candidate = place({ x: middle.x + Math.cos(angle) * r, y: middle.y + Math.sin(angle) * r, heading: car.heading + turn }, to);
+        if (fits(candidate)) return candidate;
+      }
+    }
+    return null;
+  };
+  for (let r = 0; r <= SEARCH_RADIUS + TURN_COST; r++) {
+    const same = r <= SEARCH_RADIUS ? ring(r, [0]) : null;
+    if (same) return { car: same, moved: r > 0 };
+    const turned = r >= TURN_COST ? ring(r - TURN_COST, [Math.PI, Math.PI / 2, -Math.PI / 2]) : null;
+    if (turned) return { car: turned, moved: true };
+  }
+  return { car: pad_car(yard, to), moved: true };
 }
 
 export function nose(car: Placement, spec: VehicleSpec): Vec {

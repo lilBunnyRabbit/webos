@@ -122,7 +122,7 @@ Owner, on a tug "hitting" a parked aircraft's wing: "is this really a hit? the c
 8. [x] Mow Day: a tree, the shed, the pond or the hedge is a bump (5 s, never a fail); flowers keep their cost and the flattened end.
 9. [x] Pushback becomes Airport: the rename (`refactor:`), then the Baggage run, Tow to gate and Turnaround jobs; the daily is a turnaround.
 10. [x] Airport: two collision heights, ground vehicles pass under wings and tailplanes.
-10. [x] The hub becomes a small town: districts round a plaza, a shape and an entrance sign per building (ADR-087 revision).
+11. [x] The hub becomes a small town: districts round a plaza, a shape and an entrance sign per building (ADR-087 revision).
 
 ## Next session topics
 - The boat: where a dynamic (non-kinematic) model lives, shared with F1's later slip model.

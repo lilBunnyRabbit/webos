@@ -47,6 +47,11 @@ export const CHANGELOG: Release[] = [
       {
         kind: IMPROVED,
         apps: ["tight-spot"],
+        text: "Swap vehicles in Drive Hub's yard from the top bar wherever you are; one that doesn't fit where you stand moves to the nearest clear spot.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
         text: "Drive Hub's yard is now a small town round a square with the garage in the middle: every game has its own building shaped like what it is, signed at the door, in a district that grows as new games arrive.",
       },
       {
