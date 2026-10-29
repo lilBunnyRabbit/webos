@@ -95,7 +95,17 @@ export function rodeo_shelf(vehicle: Vehicle): Shelf {
   return SHELVES.find((shelf) => shelf.vehicles.includes(vehicle)) ?? SHELVES[0];
 }
 
-export const DAILY_VEHICLES: readonly Vehicle[] = GARAGE.flatMap((shelf) => shelf.vehicles).filter((each) => !experimental(each));
+// Pinned rather than read from the garage, so a new vehicle doesn't change which one a past day drew: add new ones at
+// the end, never reorder.
+export const DAILY_VEHICLES: readonly Vehicle[] = [
+  Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.GT, Vehicle.LIMO, Vehicle.VAN, Vehicle.PICKUP, Vehicle.CAMPER,
+  Vehicle.TAXI, Vehicle.POLICE, Vehicle.AMBULANCE, Vehicle.FIRE, Vehicle.LADDER, Vehicle.GARBAGE, Vehicle.BAGGAGE,
+  Vehicle.BUS, Vehicle.DECKER, Vehicle.COACH, Vehicle.ARTIC,
+  Vehicle.BOX_TRUCK, Vehicle.SEMI, Vehicle.DRAWBAR, Vehicle.ROAD_TRAIN,
+  Vehicle.TOWING, Vehicle.CARAVAN, Vehicle.BOAT, Vehicle.HORSE_BOX, Vehicle.TRACTOR, Vehicle.TRACTOR_TWO, Vehicle.QUAD,
+  Vehicle.FORKLIFT, Vehicle.BOBCAT, Vehicle.TELEHANDLER, Vehicle.LOADER, Vehicle.DUMPER, Vehicle.MOWER, Vehicle.TANK,
+  Vehicle.MOTORCYCLE, Vehicle.TUK_TUK, Vehicle.GOLF_CART, Vehicle.RESURFACER, Vehicle.TROLLEY, Vehicle.F1,
+].filter((each) => !experimental(each));
 
 export function daily_round(day: string, seed: number): Round {
   return { vehicle: DAILY_VEHICLES[hash(seed, 3) % DAILY_VEHICLES.length], course: null, seed, daily: day };
