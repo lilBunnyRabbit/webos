@@ -71,3 +71,6 @@ The union is complete: `{ kind: "ackermann", steer_axle: "front" | "rear" | "all
 ## Revision 2026-10-29 (W3 review)
 - **Frame steers' proofs:** the out-of-bay search ended anywhere near the start, often at full bend, while a round starts straight; straightening at a standstill swings both frames unchecked. Its arrival now requires the joint straight. Every kind the loader and the dump truck were listed in still proves over the 8 seeds.
 - **The daily** picks its vehicle from the kind's `ladder`, like levels, so adding vehicles never changes a day's daily; Spots and Any still pick from every vehicle a kind lists.
+
+## Revision 2026-10-29 (accepted: a trailer's rest angle)
+Decided in `docs/brainstorm/2026-10-29_drive-hub-wave-3.md` for Pushback, not built yet. `TrailerSpec` gains `rest` (0 by default; `Math.PI` for a towbar hung off the tug's front, the aircraft ahead of it). The hitch is already signed. `trailer_poses`, `jackknife()` and the planner's hitch-angle bins measure from `rest`; the tow kinematics are unchanged.

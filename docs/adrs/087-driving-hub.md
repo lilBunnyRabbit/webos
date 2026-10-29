@@ -56,6 +56,9 @@ Tight Spot ([ADR-086](086-tight-spot.md)) built a driving core (kinematic vehicl
 - **Recording.** A finished job is recorded at once (bests, level stars, achievements, the daily), with the time star when the par is in; when it isn't, the job is recorded again with the star once its round's par arrives. The par worker starts once per round (the effect is keyed on a derived round), not every frame. Next level never stores a level past the unlocked one.
 - **Contact point.** `collide_shape` falls back to the touching shape's centroid when the polygons only touch (no crossing point), where `collide` used the car's pose; it only moves the contact ring in that degenerate case, and for rear steer the pose is the front axle, so the centroid is nearer the touch. Kept.
 
+## Revision 2026-10-29 (accepted: the yard street, a plot per game)
+Decided in `docs/brainstorm/2026-10-29_drive-hub-wave-3.md`, not built yet. The fixed 56 × 44 m yard with two plots becomes a street: one road west to east, the gate at the west end, plots on both sides, `ceil(n / 2)` pairs for `n` games, so every registered game gets a plot and a new game extends the street east. The landing frames the gate and the nearest plots, not the whole yard. One plot per game; a game's modes stay inside its building. Each game decides what a hit means (the detection, `collide()`, stays shared). New games keep their saved data in the app's data folder (ADR-035), not localStorage.
+
 ## Consequences
 - One large app; folders keep games apart.
 - The id `tight-spot` stays even for games that aren't parking.
