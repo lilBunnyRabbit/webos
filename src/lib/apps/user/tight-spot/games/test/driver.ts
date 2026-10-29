@@ -1,11 +1,12 @@
 import { NO_SIGNAL, Signal, signal_after, toggle_signal, type SignalState } from "../../core/signal";
-import { Gear, max_steer, steer_base, without_creep, type Input } from "../../core/vehicle";
-import { advance, change_gear, create_game, current_limit, set_status, SPEC, Status, type GameState } from "./game";
+import { body_ends, Gear, max_steer, steer_base, without_creep, type Input } from "../../core/vehicle";
+import { advance, change_gear, create_game, current_limit, prompted, set_status, SPEC, Status, type GameState } from "./game";
 import { EventKind, type Route, type RouteId } from "./route";
 import { ControlKind, green_left, until_green } from "./town";
 
-// The proof driver, for tests only: a careful learner who follows the route's line by pure pursuit, keeps under the
-// limits, slows for bends, stops where the rules say and signals in good time. Options make it get one thing wrong.
+// The proof driver, for tests only: a careful learner who follows the route's line by pure pursuit and knows only what a
+// player could: the limit on the last sign passed, the bends and lines in sight, and the turn the examiner has asked for,
+// signalled as soon as it's asked. Options make it get one thing wrong.
 
 export interface DriverOptions {
   pace?: number;
@@ -21,11 +22,12 @@ const MOVING = without_creep(SPEC);
 const LIMIT_MS = 6 * 60 * 1000;
 const DECEL = 2.2;
 const A_DRIVER = 2.2;
-const SIGNAL_AHEAD = 40;
 const EXIT_AHEAD = 25;
 const PARK_WAIT = 1000;
 const STOP_WAIT = 1500;
 const RAMP = 8;
+const BAY_RUN = 15;
+const CREEP = 1.5;
 
 function lerp_offset(options: DriverOptions, route: Route, s: number): number {
   let offset = 0;
@@ -73,6 +75,7 @@ export function drive_route(id: RouteId, options: DriverOptions = {}): Drive {
   state = change_gear(state, Gear.DRIVE);
   const route = state.route;
   const lock = max_steer(SPEC);
+  const nose = body_ends(SPEC).front;
   let stalk: SignalState = NO_SIGNAL;
   const cleared = new Set<number>();
   const waited = new Map<number, number>();
@@ -82,34 +85,32 @@ export function drive_route(id: RouteId, options: DriverOptions = {}): Drive {
     const s = state.at.s;
     if (options.until !== undefined && s >= options.until) break;
     const v = Math.abs(state.car.speed);
+    const front = s + nose;
 
     let target = current_limit(state) * pace;
     target = Math.min(target, curve_speed(route, s, s + 12 + (v * v) / (2 * DECEL), s));
-    for (let i = sample_at(route, s); i < route.ss.length && route.ss[i] < s + 60; i += 10) {
-      const limit = current_limit({ route, at: { index: i, s: route.ss[i], lateral: 0 } }) * pace;
-      target = Math.min(target, Math.sqrt(limit * limit + 2 * DECEL * Math.max(0, route.ss[i] - s - 8)));
-    }
+    if (!state.park && s > route.lot.stop - BAY_RUN) target = Math.min(target, CREEP);
     if (options.rush && s >= options.rush.from && s <= options.rush.to) target = options.rush.speed;
 
     let stop_at: number | null = null;
     route.events.forEach((event, k) => {
-      if (event.kind !== EventKind.APPROACH || event.s <= s - 0.5 || cleared.has(k) || event.s - s > 120) return;
+      if (event.kind !== EventKind.APPROACH || event.s <= front - 0.5 || cleared.has(k) || event.s - front > 120) return;
       const kind = event.control?.kind;
       if (kind === ControlKind.STOP && options.stop_signs !== false) {
         const since = waited.get(k);
         if (since !== undefined && state.ms - since >= STOP_WAIT) cleared.add(k);
         else {
-          stop_at ??= event.s - 1;
-          if (v < 0.05 && event.s - s < 2.5 && since === undefined) waited.set(k, state.ms);
+          stop_at ??= event.s - 1 - nose;
+          if (v < 0.05 && event.s - front < 2.5 && since === undefined) waited.set(k, state.ms);
         }
       } else if (kind === ControlKind.LIGHTS) {
         const group = event.control!.group ?? 0;
-        const eta = (event.s - s) / Math.max(v, 4) + 1.5;
+        const eta = (event.s - front) / Math.max(v, 4) + 1.5;
         if (green_left(group, state.ms) > eta) cleared.add(k);
-        else if (until_green(group, state.ms) === 0 && v > 6 && event.s - s < 15) cleared.add(k);
-        else stop_at ??= event.s - 1.5;
+        else if (until_green(group, state.ms) === 0 && v > 6 && event.s - front < 15) cleared.add(k);
+        else stop_at ??= event.s - 1.5 - nose;
       } else if (kind === ControlKind.GIVE_WAY) {
-        target = Math.min(target, Math.sqrt(9 + 2 * DECEL * Math.max(0, event.s - s - 1)));
+        target = Math.min(target, Math.sqrt(9 + 2 * DECEL * Math.max(0, event.s - front - 1)));
       }
     });
     if (!state.park && s < route.lot.stop + 0.5) stop_at ??= route.lot.stop;
@@ -151,14 +152,9 @@ export function drive_route(id: RouteId, options: DriverOptions = {}): Drive {
 
     let want: Signal = Signal.NONE;
     if (options.signals !== false) {
-      for (const event of route.events) {
-        if (event.s <= s || event.signal === Signal.NONE) continue;
-        const reach = event.kind === EventKind.RING_EXIT ? EXIT_AHEAD : SIGNAL_AHEAD;
-        if (event.s - s <= reach) {
-          want = event.signal;
-          break;
-        }
-      }
+      want = prompted(state);
+      const exit = route.events.find((event) => event.kind === EventKind.RING_EXIT && event.s > s && event.s - s <= EXIT_AHEAD);
+      if (want === Signal.NONE && exit) want = exit.signal;
       if (state.next_prompt >= route.prompts.length && s > route.pull_up.from - 5) want = Signal.RIGHT;
     }
     stalk = signal_after(stalk, state.car.steer / lock);

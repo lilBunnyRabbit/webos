@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { Pose, Vec } from "../../core/geometry";
+import { angle_between, type Pose, type Vec } from "../../core/geometry";
 import { Signal } from "../../core/signal";
 import { body_ends, type VehicleSpec } from "../../core/vehicle";
-import { ControlKind, LaneKind, LOT_ROAD, NodeKind, Turn, type Control, type Lane, type Town } from "./town";
+import { ControlKind, LaneKind, LOT_ROAD, node_arms, NodeKind, SignKind, Turn, type Control, type Lane, type Town } from "./town";
 
 export const RouteId = { MARKET: "market", STATION: "station", SCHOOL: "school" } as const;
 export type RouteId = (typeof RouteId)[keyof typeof RouteId];
@@ -65,6 +65,15 @@ export interface Prompt {
   s: number;
   text: string;
   after_park?: boolean;
+  /** Held until the car is out of the junction before this one, when that junction has a way in on the side of the turn. */
+  after?: number;
+  signal: Signal;
+}
+
+export interface LimitZone {
+  /** A lower limit starts at its sign; a higher one as the car leaves the lower zone at the junction. */
+  s: number;
+  limit: number;
 }
 
 export interface Route {
@@ -78,6 +87,7 @@ export interface Route {
   start: Pose;
   events: RouteEvent[];
   prompts: Prompt[];
+  limits: LimitZone[];
   lot: { from: number; to: number; stop: number };
   pull_up: { from: number; to: number };
 }
@@ -128,6 +138,37 @@ function prompt_text(town: Town, event: RouteEvent, connectors: Lane[], from: La
   return through ? `Take the next road on the ${side}.` : `At the end of the road, turn ${side}.`;
 }
 
+const SIGN_REACH = 20;
+
+function sign_along(town: Town, lane: Lane): number {
+  const u = { x: Math.cos(lane.headings[0]), y: Math.sin(lane.headings[0]) };
+  for (const sign of town.signs) {
+    if (sign.kind !== SignKind.SPEED || sign.value !== Math.round(lane.limit * 3.6) || angle_between(sign.facing, lane.headings[0]) > 0.3) continue;
+    const dx = sign.at.x - lane.points[0].x;
+    const dy = sign.at.y - lane.points[0].y;
+    const along = dx * u.x + dy * u.y;
+    if (along >= 0 && along <= SIGN_REACH && Math.abs(dx * u.y - dy * u.x) < 8) return along;
+  }
+  return 0;
+}
+
+/** Whether the node has a way in on the turn's side of a car heading through it, one a prompt spoken too early could send it into. */
+function opening_on(town: Town, node: string, heading: number, turn: Turn): boolean {
+  const k = turn === Turn.LEFT ? 1 : -1;
+  const side = { x: Math.sin(heading) * k, y: -Math.cos(heading) * k };
+  const arms = node_arms(town)[node];
+  return Math.abs(side.x) > Math.abs(side.y) ? arms[side.x > 0 ? "e" : "w"] : arms[side.y > 0 ? "s" : "n"];
+}
+
+export function limit_at(route: Pick<Route, "limits">, s: number): number {
+  let limit = route.limits[0].limit;
+  for (const zone of route.limits) {
+    if (zone.s > s) break;
+    limit = zone.limit;
+  }
+  return limit;
+}
+
 export function build_route(town: Town, id: RouteId, spec: VehicleSpec): Route {
   const def = DEFS[id];
   const roads = [def.start.road, ...def.roads];
@@ -176,13 +217,18 @@ export function build_route(town: Town, id: RouteId, spec: VehicleSpec): Route {
   const first = chosen[0];
   const start: Pose = { ...first.points[start_index], heading: first.headings[start_index] };
   const events: RouteEvent[] = [];
-  const prompts: Prompt[] = [{ s: 0, text: "When you're ready, drive on. Follow the road ahead unless I ask you to turn." }];
+  const prompts: Prompt[] = [{ s: 0, text: "When you're ready, drive on. Follow the road ahead unless I ask you to turn.", signal: Signal.NONE }];
+  const limits: LimitZone[] = [{ s: -Infinity, limit: chosen[0].limit }];
+  let straight_through: { node: string; heading: number; out: number } | null = null;
   let lot = { from: 0, to: 0, stop: 0 };
   let last_start = 0;
 
   for (let i = 0; i < roads.length; i++) {
     const lane = chosen[i];
     const lane_start = s;
+    const limit = limits.at(-1)!.limit;
+    if (lane.limit > limit) limits.push({ s: events.at(-1)!.s, limit: lane.limit });
+    else if (lane.limit < limit) limits.push({ s: lane_start + sign_along(town, lane), limit: lane.limit });
     push(lane, i === 0 ? start_index : 0);
     if (i === roads.length - 1) last_start = lane_start;
     if (lane.kind === LaneKind.LOT) {
@@ -214,18 +260,22 @@ export function build_route(town: Town, id: RouteId, spec: VehicleSpec): Route {
     };
     events.push(event);
     const text = prompt_text(town, event, path, lane, roads[i + 1]);
-    if (text) prompts.push({ s: event.s, text, after_park: lane.kind === LaneKind.LOT });
+    if (text) {
+      const held = straight_through !== null && turn !== Turn.STRAIGHT && opening_on(town, straight_through.node, straight_through.heading, turn);
+      prompts.push({ s: event.s, text, after_park: lane.kind === LaneKind.LOT, signal: event.signal, ...(held ? { after: straight_through!.out } : {}) });
+    }
     for (const join of path) {
       if (join.kind === LaneKind.EXIT) {
         events.push({ kind: EventKind.RING_EXIT, s, node: node.id, lane: join.id, turn: Turn.RIGHT, signal: Signal.RIGHT, junction: false, next_road: roads[i + 1] });
       }
       push(join);
     }
+    straight_through = junction && turn === Turn.STRAIGHT ? { node: node.id, heading: lane.headings.at(-1)!, out: s } : null;
   }
 
   const pull_up = { from: last_start + def.pull_up.from, to: last_start + def.pull_up.to };
-  prompts.push({ s: pull_up.from, text: "Pull up on the right at a safe place, please." });
-  return { id, name: def.name, points, headings, lanes, ss, length: s, start, events, prompts, lot, pull_up };
+  prompts.push({ s: pull_up.from, text: "Pull up on the right at a safe place, please.", signal: Signal.NONE });
+  return { id, name: def.name, points, headings, lanes, ss, length: s, start, events, prompts, limits, lot, pull_up };
 }
 
 export interface Located {

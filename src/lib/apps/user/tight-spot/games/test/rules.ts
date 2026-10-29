@@ -1,7 +1,7 @@
 import type { Polygon, Vec } from "../../core/geometry";
 import { Signal } from "../../core/signal";
-import { body_centre, corners, type Car, type VehicleSpec } from "../../core/vehicle";
-import { EventKind, type Located, type Route, type RouteEvent } from "./route";
+import { body_centre, body_ends, corners, type Car, type VehicleSpec } from "../../core/vehicle";
+import { EventKind, limit_at, type Located, type Route, type RouteEvent } from "./route";
 import { ControlKind, LANE, LaneKind, light_at, Light, on_road, type Town } from "./town";
 
 export const Severity = { MINOR: "minor", SERIOUS: "serious", DANGEROUS: "dangerous" } as const;
@@ -59,6 +59,7 @@ const STOPPED = 0.3;
 const HESITATE = 4000;
 const HESITATE_AT_LINE = 6000;
 const APPROACH_ZONE = 6;
+const QUEUE = 15;
 const STOP_SPEED = 0.3;
 const GIVE_WAY_SPEED = 4.5;
 const SIGNAL_WINDOW = 6000;
@@ -143,6 +144,8 @@ export interface View {
   signal: Signal;
   /** Asked to pull up and in the stretch for it: the car is meant to leave its lane for the kerb and stop. */
   pulling_up: boolean;
+  /** The turn the examiner has asked for and the car hasn't reached: signalling for it early, through a junction on the way, is no fault. */
+  prompted: Signal;
 }
 
 export interface Judged {
@@ -159,9 +162,10 @@ function lane_kind(view: View): LaneKind {
 }
 
 function check_speed(watch: Watch, view: View, out: Fault[]): Watch {
-  const limit = view.town.lanes[view.route.lanes[view.at.index]].limit;
+  const limit = limit_at(view.route, view.at.s);
   const v = Math.abs(view.car.speed);
-  if (v <= limit + Math.max(1, limit * 0.1)) return v <= limit ? { ...watch, over_since: null, speeding: 0 } : watch;
+  if (v <= limit) return watch.over_since === null && watch.speeding === 0 ? watch : { ...watch, over_since: null, speeding: 0 };
+  if (v <= limit + Math.max(1, limit * 0.1)) return watch.over_since === null ? watch : { ...watch, over_since: null };
   const since = watch.over_since ?? view.ms;
   let speeding = watch.speeding;
   const kmh = Math.round(limit * 3.6);
@@ -225,8 +229,14 @@ function check_lane(watch: Watch, view: View, out: Fault[]): Watch {
   return next;
 }
 
+/** Lines are judged at the front bumper, along the route from the pose. */
+function front_of(view: View, at: Located = view.at): number {
+  return at.s + body_ends(view.spec).front;
+}
+
 function next_approach(view: View): RouteEvent | null {
-  return view.route.events.find((event) => event.kind === EventKind.APPROACH && event.s > view.at.s) ?? null;
+  const front = front_of(view);
+  return view.route.events.find((event) => event.kind === EventKind.APPROACH && event.s > front) ?? null;
 }
 
 function check_hesitation(watch: Watch, view: View, out: Fault[]): Watch {
@@ -238,7 +248,7 @@ function check_hesitation(watch: Watch, view: View, out: Fault[]): Watch {
   const in_lot = lane_kind(view) === LaneKind.LOT;
   if (!watch.moved || in_lot || view.pulling_up) return watch.stopped_since === null ? watch : { ...watch, stopped_since: null };
   const ahead = next_approach(view);
-  const near = ahead && ahead.s - view.at.s < 12 ? ahead : null;
+  const near = ahead && ahead.s - front_of(view) < QUEUE ? ahead : null;
   if (near?.control?.kind === ControlKind.LIGHTS && light_at(near.control.group ?? 0, view.ms) !== Light.GREEN) return { ...watch, stopped_since: view.ms };
   const since = watch.stopped_since ?? view.ms;
   const allowed = near?.control ? HESITATE_AT_LINE : HESITATE;
@@ -279,7 +289,7 @@ function crossed(view: View, event: RouteEvent, watch: Watch, out: Fault[]) {
     out.push(
       fault(FaultKind.SIGNAL, Severity.MINOR, view, signalled(spans, other, view.ms) ? `Signalled ${side_name(other)}, turned ${side_name(event.signal)}` : `No signal before turning ${side_name(event.signal)}`)
     );
-  } else if (view.signal !== Signal.NONE) out.push(fault(FaultKind.SIGNAL, Severity.MINOR, view, `Signalled ${side_name(view.signal)} going straight on`));
+  } else if (view.signal !== Signal.NONE && view.signal !== view.prompted) out.push(fault(FaultKind.SIGNAL, Severity.MINOR, view, `Signalled ${side_name(view.signal)} going straight on`));
 }
 
 /** One step's checks, pure: the watch carries what spans steps (how long over the limit, already flagged, the signal's history). */
@@ -291,16 +301,18 @@ export function judge(watch: Watch, view: View): Judged {
   next = check_kerb(next, view, out);
   next = check_lane(next, view, out);
   next = check_hesitation(next, view, out);
-  const forward = view.at.s - view.before.s;
+  const front = front_of(view);
+  const was = front_of(view, view.before);
+  const forward = front - was;
   if (forward > 0 && forward < 5) {
     for (const event of view.route.events) {
-      if (event.s <= view.before.s || event.s > view.at.s) continue;
+      if (event.s <= was || event.s > front) continue;
       crossed(view, event, next, out);
       if (event.kind === EventKind.APPROACH) next = { ...next, approach_min: Infinity };
     }
   }
   const ahead = next_approach(view);
-  if (ahead && ahead.s - view.at.s <= APPROACH_ZONE) next = { ...next, approach_min: Math.min(next.approach_min, Math.abs(view.car.speed)) };
+  if (ahead && ahead.s - front <= APPROACH_ZONE) next = { ...next, approach_min: Math.min(next.approach_min, Math.abs(view.car.speed)) };
   return { watch: next, faults: out };
 }
 

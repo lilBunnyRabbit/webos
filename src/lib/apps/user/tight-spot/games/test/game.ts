@@ -7,7 +7,7 @@ import { fit, MAX_ANGLE } from "../../core/precision";
 import { Signal } from "../../core/signal";
 import { angle_between } from "../../core/geometry";
 import { bodies, body_centre, create_car, Gear, HATCHBACK, headings, shift, step, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
-import { locate, route_of, type Located, type Route, type RouteId } from "./route";
+import { limit_at, locate, route_of, type Located, type Route, type RouteId } from "./route";
 import { FaultKind, FRESH_WATCH, judge, passes, Severity, signalled, tally, type Fault, type Tally, type Watch } from "./rules";
 import { HALF, LANE, town, type Town } from "./town";
 
@@ -118,6 +118,7 @@ function speak(state: GameState): GameState {
   if (!prompt || (prompt.after_park && !state.park)) return state;
   const lead = Math.max(LEAD_MIN, Math.abs(state.car.speed) * LEAD_TIME);
   if (prompt.s > 0 && state.at.s < prompt.s - lead) return state;
+  if (prompt.after !== undefined && state.at.s < prompt.after) return state;
   return { ...state, next_prompt: state.next_prompt + 1, spoken: { text: prompt.text, ms: state.ms } };
 }
 
@@ -174,7 +175,7 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
     next = { ...next, off_since: since };
   } else if (state.off_since !== null) next = { ...next, off_since: null };
 
-  const judged = judge(state.watch, { town: t, route: state.route, spec: SPEC, car, at, before: state.at, ms, signal, pulling_up: pulling_up(next) });
+  const judged = judge(state.watch, { town: t, route: state.route, spec: SPEC, car, at, before: state.at, ms, signal, pulling_up: pulling_up(next), prompted: prompted(state) });
   const faults: Fault[] = [...judged.faults];
   if (!state.park && state.at.s <= state.route.lot.to && at.s > state.route.lot.to) {
     faults.push({ kind: FaultKind.PARK, severity: Severity.SERIOUS, ms, at: body_centre(car, SPEC), note: "Drove out of the car park without parking" });
@@ -232,7 +233,13 @@ export function change_gear(state: GameState, gear: Gear): GameState {
 }
 
 export function current_limit(state: Pick<GameState, "route" | "at">): number {
-  return town().lanes[state.route.lanes[state.at.index]].limit;
+  return limit_at(state.route, state.at.s);
+}
+
+/** The side of the turn the examiner last asked for, until the car gets there. */
+export function prompted(state: Pick<GameState, "route" | "at" | "next_prompt">): Signal {
+  const prompt = state.route.prompts[state.next_prompt - 1];
+  return prompt && prompt.s > state.at.s ? prompt.signal : Signal.NONE;
 }
 
 export function clock_text(ms: number): string {

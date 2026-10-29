@@ -60,7 +60,7 @@ The shell lazy-loads the component the first time it's entered, shows the game's
 | `ackermann`, `front` | cars, buses, trucks, rigs | rear axle | wheel angle | nothing |
 | `ackermann`, `rear` | forklift | front axle | wheel angle | the tail swings out |
 | `ackermann`, `all` | ladder truck | middle of the wheelbase | front wheel angle; the rear counter-steers | half the turning circle, the tail swings the other way |
-| `ackermann`, `crab` | telehandler | middle | front wheel angle | `car.crab` (`set_crab`, X, the Crab chip) slides it along the wheels without turning |
+| `ackermann`, `crab` | telehandler | middle | front wheel angle | `car.crab` (`set_crab`, V, the Crab chip) slides it along the wheels without turning |
 | `skid` (`track`) | skid-steer loader, mower, tank | middle of the contact (the mower's drive axle) | the wheel's share, −1 to 1 | full lock pivots on the spot with gas; `speed` is the outer side's |
 | `frame` (`pivot`) | wheel loader, dump truck | rear axle | the joint's bend | two bodies; the bend moves the vehicle at a standstill; the front frame must line up too |
 

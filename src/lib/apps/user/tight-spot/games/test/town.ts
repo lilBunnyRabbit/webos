@@ -647,6 +647,8 @@ export function build_town(): Town {
     { kind: SignKind.NO_ENTRY, at: { x: 140 + HALF + 1.6, y: 100 - MOUTH + 1 }, facing: -Math.PI / 2 },
     { kind: SignKind.ONE_WAY, at: { x: 140 - HALF - 1.6, y: MOUTH + 2 }, facing: Math.PI / 2 },
     { kind: SignKind.ONE_WAY, at: { x: 140 + HALF + 1.6, y: MOUTH + 2 }, facing: Math.PI / 2 },
+    { kind: SignKind.NO_ENTRY, at: { x: LOT_OUT - HALF - 1.6, y: -MOUTH + 1 }, facing: -Math.PI / 2 },
+    { kind: SignKind.NO_ENTRY, at: { x: LOT_OUT + HALF + 1.6, y: -MOUTH + 1 }, facing: -Math.PI / 2 },
     start_sign(lane("HI>I:0"), 4, SignKind.SPEED, 30),
     start_sign(lane("HI>H:0"), 4, SignKind.SPEED, 30),
     start_sign(lane("IJ>J:0"), 4, SignKind.SPEED, 30),
@@ -709,7 +711,7 @@ function in_junction(node: Node, p: Vec, arms: { n: boolean; e: boolean; s: bool
 
 const arms_cache = new WeakMap<Town, Record<string, { n: boolean; e: boolean; s: boolean; w: boolean }>>();
 
-function node_arms(town: Town): Record<string, { n: boolean; e: boolean; s: boolean; w: boolean }> {
+export function node_arms(town: Town): Record<string, { n: boolean; e: boolean; s: boolean; w: boolean }> {
   let found = arms_cache.get(town);
   if (found) return found;
   found = {};

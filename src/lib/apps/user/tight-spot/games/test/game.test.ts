@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { Signal } from "../../core/signal";
-import { create_car, Gear } from "../../core/vehicle";
+import { body_ends, create_car, Gear } from "../../core/vehicle";
 import { drive_route, type DriverOptions } from "./driver";
 import { bay_park, better, create_game, Outcome, record, result_of, SPEC, Status } from "./game";
-import { ROUTE_IDS, RouteId, type Route } from "./route";
-import { FaultKind, log_signal, passes, Severity, sheet, signalled, type Fault } from "./rules";
+import { locate, ROUTE_IDS, RouteId, type Route } from "./route";
+import { FaultKind, FRESH_WATCH, judge, log_signal, passes, Severity, sheet, signalled, type Fault, type View, type Watch } from "./rules";
 import { town } from "./town";
 
 function kinds(faults: readonly Fault[]): string[] {
@@ -21,15 +21,89 @@ function drive(id: RouteId, options: DriverOptions = {}) {
   return state;
 }
 
-describe("a careful driver", () => {
+describe("a careful driver who knows only the signs passed and the turns asked for", () => {
   for (const id of ROUTE_IDS) {
-    it(`drives route ${id} clean, parks and pulls up`, () => {
-      const state = drive(id);
-      expect(kinds(state.faults)).toEqual([]);
-      expect(state.end?.outcome).toBe(Outcome.PASS);
-      expect(state.park).not.toBeNull();
+    it(`drives route ${id} clean at the limit and either side of it, parks and pulls up`, () => {
+      for (const pace of [0.9, 1, 1.08]) {
+        const state = drive(id, { pace });
+        expect(kinds(state.faults), `pace ${pace}`).toEqual([]);
+        expect(state.end?.outcome).toBe(Outcome.PASS);
+        expect(state.park).not.toBeNull();
+      }
     });
   }
+});
+
+describe("a limit starts at its sign", () => {
+  it("turns into the car park at 17 km/h and slows at the 10 sign: no fault", () => {
+    const route = create_game(RouteId.MARKET).route;
+    const sign = route.limits.find((zone) => zone.limit < 3)!.s;
+    expect(kinds(drive(RouteId.MARKET, { rush: { from: sign - 12, to: sign, speed: 17 / 3.6 } }).faults)).toEqual([]);
+  });
+
+  it("drives the school road at 49 km/h up to the 30 sign: no fault", () => {
+    const route = create_game(RouteId.SCHOOL).route;
+    const sign = route.limits.find((zone) => zone.limit < 9)!.s;
+    expect(kinds(drive(RouteId.SCHOOL, { rush: { from: sign - 40, to: sign, speed: 49 / 3.6 } }).faults)).toEqual([]);
+  });
+
+  it("takes the road's limit as soon as the car is out of the car park", () => {
+    const route = create_game(RouteId.MARKET).route;
+    expect(kinds(drive(RouteId.MARKET, { rush: { from: route.lot.to + 0.1, to: route.lot.to + 30, speed: 30 / 3.6 } }).faults)).toEqual([]);
+  });
+});
+
+describe("judging a moment", () => {
+  const route = create_game(RouteId.MARKET).route;
+  const nose = body_ends(SPEC).front;
+  const lights = route.events.find((event) => event.control?.kind === "lights")!;
+  const straight_on = route.events.find((event) => event.node === "B")!;
+
+  function view(rear_s: number, ms: number, speed: number, extra: Partial<View> = {}): View {
+    const i = route.ss.findIndex((s) => s >= rear_s);
+    const car = { ...create_car({ ...route.points[i], heading: route.headings[i] }, Gear.DRIVE, SPEC), speed };
+    const at = locate(route, car, i);
+    return { town: town(), route, spec: SPEC, car, at, before: at, ms, signal: Signal.NONE, pulling_up: false, prompted: Signal.NONE, ...extra };
+  }
+
+  function run(views: View[], watch: Watch = FRESH_WATCH): string[] {
+    const out: Fault[] = [];
+    for (const each of views) {
+      const judged = judge(watch, each);
+      watch = judged.watch;
+      out.push(...judged.faults);
+    }
+    return kinds(out);
+  }
+
+  it("gives each burst over the limit its own second of grace", () => {
+    const s = 60;
+    const speeds = [15.5, 15.5, 15.5, 15.5, 14.5, 15.5, 15.5, 15.5, 15.5, 14.5, 15.5, 15.5];
+    expect(run(speeds.map((v, k) => view(s, k * 200, v)))).toEqual([]);
+    expect(run(new Array(7).fill(0).map((_, k) => view(s, k * 200, 15.5)))).toEqual(["minor speed"]);
+  });
+
+  it("waits two car lengths back from a red light without a hesitation fault", () => {
+    const red = 32000;
+    const back = view(lights.s - nose - 9, red, 0);
+    expect(run(new Array(100).fill(0).map((_, k) => ({ ...back, ms: red + k * 150 })), { ...FRESH_WATCH, moved: true })).toEqual([]);
+  });
+
+  it("judges the red light at the front bumper", () => {
+    const amber_end = 31000;
+    const crossing = (front_before: number, front_after: number, ms: number): View => {
+      const before = view(front_before - nose, ms, 8);
+      return { ...view(front_after - nose, ms, 8), before: before.at };
+    };
+    expect(run([crossing(lights.s - 1, lights.s + 1, amber_end - 100), crossing(lights.s + 1, lights.s + 3.6, amber_end + 300)])).toEqual([]);
+    expect(run([crossing(lights.s - 1, lights.s + 1, amber_end + 300)])).toEqual(["serious red-light"]);
+  });
+
+  it("lets a signal for the turn asked for stand through a junction on the way", () => {
+    const crossing = (prompted: Signal) => ({ ...view(straight_on.s - nose + 1, 5000, 8), before: view(straight_on.s - nose - 1, 5000, 8).at, signal: Signal.RIGHT, prompted });
+    expect(run([crossing(Signal.RIGHT)])).toEqual([]);
+    expect(run([crossing(Signal.NONE)])).toEqual(["minor signal"]);
+  });
 });
 
 describe("one mistake, one fault", () => {
