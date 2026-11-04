@@ -1,5 +1,6 @@
 import type { AppHighlight } from "$lib/core/api/services/apps/type";
 import {
+  FastForward as FastForwardIcon,
   Gif as GifIcon,
   Scissors as ScissorsIcon,
   Terminal as TerminalIcon,
@@ -16,6 +17,11 @@ export default [
     icon: GifIcon,
     title: "Video to GIF",
     text: "Turn a moment into a looping GIF: pick the frame rate and width, and see the size before you start.",
+  },
+  {
+    icon: FastForwardIcon,
+    title: "Skip pauses",
+    text: "Leave out the still stretches of a screen recording or timelapse, so it plays without stopping.",
   },
   { icon: WaveformIcon, title: "Save the sound", text: "Keep only the audio of a video, or of part of it." },
   {

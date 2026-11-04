@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.91.0",
+    date: "2026-11-04",
+    title: "Skip pauses",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["video-tools", "recorder"],
+        text: "Video Tools can skip the pauses in a recording, so screen recordings and timelapses play without the still parts; Recorder's Save & remove pauses… takes a video straight there.",
+      },
+    ],
+  },
+  {
     version: "3.90.0",
     date: "2026-11-04",
     title: "Hitboxes",

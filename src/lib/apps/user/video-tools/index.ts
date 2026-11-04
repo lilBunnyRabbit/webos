@@ -11,7 +11,7 @@ export default define_app({
   guide: () => import("./guide.md?raw"),
   category: AppCategory.MEDIA,
   tools: ["video/*"],
-  props: z.object({ path: z.string().optional() }),
+  props: z.object({ path: z.string().optional(), skip_pauses: z.boolean().optional() }),
   defaults: { constraints: { width: { min: 340 }, height: { min: 380 } } },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),

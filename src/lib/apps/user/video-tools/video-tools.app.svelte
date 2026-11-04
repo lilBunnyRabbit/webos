@@ -35,13 +35,16 @@
     gif_size,
   } from "$kit/utils/video/plan";
   import Scrubber from "./scrubber.svelte";
+  import { DEFAULT_SETTINGS, SETTINGS_FILE, SettingsSchema } from "./settings";
+  import { SKIP_SENSITIVITY } from "./skip";
 
   /** Videos don't say their frame rate, so a step is one 30 fps frame. */
   const STEP = 1 / 30;
 
-  const { path }: { path?: string } = $props();
-  const { app_id, window: win } = get_app_context();
+  const { path, skip_pauses }: { path?: string; skip_pauses?: boolean } = $props();
+  const { app_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
+  const prefs = storage.file(SETTINGS_FILE, DEFAULT_SETTINGS, SettingsSchema);
 
   interface Loaded extends VideoInfo {
     source: ClipSource;
@@ -66,6 +69,7 @@
   let fps = $state<number>(GIF_FPS.DEFAULT);
   let width_value = $state(String(GIF_WIDTH.DEFAULT));
   let dither = $state(true);
+  let skip = $state(untrack(() => skip_pauses) ?? false);
 
   let job = $state.raw<TaskJob | null>(null);
   let result = $state.raw<(ClipResult & { url: string; output: Output }) | null>(null);
@@ -239,9 +243,10 @@
   }
 
   function settings(): ClipSettings {
-    if (output === Output.GIF) return { output, fps, width: Number(width_value), dither };
+    const skipping = skip ? { skip: prefs.value.skip_sensitivity } : {};
+    if (output === Output.GIF) return { output, fps, width: Number(width_value), dither, ...skipping };
     if (output === Output.AUDIO) return { output };
-    return { output, quality, audio: keep_audio };
+    return { output, quality, audio: keep_audio && !skip, ...skipping };
   }
 
   async function save() {
@@ -284,6 +289,29 @@
 
 {#snippet heading(text: string)}
   <h3 class="px-0.5 text-2xs font-semibold tracking-wide text-foreground/65 uppercase">{text}</h3>
+{/snippet}
+
+{#snippet skip_controls()}
+  <label class="flex items-center justify-between gap-2 text-ui" title="Leaves out the stretches where nothing on screen changes, so the result plays without them">
+    Skip pauses
+    <Switch bind:checked={skip} />
+  </label>
+  {#if skip}
+    <label class="flex items-center gap-2 text-ui">
+      <span class="shrink-0">Sensitivity</span>
+      <Slider
+        size="sm"
+        min={SKIP_SENSITIVITY.MIN}
+        max={SKIP_SENSITIVITY.MAX}
+        step={5}
+        bind:value={prefs.value.skip_sensitivity}
+        class="min-w-0 flex-1"
+        aria-label="Sensitivity"
+      />
+      <span class="w-12 text-right font-mono text-2xs text-foreground/80 tabular-nums">{prefs.value.skip_sensitivity}</span>
+    </label>
+    <p class="px-0.5 text-2xs text-foreground/65">Higher keeps smaller changes. Lower it when a blinking cursor or a clock keeps pauses in.</p>
+  {/if}
 {/snippet}
 
 {#snippet row(label: string, value: string)}
@@ -398,11 +426,15 @@
               Quality
               <Segmented size="sm" label="Quality" options={QUALITY_OPTIONS} bind:value={quality} />
             </label>
+            {@render skip_controls()}
             <label class="flex items-center justify-between gap-2 text-ui">
               Keep the sound
-              <Switch bind:checked={keep_audio} />
+              <Switch disabled={skip} bind:checked={() => keep_audio && !skip, (on: boolean) => (keep_audio = on)} />
             </label>
-            <p class="px-0.5 text-2xs text-foreground/65">WebM with VP9 video{keep_audio ? " and Opus sound" : ""}. Saving plays the part through once, so it takes about as long as the part.</p>
+            {#if skip}
+              <p class="px-0.5 text-2xs text-foreground/65">Skipping pauses removes the sound.</p>
+            {/if}
+            <p class="px-0.5 text-2xs text-foreground/65">WebM with VP9 video{keep_audio && !skip ? " and Opus sound" : ""}. Saving plays the part through once, so it takes about as long as the part.</p>
           {:else if output === Output.GIF && gif}
             <label class="flex items-center gap-2 text-ui">
               <span class="w-16 shrink-0">Frames</span>
@@ -417,8 +449,9 @@
               Dithering
               <Switch bind:checked={dither} />
             </label>
-            {@render row(`${gif.frames} frames`, `${gif.size.width} × ${gif.size.height}`)}
-            {@render row("Size", `about ${format_bytes(gif.bytes)}`)}
+            {@render skip_controls()}
+            {@render row(`${skip ? "Up to " : ""}${gif.frames} frames`, `${gif.size.width} × ${gif.size.height}`)}
+            {@render row("Size", `${skip ? "up to" : "about"} ${format_bytes(gif.bytes)}`)}
             {#each gif.warnings as warning (warning)}
               <p class="flex gap-1.5 px-0.5 text-2xs text-warning"><WarningIcon class="mt-px size-3.5 shrink-0" weight="bold" />{warning}</p>
             {/each}
@@ -449,6 +482,9 @@
               <audio src={result.url} controls class="w-full"></audio>
             {/if}
             <p class="truncate px-0.5 text-ui" title={result.path}>{base_name(result.path)} · <span class="font-mono text-2xs">{format_bytes(result.size)}</span></p>
+            {#if result.length}
+              {@render row("Pauses skipped", `${format_time(result.length.source, 1)} → ${format_time(result.length.output, 1)}`)}
+            {/if}
             <div class="flex gap-2">
               <Button size="sm" onclick={open_result}>Open</Button>
               <Button size="sm" variant="quiet" onclick={show_result}>Show in folder</Button>

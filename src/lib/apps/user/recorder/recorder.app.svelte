@@ -12,6 +12,7 @@
     Camera as CameraIcon,
     CameraRotate as CameraRotateIcon,
     CameraSlash as CameraSlashIcon,
+    FastForward as FastForwardIcon,
     FileAudio as FileAudioIcon,
     FileImage as FileImageIcon,
     FileVideo as FileVideoIcon,
@@ -114,11 +115,11 @@
     await session.start(source, { mic_mix: mic_mix.value });
   }
 
-  async function save(): Promise<boolean> {
+  async function save(): Promise<string | null> {
     try {
       const take = session.take;
       const path = await session.save(files);
-      if (!path || !take) return false;
+      if (!path || !take) return null;
       achievements.achieve(take_achievement(take.kind, take.source));
       notifications.notify(app_id, {
         type: NotificationType.INFO,
@@ -126,11 +127,16 @@
         message: path.slice(RECORDINGS_DIR.length + 1),
         actions: [{ label: "Open", on_click: () => void apps.open(path) }],
       });
-      return true;
+      return path;
     } catch (reason) {
       report("Couldn't save the recording", reason);
-      return false;
+      return null;
     }
+  }
+
+  async function save_and_skip_pauses() {
+    const path = await save();
+    if (path) apps.launch("video-tools", { path, skip_pauses: true });
   }
 
   async function discard() {
@@ -145,7 +151,7 @@
     win.set_dirty(session.unsaved, {
       save: async () => {
         if (session.busy) await session.stop();
-        return save();
+        return (await save()) !== null;
       },
     })
   );
@@ -287,6 +293,9 @@
         <div class="flex flex-wrap items-center justify-center gap-2">
           {#if session.take}
             <Button size="lg" onclick={discard}><TrashIcon weight="bold" /> Discard</Button>
+            {#if session.take.kind === TakeKind.VIDEO}
+              <Button size="lg" onclick={save_and_skip_pauses}><FastForwardIcon weight="bold" /> Save &amp; remove pauses…</Button>
+            {/if}
             <Button size="lg" variant="primary" onclick={save}><FloppyDiskIcon weight="bold" /> Save</Button>
           {:else if session.phase !== Phase.ERROR}
             {@render record_controls()}

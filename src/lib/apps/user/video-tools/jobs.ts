@@ -27,6 +27,7 @@ import {
 } from "$kit/utils/video/plan";
 import type { Quality } from "./kinds";
 import { map_pixels, median_cut } from "$kit/utils/codecs/quantize";
+import { OutputClock, PauseFilter, skip_size, skip_threshold, to_grey } from "./skip";
 
 export const VIDEOS = "/home/Videos";
 
@@ -41,9 +42,14 @@ export interface ClipSource {
   size: Size;
 }
 
+interface SkipSetting {
+  /** Skip pauses at this sensitivity (0–100). A clip that skips them has no sound. */
+  skip?: number;
+}
+
 export type ClipSettings =
-  | { output: typeof Output.WEBM; quality: Quality; audio: boolean }
-  | { output: typeof Output.GIF; fps: number; width: number; dither: boolean }
+  | ({ output: typeof Output.WEBM; quality: Quality; audio: boolean } & SkipSetting)
+  | ({ output: typeof Output.GIF; fps: number; width: number; dither: boolean } & SkipSetting)
   | { output: typeof Output.AUDIO };
 
 export interface ClipRun {
@@ -60,6 +66,8 @@ export interface ClipRun {
 export interface ClipResult {
   path: string;
   size: number;
+  /** Seconds of the source part and of the output, when pauses were skipped. */
+  length?: { source: number; output: number };
 }
 
 export type ClipOutcome = { ok: true; result: ClipResult } | { ok: false; cancelled: boolean; error: string };
@@ -92,6 +100,24 @@ function progress_line(range: Range, time: number, started: number): string {
   return [`${format_time(done, 1)} of ${format_time(total, 1)}`, eta].filter(Boolean).join(" · ");
 }
 
+/** Decides per frame whether it shows something new, from a small grey copy. */
+function pause_filter(source: Size, sensitivity: number): (picture: CanvasImageSource) => boolean {
+  const size = skip_size(source);
+  const draw = new OffscreenCanvas(size.width, size.height).getContext("2d", { willReadFrequently: true })!;
+  // The default smoothing samples a few source pixels per output pixel, so a thin cursor or stroke can vanish.
+  draw.imageSmoothingQuality = "high";
+  const filter = new PauseFilter(skip_threshold(sensitivity));
+  return (picture) => {
+    draw.drawImage(picture, 0, 0, size.width, size.height);
+    return filter.keep(to_grey(draw.getImageData(0, 0, size.width, size.height).data));
+  };
+}
+
+interface Built {
+  blob: Blob | null;
+  length?: ClipResult["length"];
+}
+
 interface Step {
   name: string;
   run: (task: { progress: (value: number) => void; log: (text: string) => void }) => Promise<void>;
@@ -100,14 +126,14 @@ interface Step {
 function webm_steps(
   run: ClipRun,
   context: TaskContext,
-  out: { blob: Blob | null },
-  settings: { quality: Quality; audio: boolean }
+  out: Built,
+  settings: { quality: Quality; audio: boolean } & SkipSetting
 ): Step[] {
   const { range, source } = run;
   const size = even_size(source.size);
   let audio: AudioBuffer | null = null;
   const steps: Step[] = [];
-  if (settings.audio) {
+  if (settings.audio && settings.skip === undefined) {
     steps.push({
       name: "Read audio",
       async run(task) {
@@ -131,21 +157,29 @@ function webm_steps(
         const resize = size.width !== source.size.width || size.height !== source.size.height;
         const canvas = resize ? new OffscreenCanvas(size.width, size.height) : null;
         const draw = canvas?.getContext("2d");
+        const keep = settings.skip === undefined ? null : pause_filter(source.size, settings.skip);
+        const clock = new OutputClock(range.from);
+        let kept = 0;
         const started = performance.now();
         const result = await capture({
           file: source.file,
           ...range,
           signal: context.signal,
           on_frame(video, time) {
-            draw?.drawImage(video, 0, 0, size.width, size.height);
-            encoder.encode_frame(canvas ?? video, Math.round(Math.max(0, time - range.from) * 1e6));
             task.progress((time - range.from) / (range.to - range.from));
             context.message(progress_line(range, time, started));
+            const at = clock.place(time, keep?.(video) ?? true);
+            if (at === null) return;
+            kept++;
+            draw?.drawImage(video, 0, 0, size.width, size.height);
+            encoder.encode_frame(canvas ?? video, Math.round(at * 1e6));
             if (encoder.busy) return encoder.drained();
           },
         });
-        task.log(`${result.frames} frames`);
-        out.blob = await encoder.finish((result.end - range.from) * 1000);
+        const length = clock.end(result.end);
+        task.log(keep ? `${kept} of ${result.frames} frames kept` : `${result.frames} frames`);
+        if (keep) out.length = { source: result.end - range.from, output: length };
+        out.blob = await encoder.finish(length * 1000);
       } finally {
         encoder.close();
       }
@@ -157,8 +191,8 @@ function webm_steps(
 function gif_steps(
   run: ClipRun,
   context: TaskContext,
-  out: { blob: Blob | null },
-  settings: { fps: number; width: number; dither: boolean }
+  out: Built,
+  settings: { fps: number; width: number; dither: boolean } & SkipSetting
 ): Step[] {
   const { range, source } = run;
   const size = gif_size(source.size, settings.width);
@@ -171,14 +205,15 @@ function gif_steps(
         const draw = canvas.getContext("2d", { willReadFrequently: true })!;
         draw.imageSmoothingQuality = "high";
         const parts: Uint8Array<ArrayBuffer>[] = [gif_start(size.width, size.height)];
-        const slot_ms = 1000 / settings.fps;
+        const keep = settings.skip === undefined ? null : pause_filter(source.size, settings.skip);
+        const clock = new OutputClock(0);
         let pending: { palette: Uint8Array; indices: Uint8Array } | null = null;
         let next_slot = 0;
         // Delays are rounded on a running total so the GIF's length doesn't drift from the clip's.
         let written_cs = 0;
         const flush = (until: number) => {
           if (!pending) return;
-          const delay = Math.max(2, Math.round((until * slot_ms) / 10) - written_cs);
+          const delay = Math.max(2, Math.round(until * 100) - written_cs);
           written_cs += delay;
           parts.push(gif_local_frame({ ...size, palette: pending.palette, indices: pending.indices, delay }));
         };
@@ -192,20 +227,25 @@ function gif_steps(
             const slot = Math.floor((time - range.from) * settings.fps + 1e-6);
             if (slot < next_slot) return;
             next_slot = slot + 1;
-            draw.drawImage(video, 0, 0, size.width, size.height);
-            const rgba = draw.getImageData(0, 0, size.width, size.height).data;
             task.progress((time - range.from) / (range.to - range.from));
             context.message(progress_line(range, time, started));
+            const at = clock.place(slot / settings.fps, keep?.(video) ?? true);
+            if (at === null) return;
+            draw.drawImage(video, 0, 0, size.width, size.height);
+            const rgba = draw.getImageData(0, 0, size.width, size.height).data;
             return (async () => {
               await context.pace();
               const palette = median_cut(rgba, 256);
               const indices = map_pixels(rgba, size.width, size.height, palette, settings.dither);
-              flush(slot);
+              flush(at);
               pending = { palette, indices };
             })();
           },
         });
-        flush(Math.max(next_slot, Math.ceil((result.end - range.from) * settings.fps - 1e-6)));
+        const end_slot = Math.max(next_slot, Math.ceil((result.end - range.from) * settings.fps - 1e-6));
+        const length = clock.end(end_slot / settings.fps);
+        flush(length);
+        if (keep) out.length = { source: result.end - range.from, output: length };
         task.log(`${parts.length - 1} frames · ${size.width} × ${size.height}`);
         out.blob = new Blob([...parts, GIF_TRAILER], { type: "image/gif" });
       },
@@ -213,7 +253,7 @@ function gif_steps(
   ];
 }
 
-function audio_steps(run: ClipRun, context: TaskContext, out: { blob: Blob | null }): Step[] {
+function audio_steps(run: ClipRun, context: TaskContext, out: Built): Step[] {
   const { range, source } = run;
   return [
     {
@@ -238,6 +278,12 @@ function audio_steps(run: ClipRun, context: TaskContext, out: { blob: Blob | nul
   ];
 }
 
+function done_message(result: ClipResult): string {
+  const parts = [result.path, format_bytes(result.size)];
+  if (result.length) parts.push(`${format_time(result.length.source, 1)} → ${format_time(result.length.output, 1)}`);
+  return parts.join(" · ");
+}
+
 const TITLES: Record<Output, string> = { webm: "Trimming", gif: "Making a GIF of", audio: "Extracting the sound of" };
 const DONE: Record<Output, string> = { webm: "Clip saved", gif: "GIF saved", audio: "Sound saved" };
 
@@ -247,7 +293,7 @@ export async function export_clip(run: ClipRun): Promise<ClipOutcome> {
   const job = kernel.service<TasksService>("tasks").run(
     run.app_id,
     (context) => {
-      const out: { blob: Blob | null } = { blob: null };
+      const out: Built = { blob: null };
       const steps =
         settings.output === Output.WEBM
           ? webm_steps(run, context, out, settings)
@@ -268,7 +314,7 @@ export async function export_clip(run: ClipRun): Promise<ClipOutcome> {
           async execute() {
             context.signal.throwIfAborted();
             context.message(`Writing ${format_bytes(out.blob!.size)}`);
-            result = await write(out.blob!, run);
+            result = { ...(await write(out.blob!, run)), length: out.length };
             this.logger.info(`${result.path} · ${format_bytes(result.size)}`);
           },
         }),
@@ -280,7 +326,7 @@ export async function export_clip(run: ClipRun): Promise<ClipOutcome> {
       signal: run.signal,
       done: () => ({
         title: DONE[settings.output],
-        message: result ? `${result.path} · ${format_bytes(result.size)}` : undefined,
+        message: result ? done_message(result) : undefined,
         actions: result
           ? [{ label: "Open", on_click: () => void kernel.service<AppsService>("apps").open(result!.path) }]
           : [],

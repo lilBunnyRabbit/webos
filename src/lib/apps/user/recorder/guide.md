@@ -7,4 +7,5 @@
 ## Keeping it
 
 - After you stop, play the take back first. **Save** keeps it, **Discard** throws it away.
+- On a screen or camera video, **Save & remove pauses…** saves it and opens it in Video Tools with Skip pauses on, ready to save a copy without the still parts.
 - Everything is saved in `/home/Recordings`. **Recent** lists it; click or tap one to open it.
