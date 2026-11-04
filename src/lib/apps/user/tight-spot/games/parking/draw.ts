@@ -23,7 +23,7 @@ import type { End } from "../../core/sensors";
 import { CHUNK, toward } from "../../core/lot";
 import { bodies, body_centre, Gear } from "../../core/vehicle";
 import { draw_course, draw_course_over } from "./extreme/draw";
-import { course_by_id } from "./extreme/courses";
+import { course_by_id, layout_of } from "./extreme/courses";
 import { OFF, spec_of, Status, type GameState } from "./game";
 
 export interface Extras {
@@ -97,7 +97,11 @@ export function draw_scene(
   if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
   headroom(ctx, world.headroom, scale, palette);
   floor_labels(ctx, world.chunks, CHUNK, view, palette, extras.font, extras.insets);
-  if (extras.hitboxes) hitboxes(ctx, [...bodies(state.car, spec), ...vehicle_solids(world.solids)], scale, palette);
+  if (extras.hitboxes) {
+    // The lorry's cab collides as a wall, so `vehicle_solids` misses it.
+    const cab = course ? layout_of(course).lorry?.cab : undefined;
+    hitboxes(ctx, [...bodies(state.car, spec), ...vehicle_solids(world.solids), ...(cab ? [cab] : [])], scale, palette);
+  }
 
   if (!open && world.bays.length === 1 && state.status === Status.DRIVING) {
     ctx.save();

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { angle_between, type Polygon, type Vec } from "../../core/geometry";
 import { STANDING } from "../../core/keys";
 import { collide, collide_shape, obstacles, vehicle_solids, type Obstacles, type Scene } from "../../core/obstacles";
+import type { Solid } from "../../core/scene";
 import { hash } from "../../core/seed";
 import {
   bodies,
@@ -200,14 +201,27 @@ export function contact(near: Near, apron: Apron, car: Placement, margin = 0, sp
  * What `advance` tests, for Show hitboxes: the baggage train, or the tug and the aircraft's parts (the towbar touches
  * nothing), and the parked aircraft at the heights that phase meets.
  */
+const GROUND_VEHICLES = new Set<Part>([Part.GPU, Part.LOADER]);
+
+/** Stand kit collides as shelves, so `vehicle_solids` misses it: the apron's part map tells the ground vehicles apart. */
+function ground_vehicles(solids: readonly Solid[], apron: Apron): Polygon[] {
+  return solids.filter((solid) => GROUND_VEHICLES.has(apron.parts.get(solid) ?? Part.TERMINAL)).map((solid) => solid.shape);
+}
+
 export function hitbox_shapes(state: Pick<GameState, "phase" | "car" | "spec" | "scene" | "apron">): Polygon[] {
-  if (state.phase === Phase.BAGS) return [...bodies(state.car, BAGGAGE), ...vehicle_solids(state.scene.solids)];
+  if (state.phase === Phase.BAGS)
+    return [
+      ...bodies(state.car, BAGGAGE),
+      ...vehicle_solids(state.scene.solids),
+      ...ground_vehicles(state.scene.solids, state.apron),
+    ];
   const near = near_of(state);
   return [
     corners(state.car, state.spec),
     ...aircraft_parts(aircraft_pose(state.car, state.spec)),
     ...vehicle_solids(near.low.solids),
     ...vehicle_solids(near.high.solids),
+    ...ground_vehicles(near.low.solids, state.apron),
   ];
 }
 
