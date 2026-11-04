@@ -290,7 +290,7 @@
   });
 
   $effect(() => {
-    void [game, palette, board_size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, side_box.width, side_box.height, side_canvas];
+    void [game, palette, board_size, zoom, settings.guides, settings.hitboxes, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, side_box.width, side_box.height, side_canvas];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -336,6 +336,7 @@
     const font = getComputedStyle(canvas).fontFamily;
     draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
       guides: settings.guides,
+      hitboxes: settings.hitboxes,
       time: performance.now() / 1000,
       insets: control_insets(),
       font,

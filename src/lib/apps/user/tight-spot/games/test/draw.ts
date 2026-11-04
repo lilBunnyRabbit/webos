@@ -1,8 +1,9 @@
 import type { Insets } from "../../core/camera";
-import { bay_outline, bay_pointer, begin_frame, contact_rings, player, solids, union, type Palette, type View } from "../../core/draw";
+import { vehicle_solids } from "../../core/obstacles";
+import { bay_outline, bay_pointer, begin_frame, contact_rings, hitboxes, player, solids, union, type Palette, type View } from "../../core/draw";
 import type { Polygon, Vec } from "../../core/geometry";
 import type { Signal } from "../../core/signal";
-import { Gear, Vehicle } from "../../core/vehicle";
+import { bodies, Gear, Vehicle } from "../../core/vehicle";
 import { SPEC, Status, type GameState } from "./game";
 import { route_span } from "./route";
 import {
@@ -30,6 +31,7 @@ import {
 export interface DrawExtras {
   time: number;
   guides: boolean;
+  hitboxes: boolean;
   signal: Signal;
   insets: Insets;
   font: string;
@@ -441,6 +443,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, town
   player(ctx, state.car, Vehicle.HATCH, SPEC, braking, scale, palette, extras.time, extras.signal);
   for (const post of town.lights) traffic_light(ctx, post, state.ms, scale, palette);
   for (const sign of town.signs) sign_face(ctx, sign, scale, palette, extras.font);
+  if (extras.hitboxes) hitboxes(ctx, [...bodies(state.car, SPEC), ...vehicle_solids(town.solids)], scale, palette);
   if (state.contact) {
     const age = state.ms - state.contact.ms;
     if (age < CONTACT_FADE_MS || state.status === Status.DONE) contact_rings(ctx, state.contact.at, (Math.sin(extras.time * 6) + 1) / 2, scale, palette);

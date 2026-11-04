@@ -298,6 +298,12 @@ function carried_box(load: Pose, margin: number): Polygon {
   return oriented_box(load.x, load.y, load.heading, PALLET.length + margin * 2, PALLET.width + margin * 2);
 }
 
+/** What `contact` tests, for Show hitboxes: the body, the forks and the load on them. */
+export function hitbox_shapes(state: Pick<GameState, "car" | "loads">, spec: VehicleSpec = SPEC): Polygon[] {
+  const load = carried_pose(state);
+  return [...bodies(state.car, spec), ...(load ? [carried_box(load, 0)] : [])];
+}
+
 /** The tier the forks and the load are at: `raised`'s while either still reaches into its slot, else the floor. */
 export function fork_tier(raised: Slot | null, forks: Polygon | null, carried: Polygon | null): number {
   if (!raised) return 0;

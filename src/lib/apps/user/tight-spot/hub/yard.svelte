@@ -165,7 +165,7 @@
 
   // The loop draws while something moves; this covers the rest (a gear, a menu, a resize, a new theme).
   $effect(() => {
-    void [car, palette, size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, card, icons, icons_ready];
+    void [car, palette, size, zoom, settings.guides, settings.hitboxes, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, card, icons, icons_ready];
     if (awake && !blocked) return;
     untrack(() => render(0));
   });
@@ -257,6 +257,7 @@
       palette,
       {
         guides: settings.guides,
+        hitboxes: settings.hitboxes,
         sensors: {
           front: car.gear === Gear.DRIVE ? readings.front : null,
           rear: car.gear === Gear.REVERSE ? readings.rear : null,

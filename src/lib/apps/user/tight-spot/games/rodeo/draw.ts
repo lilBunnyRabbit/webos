@@ -1,14 +1,15 @@
 import type { Insets } from "../../core/camera";
-import { bay_arrow, bay_pointer, beams, begin_frame, contact_rings, fill, guides, outlined, path, player, sensor_arcs, type Palette, type View } from "../../core/draw";
+import { bay_arrow, bay_pointer, beams, begin_frame, contact_rings, fill, guides, hitboxes, outlined, path, player, sensor_arcs, type Palette, type View } from "../../core/draw";
 import { SolidKind } from "../../core/scene";
 import type { Pose, Vec } from "../../core/geometry";
 import type { End } from "../../core/sensors";
-import { Gear } from "../../core/vehicle";
+import { bodies, Gear } from "../../core/vehicle";
 import { BOX_HEADING, StepKind, type Gate } from "./course";
 import { spec_of, Status, step_target, type GameState } from "./game";
 
 export interface Extras {
   guides: boolean;
+  hitboxes: boolean;
   sensors: Record<End, number | null>;
   time: number;
   insets: Insets;
@@ -213,6 +214,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   const hot = new Set<Vec>(next?.gate ? (next.kind === StepKind.SLALOM ? [next.gate.a] : [next.gate.a, next.gate.b]) : []);
   for (const each of state.cones) if (!each.down) cone(ctx, each.at, scale, palette, hot.has(each.at));
 
+  if (extras.hitboxes) hitboxes(ctx, bodies(state.car, spec), scale, palette);
   if (state.status === Status.CRASHED && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
 
   const badge = Math.max(10, Math.min(14, scale * 0.6));

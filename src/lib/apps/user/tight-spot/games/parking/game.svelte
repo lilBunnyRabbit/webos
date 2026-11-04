@@ -260,7 +260,7 @@
 
   // While driving the frame loop draws; this covers everything else (menus, a resize, a new theme).
   $effect(() => {
-    void [game, palette, size, zoom, tip, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
+    void [game, palette, size, zoom, tip, settings.guides, settings.hitboxes, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -328,6 +328,7 @@
     const now = performance.now();
     draw_scene(ctx, game, view, palette, {
       guides: settings.guides,
+      hitboxes: settings.hitboxes,
       sensors: {
         front: game.car.gear === Gear.DRIVE ? readings.front : null,
         rear: game.car.gear === Gear.REVERSE ? readings.rear : null,

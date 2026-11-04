@@ -5,6 +5,7 @@ import {
   contact_rings,
   fill,
   guides,
+  hitboxes,
   outlined,
   path,
   player,
@@ -16,11 +17,12 @@ import { oriented_box, type Polygon, type Pose, type Vec } from "../../core/geom
 import { Gear, to_world, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import { AircraftPart, aircraft_parts, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, SHAPES, TAIL } from "./aircraft";
 import { KitKind, tunnel, type Apron, type Kit } from "./apron";
-import { aircraft_pose, Phase, SPEC, Status, type GameState } from "./game";
+import { aircraft_pose, hitbox_shapes, Phase, SPEC, Status, type GameState } from "./game";
 import { BAGGAGE, MIDDLE } from "./train";
 
 export interface Extras {
   guides: boolean;
+  hitboxes: boolean;
   time: number;
   insets: Insets;
   font: string;
@@ -475,6 +477,7 @@ export function draw_scene(
   apron.parked.forEach((pose, i) => overhead(ctx, pose, fin(i), scale, palette));
   if (bags) overhead(ctx, apron.aircraft, palette.player.body, scale, palette);
 
+  if (extras.hitboxes) hitboxes(ctx, hitbox_shapes(state), scale, palette);
   if (state.status === Status.CRASHED && state.contact)
     contact_rings(ctx, state.contact, pulse, Math.min(scale, 12), palette);
 

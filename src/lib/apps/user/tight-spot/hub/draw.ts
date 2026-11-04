@@ -1,13 +1,14 @@
 import { bounds_of, type Bounds, type Vec } from "../core/geometry";
+import { vehicle_solids } from "../core/obstacles";
 import type { Insets } from "../core/camera";
-import { beams, begin_frame, contact_rings, floor_labels, ground, guides, headroom, path, player, sensor_arcs, solids, type Palette, type View } from "../core/draw";
+import { beams, begin_frame, contact_rings, floor_labels, ground, guides, headroom, hitboxes, path, player, sensor_arcs, solids, type Palette, type View } from "../core/draw";
 import { CHUNK } from "../core/lot";
 import type { End } from "../core/sensors";
-import { Gear, type Car, type Vehicle, type VehicleSpec } from "../core/vehicle";
+import { bodies, Gear, type Car, type Vehicle, type VehicleSpec } from "../core/vehicle";
 import { RECESS, to_town } from "./blueprints";
 import { building, house, in_plan, shadow_of, tree } from "./buildings";
 import type { CarPark } from "./car-park";
-import { District, type Plot, type Yard } from "./yard";
+import { District, near, type Plot, type Yard } from "./yard";
 
 const SOON = "Soon";
 // From this many pixels a metre the doorway's own sign reads, and the roof names give way to the buildings' look.
@@ -36,6 +37,7 @@ export interface YardScene {
 
 export interface YardExtras {
   guides: boolean;
+  hitboxes: boolean;
   sensors: Record<End, number | null>;
   time: number;
   font: string;
@@ -472,6 +474,7 @@ export function draw_yard(ctx: CanvasRenderingContext2D, scene: YardScene, view:
     headroom(ctx, yard.car_park.headroom, scale, palette);
     floor_labels(ctx, yard.car_park.chunks, CHUNK, view, palette, extras.font, extras.insets);
   }
+  if (extras.hitboxes) hitboxes(ctx, [...bodies(car, spec), ...vehicle_solids(near(yard, spec).solids)], scale, palette);
 
   if (scene.contact && scene.contact.fade > 0) {
     ctx.globalAlpha = scene.contact.fade;

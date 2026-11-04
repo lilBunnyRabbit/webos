@@ -5,6 +5,7 @@ import {
   contact_rings,
   fill,
   guides,
+  hitboxes,
   outlined,
   pallet,
   PalletLoad,
@@ -18,7 +19,7 @@ import {
 import type { Polygon, Pose, Vec } from "../../core/geometry";
 import { SolidKind } from "../../core/scene";
 import { Gear, Vehicle } from "../../core/vehicle";
-import { bump_flash, carried_pose, fork_depth, objective, SPEC, Status, type GameState } from "./game";
+import { bump_flash, carried_pose, fork_depth, hitbox_shapes, objective, SPEC, Status, type GameState } from "./game";
 import { PALLET, pallet_shape, SlotKind, type Slot } from "./warehouse";
 
 // An upper tier's pallet is drawn shifted up and left per tier, so a bay's stack reads from above.
@@ -30,6 +31,7 @@ function stacked(pose: Pose, tier: number): Pose {
 
 export interface Extras {
   guides: boolean;
+  hitboxes: boolean;
   time: number;
   insets: Insets;
   font: string;
@@ -285,6 +287,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     ctx.globalAlpha = 1;
   }
 
+  if (extras.hitboxes) hitboxes(ctx, hitbox_shapes(state), scale, palette);
   if (bump_flash(state) && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
 
   const items: Tag[] = [];

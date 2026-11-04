@@ -160,7 +160,7 @@
   });
 
   $effect(() => {
-    void [game, palette, board_size, zoom, settings.guides, settings.speed_zoom, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, input.signal];
+    void [game, palette, board_size, zoom, settings.guides, settings.hitboxes, settings.speed_zoom, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, input.signal];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -206,6 +206,7 @@
     now = time * 1000;
     draw_scene(ctx, game, the_town, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
       guides: settings.guides,
+      hitboxes: settings.hitboxes,
       time,
       signal: game.status === Status.DONE ? Signal.NONE : input.signal,
       insets,

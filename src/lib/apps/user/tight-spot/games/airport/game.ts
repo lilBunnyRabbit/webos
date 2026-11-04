@@ -1,9 +1,10 @@
 import { z } from "zod";
-import { angle_between, type Vec } from "../../core/geometry";
+import { angle_between, type Polygon, type Vec } from "../../core/geometry";
 import { STANDING } from "../../core/keys";
-import { collide, collide_shape, obstacles, type Obstacles, type Scene } from "../../core/obstacles";
+import { collide, collide_shape, obstacles, vehicle_solids, type Obstacles, type Scene } from "../../core/obstacles";
 import { hash } from "../../core/seed";
 import {
+  bodies,
   corners,
   create_car,
   folds,
@@ -193,6 +194,21 @@ export function contact(near: Near, apron: Apron, car: Placement, margin = 0, sp
       return { at: found.at, hit: { kind: apron.parts.get(found.solid) ?? Part.TERMINAL, by: SHAPES[i].part } };
   }
   return null;
+}
+
+/**
+ * What `advance` tests, for Show hitboxes: the baggage train, or the tug and the aircraft's parts (the towbar touches
+ * nothing), and the parked aircraft at the heights that phase meets.
+ */
+export function hitbox_shapes(state: Pick<GameState, "phase" | "car" | "spec" | "scene" | "apron">): Polygon[] {
+  if (state.phase === Phase.BAGS) return [...bodies(state.car, BAGGAGE), ...vehicle_solids(state.scene.solids)];
+  const near = near_of(state);
+  return [
+    corners(state.car, state.spec),
+    ...aircraft_parts(aircraft_pose(state.car, state.spec)),
+    ...vehicle_solids(near.low.solids),
+    ...vehicle_solids(near.high.solids),
+  ];
 }
 
 function train_contact(near: Obstacles, apron: Apron, car: Placement): Contact | null {

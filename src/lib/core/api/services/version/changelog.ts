@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.90.0",
+    date: "2026-11-04",
+    title: "Hitboxes",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub can show every vehicle's hitbox, parked ones included, switched on in Settings.",
+      },
+    ],
+  },
+  {
     version: "3.89.0",
     date: "2026-10-29",
     title: "Tighter spots",

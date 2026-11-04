@@ -81,6 +81,10 @@
         <Switch bind:checked={() => settings.turn_view, (value: boolean) => toggle("turn_view", value)} />
       </label>
     {/if}
+    <label class="flex items-center justify-between gap-3 text-ui">
+      <span class="flex flex-col">Show hitboxes <span class="text-2xs text-foreground/65">Outline what every vehicle can touch</span></span>
+      <Switch bind:checked={() => settings.hitboxes, (value: boolean) => toggle("hitboxes", value)} />
+    </label>
     <p class="mt-1 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Driving</p>
     <label class="flex items-center justify-between gap-3 text-ui">
       <span class="flex flex-col">Creep <span class="text-2xs text-foreground/65">D and R roll without gas, like an automatic</span></span>

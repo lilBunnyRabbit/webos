@@ -755,6 +755,27 @@ export function contact_rings(ctx: CanvasRenderingContext2D, at: Vec, pulse: num
   ctx.fill();
 }
 
+/**
+ * Show hitboxes: the shapes collision tests, outlined over everything. Pass what the game collides (`bodies()`, its
+ * own extra shapes, `vehicle_solids()` of its obstacles), never a drawing's outline, so the two can't drift apart.
+ */
+export function hitboxes(ctx: CanvasRenderingContext2D, shapes: readonly Polygon[], scale: number, palette: Palette) {
+  if (shapes.length === 0) return;
+  ctx.save();
+  ctx.beginPath();
+  for (const shape of shapes) trace(ctx, shape);
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = 4 / scale;
+  ctx.globalAlpha = 0.5;
+  ctx.stroke();
+  ctx.strokeStyle = palette.info;
+  ctx.lineWidth = 2 / scale;
+  ctx.globalAlpha = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function player(
   ctx: CanvasRenderingContext2D,
   car: Car,

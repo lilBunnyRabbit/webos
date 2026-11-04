@@ -176,7 +176,7 @@
   });
 
   $effect(() => {
-    void [game, palette, board_size, zoom, settings.guides, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
+    void [game, palette, board_size, zoom, settings.guides, settings.hitboxes, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
     if (live && !blocked) return;
     untrack(() => render(0));
   });
@@ -232,6 +232,7 @@
     const now = performance.now();
     draw_scene(ctx, game, view, palette, {
       guides: settings.guides,
+      hitboxes: settings.hitboxes,
       sensors: {
         front: game.car.gear === Gear.DRIVE ? readings.front : null,
         rear: game.car.gear === Gear.REVERSE ? readings.rear : null,

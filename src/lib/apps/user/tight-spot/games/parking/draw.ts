@@ -1,4 +1,5 @@
 import type { Insets } from "../../core/camera";
+import { vehicle_solids } from "../../core/obstacles";
 import type { Vec } from "../../core/geometry";
 import {
   bay_arrow,
@@ -11,6 +12,7 @@ import {
   ground,
   guides,
   headroom,
+  hitboxes,
   player,
   sensor_arcs,
   solids,
@@ -19,13 +21,14 @@ import {
 } from "../../core/draw";
 import type { End } from "../../core/sensors";
 import { CHUNK, toward } from "../../core/lot";
-import { body_centre, Gear } from "../../core/vehicle";
+import { bodies, body_centre, Gear } from "../../core/vehicle";
 import { draw_course, draw_course_over } from "./extreme/draw";
 import { course_by_id } from "./extreme/courses";
 import { OFF, spec_of, Status, type GameState } from "./game";
 
 export interface Extras {
   guides: boolean;
+  hitboxes: boolean;
   sensors: Record<End, number | null>;
   time: number;
   /** What sits over the board's edges (the HUD, sideways touch controls), the same strips the camera keeps clear of. */
@@ -94,6 +97,7 @@ export function draw_scene(
   if (state.status === Status.DRIVING) sensor_arcs(ctx, state.car, spec, extras.sensors, scale, palette);
   headroom(ctx, world.headroom, scale, palette);
   floor_labels(ctx, world.chunks, CHUNK, view, palette, extras.font, extras.insets);
+  if (extras.hitboxes) hitboxes(ctx, [...bodies(state.car, spec), ...vehicle_solids(world.solids)], scale, palette);
 
   if (!open && world.bays.length === 1 && state.status === Status.DRIVING) {
     ctx.save();

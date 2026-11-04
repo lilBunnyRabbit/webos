@@ -162,7 +162,7 @@
   });
 
   $effect(() => {
-    void [game, palette, board_size, zoom, settings.guides, settings.speed_zoom, settings.turn_view, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
+    void [game, palette, board_size, zoom, settings.guides, settings.hitboxes, settings.speed_zoom, settings.turn_view, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height];
     if (game.status === Status.DRIVING && !blocked) return;
     untrack(() => render(0));
   });
@@ -241,6 +241,7 @@
     const lap_ms = lap_time(game);
     draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
       guides: settings.guides,
+      hitboxes: settings.hitboxes,
       turn,
       time: performance.now() / 1000,
       ghost: racing && lap_ms !== null ? ghost_pose(racing.frames, lap_ms) : null,

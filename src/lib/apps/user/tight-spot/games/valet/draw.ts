@@ -1,4 +1,5 @@
 import type { Insets } from "../../core/camera";
+import { vehicle_solids } from "../../core/obstacles";
 import {
   bay_outline,
   bay_pointer,
@@ -10,6 +11,7 @@ import {
   ground,
   guides,
   headroom,
+  hitboxes,
   player,
   sensor_arcs,
   solids,
@@ -18,13 +20,14 @@ import {
 } from "../../core/draw";
 import { bounds_of, centroid, type Vec } from "../../core/geometry";
 import type { End } from "../../core/sensors";
-import { body_centre, Gear, Vehicle, VEHICLES } from "../../core/vehicle";
+import { bodies, body_centre, Gear, Vehicle, VEHICLES } from "../../core/vehicle";
 import { countdown, dented, JobKind, spec_of, Status, type GameState } from "./game";
 import { BOOTH } from "./street";
 import { CHUNK, toward } from "../../core/lot";
 
 export interface Extras {
   guides: boolean;
+  hitboxes: boolean;
   sensors: Record<End, number | null>;
   time: number;
   insets: Insets;
@@ -149,6 +152,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
 
   headroom(ctx, street.world.headroom, scale, palette);
   floor_labels(ctx, street.world.chunks, CHUNK, view, palette, extras.font, extras.insets);
+  if (extras.hitboxes) hitboxes(ctx, [...(driving ? bodies(state.car, spec) : []), ...vehicle_solids(state.scene.solids)], scale, palette);
 
   const size = Math.max(10, Math.min(13, scale * 0.6));
   const items: Tag[] = [];

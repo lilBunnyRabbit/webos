@@ -1,10 +1,10 @@
 import { resolve_token } from "$lib/core/utils";
 import type { Insets } from "../../core/camera";
-import { bay_pointer, begin_frame, contact_rings, fill, guides, path, player, solids, union, type Palette, type View } from "../../core/draw";
+import { bay_pointer, begin_frame, contact_rings, fill, guides, hitboxes, path, player, solids, union, type Palette, type View } from "../../core/draw";
 import type { Polygon, Vec } from "../../core/geometry";
 import { SolidKind } from "../../core/scene";
 import { hash } from "../../core/seed";
-import { Gear } from "../../core/vehicle";
+import { bodies, Gear } from "../../core/vehicle";
 import { CELL, Cut, type Grid } from "./coverage";
 import { bump_flash, SPEC, Status, VEHICLE, type GameState } from "./game";
 import type { Garden } from "./garden";
@@ -185,6 +185,7 @@ export class LawnLayer {
 
 export interface Extras {
   guides: boolean;
+  hitboxes: boolean;
   time: number;
   insets: Insets;
   layer: LawnLayer;
@@ -342,6 +343,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, SPEC, scale, palette);
   player(ctx, state.car, VEHICLE, SPEC, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
   crowns(ctx, garden, scale, lawn);
+  if (extras.hitboxes) hitboxes(ctx, bodies(state.car, SPEC), scale, palette);
   if (bump_flash(state) && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
 
   if (extras.uncut && state.status === Status.DRIVING) {

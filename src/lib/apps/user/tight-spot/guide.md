@@ -25,6 +25,7 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 - Full lock gives a 5.3 m turning radius. The wheel turns at a hand's speed, and it can turn while the car stands still.
 - In **D** or **R** the car moves only while you press the gas, and rolls to a stop when you let go. Turn on **Creep** in settings to have it roll on its own, like a real automatic.
 - The dashed lines show where the leading corners will go at the current wheel angle.
+- Turn on **Show hitboxes** in settings to see the outline that counts as a touch, on your vehicle and every parked one.
 
 ## Vehicles
 

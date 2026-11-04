@@ -1,6 +1,6 @@
-import { begin_frame, contact_rings, player, union, type Palette, type View } from "../../core/draw";
+import { begin_frame, contact_rings, hitboxes, player, union, type Palette, type View } from "../../core/draw";
 import type { Pose, Vec } from "../../core/geometry";
-import { body_centre, create_car, Gear, Vehicle } from "../../core/vehicle";
+import { bodies, body_centre, create_car, Gear, Vehicle } from "../../core/vehicle";
 import { Status, type GameState } from "./game";
 import { SPEC } from "./spec";
 import { racing_line } from "./line";
@@ -10,6 +10,7 @@ export interface DrawExtras {
   time: number;
   /** The racing line, under the guides setting. */
   guides: boolean;
+  hitboxes: boolean;
   ghost: Pose | null;
   /** Radians the board is turned about its middle (Turn view with car); 0 is north up. */
   turn: number;
@@ -215,6 +216,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   }
   marker(ctx, body_centre(car, SPEC), scale, palette);
   player(ctx, car, Vehicle.F1, SPEC, car.brake > 0.05, scale, palette, extras.time);
+  if (extras.hitboxes) hitboxes(ctx, bodies(car, SPEC), scale, palette);
   const contact = state.contact;
   if (contact && state.ms - contact.ms < CONTACT_FADE_MS) {
     ctx.globalAlpha = 1 - (state.ms - contact.ms) / CONTACT_FADE_MS;

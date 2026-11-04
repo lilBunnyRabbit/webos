@@ -1,6 +1,6 @@
 import { contact_point, overlaps } from "./collision";
 import { bounds_of, bounds_overlap, centroid, type Bounds, type Polygon, type Vec } from "./geometry";
-import type { Solid } from "./scene";
+import { SolidKind, type Solid } from "./scene";
 import { bodies, VEHICLES, type Placement, type VehicleSpec } from "./vehicle";
 
 export interface Hit {
@@ -39,6 +39,11 @@ export function collide_shape(shape: Polygon, near: Obstacles): Hit | null {
     return { solid, at: contact_point(shape, solid.shape) ?? centroid(shape) };
   }
   return null;
+}
+
+/** The vehicles standing among a scene's solids, as the shapes collision tests: what Show hitboxes outlines. */
+export function vehicle_solids(items: readonly Solid[]): Polygon[] {
+  return items.filter((solid) => solid.kind === SolidKind.CAR && solid.shape.length > 0).map((solid) => solid.shape);
 }
 
 export function collide(car: Placement, near: Obstacles, spec: VehicleSpec = VEHICLES.hatch): Hit | null {
