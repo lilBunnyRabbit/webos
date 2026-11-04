@@ -96,7 +96,8 @@
     const size = gif_size(loaded, Number(width_value));
     const frames = gif_frame_count({ from, to }, fps);
     const bytes = estimate_gif_bytes(size, frames, dither);
-    const warnings = [
+    // Skipping pauses makes both numbers upper bounds, too loose to warn on.
+    const warnings = skip ? [] : [
       frames > GIF_LONG_FRAMES && `${frames} frames is a long GIF; most sites cap them at a few seconds.`,
       bytes > GIF_LARGE_BYTES && `About ${format_bytes(bytes)}: lower the width or frame rate, or turn dithering off.`,
     ].filter((line) => typeof line === "string");

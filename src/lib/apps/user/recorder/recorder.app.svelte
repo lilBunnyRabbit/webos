@@ -115,7 +115,11 @@
     await session.start(source, { mic_mix: mic_mix.value });
   }
 
+  let saving = $state(false);
+
   async function save(): Promise<string | null> {
+    if (saving) return null;
+    saving = true;
     try {
       const take = session.take;
       const path = await session.save(files);
@@ -131,6 +135,8 @@
     } catch (reason) {
       report("Couldn't save the recording", reason);
       return null;
+    } finally {
+      saving = false;
     }
   }
 
@@ -294,9 +300,9 @@
           {#if session.take}
             <Button size="lg" onclick={discard}><TrashIcon weight="bold" /> Discard</Button>
             {#if session.take.kind === TakeKind.VIDEO}
-              <Button size="lg" onclick={save_and_skip_pauses}><FastForwardIcon weight="bold" /> Save &amp; remove pauses…</Button>
+              <Button size="lg" disabled={saving} onclick={save_and_skip_pauses}><FastForwardIcon weight="bold" /> Save &amp; remove pauses…</Button>
             {/if}
-            <Button size="lg" variant="primary" onclick={save}><FloppyDiskIcon weight="bold" /> Save</Button>
+            <Button size="lg" variant="primary" disabled={saving} onclick={save}><FloppyDiskIcon weight="bold" /> Save</Button>
           {:else if session.phase !== Phase.ERROR}
             {@render record_controls()}
           {/if}
