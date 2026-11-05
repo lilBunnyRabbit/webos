@@ -10,7 +10,7 @@ Every app is a folder with an `index.ts` that default-exports `define_app({...})
 function define_app<TProps extends AppProps = {}>(config: AppConfig<TProps>): AppDefinition<TProps>
 ```
 
-Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`. The OS never imports a manifest at boot (ADR-077): the build turns each one into a catalogue entry, and AppsService loads the manifest's own chunk later, adding `system` and `version` from the entry. In the dev server and tests the glob in `src/lib/apps/index.ts` stands in for the build. `define_app` itself does two things:
+Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system` and `version`. The OS never imports a manifest at boot (ADR-077): the build turns each one into a catalogue entry, and AppsService loads the manifest's own chunk later, adding `system` and `version` from the entry. In the dev server and tests the glob in `src/lib/apps/index.ts` stands in for the build. `define_app` itself does two things:
 
 - It validates `widget_size` when given (spans 1–8, `min ≤ default ≤ max`) and throws `[define_app] {id}: widget_size needs …` otherwise, so a bad manifest fails the build.
 - `component` is wrapped: `() => config.component().then((m) => m.default)`. You write a plain dynamic import; the manifest's loader resolves straight to the component.
@@ -21,9 +21,9 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 
 | Field | Type | Required | Effect today |
 |-------|------|----------|--------------|
-| `id` | `AppId` (`string`) | yes | Registry key. Matched by start menu search. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, storage prefix `app.{id}.`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
+| `id` | `AppId` (`string`) | yes | Registry key. Matched by start menu search. Used by `launch(id)`, `.desktop` shortcuts (`app_id`), `file_defaults`, data folder `/var/lib/apps/{id}/`, notification `app_id`. Must be unique; a duplicate silently replaces the earlier app |
 | `name` | `string` | yes | Start menu (tile label, search, sort order), the file name of a pinned shortcut (`{name}.desktop`, so the desktop label), window title, Open-with list, notification titles |
-| `version` | `string` | no, deprecated | Ignored since ADR-077 stage 2: the OS shows the catalogue's version, the release the app's files last changed in ("Version 3.67.0" in the App Store details, `app info`, the apps inspector). Optional and `@deprecated` since 2026-10-27, removed in 4.0; no app sets it |
+| `version` | `string` | set from the catalogue | The release the app's files last changed in (ADR-077): "Version 3.67.0" in the App Store details, `app info`, the apps inspector. Not written in `define_app`; 4.0 removed the deprecated `define_app` field |
 | `icon` | `Component` | yes | Start menu, desktop, titlebar, taskbar, Open-with. Usually given a `class` for size. The app's own `icon.svelte`, drawn to the [app icon rules](../../design/foundations.md#app-icons); it takes `class` and ignores `weight` like a Phosphor icon. An app that needs on-device AI wraps it: `icon: ai_icon(AppIcon)` from `$kit/components/ai-icon` adds the sparkle ([app icons](../../design/foundations.md#app-icons)) |
 | `component` | `() => Promise<{ default: Component<Partial<TProps>> }>` | yes | Lazy loader, see below |
 | `category` | `AppCategory` | yes | The launcher section a user app sits in, and searchable by its label. See below |
@@ -33,9 +33,6 @@ Takes an `AppConfig`, returns an `AppDefinition`: the manifest without `system`.
 | `guide` | `() => Promise<{ default: string }>` | no | How to use or play the app, as short markdown: `guide: () => import("./guide.md?raw")` (ADR-085). The window's guide overlay shows it under the name and pitch, with the highlights after it ([window](../shell/window.md#guide)); it opens by itself on the app's first launch with no props ([apps](../services/apps.md#first-open)). Rendered by the markdown-lite `MarkdownView`: `#`–`###` headings, `-` lists, paragraphs, `**bold**`, `*italic*`, `` `code` ``, links; no HTML, no ordered lists, no tables. Lazy and flagged in the catalogue, never loaded at boot. Without it the overlay shows the description instead and never opens by itself |
 | `guide_on_launch` | `boolean` | no | `false` keeps the guide shut on the app's first launch, for apps that explain themselves; the ? button, F1 and `app guide` still open it. Copied into the catalogue like `restore` (ADR-085 revision). Defaults to `true` |
 | `preview` | `() => Promise<{ default: string }>` | no | A picture of the app for the announcement, as a lazy URL import (`() => import("./preview.webp?url")`), so it never weighs on boot |
-| `author` | `string` | no | **Deprecated**, removed in 4.0. Stored only. Older than `authors` (now in `meta`); nothing reads it |
-| `license` | `string` | no | **Deprecated**, removed in 4.0. Stored only |
-| `repository` | `string` | no | **Deprecated**, removed in 4.0. Stored only |
 | `defaults` | `WindowOptions` | no | Initial window state, below |
 | `associations` | `string[]` | no | File types this app opens ([file-associations.md](file-associations.md)) |
 | `tools` | `string[]` | no | File types this app works on as a tool: listed under "Open with", never the default ([file-associations.md](file-associations.md#tools)) |

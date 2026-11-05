@@ -492,7 +492,7 @@ The controls (and the sample panel's width) are bound to local `$state` and do n
 
 Keys are read by one `<svelte:window>` `keydown` listener, only while the window is focused and focus is on the window frame or inside the app (not a sheet). Pads cancel `mousedown` so they never take focus: Enter after clicking a pad means `=`, not that pad again. Enter on a focused button (Tab navigation) still activates the button.
 
-**Persistence.** `storage.persisted("history")`: newest first, capped at 50, a repeat of the newest entry isn't added again, shared live by every Calculator window. The current expression, the solved expression and the history toggle are `storage.window()` state, restored with the session.
+**Persistence.** `history` in `/var/lib/apps/calculator/storage.json` (`storage.file`, the old `app.calculator.history` key name): newest first, capped at 50, a repeat of the newest entry isn't added again, shared live by every Calculator window. The current expression, the solved expression and the history toggle are `storage.window()` state, restored with the session.
 
 **Known gaps.**
 

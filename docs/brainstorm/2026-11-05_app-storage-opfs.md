@@ -32,9 +32,9 @@ Root cause of the difficulty: `get` is synchronous and the handle is built durin
 ## Action items
 
 - [x] ADR-094
-- [-] Core: boot copy, backup, Activity Monitor and Docs storage views (done), then remove `get`/`set`/`persisted` and the deprecated fields; `app-api.md`, persistence, manifest, backup pages
-- [ ] Apps: move every `storage.get/set/persisted` and direct `localStorage` use to `storage.file()`
-- [ ] Release 4.0.0
+- [x] Core: boot copy, backup, Activity Monitor and Docs storage views, then remove `get`/`set`/`persisted` and the deprecated fields; `app-api.md`, persistence, manifest, backup pages
+- [x] Apps: move every `storage.get/set/persisted` and direct `localStorage` use to `storage.file()`
+- [x] Release 4.0.0
 
 ## Next session topics
 

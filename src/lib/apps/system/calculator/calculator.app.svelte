@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { type ClipboardService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { empty_storage, storage_schema } from "./storage";
   import { Button, EmptyState, IconButton, Toolbar } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import {
@@ -20,7 +21,6 @@
     evaluate,
     format_number,
     format_result,
-    history_schema,
     Key,
     key_from_keyboard,
     press,
@@ -69,7 +69,7 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
   const { window: win, storage } = get_app_context();
-  const history = storage.persisted<HistoryEntry[]>("history", [], history_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const calc = storage.window("calc", EMPTY_STATE, calc_schema);
   const solved = storage.window<string | null>("solved", null, z.string().nullable());
   const show_history = storage.window("show_history", false, z.boolean());
@@ -106,7 +106,7 @@
       return;
     }
     const formatted = format_number(result.value);
-    history.value = add_to_history(history.value, { expression, result: formatted });
+    data.value.history = add_to_history(data.value.history, { expression, result: formatted });
     solved.value = expression;
     calc.value = { expression: formatted, evaluated: true };
   }
@@ -140,7 +140,7 @@
       confirm_label: "Clear",
       danger: true,
     });
-    if (confirmed) history.value = [];
+    if (confirmed) data.value.history = [];
   }
 
   function on_keydown(event: KeyboardEvent) {
@@ -251,15 +251,15 @@
     >
       <div class="flex h-10 shrink-0 items-center justify-between gap-2 pr-2 pl-4">
         <h2 class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">History</h2>
-        {#if history.value.length > 0}
+        {#if data.value.history.length > 0}
           <Button size="sm" variant="quiet" onclick={clear_history}>Clear</Button>
         {/if}
       </div>
-      {#if history.value.length === 0}
+      {#if data.value.history.length === 0}
         <EmptyState icon={HistoryIcon} title="No calculations yet" description="Results show up here after =." />
       {:else}
         <ol class="min-h-0 flex-1 overflow-auto px-2 pb-2">
-          {#each history.value as entry, index (index)}
+          {#each data.value.history as entry, index (index)}
             <li>
               <button
                 type="button"

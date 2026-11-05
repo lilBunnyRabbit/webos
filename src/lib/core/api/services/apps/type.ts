@@ -161,12 +161,6 @@ export interface AppManifest<TProps extends AppProps = AppProps> {
   category: AppCategory;
   /** Set at discovery: the app lives in `src/lib/apps/system/`. */
   system: boolean;
-  /** @deprecated Stored only and never read; credits come from `authors` in `meta`. Removed in 4.0. */
-  author?: string;
-  /** @deprecated Stored only and never read. Removed in 4.0. */
-  license?: string;
-  /** @deprecated Stored only and never read. Removed in 4.0. */
-  repository?: string;
   defaults?: WindowOptions;
   /** File types this app opens: extensions (`".md"`) or MIME types (`"text/*"`, `"image/png"`). See ADR-018. */
   associations?: string[];
@@ -355,10 +349,7 @@ export interface WidgetProps {
 }
 
 /** What `define_app` returns: a manifest before discovery knows its folder or the catalogue its version. */
-export interface AppDefinition<TProps extends AppProps = AppProps> extends Omit<AppManifest<TProps>, "system" | "version"> {
-  /** @deprecated Ignored: the catalogue gives every app its version (ADR-077). Removed in 4.0. */
-  version?: string;
-}
+export type AppDefinition<TProps extends AppProps = AppProps> = Omit<AppManifest<TProps>, "system" | "version">;
 
 /** Input type for define_app - component returns module */
 export interface AppConfig<TProps extends AppProps = AppProps> extends Omit<AppDefinition<TProps>, "component"> {

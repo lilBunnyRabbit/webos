@@ -4,13 +4,14 @@ ADR: [001](../adrs/001-app-manifest-structure.md), [003](../adrs/003-app-context
 
 What an app may rely on, frozen at 1.0. Written for whoever writes an app in `src/lib/apps/user/{id}/`, including someone who forked WebOS and never reads the core. If it's in a **stable** table below, it keeps working until the next major. Anything not listed is internal: use it if you want, but it can change in any release.
 
-**Stable until 4.0.** Each major so far broke only what's listed here; everything else carried over:
+**Stable until 5.0.** Each major so far broke only what's listed here; everything else carried over:
 
 | Major | Break | Moving an app across |
 |-------|-------|----------------------|
 | 2.0 | The eager `shell: {…}` manifest form was removed ([shell contributions](#shell-contributions)) | Move the object into `commands.ts` and point `shell` at it |
 | 3.0 | `description`, `keywords`, `pitch` and `authors` left the manifest for a lazy `meta` module (ADR-049) | Move the four fields into a sibling `meta.ts` (`export default { … } satisfies AppMeta`) and add `meta: () => import("./meta")` |
 | 3.0 | The shims `$lib/core/games` (and `games/time`, `games/daily`, `games/direction`) and `$lib/core/utils/image`, kept by ADR-048, were removed | Import the same names from `$kit/games` (and its `time`, `daily`, `direction`) and `$kit/utils/image` |
+| 4.0 | `StorageHandle.get`, `set`, `persisted` and `remove` were removed: app storage left localStorage for the app's data folder (ADR-094). The deprecated manifest fields `author`, `license`, `repository` and `version` were removed too | Read the old keys from `storage.file("storage.json", defaults, Schema)`, one schema field per old key with `.catch(default)` on each; every holder of that file (windows, widgets, commands) uses the same schema; outside a window use `json_file` or `live_file` on `app_data_path(id, "storage.json")`. The boot copy has already put the data there ([below](#moving-off-get-set-and-persisted-40)). Delete the four manifest fields |
 | 3.59 → 3.61 (exception) | 3.59 made `icon` the URL of an `icon.svg` (ADR-066); 3.61 turned it back into a Svelte component, because the icons drawn on demand showed a placeholder square first. Both shipped in minors because every app that existed lived in this repo and moved with it | Rename `icon.svg` back to `icon.svelte` with a `<script>` taking `...rest` onto the `<svg>`, then `import AppIcon from "./icon.svelte"` and `icon: AppIcon`; `ai_icon` is back for the sparkle |
 
 The detail pages say how each piece behaves ([manifest](apps/manifest.md), [app context](apps/app-context.md), [file associations](apps/file-associations.md), [writing an app](apps/writing-an-app.md)). This page only says what's promised.
@@ -21,12 +22,12 @@ The detail pages say how each piece behaves ([manifest](apps/manifest.md), [app 
 |--------|---------|
 | Adding to the stable surface: a new export, an optional manifest field, a new handle member, a new service method marked stable | minor |
 | Fixing behaviour so it matches this page or the detail pages | patch |
-| Removing or renaming anything stable, changing a stable signature incompatibly, changing a stable behaviour or storage location | **major (next: 4.0)** |
+| Removing or renaming anything stable, changing a stable signature incompatibly, changing a stable behaviour or storage location | **major (next: 5.0)** |
 | Anything internal | any release, no notice |
 
 "Stable" means the name, the signature and the documented behaviour. A stable function can grow an optional parameter in a minor; it can't lose one. A stable interface can grow an optional member; it can't lose one or make one required.
 
-How it's enforced: `src/lib/core/app-api.test.ts` lists every stable runtime export per module and fails when one disappears (`bun run test:unit`). It also pins the member names of the manifest, the handles and the shell types, and imports every stable type, so removing one fails `bun run check`. A deliberate break edits that test and this page in the same commit, and that commit is the next major (4.0).
+How it's enforced: `src/lib/core/app-api.test.ts` lists every stable runtime export per module and fails when one disappears (`bun run test:unit`). It also pins the member names of the manifest, the handles and the shell types, and imports every stable type, so removing one fails `bun run check`. A deliberate break edits that test and this page in the same commit, and that commit is the next major (5.0).
 
 The test covers names, not signatures or behaviour. Those are still on you.
 
@@ -60,7 +61,6 @@ Discovery: one folder per app, `src/lib/apps/user/{id}/index.ts`, default-export
 | `guide` | yes (3.78) | `guide: () => import("./guide.md?raw")`, short markdown on how to use or play the app (ADR-085): the window's guide overlay (titlebar button, F1, `app guide`) shows it, and it opens by itself on the app's first launch with no props ([manifest](apps/manifest.md)) |
 | `guide_on_launch` | yes (3.79) | `false` keeps the guide shut on the first launch, for apps that explain themselves ([manifest](apps/manifest.md)) |
 | `meta` | yes (3.0) | `meta: () => import("./meta")`, the module default-exporting an `AppMeta` (ADR-049): `description` (one sentence; launcher search and the App Store), `keywords` (launcher search), `pitch` (`AppPitch`, `{ problem, solution }`, one short sentence each: the Showcase tells the app's story with it and falls back to `description`), `authors` (`AppAuthor[]`, `{ name, github?, url? }`; omitted means the owner, `OWNER`; credited in the App Store details, the new-app announcement, Settings › About › Credits and `app info` / `app list`). Every member of `AppMeta` is stable. Loaded during boot, alongside the main chunk, so listings have their text from the first frame (ADR-049 revision 2026-10-24) |
-| `author`, `license`, `repository` | **deprecated**, removed in 4.0 | Stored and never read. `author` predates `authors` (now in `meta`). Typed `@deprecated`; drop them from your manifest |
 | `defaults` (`constraints`, `flags`, `snap_zone`) | yes | `constraints.width/height.min` is enforced; `max` is accepted and ignored |
 | `associations`, `tools` | yes | Syntax below |
 | `props` | yes | A zod object schema |
@@ -100,7 +100,7 @@ Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `App
 | `AppContext` | `window_id`, `app_id`, `window`, `storage`, `achievements` (3.75) |
 | `AchievementsHandle` | `achieve(id)`, `progress(id, n)` (3.75, ADR-078) |
 | `WindowHandle` | Getters `id`, `is_focused`, `is_maximized`, `is_minimized`, `is_visible`, `bounds`. Controls `focus`, `close`, `minimize`, `maximize`, `restore`, `set_title`, `set_dirty`, `on_back`. Sheets `confirm`, `prompt`, `pick_file`, `pick_directory`, `pick_save`, `request` (another app's sheet, 3.75; resolves `null` on any failure, ADR-079) |
-| `StorageHandle` | `remove`, `window`, `file`; `get`, `set` and `persisted` are going in 4.0 ([below](#moving-off-get-set-and-persisted-40)) |
+| `StorageHandle` | `window`, `file` (4.0 removed `get`, `set`, `persisted` and `remove`, [below](#moving-off-get-set-and-persisted-40)) |
 
 Option types: `ConfirmOptions`, `PromptOptions`, `PickOptions`, `SaveOptions`, `DirtyOptions`.
 
@@ -112,11 +112,11 @@ Outside the context, from `$lib/core/contexts/app`:
 | `live_file(path, initial, schema)` → `LiveFile` | yes | `read()` / `edit()` for shell commands; throws `ShellError` on an invalid file |
 | `app_data_path(app_id, name?)` | yes | `/var/lib/apps/{app_id}/{name}` |
 | `confirm_discard(win, name)` | yes | The "Discard changes to …?" sheet before New or Open |
-| `create_storage_handle(app_id, state)` | yes, for use outside a window | The only way shell code and background players reach `app.{id}.*` (Solitaire's commands, Soundboard's player). Pass `{}` as `state`; `window()` on such a handle keeps nothing |
+| `create_storage_handle(app_id, state)` | yes | Builds a `StorageHandle`: the window frame makes every window's with it, and a test host gives one to a component it mounts. `file()` on it must be called during component init. Shell commands and players outside a component use `json_file` or `live_file` instead (Solitaire's commands, Soundboard's player) |
 
 ### Moving off `get`, `set` and `persisted` (4.0)
 
-4.0 removes `StorageHandle.get`, `set` and `persisted`, the localStorage half of app storage (ADR-094). Everything an app keeps goes through `file()`.
+4.0 removed `StorageHandle.get`, `set` and `persisted`, the localStorage half of app storage, and `remove`, which only deleted a localStorage key (ADR-094). Everything an app keeps goes through `file()`.
 
 - **The data is already there.** From 4.0 every boot, before any window opens, copies each `app.{id}.{key}` into `/var/lib/apps/{id}/storage.json` as `{ "{key}": value }` (the parsed JSON, or the raw string when a value isn't JSON) and deletes the key. A key that already exists in the file is overwritten.
 - **Keep the key names.** Read the same keys from that file: `storage.file("storage.json", defaults, Schema)`, one schema field per old key. No migration code.
@@ -286,7 +286,7 @@ Users' data sits in these, so moving one is a major even when no code signature 
 
 | Location | Written by | Format |
 |----------|------------|--------|
-| `localStorage` `app.{id}.{key}` | `storage.get/set/persisted`, `create_storage_handle`; going in 4.0, each boot moves them into `/var/lib/apps/{id}/storage.json` | JSON |
+| `localStorage` `app.{id}.{key}` | Nothing since 4.0. Written by `storage.get/set/persisted` before it, or by restoring an older backup; each boot moves them into `/var/lib/apps/{id}/storage.json` | JSON |
 | `/var/lib/apps/{id}/storage.json` | The boot copy (4.0, ADR-094), then the app through `storage.file` | `{ "{key}": value }`, one entry per former `app.{id}.{key}` |
 | `/var/lib/apps/{id}/` | `storage.file`, `json_file(app_data_path(...))` | Whatever the app writes |
 | `/var/lib/apps/{id}/achievements.json` | AchievementsService | Version 1, `{ unlocked: { [id]: epoch_ms }, progress: { [id]: number } }`; kept by an uninstall with data (3.75, ADR-078) |

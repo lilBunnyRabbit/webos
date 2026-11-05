@@ -2,6 +2,8 @@
 **Date:** 2026-01-24
 **Status:** Implemented (2026-10-10, partially; see revision)
 
+> **Revision 2026-11-05: localStorage storage removed in 4.0** ([ADR-094](./094-app-storage-opfs.md)). `StorageHandle` keeps only `window()` and `file()`. `get`, `set`, `persisted` and `remove`, the `app.{app_id}.{key}` localStorage half, are gone with the shared-cell machinery behind `persisted()`; every app reads its old keys from `/var/lib/apps/{app_id}/storage.json`, where the boot copy put them.
+
 > **Revision 2026-10-15: overlays and app data shipped.** The overlays are sheets over the window: `confirm()`, `prompt()`, `pick_file()`, `pick_directory()` and `pick_save()` ([ADR-025](./025-menus-sheets-clipboard.md)). `app_data` is replaced by `storage.file(name, initial, schema)`, a JSON file in `/var/lib/apps/{app_id}/`, alongside `window.is_visible` and `notify({ system })` ([ADR-035](./035-app-platform-wave-2.md)). `AppContext` stays `{ window_id, app_id, window, storage }`. Not built: `set_icon`, the window's `set_badge` (the app badge is a manifest field, ADR-034) and `status_bar`.
 
 > **Revision 2026-10-10: implementation** ([brainstorm](../brainstorm/2026-10-10_app-context.md))

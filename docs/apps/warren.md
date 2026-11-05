@@ -279,6 +279,8 @@ Shell (`commands.ts`, `shell.ts`), both reading the JSON without Lexical:
 
 Path completion is filtered to `.warren`.
 
+App storage is `/var/lib/apps/warren/storage.json` (`storage.ts`, one schema, each field `.catch(default)`): `groups`, `smart`, `units`, `marks`, `spelling`, `ignored` and `dictionary`, named as the localStorage keys they were until 4.0. It holds the defaults until it has loaded, so the spelling list starts once the saved switch and dictionary arrive together.
+
 Achievements (ADR-078) live in `/var/lib/apps/warren/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)), reported after a save lands, only when the document had unsaved changes or is new and blank-started (Save on an untouched file, an imported document or a template earns nothing): `first-save`, `goal` (the saved document's word count reaches its `goal`), `words-10000` (progress: the saved document's word count, so the most words any one saved document has held; 10,000 unlocks). Printing earns nothing: the browser reports no difference between printing, saving a PDF and cancelling the dialog.
 
 ## Dependencies & licences

@@ -40,7 +40,6 @@
     TextUnderline as TextUnderlineIcon,
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
-  import { z } from "zod";
   import inter_url from "../../../../assets/fonts/InterVariable.woff2?url";
   import { build_docx, DOCX_TYPE, font_name } from "./docx";
   import { BlockStyle, LIST_STYLES, TableAction, WarrenEditor, Zone, type Margin } from "./editor.svelte";
@@ -80,6 +79,7 @@
   import { draw_marks } from "./marks";
   import { SlashCommand } from "./slash";
   import WarrenSlash from "./warren-slash.svelte";
+  import { empty_storage, storage_schema } from "./storage";
 
   const { path: initial_path }: { path?: string } = $props();
   const { app_id, window_id, window: win, storage, achievements } = get_app_context();
@@ -88,18 +88,8 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
-  const groups = storage.persisted<Record<string, boolean>>("groups", {}, z.record(z.string(), z.boolean()));
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
   const mobile = kernel.platform === Platform.MOBILE;
-
-  const smart = storage.persisted<boolean>("smart", true, z.boolean());
-
-  const units = storage.persisted<"mm" | "in">("units", "mm", z.enum(["mm", "in"]));
-
-  const marks = storage.persisted<boolean>("marks", false, z.boolean());
-
-  const spelling_on = storage.persisted<boolean>("spelling", false, z.boolean());
-  const ignored_everywhere = storage.persisted<string[]>("ignored", [], z.array(z.string()));
-  const dictionary = storage.persisted<string[]>("dictionary", [], z.array(z.string()));
   const spell = new SpellList();
 
   const ai = $derived(kernel.service<AiService>("ai"));
@@ -111,7 +101,7 @@
 
   const editor = new WarrenEditor(
     (error) => report_error(app_id, "Something went wrong in the editor", error),
-    () => smart.value,
+    () => prefs.value.smart,
     {
       failed: (reason) => report_error(app_id, "Couldn't add the picture", reason),
       added: () => {
@@ -566,7 +556,7 @@
       notifications.notify(app_id, { type: NotificationType.WARNING, title: "Couldn't comment there", message: "The text it was on changed. Select it again." });
       return;
     }
-    groups.value = { ...groups.value, comments: true };
+    prefs.value.groups = { ...prefs.value.groups, comments: true };
   }
 
   async function edit_comment(item: Comment) {
@@ -614,11 +604,11 @@
   }
 
   $effect(() => {
-    const on = spelling_on.value;
-    untrack(() => (on ? void spell.start(dictionary.value) : spell.stop()));
+    const on = prefs.value.spelling;
+    untrack(() => (on ? void spell.start(prefs.value.dictionary) : spell.stop()));
   });
 
-  const ignored_words = $derived(new Set([...editor.ignored_words, ...ignored_everywhere.value]));
+  const ignored_words = $derived(new Set([...editor.ignored_words, ...prefs.value.ignored]));
 
   $effect(() => {
     if (spell.status !== SpellStatus.READY) return;
@@ -634,7 +624,7 @@
   }
 
   async function spell_add(word: string) {
-    dictionary.value = [...new Set([...dictionary.value, check_form(word)])];
+    prefs.value.dictionary = [...new Set([...prefs.value.dictionary, check_form(word)])];
     try {
       await spell.add(word);
     } catch (reason) {
@@ -797,7 +787,7 @@
       scoped("superscript", "mod+shift+.", "Superscript", () => editor.toggle_superscript()),
       scoped("clear-formatting", "mod+\\", "Clear formatting", () => editor.clear_formatting()),
       scoped("focus-mode", "mod+shift+f", "Focus mode", () => (focus_mode = !focus_mode)),
-      scoped("marks", "mod+shift+8", "Show ¶ marks", () => (marks.value = !marks.value)),
+      scoped("marks", "mod+shift+8", "Show ¶ marks", () => (prefs.value.marks = !prefs.value.marks)),
     ];
     return () => disposers.forEach((dispose) => dispose());
   });
@@ -1010,30 +1000,30 @@
     {counts}
     {repeats}
     {selection}
-    open={groups.value}
-    ontoggle={(id, value) => (groups.value = { ...groups.value, [id]: value })}
+    open={prefs.value.groups}
+    ontoggle={(id, value) => (prefs.value.groups = { ...prefs.value.groups, [id]: value })}
     onexport={export_as}
     onchanged={changed}
     onlink={open_link}
     {link_anchor}
     onfind={open_find}
-    smart={smart.value}
-    onsmart={(on) => (smart.value = on)}
+    smart={prefs.value.smart}
+    onsmart={(on) => (prefs.value.smart = on)}
     ongo={go_to}
     onpicture={picture_menu}
     onzone={set_zone}
-    units={units.value}
-    onunits={(value) => (units.value = value)}
+    units={prefs.value.units}
+    onunits={(value) => (prefs.value.units = value)}
     onword={(word) => editor.select_next(word, !mobile)}
   >
     {#snippet spelling()}
       <WarrenSpelling
         list={spell}
-        on={spelling_on.value}
-        onon={(on) => (spelling_on.value = on)}
+        on={prefs.value.spelling}
+        onon={(on) => (prefs.value.spelling = on)}
         onjump={(word) => editor.select_next(word, !mobile)}
         onignore={(word) => editor.ignore_word(check_form(word))}
-        onignoreall={(word) => (ignored_everywhere.value = clean_words([...ignored_everywhere.value, check_form(word)]) ?? [])}
+        onignoreall={(word) => (prefs.value.ignored = clean_words([...prefs.value.ignored, check_form(word)]) ?? [])}
         onadd={spell_add}
         onreplace={spell_replace}
       />
@@ -1075,7 +1065,7 @@
         <SparkleIcon weight="bold" />
       </IconButton>
     {/if}
-    <IconButton label="Show ¶ marks (Mod+Shift+8)" size="sm" class={TOUCH} pressed={marks.value} onpointerdown={keep_focus} onclick={() => (marks.value = !marks.value)}><ParagraphIcon weight="bold" /></IconButton>
+    <IconButton label="Show ¶ marks (Mod+Shift+8)" size="sm" class={TOUCH} pressed={prefs.value.marks} onpointerdown={keep_focus} onclick={() => (prefs.value.marks = !prefs.value.marks)}><ParagraphIcon weight="bold" /></IconButton>
     <IconButton label="Focus mode (Mod+Shift+F)" size="sm" class={TOUCH} onpointerdown={keep_focus} onclick={() => (focus_mode = true)}><CornersOutIcon weight="bold" /></IconButton>
   </Toolbar>
   {/if}
@@ -1142,7 +1132,7 @@
           role="presentation"
           {@attach attach_resize}
         >
-          {#if marks.value}<div class="marks" bind:this={marks_layer} aria-hidden="true"></div>{/if}
+          {#if prefs.value.marks}<div class="marks" bind:this={marks_layer} aria-hidden="true"></div>{/if}
           <div class="col-resize" bind:this={resize_handle} hidden aria-hidden="true"></div>
           <div class={["zone head", !has_header && "spacer"]} bind:this={head} onclick={(event) => has_header && event.target === event.currentTarget && editor.focus(Zone.HEADER)} role="presentation">
             {#if has_header}

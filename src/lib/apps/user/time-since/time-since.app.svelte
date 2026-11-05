@@ -10,9 +10,9 @@
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import CounterHistory from "./counter-history.svelte";
   import Duration from "./duration.svelte";
+  import { empty_storage, storage_schema } from "./storage";
   import {
     COUNTERS_FILE,
-    CounterSort,
     CountersFileSchema,
     EMPTY_FILE,
     SORT_OPTIONS,
@@ -42,10 +42,10 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
   const file = storage.file(COUNTERS_FILE, EMPTY_FILE, CountersFileSchema);
-  const sort = storage.persisted<CounterSort>("sort", CounterSort.LONGEST, z.enum(CounterSort));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const selected_id = storage.window<string | null>("counter", untrack(() => initial_counter ?? null), z.string().nullable());
 
-  const counters = $derived(sort_counters(file.value.counters, sort.value));
+  const counters = $derived(sort_counters(file.value.counters, data.value.sort));
   const selected = $derived(file.value.counters.find((counter) => counter.id === selected_id.value) ?? null);
   const running = $derived(file.value.counters.filter((counter) => counter.current_start !== null));
 
@@ -159,7 +159,7 @@
 
 <div class="@container grid h-full grid-rows-[auto_1fr_auto]">
   <Toolbar>
-    <Select bind:value={sort.value} options={SORT_OPTIONS} size="sm" aria-label="Sort" class="w-auto" />
+    <Select bind:value={data.value.sort} options={SORT_OPTIONS} size="sm" aria-label="Sort" class="w-auto" />
     <span class="flex-1"></span>
     <Button variant="primary" size="sm" onclick={add}><Plus weight="bold" />New counter</Button>
   </Toolbar>

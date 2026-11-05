@@ -42,6 +42,7 @@
     totals,
   } from "./hub";
   import { use_today } from "./today.svelte";
+  import { empty_storage, storage_schema } from "./storage";
 
   const { tab: initial_tab }: { tab?: Tab } = $props();
 
@@ -52,7 +53,7 @@
   const achievements = $derived(kernel.service<AchievementsService>("achievements"));
 
   const tab = storage.window<Tab>("tab", untrack(() => initial_tab ?? Tab.LIBRARY), z.enum(Tab));
-  const sort = storage.persisted<Sort>("sort", Sort.RECENT, z.enum(Sort));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const plays = use_plays();
   const today = use_today(() => win.is_visible);
 
@@ -65,7 +66,7 @@
 
 
   const games = $derived(list_games(apps.listings({ all: true })));
-  const library = $derived(sort_entries(entries(games, plays.value), sort.value));
+  const library = $derived(sort_entries(entries(games, plays.value), data.value.sort));
   const dailies = $derived(daily_games(games));
   const solved_today = $derived(plays.value.daily[today.value] ?? {});
   const solved_count = $derived(dailies.filter((entry) => solved_today[entry.key]).length);
@@ -122,7 +123,7 @@
     <Segmented bind:value={tab.value} options={TABS} label="View" size="sm" />
     <span class="flex-1"></span>
     {#if tab.value === Tab.LIBRARY}
-      <Select bind:value={sort.value} options={SORT_OPTIONS} size="sm" class="w-34" aria-label="Sort games" />
+      <Select bind:value={data.value.sort} options={SORT_OPTIONS} size="sm" class="w-34" aria-label="Sort games" />
     {/if}
     {#if can_pin}
       <Button

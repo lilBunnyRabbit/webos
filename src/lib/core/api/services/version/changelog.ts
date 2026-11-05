@@ -5,6 +5,26 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.0.0",
+    date: "2026-11-05",
+    title: "App data in files",
+    changes: [
+      {
+        kind: IMPROVED,
+        text: "Apps' saved settings, scores and games now live in the WebOS file system, each app in its own folder; they moved there by themselves the first time this version started, so there's nothing to do.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["activity-monitor"],
+        text: "Activity Monitor shows how much space each app's data folder takes.",
+      },
+      {
+        kind: IMPROVED,
+        text: "Backups now keep every app's data in its folder, along with your other files.",
+      },
+    ],
+  },
+  {
     version: "3.92.0",
     date: "2026-11-05",
     title: "Glimpse",

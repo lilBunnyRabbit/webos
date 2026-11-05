@@ -27,6 +27,7 @@
   } from "./notes";
   import { create_note, delete_note, NotesReader, read_todo, save_note, write_todo } from "./store";
   import { NoteDraft } from "./draft.svelte";
+  import { empty_storage, storage_schema } from "./storage";
 
   const { note: initial_note, tab: initial_tab }: { note?: string; tab?: "inbox" | "notes" | "todo" } = $props();
 
@@ -44,7 +45,7 @@
   type Tab = (typeof Tab)[keyof typeof Tab];
   const tab = storage.window<Tab>("tab", untrack(() => initial_tab ?? (initial_note ? Tab.NOTES : Tab.INBOX)), z.enum(Tab));
   const selected_id = storage.window<string | null>("note", untrack(() => initial_note ?? null), z.string().nullable());
-  const filter_status = storage.persisted<NoteStatus>("notes-status", NoteStatus.READY, z.enum(NoteStatus));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let notes = $state.raw<Note[]>([]);
   let todo_text = $state("");
@@ -96,7 +97,7 @@
   }
 
   const visible = $derived(
-    (tab.value === Tab.INBOX ? inbox : notes.filter((note) => note.status === filter_status.value)).filter(matches)
+    (tab.value === Tab.INBOX ? inbox : notes.filter((note) => note.status === data.value["notes-status"])).filter(matches)
   );
 
   async function persist(note: Note): Promise<boolean> {
@@ -233,7 +234,7 @@
     if (target.status === NoteStatus.RAW) tab.value = Tab.INBOX;
     else {
       tab.value = Tab.NOTES;
-      filter_status.value = target.status;
+      data.value["notes-status"] = target.status;
     }
     query = "";
     selected_id.value = target.id;
@@ -303,14 +304,14 @@
           <div class="flex items-center gap-2 border-b border-foreground/8 p-2">
             <Input bind:value={query} size="sm" class="min-w-0 flex-1" placeholder="Filter, or #tag" aria-label="Filter notes" />
             {#if tab.value === Tab.NOTES}
-              <Select size="sm" bind:value={filter_status.value} aria-label="Status" class="w-auto" options={status_options.filter((option) => option.value !== NoteStatus.RAW)} />
+              <Select size="sm" bind:value={data.value["notes-status"]} aria-label="Status" class="w-auto" options={status_options.filter((option) => option.value !== NoteStatus.RAW)} />
             {/if}
           </div>
           <div class="min-h-0 flex-1 overflow-auto p-1.5">
             {#if loaded && visible.length === 0}
               <EmptyState
                 icon={tab.value === Tab.INBOX ? Tray : Notepad}
-                title={query ? "No matches" : tab.value === Tab.INBOX ? "Inbox zero" : `No ${filter_status.value} notes`}
+                title={query ? "No matches" : tab.value === Tab.INBOX ? "Inbox zero" : `No ${data.value["notes-status"]} notes`}
                 description={tab.value === Tab.INBOX ? `New captures land here.${capture_keys ? ` Press ${capture_keys} anywhere to jot one down.` : ""}` : undefined}
                 class="h-full"
               />

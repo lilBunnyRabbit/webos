@@ -2,6 +2,7 @@
   import kernel, { NotificationType, type NotificationsService, type TaskJob } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Separator, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
+  import { empty_storage, storage_schema } from "./storage";
   import { format_bytes } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
@@ -16,7 +17,6 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
-  import { z } from "zod";
   import { device_item, item_at } from "$lib/core/utils/zip/files";
   import { add_item, archive_name, parent_path, type CreateItem } from "$lib/core/utils/zip/create";
   import { Method } from "$lib/core/utils/zip/format";
@@ -32,7 +32,7 @@
     { value: "deflate", label: "Deflate" },
     { value: "store", label: "Store" },
   ];
-  const method = storage.persisted<"deflate" | "store">("method", "deflate", z.enum(["deflate", "store"]));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let items = $state.raw<CreateItem[]>([]);
   let adding = $state(0);
@@ -87,7 +87,7 @@
     const path = await win.pick_save({ name: archive_name(items), accept: [".zip"], start_path: start_path ? parent_path(start_path) : "/home", title: "Save archive as" });
     if (!path) return;
 
-    const zip_method = method.value === "store" ? Method.STORE : Method.DEFLATE;
+    const zip_method = data.value.method === "store" ? Method.STORE : Method.DEFLATE;
     await zip_items(items, path, zip_method, { app_id, on_job: (next) => (job = next) });
   }
 </script>
@@ -100,7 +100,7 @@
     <IconButton label="Add a folder…" size="sm" onclick={pick_folder} disabled={!!job}><FolderPlusIcon weight="bold" /></IconButton>
     <IconButton label="Add from device…" size="sm" onclick={pick_device} disabled={!!job}><DevicesIcon weight="bold" /></IconButton>
     <Separator vertical class="hidden @lg:block" />
-    <Segmented size="sm" label="Compression" options={METHODS} bind:value={method.value} />
+    <Segmented size="sm" label="Compression" options={METHODS} bind:value={data.value.method} />
     {#if job}
       <Button size="sm" onclick={() => job?.cancel()}><StopIcon weight="fill" /> Cancel</Button>
     {:else}
@@ -159,7 +159,7 @@
       </span>
     {:else}
       <span>{file_count} {file_count === 1 ? "file" : "files"} · {format_bytes(total)}</span>
-      <span class="ml-auto">{method.value === "store" ? "store, no compression" : "deflate"}</span>
+      <span class="ml-auto">{data.value.method === "store" ? "store, no compression" : "deflate"}</span>
     {/if}
   </StatusBar>
 </div>

@@ -69,7 +69,7 @@ export default {
 
   const files = $derived(kernel.service<FilesService>("files"));
   const { window: win, storage } = get_app_context();
-  const font_size = storage.persisted("font_size", 14, z.number());
+  const prefs = storage.file("storage.json", { font_size: 14 }, z.object({ font_size: z.number().catch(14) }));
 
   const content = $derived(path ? files.get_file(path).then((file) => file?.text() ?? null) : null);
 </script>
@@ -77,7 +77,7 @@ export default {
 <div class="grid h-full grid-rows-[auto_1fr]">
   <Toolbar>
     <span class="min-w-0 flex-1 truncate px-1 font-mono text-2xs text-foreground/80">{path ?? "No file"}</span>
-    <IconButton label="Larger text" size="sm" onclick={() => font_size.value++}><TextAaIcon weight="bold" /></IconButton>
+    <IconButton label="Larger text" size="sm" onclick={() => prefs.value.font_size++}><TextAaIcon weight="bold" /></IconButton>
     <IconButton label="Close" size="sm" onclick={() => win.close()}><XIcon weight="bold" /></IconButton>
   </Toolbar>
 
@@ -87,7 +87,7 @@ export default {
     {#await content}
       <div class="grid place-items-center"><Spinner label="Reading note" /></div>
     {:then text}
-      <pre class="overflow-auto p-4 @md:px-8" style:font-size="{font_size.value}px">{text ?? "File not found."}</pre>
+      <pre class="overflow-auto p-4 @md:px-8" style:font-size="{prefs.value.font_size}px">{text ?? "File not found."}</pre>
     {/await}
   {/if}
 </div>
@@ -98,7 +98,7 @@ What this shows:
 - **Every prop is optional.** Start menu launches and default pins pass none; only a shortcut file with `props` passes some. The type system enforces it (`Component<Partial<TProps>>`).
 - **Services** through `kernel.service<T>("key")` in `$derived`, never destructured.
 - **Context** via `get_app_context()` during init. `window` renamed to keep the global reachable.
-- **Per-app settings** with `storage.persisted()`, stored as `app.notes.font_size`. Shared live by every Notes window. Must be called during init.
+- **Per-app settings** with `storage.file()`, stored in `/var/lib/apps/notes/storage.json`. Shared live by every Notes window. Must be called during init; holds the defaults until `ready`. `.catch()` on each field resets only a bad field.
 - **Responsive** with container queries (`@md:`); the window body is the `@container`. No viewport breakpoints.
 - **UI kit, not hand-rolled controls.** `Toolbar`, `IconButton` (always with a `label`), `EmptyState` and `Spinner` from `$lib/core/components/ui`, laid out as the document frame from [docs/design/patterns.md](../../design/patterns.md). The Style Guide app shows every component live.
 - **Theme tokens only** (`text-foreground/65`, `bg-background-light`); the default Tailwind palette doesn't compile.
@@ -111,7 +111,7 @@ What this shows:
 
 - **Pause when unseen.** Loops, timers and media derive from `win.is_visible` (minimized or hidden tab → `false`), never `document.hidden` by hand (ADR-035).
 - **Live clocks.** A display that shows the current time or a running duration uses `Ticker` from `$lib/core/utils/ticker.svelte`: `new Ticker(() => win.is_visible, 1000)` (a widget passes `() => !windows.page_hidden`) gives a reactive `ticker.now` that refreshes at the interval only while visible, catches up the moment it's visible again, and switches at once when the interval getter changes (`() => (running ? 1000 : 30_000)`). Every ticker with the same interval reads one shared clock that ticks on wall-clock boundaries (each second on the second), so all live displays on the page change in the same frame (owner, 2026-10-15: a Clock widget's second hand and a Time Since counter moved out of step). The shared clock runs only while something reads it. Read `now` in markup, `$derived` or `$effect`; it's read-only. It only drives the display: anything that must keep counting while hidden (a stopwatch, a deadline) stores wall-clock timestamps and derives elapsed time from `ticker.now`.
-- **App data.** Settings and small state: `storage.persisted()`. Anything bigger (entries, boards, history): `storage.file("name.json", initial, schema)` in `/var/lib/apps/{id}/`. Documents the user names and opens: real files in `/home` ([app context](app-context.md#file-adr-035)).
+- **App data.** Settings, small state and anything bigger (entries, boards, history): `storage.file("name.json", initial, schema)` in `/var/lib/apps/{id}/`. Documents the user names and opens: real files in `/home` ([app context](app-context.md#file-adr-035)).
 - **Background alerts.** `notify(app_id, { system: true, … })` also reaches the OS while the tab is hidden; call `notifications.request_system()` from a click first.
 - **Paths and small helpers.** `base_name`, `parent_path`, `file_stem` and `file_extension` from `$lib/core/api/services/files/path` ([files](../services/files.md#paths)); `error_message`, `clamp`, `pad2` and `escape_html` from `$lib/core/utils`. Undo for a document app: `$kit/utils/history` (an immutable `History<T>` in `$state.raw`; `push` takes `{ max_entries, max_bytes, size_of }`). Use these rather than slicing at `lastIndexOf`. A failed save, open or copy: `report_error(app_id, title, reason)` from `$kit/utils/report-error` (an error toast with the reason's message); a status line that clears itself: `Flash` from `$kit/utils/flash.svelte`.
 - **Dates.** `$lib/core/utils/date`: `day_key(date?)` (local `YYYY-MM-DD`), `resolve_day(text, today)` (`today`, `yesterday`, `tomorrow`, `+N` / `-N`, `YYYY-MM-DD`, `MM-DD`, `D`; `null` if not a real day) and `parse_time(text)` (`9`, `9:30`, `24:00` → `HH:MM`). Apps that aren't games take dates from here, not from the game kit.
@@ -132,11 +132,11 @@ What this shows:
 | Launched with props that fail the schema | Window opens with no props, warning toast, zod issues in the console |
 | Component import fails | The window shows "{App} didn't load" with a likely cause, Try again / Reload WebOS / Close window, and the error under Details ([window](../shell/window.md#content-and-app-context)) |
 | App throws while rendering, in an effect or a `$derived` | The window shows "This app crashed" with Restart app / Close window, plus an error toast. The OS keeps running. Event-handler errors aren't caught: report those yourself |
-| Same app opened twice | Two windows. Shared `persisted()` values, separate component state |
+| Same app opened twice | Two windows. Shared `storage.file()` values, separate component state |
 | User closes the window | Unmount; clean up in `$effect` returns or `onDestroy`. A window marked dirty with `window.set_dirty(true, { save })` asks Save / Don't save / Cancel first (ADR-029) |
 | Report an error to the user | `kernel.service<NotificationsService>("notifications").notify(app_id, { type: "error", title })` ([notifications](../services/notifications.md)) |
 | Ask the user something outside the window | `dialogs.show(Component, props, { anchor })` ([dialogs](../services/dialogs.md)) |
 | Need the file's bytes | `files.get_file(path)` returns a `File` or `null` ([files](../services/files.md)) |
 | Long work the user should see, cancel or retry | `tasks.run(app_id, (context) => task, { title })` with `@lilbunnyrabbit/task-manager` tasks and groups; it keeps running after the window closes ([tasks](../services/tasks.md#writing-a-task)) |
 
-References in the repo: `user/example` (context, persisted state, props, a background task in `task.ts`), `system/text-editor` (file app that saves: close guard, disk watch, window-scoped shortcuts), `system/media-preview` (file app with a toolbar and status bar), `system/settings` (side-nav app with sections), `system/style-guide` (every kit component).
+References in the repo: `user/example` (context, a shared `storage.json`, props, a background task in `task.ts`), `system/text-editor` (file app that saves: close guard, disk watch, window-scoped shortcuts), `system/media-preview` (file app with a toolbar and status bar), `system/settings` (side-nav app with sections), `system/style-guide` (every kit component).

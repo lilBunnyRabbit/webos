@@ -78,7 +78,7 @@ Hard logic lives in plain TS so it can be tested without Svelte. ADR-005 (`opfs.
 - Pure logic beside the service: older services use a static helper class (`WindowsHelper`, `DesktopHelper`), files uses module-level functions (`opfs.ts`). New services follow the files style. Don't convert old helpers as a drive-by.
 - Constructors only set fields. Side effects (`$effect.root`, timers, listeners, storage reads) go in `init()`, and everything `init()` starts, `destroy()` stops. `destroy()` is synchronous. Service init order comes from `dependencies`, so a service may use its dependencies in `init()` (ADR-002).
 - Every service ships `inspector.svelte` beside it, wired as `inspector = () => import("./inspector.svelte")`, so the Kernel app can show it (ADR-020). Basic view always; detailed view behind the `detailed` prop. Use the building blocks in `components/inspector/` and only the service's public API.
-- Persisted service state lives in the file system (ADR-021): config in `/etc/{service}.json` (`/etc/settings.json`), state in `/var/lib/{service}/` (`/var/lib/desktop/layout.json`). Versioned JSON, written through FilesService, with parse/serialize as pure functions beside the service (`settings/persistence.ts`, `desktop/layout.ts`). Validate on load and fall back to defaults; never trust the stored shape. App data goes in files too: `storage.file()` in `/var/lib/apps/{id}/` (ADR-035), never `storage.get`/`set`/`persisted` (localStorage, being retired). localStorage is only for what must be read before OPFS is up: the analytics answer `index.html` reads, dismissed browser warnings.
+- Persisted service state lives in the file system (ADR-021): config in `/etc/{service}.json` (`/etc/settings.json`), state in `/var/lib/{service}/` (`/var/lib/desktop/layout.json`). Versioned JSON, written through FilesService, with parse/serialize as pure functions beside the service (`settings/persistence.ts`, `desktop/layout.ts`). Validate on load and fall back to defaults; never trust the stored shape. App data goes in files too: `storage.file()` in `/var/lib/apps/{id}/` (ADR-035), since 4.0 the only app storage (`storage.get`/`set`/`persisted` were removed, ADR-094). localStorage is only for what must be read before OPFS is up: the analytics answer `index.html` reads, dismissed browser warnings.
 
 ### Accessing a service
 
@@ -112,7 +112,7 @@ export default define_app({
 });
 ```
 
-- What an app may rely on (frozen at 1.0, stable until 4.0) and what is internal: [system/app-api.md](system/app-api.md).
+- What an app may rely on (frozen at 1.0, stable until 5.0) and what is internal: [system/app-api.md](system/app-api.md).
 - Discovered by folder: the build writes every app into the catalogue, the dev server and tests glob them in `src/lib/apps/index.ts` (ADR-077). No registration.
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.

@@ -71,8 +71,8 @@ Every launch opens a new window. Nothing is single-instance and nothing deduplic
 
 Instances of one app share:
 
-- `persisted()` cells: same key = same live value in every window ([app-context.md](app-context.md#shared-persisted-cells)).
-- `app.{id}.*` in localStorage.
+- `storage.file()` cells: same file = same live value in every window ([app-context.md](app-context.md#file-adr-035)).
+- Everything in `/var/lib/apps/{id}/`.
 - Module-level state in the app's own `.svelte`/`.ts` files (ES modules are singletons).
 
 They don't share component state or props.

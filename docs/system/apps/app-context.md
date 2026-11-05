@@ -15,7 +15,7 @@ const { window_id, app_id, window, storage, achievements } = get_app_context();
 | `window_id` | `WindowId` | This window |
 | `app_id` | `AppId` | The manifest id |
 | `window` | `WindowHandle` | Window state and controls |
-| `storage` | `StorageHandle` | `localStorage` under `app.{app_id}.`, plus this window's state (`window()`) |
+| `storage` | `StorageHandle` | JSON files in `/var/lib/apps/{app_id}/` (`file()`), plus this window's state (`window()`) |
 | `achievements` | `AchievementsHandle` | Reports the manifest's achievements, bound to `app_id` (ADR-078), [below](#achievementshandle) |
 
 - Svelte `getContext` under a private symbol. Call it during component init, in any component inside the app's window (children included).
@@ -69,46 +69,24 @@ Not there (ADR-003, deferred): `on()` events (owner decided against them; use ge
 
 ## `StorageHandle`
 
-Built by `create_storage_handle(app_id, instance.app.state)` in `window.svelte`. Keys are stored as `app.{app_id}.{key}`, JSON-encoded. Small data only; files go through [FilesService](../services/files.md). Storage conventions overall: [persistence.md](../persistence.md).
+Built by `create_storage_handle(app_id, instance.app.state)` in `window.svelte` (and the mobile and solo window frames). Two members: per-window view state and JSON files in the app's data folder. Files the user names and opens go through [FilesService](../services/files.md). Storage conventions overall: [persistence.md](../persistence.md).
 
 | Member | Signature | Behaviour |
 |--------|-----------|-----------|
-| `get` | `<T>(key, schema?: ZodType<T>): T \| null` | Reads and parses. Missing, unparseable JSON, a throwing `localStorage`, or a failed `schema.safeParse` → `null`. Without a schema the parsed value is cast, unchecked |
-| `set` | `<T>(key, value: T): void` | If a `persisted()` cell is live for the key, sets the cell (which then saves). Otherwise writes directly. Write errors are `console.error`ed. No schema check |
-| `remove` | `(key): void` | `localStorage.removeItem` (errors logged, not thrown), then resets a live cell to its `initial` without saving; see below |
-| `persisted` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | A reactive cell that saves on change, shared by every window of the app. Must be called during component init. For app data |
 | `window` | `<T>(key, initial: T, schema?: ZodType<T>): { value: T }` | State of this window only, saved with the session. For view state (open tab, expanded rows, toggles) |
-| `file` | `<T>(name, initial: T, schema: ZodType<T>): { value: T; ready; error }` | A JSON file in the app's data folder `/var/lib/apps/{app_id}/{name}`, shared by every window. For app data bigger than settings (ADR-035). Must be called during component init |
+| `file` | `<T>(name, initial: T, schema: ZodType<T>): { value: T; ready; error }` | A JSON file in the app's data folder `/var/lib/apps/{app_id}/{name}`, shared by every window. For settings and app data alike (ADR-035, ADR-094). Must be called during component init |
 
-### `persisted()`
+4.0 removed `get`, `set`, `persisted` and `remove`, which kept values in localStorage keys `app.{app_id}.{key}` (ADR-094). Each boot copies any such key left (from before 4.0, or from restoring an older backup) into `/var/lib/apps/{app_id}/storage.json` as `{ "{key}": value }` and deletes it ([apps service](../services/apps.md#app-storage-copy-adr-094)), so an app reads its old keys with `storage.file("storage.json", defaults, Schema)`:
 
 ```ts
-const count = storage.persisted("count", 0, z.number());
-count.value++; // saved
+const data = storage.file("storage.json", { count: 0 }, z.object({ count: z.number().catch(0) }));
+data.value.count++; // saved once ready, shared live by every window
 ```
 
-- Initial value: `get(key, schema) ?? initial`. Invalid stored data falls back to `initial`.
-- The cell saves with an `$effect` (inside its own `$effect.root`) on `$state.snapshot(value)`. Its first run writes nothing when the value still equals what was loaded, so opening a window doesn't rewrite the key: a missing key stays missing, and invalid stored data stays until the first change replaces it. A change made before that first run (during component init) is still saved.
-- Saving is deep: mutating a nested property of an object value is tracked and saved.
-- Saves happen when effects flush (microtask), so a `get()` right after assigning `value` can still read the old string.
-- The calling component registers an `$effect` whose cleanup releases the cell. That's why it must run during init.
-
-### Shared persisted cells
-
-A module-level `Map<full_key, PersistedCell>` holds one cell per `app.{id}.{key}` across all windows.
-
-- The first `persisted()` call for a key creates the cell; later calls (any window of the same app) get the same object. Its `initial` and `schema` win; later callers' arguments are ignored while the cell lives.
-- Each call retains the cell; each unmount releases it. When the count hits zero the save effect is disposed and the cell is deleted from the map. The next `persisted()` re-reads storage.
-- `set(key, …)` from any window updates the live cell, so every window sees it instantly.
-
-Two windows of the Example app: incrementing in one updates the other live, and both write the same value. Close one, the other keeps working. Close both, reopen: the last saved value loads.
-
-Edge cases:
-
-- `remove(key)` while a cell is live: storage is cleared and the cell resets to a clone of its `initial` in every window, without writing. The key stays absent until the next change. The reset target is the first caller's `initial`, cloned when the cell was created.
-- A launch prop used as `initial` (the Example app's `count`) only counts when nothing is stored and no cell is live. After that the stored value wins over the prop.
-- Other browser tabs aren't synced; there's no `storage` event listener.
-- Two different components in the same window calling `persisted()` on the same key also share the cell.
+- `value` holds the defaults until `ready`; nothing written before then is saved. Wait for `ready` before showing data that would flash.
+- Every field gets `.catch(default)`, so one bad value resets that field, not the whole file.
+- Every holder of the file (each window, a widget, a shell command through `json_file` or `live_file`) uses the same schema: the file is one cell per path and the first holder's schema parses it.
+- A launch prop used as a default (the Example app's `count`) only counts until the file has loaded; after that the saved value wins.
 
 ### `window()`
 
@@ -123,7 +101,7 @@ page.value = "about"; // this window only
 - Gone when the window closes. Not tied to component lifetime, so it can be called anywhere a context is available.
 - A launch prop can be the `initial` (Settings' `section`): it counts for a new window, but a restored window's saved state wins over its saved props.
 
-Used by Settings, Activity Monitor and Style Guide (`section`), Kernel (`expanded`) and Text Editor (`wrap`, `markdown`; Text Viewer's `wrap` before the rename). Before 2026-10-11 these were `persisted()` cells, so every window of the app switched together; SessionService's `init()` removes their old `app.{id}.*` keys ([persistence](../persistence.md)).
+Used by Settings, Activity Monitor and Style Guide (`section`), Kernel (`expanded`) and Text Editor (`wrap`, `markdown`; Text Viewer's `wrap` before the rename). Before 2026-10-11 these were shared localStorage cells, so every window of the app switched together; SessionService's `init()` removes their old `app.{id}.*` keys ([persistence](../persistence.md)).
 
 ### `file()` (ADR-035)
 
@@ -133,7 +111,7 @@ const board = storage.file("board.json", EMPTY_BOARD, BoardSchema);
 ```
 
 - Built on `json_file(path, initial, schema)` from `$lib/core/contexts/app` (`json-file.svelte.ts`), which also works outside an app (a widget, another app's file, the game kit) and returns a handle with `release()`. `app_data_path(app_id, name)` builds the path.
-- One cell per path across the page, reference-counted; the last release stops it. Its effects run in a `detached_root` (`$lib/core/utils/detached-root.svelte.ts`), created from a microtask: a root made during component init is linked into that component's effect tree, and a change landing while the component plays its outro (a closing window) left the root dirty and dead for every holder. `persisted()` cells and the Quick Notes, Kanban badge and Pomodoro timer roots use it for the same reason.
+- One cell per path across the page, reference-counted; the last release stops it. Its effects run in a `detached_root` (`$lib/core/utils/detached-root.svelte.ts`), created from a microtask: a root made during component init is linked into that component's effect tree, and a change landing while the component plays its outro (a closing window) left the root dirty and dead for every holder. The Quick Notes, Kanban badge and Pomodoro timer roots use it for the same reason.
 - `ready` is `false` until the first read. Nothing is written before it, so a slow read never overwrites the file with `initial`.
 - Re-reads whenever the folder's `files.revision()` changes: another window, Text Editor, Explorer, a delete (back to `initial`, no write). Texts it wrote itself recently are recognized and not read back over newer edits. A re-read while its own write is waiting, queued or in flight waits for `LatestWriter.idle()` first (which saves a delayed write at once): the folder's revision also moves for a sibling file's write or for the folder being created, and disk would still hold the old text (or nothing). A read matching its own write clears `error`. Reads go through the `FileSystemFileHandle` kept from the first successful read (`handle.getFile()`), walking the path again only on `NotFoundError` (deleted, or moved with its folder). Each read seeds the writer with the disk text, so writing it back is skipped.
 - Deep changes save pretty-printed through `LatestWriter` with `delay: 300` (serialized, newest wins, folders created, flushed when the tab hides): a burst of edits saves once. A change made right before the last release is still written, and the release flushes it without waiting for the delay. A new holder of that path waits for that last write to land before its first read, so it never reads the file from before it (a Pomodoro command run right after the on-fire handler let go read the old phase).

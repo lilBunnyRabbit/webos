@@ -329,7 +329,6 @@ const manifest_fields: Members<
   AppConfig,
   | "achievements"
   | "associations"
-  | "author"
   | "background"
   | "badge"
   | "category"
@@ -342,7 +341,6 @@ const manifest_fields: Members<
   | "highlights"
   | "icon"
   | "id"
-  | "license"
   | "meta"
   | "name"
   | "on_fire"
@@ -351,11 +349,9 @@ const manifest_fields: Members<
   | "props"
   | "provides"
   | "replaces"
-  | "repository"
   | "restore"
   | "shell"
   | "tools"
-  | "version"
   | "widget"
   | "widget_size"
 > = true;
@@ -384,7 +380,7 @@ const window_handle_members: Members<
   | "set_title"
 > = true;
 
-const storage_handle_members: Members<StorageHandle, "file" | "get" | "persisted" | "remove" | "set" | "window"> = true;
+const storage_handle_members: Members<StorageHandle, "file" | "window"> = true;
 const app_context_members: Members<AppContext, "achievements" | "app_id" | "storage" | "window" | "window_id"> = true;
 const achievements_handle_members: Members<AchievementsHandle, "achieve" | "progress"> = true;
 const achievement_members: Members<Achievement, "goal" | "id" | "secret" | "text" | "title"> = true;
