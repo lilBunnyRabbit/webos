@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.92.0",
+    date: "2026-11-05",
+    title: "Glimpse",
+    introduces: ["glimpse"],
+    changes: [
+      {
+        kind: NEW,
+        apps: ["glimpse"],
+        text: "Glimpse is a quick camera for double-check photos, like a locked door, that erase themselves after an hour, a day, three days or a week, with the torch, zoom and a gallery to flip through them.",
+      },
+    ],
+  },
+  {
     version: "3.91.0",
     date: "2026-11-04",
     title: "Skip pauses",

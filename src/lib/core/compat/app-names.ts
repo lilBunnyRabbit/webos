@@ -16,6 +16,7 @@ export const APP_NAMES: Record<string, string> = {
   forms: "Forms",
   funky: "Funky DSL",
   "gif-player": "GIF Player",
+  glimpse: "Glimpse",
   gw2: "GW2 Tracker",
   "hid-lab": "Keyboard & HID Lab",
   hopsprite: "Hopsprite",
