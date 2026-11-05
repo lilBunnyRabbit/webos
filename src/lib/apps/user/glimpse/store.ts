@@ -96,7 +96,10 @@ export function delete_photo(files: FilesService, index: IndexHolder, photo_id: 
   });
 }
 
-export function clean_orphans(files: FilesService, index: IndexHolder): Promise<number> {
+// Another tab may be between writing a photo and listing it in its index; only files left this long are orphans.
+const ORPHAN_GRACE_MS = 10 * 60_000;
+
+export function clean_orphans(files: FilesService, index: IndexHolder, now = Date.now()): Promise<number> {
   return enqueue(async () => {
     let count = 0;
     for (const name of [PHOTOS, THUMBS]) {
@@ -104,6 +107,8 @@ export function clean_orphans(files: FilesService, index: IndexHolder): Promise<
       if (!directory) continue;
       const names = (await files.list(directory)).filter((item) => item.kind === "file").map((item) => item.name);
       for (const orphan of orphans(names, index.value.batches, writing)) {
+        const file = await (await directory.getFileHandle(orphan)).getFile();
+        if (now - file.lastModified < ORPHAN_GRACE_MS) continue;
         await files.delete_entry(directory, orphan);
         count++;
       }

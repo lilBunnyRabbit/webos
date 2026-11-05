@@ -64,6 +64,7 @@ export class Camera {
   private want_device: string | null = null;
   private destroyed = false;
   private zoom_frame = 0;
+  private flashing = 0;
 
   constructor(private readonly options: CameraOptions) {
     $effect(() => {
@@ -143,13 +144,14 @@ export class Camera {
   async grab(video: HTMLVideoElement): Promise<ImageBitmap> {
     const flash = this.torch === TorchMode.FLASH && this.has_torch;
     if (flash) {
-      await this.apply({ torch: true });
+      // A burst shares one flash: the torch goes off only after the last shot in flight.
+      if (this.flashing++ === 0) await this.apply({ torch: true });
       await wait(FLASH_SETTLE_MS);
     }
     try {
       return await createImageBitmap(video);
     } finally {
-      if (flash) void this.apply({ torch: false });
+      if (flash && --this.flashing === 0) void this.apply({ torch: false });
     }
   }
 
@@ -188,6 +190,8 @@ export class Camera {
       this.devices = devices.filter((device) => device.kind === "videoinput" && device.deviceId);
     } catch (reason) {
       this.wanted = false;
+      // A picked lens that vanished (unplugged webcam) would fail every retry; Try again falls back to the facing.
+      this.want_device = null;
       this.options.onerror(reason);
     } finally {
       this.starting = false;

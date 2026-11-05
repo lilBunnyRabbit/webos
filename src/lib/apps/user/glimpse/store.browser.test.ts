@@ -39,7 +39,7 @@ test("saves shots into one batch, sweeps orphans and erases expired batches with
   expect(await names(THUMBS)).toEqual(["p1.jpg", "p2.jpg"]);
 
   await files.create_file(await files.get_directory(app_data_path(APP_ID, PHOTOS)), "stray.jpg", { content: "x" });
-  expect(await clean_orphans(files, index)).toBe(1);
+  expect(await clean_orphans(files, index, Date.now() + 3_600_000)).toBe(1);
   expect(await names(PHOTOS)).toEqual(["p1.jpg", "p2.jpg"]);
 
   expect(await erase_expired(files, index, 4999)).toBe(0);

@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type AppsService, type DialogsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { Button, EmptyState, Spinner } from "$lib/core/components/ui";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { app_data_path, get_app_context, json_file } from "$lib/core/contexts/app";
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { report_error } from "$kit/utils/report-error";
   import type { Point } from "$kit/utils/view";
@@ -149,12 +149,17 @@
     }
     shots++;
     pending++;
-    save_shot(files, index, () => ({ ...meta }), frame, turn, id, taken)
+    // The save holds the index itself: closing the window mid-burst must not drop shots still in the queue.
+    const hold = json_file(app_data_path(APP_ID, INDEX_FILE), EMPTY_INDEX, IndexSchema);
+    save_shot(files, hold, () => ({ ...meta }), frame, turn, id, taken)
       .then(() => {
         if (session?.id === meta.id) last = id;
       })
       .catch((reason: unknown) => report_error(APP_ID, "Couldn't save the photo", reason))
-      .finally(() => pending--);
+      .finally(() => {
+        pending--;
+        hold.release();
+      });
   }
 
   function show_batch() {
