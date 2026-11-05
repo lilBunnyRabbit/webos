@@ -126,6 +126,7 @@ What are the implications of this decision?
 | [090](./090-drive-hub-portals.md) | Drive Hub portals (multi-floor garages) | 2026-10-29 | Implemented |
 | [091](./091-drive-hub-tyre-support.md) | Drive Hub tyre support and Tight Spot Extreme | 2026-10-29 | Implemented |
 | [092](./092-skip-pauses.md) | Skip pauses in Video Tools | 2026-11-04 | Implemented |
+| [093](./093-glimpse.md) | Glimpse, throwaway photos | 2026-11-05 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 

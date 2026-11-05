@@ -47,6 +47,7 @@ An app that's a form over a JSON file doesn't get a page. An app that ships a mo
 | [drive-hub-games.md](drive-hub-games.md) | Drive Hub games (`tight-spot`) | How to add a game to Drive Hub: the contract, what the core gives, what a game owns, proofs and test time, the drive kinds a game must allow for, the visual check list, the gotchas the forklift met |
 | [motion-watch.md](motion-watch.md) | Motion Watch (`motion-watch`) | Main thread, worker and storage split, running-average detection with blobs, lights and zones, the WebCodecs pre-roll ring and clip cutting, the day folder and `events.json` format, retention, the window as a view onto a background job |
 | [video-tools.md](video-tools.md) | Video Tools (`video-tools`) | Play-and-capture through `requestVideoFrameCallback`, the WebM clip and its own muxer, the GIF slot grid with a palette per frame and running-total delays, Skip pauses: the 160 px grey compare against the last kept frame, the sensitivity scale and its tuning, the output clock, the settings file and the `skip_pauses` prop |
+| [glimpse.md](glimpse.md) | Glimpse (`glimpse`) | The frame-grab capture pipeline (worker JPEG and thumbnail, queued writes), torch, zoom and focus by capability, orientation from gravity against the screen angle, the `index.json` format with `photos/` and `thumbs/`, erasing on open and on a timer, the orphan sweep, the viewer |
 
 ## Page shape
 

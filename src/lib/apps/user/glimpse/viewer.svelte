@@ -176,6 +176,8 @@
     action();
   }
 
+  const focus_on_open = (node: HTMLElement) => node.focus({ preventScroll: true });
+
   const anchor = (event: MouseEvent): Point => {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
     return { x: rect.left, y: rect.top };
@@ -185,7 +187,7 @@
 <svelte:window onkeydown={on_keydown} />
 
 {#if item}
-  <div bind:this={root} class="absolute inset-0 z-10 flex flex-col bg-background-darkest select-none" role="dialog" aria-label="Photo viewer">
+  <div bind:this={root} class="absolute inset-0 z-10 flex flex-col bg-background-darkest outline-none select-none" role="dialog" aria-label="Photo viewer" tabindex="-1" {@attach focus_on_open}>
     <div class="flex min-w-0 items-center gap-2 px-2 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2">
       <IconButton label="Close" onclick={onclose} class="pointer-coarse:size-11"><XIcon weight="bold" /></IconButton>
       <div class="flex min-w-0 flex-1 flex-col">

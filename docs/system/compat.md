@@ -183,15 +183,16 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `idle-callback` | Idle callbacks | Background work at start-up runs on a timer instead of when the browser is idle. | `text-editor` | 47 | 55 | no |
 | `canvas-filter` | Canvas filters | Image Editor, Image Tools and Birdseye apply filters by hand: slower, and Birdseye's blur is softer. | `image-editor` `image-tools` `birdseye` | 52 | 49 | no |
 | `coalesced-events` | Coalesced pointer events | Fast strokes in drawing apps are less smooth. | `paint` `doodlehop` `font-maker` `hopsprite` `proposals` `pdf-tools` | 58 | 59 | 18.2 |
-| `wake-lock` | Screen Wake Lock | The screen may sleep while you cook, check out or transfer. | `recipe-box` `cards` `shopping-list` `p2p-transfer` `motion-watch` | 84 | 126 | 18.4 |
+| `camera-controls` | Camera torch and zoom | No torch, zoom or tap to focus in the camera. | `glimpse` | 59 | no | no |
+| `wake-lock` | Screen Wake Lock | The screen may sleep while you cook, check out or transfer. | `recipe-box` `cards` `shopping-list` `p2p-transfer` `motion-watch` `glimpse` | 84 | 126 | 18.4 |
 | `webp-encode` | WebP encoding | Pictures are saved as larger PNG files. | `cards` `font-maker` `moonrabbit` `proposals` `warren` | 17 | 96 | no |
-| `image-smoothing-quality` | Image smoothing quality | Shrunk images look rougher. | `image-editor` `image-tools` `birdseye` `video-tools` `icon-pack` `nonogram` | 54 | no | 9.1 |
+| `image-smoothing-quality` | Image smoothing quality | Shrunk images look rougher. | `image-editor` `image-tools` `birdseye` `video-tools` `icon-pack` `nonogram` `glimpse` | 54 | no | 9.1 |
 | `field-sizing` | Auto-growing text boxes | Text boxes don't grow as you type. | `alibi` `ask` `kanban` `moonrabbit` | 123 | 152 | 26.2 |
 | `corner-shape` | Corner shapes | The squircle icon preview shows a circle. | `icon-pack` | 139 | no | no |
 | `keyboard-map` | Keyboard map | Key labels for your keyboard layout. | `hid-lab` | 69 | no | no |
 | `scrollbar-gutter` | Scrollbar gutter | Week columns don't line up with their headers. | `calendar` | 94 | 97 | 18.2 |
 | `fullscreen` | Fullscreen | Fullscreen visuals. iPhones have none. | `music-visualizer` | 71 | 64 | 16.4 |
-| `vibration` | Vibration | Haptic feedback on long-press and in a few apps. | `hopsprite` `image-tools` `nurikabe` `shopping-list` `tape-sketch` | 32 | no | no |
+| `vibration` | Vibration | Haptic feedback on long-press and in a few apps. | `hopsprite` `image-tools` `nurikabe` `shopping-list` `tape-sketch` `glimpse` | 32 | no | no |
 | `view-transitions` | View transitions | Window and list animations. | `shopping-list` | 111 | 144 | 18 |
 | `base-select` | Customizable select | Dropdowns use the browser's plain look. |  | 135 | no | 27 |
 | `scroll-timeline` | Scroll-driven animations | Terminal tables don't fade at their scroll edge. | `terminal` | 115 | 159 | 26 |

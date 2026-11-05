@@ -1,6 +1,6 @@
 # ADR-093: Glimpse, throwaway photos
 **Date:** 2026-11-05
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 The owner takes several quick photos as a double check (a closed door, a parked car) and doesn't want to keep them. The phone's camera app is slow to reach, and its photos stay forever. WebOS has cameras in Recorder, Color Tools, Motion Watch and the kit QR scanner, but none of them uses the torch, zoom or focus, and none has a gallery ([brainstorm](../brainstorm/2026-11-05_glimpse.md)).
@@ -49,3 +49,11 @@ The owner takes several quick photos as a double check (a closed door, a parked 
 - A photo that expires while Glimpse is closed stays on disk until Glimpse next opens.
 - Glimpse is a fifth camera-opening implementation, until a kit helper merges them.
 - Glimpse gets a `docs/apps/glimpse.md` page, because it has a format and a capture pipeline.
+
+## Revision 2026-11-05 (build)
+Decided within scope while building:
+- The expiry chip starts at 24 h every time the camera opens; it doesn't carry the last pick into the next batch.
+- A camera that reports no `facingMode` (laptop webcams) is treated as front-facing, so its preview is mirrored.
+- The lens pick shows only with more than two cameras; with two, the switch button covers it.
+- Torch, zoom and focus are Chrome-only constraints, so they got a `camera-controls` entry (cosmetic) in the browser support list.
+- Device orientation comes from `devicemotion` gravity. iOS sends no events without a permission prompt, which Glimpse doesn't show, so photos there follow the screen angle only.

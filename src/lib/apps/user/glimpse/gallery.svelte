@@ -29,7 +29,7 @@
       <header class="flex min-w-0 items-center gap-1.5">
         <h2 class="min-w-0 truncate text-ui font-semibold">{title}</h2>
         <Badge tone={batch.expires - now < SOON_MS ? "warning" : "neutral"} class="font-mono">erases in {time_left(batch.expires, now)}</Badge>
-        <span class="hidden shrink-0 text-2xs text-foreground/65 @xs:inline">{batch.photos.length} {batch.photos.length === 1 ? "photo" : "photos"}</span>
+        <span class="hidden shrink-0 text-2xs text-foreground/65 @sm:inline">{batch.photos.length} {batch.photos.length === 1 ? "photo" : "photos"}</span>
         <div class="ml-auto flex shrink-0 items-center">
           <IconButton label="Name this batch" size="sm" onclick={() => onrename(batch)}><PencilSimpleIcon weight="bold" /></IconButton>
           <IconButton label="Delete this batch" size="sm" onclick={() => ondelete(batch)}><TrashIcon weight="bold" /></IconButton>

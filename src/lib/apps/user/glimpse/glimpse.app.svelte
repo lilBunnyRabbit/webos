@@ -101,6 +101,7 @@
 
   function open_camera() {
     const created = Date.now();
+    expiry = DEFAULT_EXPIRY;
     session = { id: new_id(created), created, expires: created + expiry_ms(expiry) };
     shots = 0;
     last = null;
