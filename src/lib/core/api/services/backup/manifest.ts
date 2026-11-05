@@ -41,14 +41,6 @@ export function app_storage(storage: Storage): Record<string, string> {
   return entries;
 }
 
-export function storage_bytes(entries: Record<string, string>): number {
-  const encoder = new TextEncoder();
-  return Object.entries(entries).reduce(
-    (sum, [key, value]) => sum + encoder.encode(key).length + encoder.encode(value).length,
-    0
-  );
-}
-
 export function serialize_manifest(manifest: BackupManifest): string {
   return JSON.stringify(manifest, null, 2) + "\n";
 }

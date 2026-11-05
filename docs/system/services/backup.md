@@ -14,9 +14,9 @@ Gets all WebOS data out of the browser in one piece and back in. A backup is one
 |------|--------------|-------------|------------|------|
 | Files | `files` | `/home` | `home/…` | |
 | Settings | `settings` | `/etc` | `etc/…` | |
-| App data | `apps` | `/var/lib` | `var/lib/…` | every `app.*` localStorage key, in `backup.json` |
+| App data | `apps` | `/var/lib` | `var/lib/…` | nothing since 4.0: app storage lives in `/var/lib/apps/{id}/` (ADR-094) |
 
-`BACKUP_AREAS` in `type.ts` lists them with label, path and zip prefix. `/tmp`, `/var` outside `/var/lib`, the service worker caches and non-`app.*` localStorage never go in.
+`BACKUP_AREAS` in `type.ts` lists them with label, path and zip prefix. `/tmp`, `/var` outside `/var/lib`, the service worker caches and localStorage never go in.
 
 ## Format
 
@@ -26,7 +26,7 @@ webos-backup-YYYY-MM-DD.zip          (local day; the save picker may rename it)
   home/…        etc/…        var/lib/…
 ```
 
-`backup.json` (`manifest.ts`, pretty-printed): `format` is `BACKUP_FORMAT` (`1`); `version` is the WebOS build (`BUILD_INFO.version` from `services/version/build-info.ts`); `created` an ISO datetime; `areas` the areas it holds, at least one; `local_storage` the `app.*` keys and raw string values (empty unless `apps` is in `areas`). Folders get their own entries, so empty folders survive. Entries are deflated by the zip engine (`core/utils/zip`), which stores incompressible files as they are.
+`backup.json` (`manifest.ts`, pretty-printed): `format` is `BACKUP_FORMAT` (`1`); `version` is the WebOS build (`BUILD_INFO.version` from `services/version/build-info.ts`); `created` an ISO datetime; `areas` the areas it holds, at least one; `local_storage` is always `{}` in backups made since 4.0 (ADR-094); format 1 kept it for the `app.*` keys and their raw string values, so it stays in the schema and older backups' keys still restore. Folders get their own entries, so empty folders survive. Entries are deflated by the zip engine (`core/utils/zip`), which stores incompressible files as they are.
 
 `parse_manifest` checks `format` first: higher than `BACKUP_FORMAT` → "This backup comes from a newer WebOS (format N). Update WebOS, then restore it." Then the zod schema (`BackupManifestSchema`); any mismatch, including a non-`app.` key in `local_storage`, is "This backup is damaged: …". A migration only gets written once a format 2 exists.
 
@@ -36,7 +36,7 @@ webos-backup-YYYY-MM-DD.zip          (local day; the save picker may rename it)
 |--------|-----------|-------|
 | `activity` | `BackupActivity \| null` | `$state`: `creating` or `restoring` while one runs. One at a time: starting another throws |
 | `last` | `BackupSaved \| null` | The last backup saved in this tab: `{ name, size, areas, at }` |
-| `sizes` | `() => Promise<Record<BackupArea, number>>` | Bytes per area now: each folder's `get_directory_size`, App data plus the UTF-8 size of its `app.*` keys and values |
+| `sizes` | `() => Promise<Record<BackupArea, number>>` | Bytes per area now: each folder's `get_directory_size` |
 | `create` | `(areas: BackupArea[]) => Promise<BackupSaved \| null>` | See [Create](#create). Resolves when the task settles; `null` when the picker is cancelled or the task is cancelled or fails (its toast says which) |
 | `restore` | `() => Promise<boolean>` | See [Restore](#restore). `false` when the picker or the question is cancelled, or the task is cancelled or fails; on success the page reloads |
 
@@ -47,7 +47,7 @@ webos-backup-YYYY-MM-DD.zip          (local day; the save picker may rename it)
 1. `normalize_areas`: known areas, each once, in `BACKUP_AREAS` order. None → `BackupError`.
 2. **Pick the target first**, while the click or key press still counts as a user activation: `showSaveFilePicker({ suggestedName, startIn: "downloads", types: zip })`. Without the picker (mobile, Firefox, Safari) the target is a download. A cancel resolves `null`.
 3. Runs `backup_task` (`tasks.ts`) through [TasksService](tasks.md) (sender `backup`, shown as System; title "Backing up files" or "Backing up 3 areas"). A sequential group, since one `ZipWriter` appends entries in order:
-   - **One task per picked area** ("Files (/home)"): `area_sources` walks the folder with `opfs.list_directory` and **copies each file into memory** (`arrayBuffer()`), since a zip of OPFS `File`s would turn unreadable as soon as anything rewrote one of them (session.json changes whenever a window moves) before the zip reached the device. Then each source is added with the job's signal and `pace`; progress and the message ("Files: 2 MB of 8 MB") count uncompressed bytes. Logs the file count and size; App data also logs its `app.*` key count.
+   - **One task per picked area** ("Files (/home)"): `area_sources` walks the folder with `opfs.list_directory` and **copies each file into memory** (`arrayBuffer()`), since a zip of OPFS `File`s would turn unreadable as soon as anything rewrote one of them (session.json changes whenever a window moves) before the zip reached the device. Then each source is added with the job's signal and `pace`; progress and the message ("Files: 2 MB of 8 MB") count uncompressed bytes. Logs the file count and size.
    - **Save to device**: adds `backup.json` (`manifest_source`), `finish()`es the zip and saves it: `createWritable()` on the picked file, or an `<a download>` click with an object URL revoked a minute later. Sets `last`.
 4. The job's toast becomes "Backup saved · name · size", "Backup cancelled" or "Couldn't save the backup". Cancel (toast, Activity Monitor) stops between chunks. Retry rebuilds the zip into the same picked target.
 
@@ -63,7 +63,7 @@ webos-backup-YYYY-MM-DD.zip          (local day; the save picker may rename it)
      - `flush_writers()` first, so a debounced `LatestWriter` save (settings, session, app files) lands before the hold. Create does the same before packing the areas.
      - `hold_writes()` (files, [Writes can be held](files.md#behaviour--invariants)): waits for writes under way, then every write through `opfs.ts` (FilesService, DirectoryHandler, `LatestWriter`, `json_file`) rejects.
      - For each area in `areas`: remove the folder recursively and recreate it, then move the staged tree in with native `FileSystemFileHandle.move()` per file (OPFS directories have no `move()`). All through **native handles**, so no revision is bumped and no watcher (desktop, `json_file`, File Explorer) reloads and writes its defaults back.
-     - App data: removes every `app.*` key, then sets the backup's `local_storage`.
+     - App data: removes every `app.*` key, then sets the backup's `local_storage`. Only an older backup has any; the next boot's copy moves them into `/var/lib/apps/{id}/storage.json` ([apps](apps.md#app-storage-copy-adr-094)).
      - Clears the stage. On failure part way it releases the hold and throws. The areas may be half replaced; the backup file is untouched, so restoring again fixes it.
    - Then `location.reload()` from inside the task, with the hold still on, so a Retry that gets this far reloads too. A Cancel that lands during the swap shows "Too late to stop" and the swap finishes and reloads anyway; the stage isn't cleared under it.
 6. Areas the zip doesn't hold are never touched, on disk or in localStorage. The stage costs the backup's unpacked size in OPFS for the length of the restore.

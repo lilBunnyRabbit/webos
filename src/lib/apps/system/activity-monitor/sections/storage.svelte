@@ -1,11 +1,15 @@
 <script lang="ts">
-  import kernel, { type AppsService } from "$lib/core/api";
+  import kernel, { type AppsService, type FilesService, type SizeNode } from "$lib/core/api";
   import { Button, Section, Spinner } from "$lib/core/components/ui";
   import { format_bytes, error_message } from "$lib/core/utils";
-  import { local_storage_usage, type LocalStorageGroup, type StorageEstimateWithDetails } from "../browser";
+  import { untrack } from "svelte";
+  import { local_storage_size, type StorageEstimateWithDetails } from "../browser";
   import DiskUsage from "./disk-usage.svelte";
 
+  const APP_DATA_PATH = "/var/lib/apps";
+
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const files = $derived(kernel.service<FilesService>("files"));
 
   interface Quota {
     estimate: StorageEstimateWithDetails;
@@ -22,9 +26,30 @@
 
   let quota = $state<Promise<Quota>>(load_quota());
   let worker = $state<Promise<Worker>>(load_worker());
-  let local = $state.raw<LocalStorageGroup[]>(local_storage_usage());
+  let local = $state.raw(local_storage_size());
+  let app_data = $state.raw<SizeNode[] | null>(null);
+  let app_data_error = $state<string | null>(null);
 
-  const local_total = $derived(local.reduce((sum, group) => sum + group.bytes, 0));
+  const app_data_total = $derived((app_data ?? []).reduce((sum, node) => sum + node.size, 0));
+
+  let app_data_load = 0;
+  // Depth 2, so app folders come back with `children` and the service's own files at this level can be told apart.
+  async function load_app_data() {
+    const id = ++app_data_load;
+    try {
+      const tree = await files.size_tree(APP_DATA_PATH, 2);
+      if (id !== app_data_load) return;
+      app_data = (tree.children ?? []).filter((node) => node.children);
+      app_data_error = null;
+    } catch (error) {
+      if (id === app_data_load) app_data_error = error_message(error);
+    }
+  }
+
+  $effect(() => {
+    files.revision(APP_DATA_PATH);
+    untrack(() => void load_app_data());
+  });
 
   async function load_quota(): Promise<Quota> {
     const [estimate, persisted] = await Promise.all([navigator.storage.estimate(), navigator.storage.persisted()]);
@@ -46,7 +71,8 @@
   function refresh() {
     quota = load_quota();
     worker = load_worker();
-    local = local_storage_usage();
+    local = local_storage_size();
+    void load_app_data();
   }
 </script>
 
@@ -92,15 +118,20 @@
 
 <DiskUsage />
 
-<Section title="App storage" description="localStorage per app, {format_bytes(local_total)} in total.">
-  {#if local.length === 0}
+<Section title="App data" description="Each app's folder in {APP_DATA_PATH}, {format_bytes(app_data_total)} in total.">
+  {#if app_data_error}
+    {@render row("App data", app_data_error, false)}
+  {:else if app_data === null}
+    {@render loading()}
+  {:else if app_data.length === 0}
     <p class="px-4 py-3 text-ui text-foreground/65">Nothing stored</p>
   {:else}
-    {#each local as group (group.app_id)}
-      {@const name = group.app_id === null ? "Other keys" : (apps.get(group.app_id)?.name ?? group.app_id)}
-      {@render row(`${name} · ${group.keys} ${group.keys === 1 ? "key" : "keys"}`, format_bytes(group.bytes))}
+    {#each app_data as node (node.path)}
+      {@const count = node.children?.length ?? 0}
+      {@render row(`${apps.get(node.name)?.name ?? node.name} · ${count} ${count === 1 ? "file" : "files"}`, format_bytes(node.size))}
     {/each}
   {/if}
+  {@render row(`localStorage · ${local.keys} ${local.keys === 1 ? "key" : "keys"}`, format_bytes(local.bytes))}
 </Section>
 
 <Section title="Service worker" description="The worker that caches the OS for offline use.">

@@ -5,7 +5,6 @@ import {
   normalize_areas,
   parse_manifest,
   serialize_manifest,
-  storage_bytes,
   type BackupManifest,
 } from "./manifest";
 import { BackupError } from "./type";
@@ -60,9 +59,5 @@ describe("backup areas", () => {
 
   test("names the zip after the local day", () => {
     expect(backup_name(new Date(2026, 9, 5, 23, 59))).toBe("webos-backup-2026-10-05.zip");
-  });
-
-  test("counts storage in UTF-8 bytes", () => {
-    expect(storage_bytes({ "app.a.k": "é" })).toBe(7 + 2);
   });
 });

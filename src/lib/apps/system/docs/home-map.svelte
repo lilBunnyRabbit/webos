@@ -28,12 +28,12 @@
       const count = (test: (store: string, key: string) => boolean) => map.entries.filter((entry) => test(entry.store, entry.key)).length;
       const opfs = ["/etc", "/var/lib", "/home", "/tmp"].map((area) => ({
         label: area,
-        detail: `OPFS · ${count((store, key) => store === "OPFS" && opfs_area(key) === area)} entries`,
+        detail: `OPFS · ${count((store, key) => store === "OPFS" && opfs_area(key) === area) + (area === "/var/lib" ? map.app_keys.length : 0)} entries`,
         hash: "storage-map",
       }));
       const others = ["localStorage", "IndexedDB", "Cache Storage"].map((name) => ({
         label: name,
-        detail: `${count((store) => store.startsWith(name)) + (name === "localStorage" ? map.app_keys.length : 0)} entries`,
+        detail: `${count((store) => store.startsWith(name))} entries`,
         hash: "storage-map",
       }));
       stores = [...opfs, ...others];

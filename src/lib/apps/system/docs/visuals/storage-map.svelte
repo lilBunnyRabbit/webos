@@ -101,6 +101,22 @@
             <ul>
               {#each items as entry, index (index)}{@render row(entry)}{/each}
             </ul>
+            {#if area === "/var/lib" && map.app_keys.length > 0}
+              <details class="group border-y border-foreground/8">
+                <summary class="flex cursor-pointer items-center gap-2 px-3 py-2 text-2xs text-foreground/80 hover:bg-foreground/4">
+                  <span class={cn("transition-transform group-open:rotate-90")}>›</span>
+                  <span class="font-mono tabular-nums">{map.app_keys.length}</span> app keys in <span class="font-mono">/var/lib/apps/{"{id}"}/storage.json</span>
+                </summary>
+                <ul class="max-h-72 overflow-y-auto">
+                  {#each map.app_keys as item, index (index)}
+                    <li class="flex items-center gap-3 border-b border-foreground/6 px-3 py-1.5 last:border-b-0">
+                      <span class="min-w-0 flex-1 font-mono text-2xs break-all">{item.key}</span>
+                      <span class="truncate font-mono text-2xs text-foreground/65">{item.app}</span>
+                    </li>
+                  {/each}
+                </ul>
+              </details>
+            {/if}
           {/if}
         {/each}
       </div>
@@ -114,22 +130,6 @@
           <ul>
             {#each items as entry, index (index)}{@render row(entry)}{/each}
           </ul>
-          {#if store === "localStorage" && map.app_keys.length > 0}
-            <details class="group border-t border-foreground/8">
-              <summary class="flex cursor-pointer items-center gap-2 px-3 py-2 text-2xs text-foreground/80 hover:bg-foreground/4">
-                <span class={cn("transition-transform group-open:rotate-90")}>›</span>
-                <span class="font-mono tabular-nums">{map.app_keys.length}</span> app keys under <span class="font-mono">app.*</span>
-              </summary>
-              <ul class="max-h-72 overflow-y-auto">
-                {#each map.app_keys as item, index (index)}
-                  <li class="flex items-center gap-3 border-b border-foreground/6 px-3 py-1.5 last:border-b-0">
-                    <span class="min-w-0 flex-1 font-mono text-2xs break-all">{item.key}</span>
-                    <span class="truncate font-mono text-2xs text-foreground/65">{item.app}</span>
-                  </li>
-                {/each}
-              </ul>
-            </details>
-          {/if}
         </div>
       {/each}
     </div>

@@ -52,7 +52,7 @@ export class BackupService implements IBackupService {
   }
 
   async sizes(): Promise<Record<BackupArea, number>> {
-    return (await logic()).sizes(await this.files_service.get_root(), localStorage);
+    return (await logic()).sizes(await this.files_service.get_root());
   }
 
   async create(areas: BackupArea[]): Promise<BackupSaved | null> {
@@ -71,7 +71,6 @@ export class BackupService implements IBackupService {
         root: await this.files_service.get_root(),
         areas: picked,
         meta: { version: await this.release(), created },
-        storage: localStorage,
         save: async (blob: Blob) => {
           const name = await run.save_to_device(target, blob, suggested);
           this.last = { name, size: blob.size, areas: picked, at: created };

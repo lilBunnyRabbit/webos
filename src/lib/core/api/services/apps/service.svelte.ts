@@ -41,6 +41,7 @@ import { parse_recent, RECENT_PATH, serialize_recent, with_recent } from "./rece
 import { FAVOURITES_LOCK, FAVOURITES_PATH, moved_favourite, parse_favourites, serialize_favourites, with_favourite, without_favourite } from "./favourites";
 import { without_pin } from "../settings/taskbar";
 import { is_core_app } from "./helpers";
+import { copy_app_storage } from "./storage-copy";
 import { track_launch } from "$lib/core/utils/analytics";
 import { error_message } from "$lib/core/utils";
 import { on_idle } from "$lib/core/utils/idle";
@@ -123,6 +124,7 @@ export class AppsService implements IAppsService {
   }
 
   async init(): Promise<void> {
+    await copy_app_storage(this.files_service, localStorage).catch((error) => console.error("[AppsService] Couldn't move app storage", error));
     this.source = await this.catalogue_source();
     await this.boot_catalogue();
     await this.init_installed();

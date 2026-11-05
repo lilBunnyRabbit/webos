@@ -15,7 +15,6 @@ import {
   area_of,
   parse_manifest,
   serialize_manifest,
-  storage_bytes,
   type BackupManifest,
 } from "./manifest";
 import { BACKUP_AREAS, BackupArea, BackupError, type BackupAreaInfo } from "./type";
@@ -26,13 +25,12 @@ export interface OpenedBackup {
   archive: ZipArchive;
 }
 
-export async function sizes(root: FileSystemDirectoryHandle, storage: Storage): Promise<Record<BackupArea, number>> {
+export async function sizes(root: FileSystemDirectoryHandle): Promise<Record<BackupArea, number>> {
   const result = { files: 0, settings: 0, apps: 0 };
   for (const { area, path } of BACKUP_AREAS) {
     const directory = await get_directory_at(root, split_path(path));
     result[area] = directory ? await get_directory_size(directory) : 0;
   }
-  result.apps += storage_bytes(app_storage(storage));
   return result;
 }
 
@@ -58,17 +56,14 @@ export async function area_sources(root: FileSystemDirectoryHandle, info: Backup
   return sources;
 }
 
-export function manifest_source(
-  areas: BackupArea[],
-  meta: { version: string; created: Date },
-  storage: Storage
-): ZipSource {
+// App data lives in /var/lib/apps since 4.0 (ADR-094): `local_storage` stays in format 1, always empty.
+export function manifest_source(areas: BackupArea[], meta: { version: string; created: Date }): ZipSource {
   const manifest: BackupManifest = {
     format: BACKUP_FORMAT,
     version: meta.version,
     created: meta.created.toISOString(),
     areas,
-    local_storage: areas.includes(BackupArea.APPS) ? app_storage(storage) : {},
+    local_storage: {},
   };
   return { name: MANIFEST_NAME, data: new Blob([serialize_manifest(manifest)]), modified: meta.created };
 }

@@ -15,7 +15,7 @@ export interface BackupAreaInfo {
   prefix: string;
 }
 
-/** `/tmp` and caches never go in a backup. App data also covers the `app.*` localStorage keys. */
+/** `/tmp` and caches never go in a backup. */
 export const BACKUP_AREAS: readonly BackupAreaInfo[] = [
   { area: BackupArea.FILES, label: "Files", path: "/home", prefix: "home" },
   { area: BackupArea.SETTINGS, label: "Settings", path: "/etc", prefix: "etc" },
@@ -45,7 +45,6 @@ export interface BackupService extends IService {
   /** In this tab. */
   readonly last: BackupSaved | null;
 
-  /** App data counts its `app.*` localStorage too. */
   sizes(): Promise<Record<BackupArea, number>>;
   /**
    * Zips `areas` and saves it to the device: the save picker where there is one, else a download. The picker needs a

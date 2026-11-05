@@ -84,27 +84,19 @@ export function short_url(url: string): string {
   }
 }
 
-export interface LocalStorageGroup {
-  /** The `app.{id}.` owner, or `null` for keys outside app storage. */
-  app_id: string | null;
+export interface LocalStorageSize {
   keys: number;
   bytes: number;
 }
 
-/** localStorage size per app prefix. Strings are UTF-16, so two bytes per code unit. */
-export function local_storage_usage(): LocalStorageGroup[] {
-  const groups = new Map<string | null, LocalStorageGroup>();
+/** Strings are UTF-16, so two bytes per code unit. */
+export function local_storage_size(): LocalStorageSize {
+  let bytes = 0;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
-    if (key === null) continue;
-    const match = /^app\.([^.]+)\./.exec(key);
-    const app_id = match ? match[1] : null;
-    const group = groups.get(app_id) ?? { app_id, keys: 0, bytes: 0 };
-    group.keys++;
-    group.bytes += (key.length + (localStorage.getItem(key)?.length ?? 0)) * 2;
-    groups.set(app_id, group);
+    if (key !== null) bytes += (key.length + (localStorage.getItem(key)?.length ?? 0)) * 2;
   }
-  return [...groups.values()].sort((a, b) => b.bytes - a.bytes);
+  return { keys: localStorage.length, bytes };
 }
 
 export function format_ms(ms: number): string {

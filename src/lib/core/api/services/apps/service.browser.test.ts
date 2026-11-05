@@ -174,10 +174,9 @@ describe("AppsService installed apps", () => {
 
     await apps(kernel).uninstall("board");
     expect(apps(kernel).is_installed("board")).toBe(false);
-    expect(localStorage.getItem("app.board.zone")).toBe("UTC");
+    expect(await (await files.get_file("/var/lib/apps/board/storage.json"))?.text()).toContain('"zone": "UTC"');
 
     await apps(kernel).uninstall("notes", { data: true });
-    expect(localStorage.getItem("app.notes.view")).toBeNull();
     expect(await files.get_directory("/var/lib/apps/notes")).toBeNull();
     await vi.waitFor(async () => expect(await on_disk(kernel)).toEqual([]));
 

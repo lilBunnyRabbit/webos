@@ -29,3 +29,7 @@ ADR-003's `StorageHandle` keeps `get`, `set` and `persisted` in localStorage key
 - `file()` is async: an app shows its defaults until `ready`, or waits on it.
 - Many apps start on a generic `storage.json`. Splitting it into domain files later is an app-local change.
 - 4.0.0 is a major: `app-api.md` lists the break and how to move an app across.
+
+## Revisions
+
+- **2026-11-05, core build.** The copy is `copy_app_storage()` in `services/apps/storage-copy.ts`, awaited as the first step of `AppsService.init()`, so it also lands before the installed-list signals read `/var/lib/apps/` and in solo mode through the inherited `init()`. Apps are copied in parallel; one failing is logged and keeps its keys for the next boot. A `storage.json` that is missing, invalid or not an object counts as `{}`, so an unreadable file is replaced by the copied keys. No lock across tabs: two tabs booting at once write the same merge. Measured about 80 ms once for 70 apps of four keys, nothing after. Restore still removes the current `app.*` keys before setting an old backup's. Activity Monitor and Docs had no `get`/`set`/`persisted` uses of their own (only `storage.window()`), so nothing moved there; their views changed instead: Activity Monitor's "App storage" (localStorage per app) became "App data" (each `/var/lib/apps/{id}` folder's size, plus one row for what's left in localStorage), and the Docs storage map lists the app keys under `/var/lib` as `storage.json` keys.

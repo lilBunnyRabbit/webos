@@ -100,7 +100,7 @@ Types: `AppConfig`, `AppDefinition`, `AppManifest`, `AppMeta`, `AppAuthor`, `App
 | `AppContext` | `window_id`, `app_id`, `window`, `storage`, `achievements` (3.75) |
 | `AchievementsHandle` | `achieve(id)`, `progress(id, n)` (3.75, ADR-078) |
 | `WindowHandle` | Getters `id`, `is_focused`, `is_maximized`, `is_minimized`, `is_visible`, `bounds`. Controls `focus`, `close`, `minimize`, `maximize`, `restore`, `set_title`, `set_dirty`, `on_back`. Sheets `confirm`, `prompt`, `pick_file`, `pick_directory`, `pick_save`, `request` (another app's sheet, 3.75; resolves `null` on any failure, ADR-079) |
-| `StorageHandle` | `get`, `set`, `remove`, `persisted`, `window`, `file` |
+| `StorageHandle` | `remove`, `window`, `file`; `get`, `set` and `persisted` are going in 4.0 ([below](#moving-off-get-set-and-persisted-40)) |
 
 Option types: `ConfirmOptions`, `PromptOptions`, `PickOptions`, `SaveOptions`, `DirtyOptions`.
 
@@ -113,6 +113,18 @@ Outside the context, from `$lib/core/contexts/app`:
 | `app_data_path(app_id, name?)` | yes | `/var/lib/apps/{app_id}/{name}` |
 | `confirm_discard(win, name)` | yes | The "Discard changes to …?" sheet before New or Open |
 | `create_storage_handle(app_id, state)` | yes, for use outside a window | The only way shell code and background players reach `app.{id}.*` (Solitaire's commands, Soundboard's player). Pass `{}` as `state`; `window()` on such a handle keeps nothing |
+
+### Moving off `get`, `set` and `persisted` (4.0)
+
+4.0 removes `StorageHandle.get`, `set` and `persisted`, the localStorage half of app storage (ADR-094). Everything an app keeps goes through `file()`.
+
+- **The data is already there.** From 4.0 every boot, before any window opens, copies each `app.{id}.{key}` into `/var/lib/apps/{id}/storage.json` as `{ "{key}": value }` (the parsed JSON, or the raw string when a value isn't JSON) and deletes the key. A key that already exists in the file is overwritten.
+- **Keep the key names.** Read the same keys from that file: `storage.file("storage.json", defaults, Schema)`, one schema field per old key. No migration code.
+- **Every field gets `.catch(default)`,** so one bad value resets that field and not the whole file: `z.object({ best: z.number().catch(0), speed: z.enum(SPEEDS).catch("normal") })`.
+- **`file()` is async.** `value` holds the defaults until `ready`; write only after `ready` (nothing is saved before it), or wait for it before showing data that would flash.
+- **Another shape** (a domain file, several files): read `storage.json` once, write the new file, delete `storage.json`.
+- **Outside a window** (shell commands, players): `json_file(app_data_path(id, "storage.json"), defaults, Schema)` and `release()` when done.
+- **Direct `localStorage`** in an app moves the same way. Only values needed before OPFS is up stay in localStorage, and none of those belong to an app.
 
 The barrel exports nothing else. The window frame builds the context with `set_app_context` (`contexts/app/context`) and `create_window_handle` (`contexts/app/window-handle`), and `live_file`'s release delay is `LINGER_MS` (`contexts/app/live-file.svelte`). All three are internal and imported from their own modules.
 
@@ -274,7 +286,8 @@ Users' data sits in these, so moving one is a major even when no code signature 
 
 | Location | Written by | Format |
 |----------|------------|--------|
-| `localStorage` `app.{id}.{key}` | `storage.get/set/persisted`, `create_storage_handle` | JSON |
+| `localStorage` `app.{id}.{key}` | `storage.get/set/persisted`, `create_storage_handle`; going in 4.0, each boot moves them into `/var/lib/apps/{id}/storage.json` | JSON |
+| `/var/lib/apps/{id}/storage.json` | The boot copy (4.0, ADR-094), then the app through `storage.file` | `{ "{key}": value }`, one entry per former `app.{id}.{key}` |
 | `/var/lib/apps/{id}/` | `storage.file`, `json_file(app_data_path(...))` | Whatever the app writes |
 | `/var/lib/apps/{id}/achievements.json` | AchievementsService | Version 1, `{ unlocked: { [id]: epoch_ms }, progress: { [id]: number } }`; kept by an uninstall with data (3.75, ADR-078) |
 | `/var/lib/games/plays.json` | Games kit | Version 1, `PlaysSchema` |

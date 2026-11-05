@@ -4,7 +4,7 @@ import { Method, type StreamOptions } from "$lib/core/utils/zip/format";
 import { ZipWriter } from "$lib/core/utils/zip/write";
 import type { TaskContext } from "../tasks/type";
 import { area_sources, clear_stage, manifest_source, stage_area, swap_staged, STAGE_PATH, type OpenedBackup } from "./backup";
-import { app_storage, area_of } from "./manifest";
+import { area_of } from "./manifest";
 import { BACKUP_AREAS, BackupArea, type BackupAreaInfo } from "./type";
 
 const plural = (count: number, word: string) => `${count} ${count === 1 ? word : `${word}s`}`;
@@ -26,7 +26,6 @@ export interface CreatePlan {
   root: FileSystemDirectoryHandle;
   areas: BackupArea[];
   meta: { version: string; created: Date };
-  storage: Storage;
   save: (blob: Blob) => Promise<void>;
 }
 
@@ -42,14 +41,13 @@ export function backup_task(plan: CreatePlan, context: TaskContext): ExecutableT
         const stream = bytes_stream(context, info.label, total, (value) => this.setProgress(value));
         for (const source of sources) await writer.add(source, stream);
         this.logger.info(`Packed ${plural(sources.filter((source) => !source.directory).length, "file")} · ${format_bytes(total)}`);
-        if (info.area === BackupArea.APPS) this.logger.info(`${plural(Object.keys(app_storage(plan.storage)).length, "app storage key")}`);
       },
     })();
   const save = createTask<void, void>({
     name: "Save to device",
     async execute() {
       context.message("Saving to the device");
-      await writer.add(manifest_source(plan.areas, plan.meta, plan.storage));
+      await writer.add(manifest_source(plan.areas, plan.meta));
       const blob = writer.finish();
       await plan.save(blob);
       context.message(null);

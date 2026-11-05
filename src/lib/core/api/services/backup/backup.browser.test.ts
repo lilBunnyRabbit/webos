@@ -36,7 +36,7 @@ async function build_backup(areas: BackupArea[]): Promise<Blob> {
   for (const info of BACKUP_AREAS.filter(({ area }) => areas.includes(area))) {
     for (const source of await area_sources(await root(), info)) await writer.add(source);
   }
-  await writer.add(manifest_source(areas, meta, localStorage));
+  await writer.add(manifest_source(areas, meta));
   return writer.finish();
 }
 
@@ -64,14 +64,13 @@ afterEach(() => {
 });
 
 describe("backup", () => {
-  test("restores every area it holds, app storage included, and nothing from /tmp", async () => {
+  test("restores every area it holds and nothing from /tmp", async () => {
     await seed("/home/Documents/a.txt", "alpha");
     await files.create_directory(await files.get_directory("/home"), "Empty");
     await seed("/etc/settings.json", '{"theme":"dark"}');
     await seed("/var/lib/session/session.json", "[1]");
     await seed("/tmp/scratch.txt", "temp");
     localStorage.setItem("app.notes.font", "mono");
-    localStorage.setItem("kernel.test", "outside");
 
     const blob = await build_backup(["files", "settings", "apps"]);
 
@@ -79,8 +78,6 @@ describe("backup", () => {
     await seed("/home/Documents/new.txt", "added after the backup");
     await seed("/etc/settings.json", "{}");
     await seed("/var/lib/session/session.json", "[2]");
-    localStorage.setItem("app.notes.font", "serif");
-    localStorage.setItem("app.later.key", "added after the backup");
 
     await restore(blob);
 
@@ -91,13 +88,23 @@ describe("backup", () => {
     expect(await read("/var/lib/session/session.json")).toBe("[1]");
     expect(await read("/tmp/scratch.txt")).toBe("temp");
     expect(await files.get_directory(STAGE_PATH)).toBeNull();
-    expect(localStorage.getItem("app.notes.font")).toBe("mono");
-    expect(localStorage.getItem("app.later.key")).toBeNull();
-    expect(localStorage.getItem("kernel.test")).toBe("outside");
 
     const opened = await open_backup(blob);
-    expect(opened.manifest).toMatchObject({ format: 1, version: "0.37.0", areas: ["files", "settings", "apps"] });
+    expect(opened.manifest).toMatchObject({ format: 1, version: "0.37.0", areas: ["files", "settings", "apps"], local_storage: {} });
     expect(opened.archive.entries.some((entry) => entry.name.startsWith("tmp/"))).toBe(false);
+  });
+
+  test("an older backup's app storage keys come back for the next boot to copy in", async () => {
+    const manifest = { format: 1, version: "3.0.0", created: meta.created.toISOString(), areas: ["apps"], local_storage: { "app.notes.font": '"mono"' } };
+    const blob = await write_zip([{ name: "backup.json", data: new Blob([JSON.stringify(manifest)]) }], { method: Method.STORE });
+    localStorage.setItem("app.later.key", "1");
+    localStorage.setItem("kernel.test", "outside");
+
+    await restore(blob);
+
+    expect(localStorage.getItem("app.notes.font")).toBe('"mono"');
+    expect(localStorage.getItem("app.later.key")).toBeNull();
+    expect(localStorage.getItem("kernel.test")).toBe("outside");
   });
 
   test("leaves areas the backup doesn't hold alone", async () => {
@@ -174,10 +181,9 @@ describe("backup", () => {
     await expect(open_backup(blob)).rejects.toThrow(BackupError);
   });
 
-  test("measures each area, app storage counted under App data", async () => {
+  test("measures each area", async () => {
     await seed("/home/a.txt", "12345");
-    await seed("/etc/settings.json", "123");
-    localStorage.setItem("app.x.k", "v");
-    expect(await sizes(await root(), localStorage)).toMatchObject({ files: 5, apps: "app.x.k".length + 1 });
+    await seed("/var/lib/apps/x/storage.json", "123");
+    expect(await sizes(await root())).toMatchObject({ files: 5, apps: 3 });
   });
 });
