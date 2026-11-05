@@ -5,7 +5,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { Export as ExportIcon, FolderOpen as FolderOpenIcon } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { run_job } from "./job";
   import { page_image_name } from "./naming";
   import { PDF_ACCEPT, write_into } from "./pdf-files";
@@ -33,11 +33,7 @@
     { value: "4", label: "4× · 288 dpi" },
   ];
 
-  const settings = storage.persisted(
-    "export",
-    { format: "png" as "png" | "jpg", scale: "2" },
-    z.object({ format: z.enum(["png", "jpg"]), scale: z.enum(["1", "2", "3", "4"]) })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   let all_pages = $state(true);
   let ranges = $state("1");
   let busy = $state(false);
@@ -71,7 +67,7 @@
   });
 
   const pixel_size = $derived(
-    first_size ? `${Math.round(first_size.width * Number(settings.value.scale))} × ${Math.round(first_size.height * Number(settings.value.scale))} px` : ""
+    first_size ? `${Math.round(first_size.width * Number(data.value.export.scale))} × ${Math.round(first_size.height * Number(data.value.export.scale))} px` : ""
   );
 
   async function pick() {
@@ -85,7 +81,7 @@
     if (!folder) return;
     const { document, source, count } = loaded;
     const list = pages.list;
-    const { format, scale } = settings.value;
+    const { format, scale } = data.value.export;
     const type = format === "png" ? "image/png" : "image/jpeg";
     busy = true;
     await run_job(
@@ -129,14 +125,14 @@
         </div>
         <div class="flex min-w-0 flex-1 flex-col gap-6">
           <Group title="Images">
-            <SettingRow label="Format" description={settings.value.format === "png" ? "Sharp, larger files." : "Smaller files, slight blur on text."}>
+            <SettingRow label="Format" description={data.value.export.format === "png" ? "Sharp, larger files." : "Smaller files, slight blur on text."}>
               {#snippet children({ id })}
-                <Segmented {id} size="sm" label="Format" options={[...FORMATS]} bind:value={settings.value.format} />
+                <Segmented {id} size="sm" label="Format" options={[...FORMATS]} bind:value={data.value.export.format} />
               {/snippet}
             </SettingRow>
             <SettingRow label="Resolution" description={pixel_size ? `Page 1 becomes ${pixel_size}.` : undefined}>
               {#snippet children({ id })}
-                <Select {id} size="sm" class="w-36" options={SCALES} bind:value={settings.value.scale} />
+                <Select {id} size="sm" class="w-36" options={SCALES} bind:value={data.value.export.scale} />
               {/snippet}
             </SettingRow>
           </Group>
@@ -162,7 +158,7 @@
   <StatusBar>
     {#if loaded}
       <span>{pages.list.length} of {loaded.count} {loaded.count === 1 ? "page" : "pages"}</span>
-      <span>{settings.value.format.toUpperCase()} · {settings.value.scale}×</span>
+      <span>{data.value.export.format.toUpperCase()} · {data.value.export.scale}×</span>
     {:else}
       <span>No PDF</span>
     {/if}

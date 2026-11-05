@@ -5,40 +5,25 @@
   import { paint } from "$kit/utils/image";
   import { FloppyDisk as FloppyDiskIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
-  import { z } from "zod";
   import {
-    DEFAULT_OUTPUT,
-    DEFAULT_SPEC,
     Gradient,
     MAX_SIDE,
     Pattern,
+    SizeBy,
     TestFormat,
     plan_output,
     test_image_name,
     test_image_schema,
-    test_output_schema,
     type TestImageSpec,
   } from "./test-image";
   import { generate_test_image, pictures_folder } from "./test-image-job";
+  import { empty_storage, storage_schema } from "./storage";
   import { render_canvas } from "./test-image-render";
 
   const { picker }: { picker: Snippet } = $props();
   const { app_id, window: win, storage } = get_app_context();
 
-  const SizeBy = { DIMENSIONS: "dimensions", BYTES: "bytes" } as const;
-  type SizeBy = (typeof SizeBy)[keyof typeof SizeBy];
-
-  const settings = storage.persisted(
-    "test-image",
-    { spec: DEFAULT_SPEC, format: DEFAULT_OUTPUT.format, quality: DEFAULT_OUTPUT.quality, by: SizeBy.DIMENSIONS as SizeBy, target: "500MB" },
-    z.object({
-      spec: test_image_schema,
-      format: test_output_schema.shape.format,
-      quality: test_output_schema.shape.quality,
-      by: z.enum([SizeBy.DIMENSIONS, SizeBy.BYTES]),
-      target: z.string(),
-    })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   const PATTERNS = [
     { value: Pattern.RINGS, label: "Pixel rings" },
@@ -72,24 +57,24 @@
     { value: "32x32", label: "Icon · 32" },
   ];
 
-  const spec = $derived(settings.value.spec);
-  const target = $derived(settings.value.by === SizeBy.BYTES ? parse_bytes(settings.value.target) : null);
-  const output = $derived({ format: settings.value.format, quality: settings.value.quality, target });
+  const spec = $derived(data.value["test-image"].spec);
+  const target = $derived(data.value["test-image"].by === SizeBy.BYTES ? parse_bytes(data.value["test-image"].target) : null);
+  const output = $derived({ format: data.value["test-image"].format, quality: data.value["test-image"].quality, target });
   const plan = $derived(
-    settings.value.by === SizeBy.BYTES && target === null
+    data.value["test-image"].by === SizeBy.BYTES && target === null
       ? ({ ok: false, error: "Give a size like 500MB or 2GB" } as const)
       : plan_output(spec, output)
   );
   const sized = $derived<TestImageSpec>(plan.ok ? { ...spec, width: plan.width, height: plan.height } : spec);
-  const preview = $derived(render_canvas(sized, settings.value.format, Math.min(1, 1024 / Math.max(sized.width, sized.height))));
+  const preview = $derived(render_canvas(sized, data.value["test-image"].format, Math.min(1, 1024 / Math.max(sized.width, sized.height))));
 
   const uses_cell = $derived(spec.pattern === Pattern.RINGS || spec.pattern === Pattern.CHECKER);
   const uses_colors = $derived(spec.pattern === Pattern.CHECKER || spec.pattern === Pattern.GRADIENT || spec.pattern === Pattern.SOLID);
-  const has_quality = $derived(settings.value.format === TestFormat.JPEG || settings.value.format === TestFormat.WEBP);
+  const has_quality = $derived(data.value["test-image"].format === TestFormat.JPEG || data.value["test-image"].format === TestFormat.WEBP);
 
   function update(patch: Partial<TestImageSpec>) {
-    const next = test_image_schema.safeParse({ ...settings.value.spec, ...patch });
-    if (next.success) settings.value.spec = next.data;
+    const next = test_image_schema.safeParse({ ...data.value["test-image"].spec, ...patch });
+    if (next.success) data.value["test-image"].spec = next.data;
   }
 
   const number_of = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
@@ -108,7 +93,7 @@
     if (!plan.ok) return;
     const folder = await pictures_folder().catch(() => "/home");
     const path = await win.pick_save({
-      name: test_image_name(spec, plan.width, plan.height, settings.value.format),
+      name: test_image_name(spec, plan.width, plan.height, data.value["test-image"].format),
       accept: ["image/*"],
       start_path: folder,
       title: "Save test image as",
@@ -143,7 +128,7 @@
   <Toolbar>
     {@render picker()}
     <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium">Test image</span>
-    <Select size="sm" class="w-auto" aria-label="Format" options={FORMATS} bind:value={settings.value.format} />
+    <Select size="sm" class="w-auto" aria-label="Format" options={FORMATS} bind:value={data.value["test-image"].format} />
     <Button variant="primary" size="sm" disabled={!plan.ok} onclick={generate}><FloppyDiskIcon weight="bold" /> Generate…</Button>
   </Toolbar>
 
@@ -155,16 +140,16 @@
           size="sm"
           label="Size by"
           class="self-start"
-          bind:value={settings.value.by}
+          bind:value={data.value["test-image"].by}
           options={[
             { value: SizeBy.DIMENSIONS, label: "Dimensions" },
             { value: SizeBy.BYTES, label: "File size" },
           ]}
         />
-        {#if settings.value.by === SizeBy.BYTES}
+        {#if data.value["test-image"].by === SizeBy.BYTES}
           <label class="flex items-center justify-between gap-2 text-ui">
             Exact size
-            <Input size="sm" class="w-28 font-mono" placeholder="500MB" bind:value={settings.value.target} />
+            <Input size="sm" class="w-28 font-mono" placeholder="500MB" bind:value={data.value["test-image"].target} />
           </label>
           <p class="px-0.5 text-2xs text-foreground/65">Uncompressed PNG or BMP, padded to the byte. Width and height below set the shape.</p>
         {/if}
@@ -218,7 +203,7 @@
           <label class="flex items-center justify-between gap-2 text-ui">
             Quality
             <span class="flex items-center gap-1.5">
-              <Input type="number" size="sm" min={1} max={100} class="w-24 font-mono tabular-nums" bind:value={settings.value.quality} />
+              <Input type="number" size="sm" min={1} max={100} class="w-24 font-mono tabular-nums" bind:value={data.value["test-image"].quality} />
               <span class="w-4 font-mono text-2xs text-foreground/80">%</span>
             </span>
           </label>

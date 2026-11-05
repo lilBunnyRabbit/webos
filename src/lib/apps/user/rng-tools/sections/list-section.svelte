@@ -5,16 +5,15 @@
   import { Shuffle as ShuffleIcon } from "phosphor-svelte";
   import { as_number } from "../form";
   import {
-    DEFAULT_LIST_SETTINGS,
     ListMode,
     check_list,
     format_list_result,
-    list_settings_schema,
     parse_lines,
     run_list,
     type ListResult,
     type ListSettings,
   } from "../list";
+  import { empty_storage, storage_schema } from "../storage";
 
   const MODE_OPTIONS = [
     { value: ListMode.PICK_ONE, label: "Pick one" },
@@ -30,15 +29,15 @@
   };
 
   const { storage } = get_app_context();
-  const settings = storage.persisted<ListSettings>("list", DEFAULT_LIST_SETTINGS, list_settings_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let result = $state.raw<ListResult | null>(null);
 
-  const items = $derived(parse_lines(settings.value.text));
-  const checked = $derived(check_list(items, settings.value));
+  const items = $derived(parse_lines(data.value.list.text));
+  const checked = $derived(check_list(items, data.value.list));
 
   function update(patch: Partial<ListSettings>) {
-    settings.value = { ...settings.value, ...patch };
+    data.value.list = { ...data.value.list, ...patch };
   }
 
   function run() {
@@ -53,28 +52,28 @@
       aria-label="Entries"
       rows={8}
       placeholder={"Ana\nBo\nCai"}
-      bind:value={() => settings.value.text, (text) => update({ text: text ?? "" })}
+      bind:value={() => data.value.list.text, (text) => update({ text: text ?? "" })}
     />
     <p class="font-mono text-2xs text-foreground/65 tabular-nums">{items.length} {items.length === 1 ? "entry" : "entries"}</p>
   </div>
 </Section>
 
 <div class="flex flex-col gap-3">
-  <Segmented label="What to do" class="max-w-full self-start overflow-x-auto" options={MODE_OPTIONS} bind:value={() => settings.value.mode, (mode) => update({ mode })} />
+  <Segmented label="What to do" class="max-w-full self-start overflow-x-auto" options={MODE_OPTIONS} bind:value={() => data.value.list.mode, (mode) => update({ mode })} />
 
   <div class="flex flex-wrap items-center gap-3">
-    {#if settings.value.mode === ListMode.PICK_MANY}
+    {#if data.value.list.mode === ListMode.PICK_MANY}
       <label class="flex items-center gap-2 text-ui">
         How many
-        <Input type="number" min="1" step="1" size="sm" class="w-20" bind:value={() => settings.value.pick_count, (value) => update({ pick_count: as_number(value) })} />
+        <Input type="number" min="1" step="1" size="sm" class="w-20" bind:value={() => data.value.list.pick_count, (value) => update({ pick_count: as_number(value) })} />
       </label>
-    {:else if settings.value.mode === ListMode.TEAMS}
+    {:else if data.value.list.mode === ListMode.TEAMS}
       <label class="flex items-center gap-2 text-ui">
         Teams
-        <Input type="number" min="2" step="1" size="sm" class="w-20" bind:value={() => settings.value.team_count, (value) => update({ team_count: as_number(value) })} />
+        <Input type="number" min="2" step="1" size="sm" class="w-20" bind:value={() => data.value.list.team_count, (value) => update({ team_count: as_number(value) })} />
       </label>
     {/if}
-    <Button variant="primary" disabled={!checked.ok} onclick={run}><ShuffleIcon weight="bold" />{ACTION_LABELS[settings.value.mode]}</Button>
+    <Button variant="primary" disabled={!checked.ok} onclick={run}><ShuffleIcon weight="bold" />{ACTION_LABELS[data.value.list.mode]}</Button>
     {#if !checked.ok && items.length > 0}<p role="alert" class="text-ui text-error">{checked.error}</p>{/if}
   </div>
 </div>

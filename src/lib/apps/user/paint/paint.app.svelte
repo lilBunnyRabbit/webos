@@ -47,7 +47,7 @@
   import { clamp_side, fit_zoom, parse_hex, push_recent, step_zoom, to_canvas_point, to_hex, type Point, type Rect } from "./shapes";
   import {
     Background,
-    FILL_MODES,
+    empty_storage,
     FillMode,
     TOOL_KEYS,
     TOOL_LABELS,
@@ -55,6 +55,7 @@
     Tool,
     is_freehand,
     is_shape,
+    storage_schema,
     text_font_size,
     uses_size,
   } from "./tools";
@@ -69,16 +70,8 @@
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
-  const HEX = z.string().regex(/^#[0-9a-f]{6}$/i);
-  const tool = storage.persisted<Tool>("tool", Tool.BRUSH, z.enum(TOOLS));
-  const size = storage.persisted("size", 4, z.number().int().min(1).max(100));
-  const tolerance = storage.persisted("tolerance", 10, z.number().min(0).max(100));
-  const fill_mode = storage.persisted<FillMode>("fill_mode", FillMode.OUTLINE, z.enum(FILL_MODES));
-  const primary = storage.persisted("primary", "#000000", HEX);
-  const secondary = storage.persisted("secondary", "#ffffff", HEX);
-  const recent = storage.persisted<string[]>("recent", [], z.array(HEX).max(8));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const panel_open = storage.window("panel_open", true, z.boolean());
-  const saved_new = storage.persisted("saved_new", 0, z.number().int().nonnegative());
 
   const DEFAULT_WIDTH = 800;
   const DEFAULT_HEIGHT = 600;
@@ -233,7 +226,7 @@
   }
 
   function remember(color: string) {
-    recent.value = push_recent(recent.value, color);
+    data.value.recent = push_recent(data.value.recent, color);
   }
 
   function blank(next_width: number, next_height: number, background: Background) {
@@ -334,8 +327,8 @@
       if (changed) achievements.achieve("first-save");
       if (over_itself) achievements.achieve("touch-up");
       if (fresh) {
-        saved_new.value += 1;
-        achievements.progress("saves-10", saved_new.value);
+        data.value.saved_new += 1;
+        achievements.progress("saves-10", data.value.saved_new);
       }
       return true;
     } catch (reason) {
@@ -374,14 +367,14 @@
   }
 
   function brush_width(event: PointerEvent): number {
-    return event.pointerType === "pen" && event.pressure > 0 ? Math.max(1, size.value * event.pressure * 2) : size.value;
+    return event.pointerType === "pen" && event.pressure > 0 ? Math.max(1, data.value.size * event.pressure * 2) : data.value.size;
   }
 
   function freehand(from: Point, to: Point, event: PointerEvent, active: Stroke) {
     const ctx = context();
     if (active.tool === Tool.PENCIL) {
-      stamp_pencil(ctx, floor(from), floor(to), size.value, active.color);
-      active.bounds = union(active.bounds, segment_bounds(floor(from), floor(to), size.value + 1));
+      stamp_pencil(ctx, floor(from), floor(to), data.value.size, active.color);
+      active.bounds = union(active.bounds, segment_bounds(floor(from), floor(to), data.value.size + 1));
     } else {
       const line_width = brush_width(event);
       stroke_brush(ctx, from, to, line_width, active.color, active.tool === Tool.ERASER);
@@ -393,24 +386,24 @@
     const ctx = overlay_context();
     ctx.clearRect(0, 0, width, height);
     draw_shape(ctx, active.tool, active.start, active.last, active.constrain, {
-      size: size.value,
+      size: data.value.size,
       stroke: active.color,
       fill: active.other,
-      mode: fill_mode.value,
+      mode: data.value.fill_mode,
     });
   }
 
-  function pick_color(point: Point, target: { value: string }) {
+  function pick_color(point: Point, target: "primary" | "secondary") {
     const { x, y } = floor(point);
     if (x < 0 || y < 0 || x >= width || y >= height) return;
     const [r, g, b] = context().getImageData(x, y, 1, 1).data;
-    target.value = to_hex(r, g, b);
+    data.value[target] = to_hex(r, g, b);
   }
 
   function fill_at(point: Point, color: string) {
     const { x, y } = floor(point);
     const image = snapshot();
-    if (!flood_fill(image, x, y, parse_hex(color), tolerance.value)) return;
+    if (!flood_fill(image, x, y, parse_hex(color), data.value.tolerance)) return;
     const changed = committed && changed_bounds(committed, image);
     if (changed) context().putImageData(image, 0, 0, changed.x, changed.y, changed.width, changed.height);
     commit(changed);
@@ -424,7 +417,7 @@
     ctx.save();
     ctx.fillStyle = color;
     ctx.textBaseline = "top";
-    ctx.font = `${text_font_size(size.value)}px sans-serif`;
+    ctx.font = `${text_font_size(data.value.size)}px sans-serif`;
     const x = Math.floor(point.x);
     const y = Math.floor(point.y);
     ctx.fillText(text, x, y);
@@ -440,7 +433,7 @@
   }
 
   function on_pointerdown(event: PointerEvent) {
-    const active_tool = tool.value;
+    const active_tool = data.value.tool;
     if (stroke || pan || loading) return;
     if (active_tool === Tool.HAND) {
       if (event.pointerType === "touch") return;
@@ -452,12 +445,12 @@
     event.preventDefault();
 
     const use_secondary = event.button === 2;
-    const color = use_secondary ? secondary.value : primary.value;
-    const other = use_secondary ? primary.value : secondary.value;
+    const color = use_secondary ? data.value.secondary : data.value.primary;
+    const other = use_secondary ? data.value.primary : data.value.secondary;
     const point = canvas_point(event);
 
     if (active_tool === Tool.FILL) return fill_at(point, color);
-    if (active_tool === Tool.PICKER) return pick_color(point, use_secondary ? secondary : primary);
+    if (active_tool === Tool.PICKER) return pick_color(point, use_secondary ? "secondary" : "primary");
     if (active_tool === Tool.TEXT) return void place_text(point, color);
 
     overlay_canvas!.setPointerCapture(event.pointerId);
@@ -498,12 +491,12 @@
     if (is_shape(active.tool)) {
       overlay_context().clearRect(0, 0, width, height);
       draw_shape(context(), active.tool, active.start, active.last, active.constrain, {
-        size: size.value,
+        size: data.value.size,
         stroke: active.color,
         fill: active.other,
-        mode: fill_mode.value,
+        mode: data.value.fill_mode,
       });
-      active.bounds = shape_bounds(active.tool, active.start, active.last, active.constrain, size.value);
+      active.bounds = shape_bounds(active.tool, active.start, active.last, active.constrain, data.value.size);
     }
     commit(active.bounds);
     if (active.tool !== Tool.ERASER) remember(active.color);
@@ -520,14 +513,14 @@
   }
 
   function swap_colors() {
-    [primary.value, secondary.value] = [secondary.value, primary.value];
+    [data.value.primary, data.value.secondary] = [data.value.secondary, data.value.primary];
   }
 
   async function pick_from_screen() {
     if (!EyeDropperApi) return;
     try {
       const result = await new EyeDropperApi().open();
-      primary.value = css_to_hex(result.sRGBHex);
+      data.value.primary = css_to_hex(result.sRGBHex);
     } catch {
       // Esc cancels the eyedropper with an AbortError; nothing to report.
     }
@@ -557,7 +550,7 @@
       scoped("save", "mod+s", "Save", save),
       scoped("save-as", "mod+shift+s", "Save as…", save_as),
       scoped("swap", "x", "Swap colours", swap_colors),
-      ...TOOLS.map((item) => scoped(`tool.${item}`, TOOL_KEYS[item], TOOL_LABELS[item], () => (tool.value = item))),
+      ...TOOLS.map((item) => scoped(`tool.${item}`, TOOL_KEYS[item], TOOL_LABELS[item], () => (data.value.tool = item))),
     ];
     return () => disposers.forEach((dispose) => dispose());
   });
@@ -617,10 +610,10 @@
           <IconButton
             label="{TOOL_LABELS[item]} ({TOOL_KEYS[item].toUpperCase()})"
             size="sm"
-            pressed={tool.value === item}
-            onclick={() => (tool.value = item)}
+            pressed={data.value.tool === item}
+            onclick={() => (data.value.tool = item)}
           >
-            <Icon weight={tool.value === item ? "fill" : "bold"} />
+            <Icon weight={data.value.tool === item ? "fill" : "bold"} />
           </IconButton>
         {/each}
       </div>
@@ -628,11 +621,11 @@
       <div class="flex flex-wrap items-center gap-1.5">
         <label class="color-well" title="Primary colour (left click)">
           <span class="sr-only">Primary colour</span>
-          <input type="color" bind:value={primary.value} onchange={() => remember(primary.value)} />
+          <input type="color" bind:value={data.value.primary} onchange={() => remember(data.value.primary)} />
         </label>
         <label class="color-well" title="Secondary colour (right click)">
           <span class="sr-only">Secondary colour</span>
-          <input type="color" bind:value={secondary.value} onchange={() => remember(secondary.value)} />
+          <input type="color" bind:value={data.value.secondary} onchange={() => remember(data.value.secondary)} />
         </label>
         <IconButton label="Swap colours (X)" size="sm" onclick={swap_colors}><ArrowsLeftRightIcon weight="bold" /></IconButton>
         {#if EyeDropperApi}
@@ -651,11 +644,11 @@
                 style:background-color={color}
                 title="{color} · click for primary, right-click for secondary"
                 aria-label="Use {color}"
-                aria-pressed={color === primary.value.toLowerCase()}
-                onclick={() => (primary.value = color)}
+                aria-pressed={color === data.value.primary.toLowerCase()}
+                onclick={() => (data.value.primary = color)}
                 oncontextmenu={(event) => {
                   event.preventDefault();
-                  secondary.value = color;
+                  data.value.secondary = color;
                 }}
               ></button>
             {/each}
@@ -666,19 +659,19 @@
       <div bind:this={swatch_group} class="contents">
         {@render swatch_row("Colours", swatches)}
       </div>
-      {#if recent.value.length > 0}
-        {@render swatch_row("Recent", recent.value)}
+      {#if data.value.recent.length > 0}
+        {@render swatch_row("Recent", data.value.recent)}
       {/if}
 
-      {#if uses_size(tool.value)}
+      {#if uses_size(data.value.tool)}
         <label class="flex items-center gap-2 text-ui text-foreground/80">
-          {tool.value === Tool.TEXT ? "Text" : "Size"}
-          <Slider min={1} max={100} bind:value={size.value} size="sm" class="flex-1" />
-          <span class="w-8 text-right font-mono text-2xs tabular-nums">{tool.value === Tool.TEXT ? text_font_size(size.value) : size.value}</span>
+          {data.value.tool === Tool.TEXT ? "Text" : "Size"}
+          <Slider min={1} max={100} bind:value={data.value.size} size="sm" class="flex-1" />
+          <span class="w-8 text-right font-mono text-2xs tabular-nums">{data.value.tool === Tool.TEXT ? text_font_size(data.value.size) : data.value.size}</span>
         </label>
       {/if}
 
-      {#if tool.value === Tool.RECTANGLE || tool.value === Tool.ELLIPSE}
+      {#if data.value.tool === Tool.RECTANGLE || data.value.tool === Tool.ELLIPSE}
         <Segmented
           label="Shape style"
           options={[
@@ -686,15 +679,15 @@
             { value: FillMode.FILL, label: "Fill" },
             { value: FillMode.BOTH, label: "Both" },
           ]}
-          bind:value={fill_mode.value}
+          bind:value={data.value.fill_mode}
         />
       {/if}
 
-      {#if tool.value === Tool.FILL}
+      {#if data.value.tool === Tool.FILL}
         <label class="flex items-center gap-2 text-ui text-foreground/80" title="How different a colour may be and still get filled">
           Tolerance
-          <Slider min={0} max={100} bind:value={tolerance.value} size="sm" class="flex-1" />
-          <span class="w-8 text-right font-mono text-2xs tabular-nums">{tolerance.value}%</span>
+          <Slider min={0} max={100} bind:value={data.value.tolerance} size="sm" class="flex-1" />
+          <span class="w-8 text-right font-mono text-2xs tabular-nums">{data.value.tolerance}%</span>
         </label>
       {/if}
 
@@ -714,7 +707,7 @@
         <canvas bind:this={doc_canvas} class={["absolute inset-0 size-full", zoom >= 2 && "[image-rendering:pixelated]"]}></canvas>
         <canvas
           bind:this={overlay_canvas}
-          class={["absolute inset-0 size-full", zoom >= 2 && "[image-rendering:pixelated]", tool.value === Tool.HAND ? "cursor-grab touch-auto" : "cursor-crosshair touch-none"]}
+          class={["absolute inset-0 size-full", zoom >= 2 && "[image-rendering:pixelated]", data.value.tool === Tool.HAND ? "cursor-grab touch-auto" : "cursor-crosshair touch-none"]}
           onpointerdown={on_pointerdown}
           onpointermove={on_pointermove}
           onpointerleave={() => (cursor = null)}
@@ -732,7 +725,7 @@
     <span>{width} × {height} px</span>
     <span>{cursor ? `${cursor.x}, ${cursor.y}` : "–"}</span>
     <span class="hidden @sm:inline">{Math.round(zoom * 100)}%</span>
-    <span class="hidden @md:inline">{TOOL_LABELS[tool.value]}</span>
+    <span class="hidden @md:inline">{TOOL_LABELS[data.value.tool]}</span>
   </StatusBar>
 </div>
 

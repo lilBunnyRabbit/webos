@@ -3,32 +3,28 @@
   import { Button, Section } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { ArrowCounterClockwise as ResetIcon, Coin as CoinIcon } from "phosphor-svelte";
-  import { z } from "zod";
   import { random_bool } from "../random";
+  import { empty_storage, storage_schema } from "../storage";
 
   const RECENT_LIMIT = 30;
 
   const { storage } = get_app_context();
-  const tally = storage.persisted(
-    "coin.tally",
-    { heads: 0, tails: 0 },
-    z.object({ heads: z.number().int().nonnegative(), tails: z.number().int().nonnegative() })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let recent = $state.raw<boolean[]>([]);
 
-  const total = $derived(tally.value.heads + tally.value.tails);
+  const total = $derived(data.value["coin.tally"].heads + data.value["coin.tally"].tails);
   const latest = $derived(recent[0]);
   const counts = $derived([
-    { label: "Heads", count: tally.value.heads, share: true },
-    { label: "Tails", count: tally.value.tails, share: true },
+    { label: "Heads", count: data.value["coin.tally"].heads, share: true },
+    { label: "Tails", count: data.value["coin.tally"].tails, share: true },
     { label: "Total", count: total, share: false },
   ]);
 
   function flip(times: number) {
     const flips = Array.from({ length: times }, () => random_bool());
     const heads = flips.filter(Boolean).length;
-    tally.value = { heads: tally.value.heads + heads, tails: tally.value.tails + times - heads };
+    data.value["coin.tally"] = { heads: data.value["coin.tally"].heads + heads, tails: data.value["coin.tally"].tails + times - heads };
     recent = [...flips.reverse(), ...recent].slice(0, RECENT_LIMIT);
   }
 
@@ -64,7 +60,7 @@
 
 <Section title="Tally" description="Every flip, kept until you reset it.">
   {#snippet actions()}
-    <Button size="sm" variant="quiet" disabled={total === 0} onclick={() => (tally.value = { heads: 0, tails: 0 })}><ResetIcon weight="bold" />Reset</Button>
+    <Button size="sm" variant="quiet" disabled={total === 0} onclick={() => (data.value["coin.tally"] = { heads: 0, tails: 0 })}><ResetIcon weight="bold" />Reset</Button>
   {/snippet}
   <dl class="grid grid-cols-3 divide-x divide-foreground/8 text-center">
     {#each counts as { label, count, share } (label)}

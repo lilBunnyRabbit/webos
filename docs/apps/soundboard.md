@@ -51,7 +51,7 @@ A pad's `color` is a theme token name (`primary`, `secondary`, `tertiary`, `acce
 | Boards | `/var/lib/apps/soundboard/board.json` (`storage.file`) | `{ version: 1, boards: [{ id, name, pads }] }`, at least one board, zod-checked (`BoardFileSchema`, `board.ts:48`) |
 | Pad | inside a board | `{ id, label, sound, color, volume (0–1), key, loop, image }`: `sound` a file name in the sounds folder; `key` one of `1`–`9`, `a`–`z` or `null`, unique on its board; `image` a path or `null` (optional on read, added without a version bump) |
 | Sounds | `/var/lib/apps/soundboard/sounds/` | The board's own copy of every added file, and the WAVs made by trims and videos. A sound is deleted when no pad on any board uses it any more |
-| Volume, play mode | `app.soundboard.volume`, `app.soundboard.mode` | Number 0–1 (default 0.8); `restart` or `overlap` |
+| Volume, play mode | `/var/lib/apps/soundboard/storage.json` (`StorageSchema`, `board.ts`) | `{ volume, mode }`: number 0–1 (default 0.8); `restart` or `overlap`, each falling back on its own. The names are the old `app.soundboard.*` keys, moved in by the 4.0 boot copy. The shared player starts on the defaults and reads the file through `live_file`; an open window drives it from its own handle |
 | Per window | `board`, `imported` | The open board; whether the `path` prop was already added, so a restored window doesn't add it again |
 
 Props: `{ path }` (`FILE_PROPS`). Soundboard is a tool for `audio/*` and `video/*`: Open with on a sound adds a pad, on a video opens the trim sheet.

@@ -184,3 +184,14 @@ export function can_move(game: Game): boolean {
 export function shows_win(game: Game): boolean {
   return game.won && !game.keep_going;
 }
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  best: z.number().int().nonnegative().catch(0),
+  game: saved_schema.nullable().catch(null),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { best: 0, game: null };
+}

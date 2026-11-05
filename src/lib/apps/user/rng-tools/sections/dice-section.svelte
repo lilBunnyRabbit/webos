@@ -4,14 +4,15 @@
   import { DiceFive as DiceFiveIcon, Trash as TrashIcon } from "phosphor-svelte";
   import { z } from "zod";
   import { DICE_PRESETS, dice_roll_schema, parse_dice, roll_terms, type DiceRoll, type TermRoll } from "../dice";
+  import { empty_storage, storage_schema } from "../storage";
 
   const HISTORY_LIMIT = 50;
 
   const { storage } = get_app_context();
-  const notation = storage.persisted("dice.notation", "3d6+2", z.string());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const history = storage.window<DiceRoll[]>("dice_history", [], z.array(dice_roll_schema));
 
-  const parsed = $derived(parse_dice(notation.value));
+  const parsed = $derived(parse_dice(data.value["dice.notation"]));
   const latest = $derived(history.value[0] ?? null);
 
   function roll() {
@@ -20,7 +21,7 @@
   }
 
   function roll_preset(preset: string) {
-    notation.value = preset;
+    data.value["dice.notation"] = preset;
     roll();
   }
 
@@ -39,7 +40,7 @@
     }}
   >
     <div class="flex gap-2">
-      <Input aria-label="Dice" class="font-mono" autocomplete="off" spellcheck="false" bind:value={notation.value} />
+      <Input aria-label="Dice" class="font-mono" autocomplete="off" spellcheck="false" bind:value={data.value["dice.notation"]} />
       <Button type="submit" variant="primary" disabled={!parsed.ok}><DiceFiveIcon weight="bold" />Roll</Button>
     </div>
     {#if !parsed.ok}<p role="alert" class="text-ui text-error">{parsed.error}</p>{/if}

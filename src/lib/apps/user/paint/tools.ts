@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export const Tool = {
   PENCIL: "pencil",
   BRUSH: "brush",
@@ -62,4 +64,32 @@ export function uses_size(tool: Tool): boolean {
 
 export function text_font_size(size: number): number {
   return Math.max(8, size * 4);
+}
+
+const HEX = z.string().regex(/^#[0-9a-f]{6}$/i);
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  tool: z.enum(TOOLS).catch(Tool.BRUSH),
+  size: z.number().int().min(1).max(100).catch(4),
+  tolerance: z.number().min(0).max(100).catch(10),
+  fill_mode: z.enum(FILL_MODES).catch(FillMode.OUTLINE),
+  primary: HEX.catch("#000000"),
+  secondary: HEX.catch("#ffffff"),
+  recent: z.array(HEX).max(8).catch(() => []),
+  saved_new: z.number().int().nonnegative().catch(0),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return {
+    tool: Tool.BRUSH,
+    size: 4,
+    tolerance: 10,
+    fill_mode: FillMode.OUTLINE,
+    primary: "#000000",
+    secondary: "#ffffff",
+    recent: [],
+    saved_new: 0,
+  };
 }

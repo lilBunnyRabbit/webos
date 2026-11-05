@@ -70,10 +70,11 @@ Hints are counted; best times count only solves without them.
 
 | Key | What |
 |-----|------|
-| `app.hop.game` | Free-play game in progress: `{ size, seed, path, hints, elapsed }`. The puzzle is its seed; `restore` replays the path and keeps its legal prefix |
-| `app.hop.daily` | Daily in progress: `{ day, game }` |
-| `app.hop.stats` | Per size `{ solved, best }` |
-| `app.hop.size` | Last size |
+| `/var/lib/apps/hop/storage.json` | One file (`storage_schema`, `game.ts`), each field falling back to its default on its own. Its field names are the old `app.hop.*` keys, which the 4.0 boot copy moved in. `hop.app.svelte` opens it and mounts the board (`game-screen.svelte`) only once it has loaded, so a saved game never flashes a fresh puzzle first |
+| `game` | Free-play game in progress: `{ size, seed, path, hints, elapsed }`. The puzzle is its seed; `restore` replays the path and keeps its legal prefix |
+| `daily` | Daily in progress: `{ day, game }` |
+| `stats` | Per size `{ solved, best }` |
+| `size` | Last size |
 | `/var/lib/apps/hop/achievements.json` | Achievements, written by the OS ([achievements](../system/services/achievements.md)) |
 
 A solved daily calls `PlayTracker.daily(day, ms)`; `daily_rank` stays at its default, time ascending. Props: `daily` (`YYYY-MM-DD`), the Game Hub contract. The daily seed is `daily_seed(day, "hop")`, size 7×7. No shell commands beyond `games daily`.

@@ -6,6 +6,7 @@ export const POSTER_PAPERS = [PageSize.A4, PageSize.LETTER, PageSize.A3] as cons
 
 export const MM_PER_PT = 25.4 / 72;
 export const MAX_ACROSS = 20;
+export const MAX_OVERLAP = 30;
 export const MAX_SHEETS = 400;
 /** Tiles are scaled down past this: no printer shows more, and the PDF would only grow. */
 export const MAX_DPI = 300;

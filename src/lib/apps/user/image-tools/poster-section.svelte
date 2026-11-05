@@ -9,14 +9,13 @@
   import { has_files, image_files, load_image, load_image_at, paint, type SourceImage } from "$kit/utils/image";
   import { FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Printer as PrinterIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { z } from "zod";
   import { poster_name } from "./naming";
   import {
     LOW_DPI,
     MAX_ACROSS,
+    MAX_OVERLAP,
     MAX_SHEETS,
     POOR_DPI,
-    POSTER_PAPERS,
     format_mm,
     overlap_bands,
     poster_layout,
@@ -26,9 +25,9 @@
   } from "./poster";
   import { write_poster } from "./poster-pdf";
   import type { SectionProps } from "./sections";
+  import { empty_storage, storage_schema } from "./storage";
 
   const PREVIEW_SIDE = 1600;
-  const MAX_OVERLAP = 30;
   /** Past this many columns the labels would cover the picture. */
   const LABELLED_COLUMNS = 12;
   const PAPERS: { value: PosterPaper; label: string }[] = [
@@ -50,19 +49,7 @@
   const { app_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
 
-  const settings = storage.persisted(
-    "poster",
-    { paper: "a4" as PosterPaper, orientation: "portrait" as "portrait" | "landscape", across: 3, overlap: 10, margin: "10" as "5" | "10" | "15", marks: true, map: true },
-    z.object({
-      paper: z.enum(POSTER_PAPERS),
-      orientation: z.enum(["portrait", "landscape"]),
-      across: z.number().int().min(1).max(MAX_ACROSS),
-      overlap: z.number().min(0).max(MAX_OVERLAP),
-      margin: z.enum(["5", "10", "15"]),
-      marks: z.boolean(),
-      map: z.boolean(),
-    })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let root = $state<HTMLElement>();
   let source = $state.raw<SourceImage | null>(null);
@@ -75,11 +62,11 @@
   const layout = $derived(
     source
       ? poster_layout(source.bitmap.width, source.bitmap.height, {
-          paper: settings.value.paper,
-          landscape: settings.value.orientation === "landscape",
-          across: settings.value.across,
-          overlap: settings.value.overlap,
-          margin: Number(settings.value.margin),
+          paper: data.value.poster.paper,
+          landscape: data.value.poster.orientation === "landscape",
+          across: data.value.poster.across,
+          overlap: data.value.poster.overlap,
+          margin: Number(data.value.poster.margin),
         })
       : null
   );
@@ -190,10 +177,10 @@
         app_id,
         bitmap: image.bitmap,
         name: image.name,
-        paper: settings.value.paper,
+        paper: data.value.poster.paper,
         layout: plan,
-        marks: settings.value.marks,
-        map: settings.value.map,
+        marks: data.value.poster.marks,
+        map: data.value.poster.map,
         target,
       });
     } finally {
@@ -263,25 +250,25 @@
       >
         <div class="flex flex-col gap-2">
           {@render heading("Paper")}
-          <Segmented label="Paper" options={PAPERS} bind:value={settings.value.paper} class="w-full *:flex-1" />
-          <Segmented label="Orientation" options={[...ORIENTATIONS]} bind:value={settings.value.orientation} class="w-full *:flex-1" />
+          <Segmented label="Paper" options={PAPERS} bind:value={data.value.poster.paper} class="w-full *:flex-1" />
+          <Segmented label="Orientation" options={[...ORIENTATIONS]} bind:value={data.value.poster.orientation} class="w-full *:flex-1" />
         </div>
 
         <div class="flex flex-col gap-2">
           {@render heading("Size")}
           <label class="flex items-center gap-2">
             {@render field("Across")}
-            <Slider size="sm" min={1} max={MAX_ACROSS} bind:value={settings.value.across} class="min-w-0 flex-1" aria-label="Sheets across" />
+            <Slider size="sm" min={1} max={MAX_ACROSS} bind:value={data.value.poster.across} class="min-w-0 flex-1" aria-label="Sheets across" />
             <span class="w-12 text-right font-mono text-2xs text-foreground/80 tabular-nums">{layout.columns} × {layout.rows}</span>
           </label>
           <label class="flex items-center gap-2" title="How much each sheet shares with its neighbour, to glue over">
             {@render field("Overlap")}
-            <Slider size="sm" min={0} max={MAX_OVERLAP} bind:value={settings.value.overlap} class="min-w-0 flex-1" aria-label="Overlap" />
+            <Slider size="sm" min={0} max={MAX_OVERLAP} bind:value={data.value.poster.overlap} class="min-w-0 flex-1" aria-label="Overlap" />
             <span class="w-12 text-right font-mono text-2xs text-foreground/80 tabular-nums">{Math.round(layout.overlap)} mm</span>
           </label>
           <div class="flex items-center gap-2" title="Unprinted border, where crop marks and the sheet's label go">
             {@render field("Margin")}
-            <Segmented size="sm" label="Margin" options={[...MARGINS]} bind:value={settings.value.margin} class="min-w-0 flex-1 *:flex-1 *:justify-center" />
+            <Segmented size="sm" label="Margin" options={[...MARGINS]} bind:value={data.value.poster.margin} class="min-w-0 flex-1 *:flex-1 *:justify-center" />
             <span class="w-12 text-right font-mono text-2xs text-foreground/80">mm</span>
           </div>
         </div>
@@ -290,18 +277,18 @@
           {@render heading("Print")}
           <label class="flex items-center justify-between gap-2 text-ui">
             Crop marks
-            <Switch bind:checked={settings.value.marks} />
+            <Switch bind:checked={data.value.poster.marks} />
           </label>
           <label class="flex items-center justify-between gap-2 text-ui" title="A first page showing where every sheet goes">
             Assembly map
-            <Switch bind:checked={settings.value.map} />
+            <Switch bind:checked={data.value.poster.map} />
           </label>
         </div>
 
         <div class="flex flex-col gap-1">
           {@render heading("Result")}
           <p class="px-0.5 text-ui">
-            {layout.sheets.length} sheets{settings.value.map ? " and a map" : ""}
+            {layout.sheets.length} sheets{data.value.poster.map ? " and a map" : ""}
             <span class="block font-mono text-2xs text-foreground/65 tabular-nums">{format_mm(layout.poster.width)} × {format_mm(layout.poster.height)}</span>
             <span class={["block font-mono text-2xs tabular-nums", dpi_note ? "text-warning" : "text-foreground/65"]}>{Math.round(layout.dpi)} DPI</span>
           </p>

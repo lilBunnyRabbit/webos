@@ -4,24 +4,22 @@
   import { ArrowsClockwise as ArrowsClockwiseIcon } from "phosphor-svelte";
   import { as_number } from "../form";
   import {
-    DEFAULT_NUMBER_SETTINGS,
     MAX_NUMBER_COUNT,
     check_numbers,
     generate_numbers,
-    number_settings_schema,
-    type NumberSettings,
   } from "../numbers";
+  import { empty_storage, storage_schema } from "../storage";
 
   const { storage } = get_app_context();
-  const settings = storage.persisted<NumberSettings>("number", DEFAULT_NUMBER_SETTINGS, number_settings_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let results = $state.raw<number[]>([]);
 
-  const checked = $derived(check_numbers(settings.value));
+  const checked = $derived(check_numbers(data.value.number));
   const error = $derived(checked.ok ? null : checked.error);
 
   function set_number(key: "min" | "max" | "count", value: unknown) {
-    settings.value = { ...settings.value, [key]: as_number(value) };
+    data.value.number = { ...data.value.number, [key]: as_number(value) };
   }
 
   function generate() {
@@ -32,22 +30,22 @@
 <Section title="Range" description="Whole numbers between the two bounds, both included.">
   <SettingRow label="Minimum">
     {#snippet children({ id, describedby })}
-      <Input {id} aria-describedby={describedby} type="number" step="1" size="sm" class="w-36" bind:value={() => settings.value.min, (value) => set_number("min", value)} />
+      <Input {id} aria-describedby={describedby} type="number" step="1" size="sm" class="w-36" bind:value={() => data.value.number.min, (value) => set_number("min", value)} />
     {/snippet}
   </SettingRow>
   <SettingRow label="Maximum">
     {#snippet children({ id, describedby })}
-      <Input {id} aria-describedby={describedby} type="number" step="1" size="sm" class="w-36" bind:value={() => settings.value.max, (value) => set_number("max", value)} />
+      <Input {id} aria-describedby={describedby} type="number" step="1" size="sm" class="w-36" bind:value={() => data.value.number.max, (value) => set_number("max", value)} />
     {/snippet}
   </SettingRow>
   <SettingRow label="How many" description="Up to {MAX_NUMBER_COUNT} at once.">
     {#snippet children({ id, describedby })}
-      <Input {id} aria-describedby={describedby} type="number" min="1" max={MAX_NUMBER_COUNT} step="1" size="sm" class="w-36" bind:value={() => settings.value.count, (value) => set_number("count", value)} />
+      <Input {id} aria-describedby={describedby} type="number" min="1" max={MAX_NUMBER_COUNT} step="1" size="sm" class="w-36" bind:value={() => data.value.number.count, (value) => set_number("count", value)} />
     {/snippet}
   </SettingRow>
   <SettingRow label="No repeats" description="Every number appears at most once.">
     {#snippet children({ id, describedby })}
-      <Switch {id} aria-describedby={describedby} bind:checked={() => settings.value.unique, (unique) => (settings.value = { ...settings.value, unique })} />
+      <Switch {id} aria-describedby={describedby} bind:checked={() => data.value.number.unique, (unique) => (data.value.number = { ...data.value.number, unique })} />
     {/snippet}
   </SettingRow>
 </Section>

@@ -18,7 +18,6 @@
     MAX_PRESET_NAME,
     check_preset,
     draw_preset,
-    draw_presets_schema,
     draw_results_schema,
     format_draw,
     move,
@@ -30,18 +29,19 @@
     type DrawPresetDraft,
     type DrawResult,
   } from "../draws";
+  import { empty_storage, storage_schema } from "../storage";
   import { as_number } from "../form";
 
   const { storage, window: win } = get_app_context();
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
 
-  const presets = storage.persisted<DrawPreset[]>("draws", [], draw_presets_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const results = storage.window<Record<string, DrawResult>>("draws_results", {}, draw_results_schema);
 
   let draft = $state<DrawPresetDraft | null>(null);
   let name_input = $state<HTMLInputElement | null>(null);
 
-  const editing = $derived(draft !== null && presets.value.some((preset) => preset.id === draft?.id));
+  const editing = $derived(draft !== null && data.value.draws.some((preset) => preset.id === draft?.id));
   const checked_draft = $derived(draft ? check_preset(draft) : null);
   const draft_error = $derived(checked_draft && !checked_draft.ok ? checked_draft.error : null);
 
@@ -64,7 +64,7 @@
 
   function draw_all() {
     const next = { ...results.value };
-    for (const preset of presets.value) {
+    for (const preset of data.value.draws) {
       const checked = check_preset(to_draft(preset));
       if (checked.ok) next[preset.id] = draw_preset(checked.value);
     }
@@ -78,12 +78,12 @@
   function save() {
     if (!checked_draft?.ok) return;
     const preset = checked_draft.value;
-    const previous = presets.value.find((item) => item.id === preset.id);
+    const previous = data.value.draws.find((item) => item.id === preset.id);
     if (previous) {
-      presets.value = presets.value.map((item) => (item.id === preset.id ? preset : item));
+      data.value.draws = data.value.draws.map((item) => (item.id === preset.id ? preset : item));
       if (!same_lists(previous.lists, preset.lists)) forget_result(preset.id);
     } else {
-      presets.value = [...presets.value, preset];
+      data.value.draws = [...data.value.draws, preset];
     }
     draft = null;
   }
@@ -95,13 +95,13 @@
       danger: true,
     });
     if (!confirmed) return;
-    presets.value = presets.value.filter((item) => item.id !== preset.id);
+    data.value.draws = data.value.draws.filter((item) => item.id !== preset.id);
     forget_result(preset.id);
   }
 
   async function open_menu(event: MouseEvent, preset: DrawPreset, index: number) {
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const count = presets.value.length;
+    const count = data.value.draws.length;
     const items: MenuItem[] = [
       { id: "edit", label: "Edit", icon: PencilSimpleIcon },
       ...(count > 1
@@ -115,8 +115,8 @@
     ];
     const choice = await dialogs.menu(items, { anchor: { x: rect.left, y: rect.bottom + 4 } });
     if (choice === "edit") draft = to_draft(preset);
-    else if (choice === "up") presets.value = move(presets.value, index, -1);
-    else if (choice === "down") presets.value = move(presets.value, index, 1);
+    else if (choice === "up") data.value.draws = move(data.value.draws, index, -1);
+    else if (choice === "down") data.value.draws = move(data.value.draws, index, 1);
     else if (choice === "delete") remove(preset);
   }
 </script>
@@ -186,7 +186,7 @@
     <Button variant="quiet" onclick={() => (draft = null)}>Cancel</Button>
     {#if draft_error}<p role="alert" class="text-ui text-error">{draft_error}</p>{/if}
   </div>
-{:else if presets.value.length === 0}
+{:else if data.value.draws.length === 0}
   <Section>
     <EmptyState
       icon={TicketIcon}
@@ -201,12 +201,12 @@
 {:else}
   <div class="flex flex-wrap items-center gap-3">
     <Button variant="primary" onclick={draw_all}><ArrowsClockwiseIcon weight="bold" />Draw all</Button>
-    {#if presets.value.length < MAX_DRAW_PRESETS}
+    {#if data.value.draws.length < MAX_DRAW_PRESETS}
       <Button onclick={() => (draft = new_draft())}><PlusIcon weight="bold" />New preset</Button>
     {/if}
   </div>
 
-  {#each presets.value as preset, index (preset.id)}
+  {#each data.value.draws as preset, index (preset.id)}
     {@const result = results.value[preset.id]}
     {@const checked = check_preset(to_draft(preset))}
     <Section title={preset.name}>

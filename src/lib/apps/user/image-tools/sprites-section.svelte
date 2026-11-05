@@ -40,7 +40,8 @@
   import { has_files, image_files, load_image } from "$kit/utils/image";
   import { ANCHORS, frame_file_name, frames_metadata, render_frames, render_sheet, type ExportOptions } from "./sprite-export";
   import { SpriteExtractState } from "./sprite-extract.svelte";
-  import { count_overrides, DEFAULT_SETTINGS, format_sequence, GridMode, parse_sequence, SETTINGS_SCHEMA } from "./sprite-model";
+  import { count_overrides, format_sequence, GridMode, parse_sequence } from "./sprite-model";
+  import { empty_storage, storage_schema } from "./storage";
   import SpriteFilmstrip from "./sprite-filmstrip.svelte";
   import SpriteNumberField from "./sprite-number-field.svelte";
   import SpritePreview from "./sprite-preview.svelte";
@@ -56,9 +57,22 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const sprite = new SpriteExtractState(storage.get("sprite-settings", SETTINGS_SCHEMA) ?? DEFAULT_SETTINGS);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
+  const sprite = new SpriteExtractState(untrack(() => $state.snapshot(data.value["sprite-settings"])));
+  let settings_loaded = false;
 
-  $effect(() => storage.set("sprite-settings", sprite.settings));
+  // The sheet starts on the defaults when the file is still loading; the saved settings replace them once, then changes save.
+  $effect(() => {
+    if (!data.ready) return;
+    const settings = sprite.settings;
+    untrack(() => {
+      if (settings_loaded) data.value["sprite-settings"] = settings;
+      else {
+        settings_loaded = true;
+        sprite.settings = $state.snapshot(data.value["sprite-settings"]);
+      }
+    });
+  });
 
   let sheet = $state<SpriteSheet>();
   let preview = $state<SpritePreview>();

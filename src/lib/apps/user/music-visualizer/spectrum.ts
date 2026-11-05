@@ -1,4 +1,6 @@
 import { clamp } from "$lib/core/utils";
+import { z } from "zod";
+
 export const VisualizerMode = {
   BARS: "bars",
   WAVE: "wave",
@@ -6,6 +8,19 @@ export const VisualizerMode = {
 } as const;
 
 export type VisualizerMode = (typeof VisualizerMode)[keyof typeof VisualizerMode];
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  mode: z.enum(VisualizerMode).catch(VisualizerMode.BARS),
+  volume: z.number().min(0).max(1).catch(0.8),
+  smoothing: z.number().min(0).max(1).catch(0.7),
+  sensitivity: z.number().min(0.5).max(3).catch(1.2),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { mode: VisualizerMode.BARS, volume: 0.8, smoothing: 0.7, sensitivity: 1.2 };
+}
 
 export interface Band {
   start: number;

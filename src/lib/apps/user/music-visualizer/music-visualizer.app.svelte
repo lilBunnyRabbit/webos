@@ -22,9 +22,8 @@
     Waveform as WaveformIcon,
   } from "phosphor-svelte";
   import { onDestroy, tick, untrack } from "svelte";
-  import { z } from "zod";
   import { AudioGraph } from "./audio-graph";
-  import { format_time, VisualizerMode } from "./spectrum";
+  import { empty_storage, format_time, storage_schema, VisualizerMode } from "./spectrum";
   import Visualizer from "./visualizer.svelte";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { report_error } from "$kit/utils/report-error";
@@ -41,10 +40,7 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const mode = storage.persisted<VisualizerMode>("mode", VisualizerMode.BARS, z.enum(VisualizerMode));
-  const volume = storage.persisted("volume", 0.8, z.number().min(0).max(1));
-  const smoothing = storage.persisted("smoothing", 0.7, z.number().min(0).max(1));
-  const sensitivity = storage.persisted("sensitivity", 1.2, z.number().min(0.5).max(3));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let root = $state<HTMLDivElement>();
   let stage = $state<HTMLDivElement>();
@@ -78,11 +74,11 @@
   });
 
   $effect(() => {
-    if (graph) graph.volume = volume.value;
+    if (graph) graph.volume = data.value.volume;
   });
 
   $effect(() => {
-    if (graph) graph.smoothing = smoothing.value;
+    if (graph) graph.smoothing = data.value.smoothing;
   });
 
   onDestroy(() => graph?.close());
@@ -256,7 +252,7 @@
       <Toolbar>
         <IconButton label="Open…" size="sm" onclick={pick}><FolderOpenIcon weight="bold" /></IconButton>
         <span class="order-first min-w-0 basis-full truncate px-1 text-ui font-medium @lg:order-none @lg:flex-1 @lg:basis-auto">{title}</span>
-        <Segmented size="sm" label="Visualization" options={MODE_OPTIONS} bind:value={mode.value} />
+        <Segmented size="sm" label="Visualization" options={MODE_OPTIONS} bind:value={data.value.mode} />
         <Separator vertical class="hidden @md:block" />
         <IconButton label={mic ? "Stop microphone" : "Use microphone"} size="sm" variant={mic ? "secondary" : "quiet"} onclick={toggle_mic}>
           {#if mic}<MicrophoneSlashIcon weight="bold" />{:else}<MicrophoneIcon weight="bold" />{/if}
@@ -265,7 +261,7 @@
       </Toolbar>
 
       <div bind:this={stage} role="presentation" class="stage relative min-h-0" ondblclick={toggle_fullscreen}>
-        <Visualizer analyser={graph?.analyser ?? null} mode={mode.value} sensitivity={sensitivity.value} {running} />
+        <Visualizer analyser={graph?.analyser ?? null} mode={data.value.mode} sensitivity={data.value.sensitivity} {running} />
         {#if fullscreen}
           <IconButton label="Exit full screen" size="sm" class="absolute top-3 right-3" onclick={toggle_fullscreen}>
             <CornersInIcon weight="bold" />
@@ -297,18 +293,18 @@
 
           <label class="flex min-w-32 flex-1 items-center gap-2 text-ui text-foreground/80">
             <span class="sr-only">Volume</span>
-            {#if volume.value === 0}<SpeakerXIcon class="size-4 shrink-0" weight="bold" />{:else}<SpeakerHighIcon class="size-4 shrink-0" weight="bold" />{/if}
-            <Slider min={0} max={1} step={0.01} bind:value={volume.value} size="sm" class="flex-1" />
+            {#if data.value.volume === 0}<SpeakerXIcon class="size-4 shrink-0" weight="bold" />{:else}<SpeakerHighIcon class="size-4 shrink-0" weight="bold" />{/if}
+            <Slider min={0} max={1} step={0.01} bind:value={data.value.volume} size="sm" class="flex-1" />
           </label>
 
           <label class="flex min-w-32 flex-1 items-center gap-2 text-ui text-foreground/80" title="How slowly the picture reacts to changes">
             Smoothing
-            <Slider min={0} max={1} step={0.05} bind:value={smoothing.value} size="sm" class="flex-1" />
+            <Slider min={0} max={1} step={0.05} bind:value={data.value.smoothing} size="sm" class="flex-1" />
           </label>
 
           <label class="flex min-w-32 flex-1 items-center gap-2 text-ui text-foreground/80" title="How strongly quiet sound moves the picture">
             Sensitivity
-            <Slider min={0.5} max={3} step={0.1} bind:value={sensitivity.value} size="sm" class="flex-1" />
+            <Slider min={0.5} max={3} step={0.1} bind:value={data.value.sensitivity} size="sm" class="flex-1" />
           </label>
         </div>
       </div>
@@ -320,7 +316,7 @@
           <span class="truncate">{file.type || "unknown type"}</span>
           <span>{format_bytes(file.size)}</span>
         {/if}
-        <span class="ml-auto hidden @sm:block">{MODE_OPTIONS.find((option) => option.value === mode.value)?.label}</span>
+        <span class="ml-auto hidden @sm:block">{MODE_OPTIONS.find((option) => option.value === data.value.mode)?.label}</span>
       </StatusBar>
     </div>
   {/if}

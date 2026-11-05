@@ -18,6 +18,19 @@ export const high_scores_schema = z.record(z.string(), z.number().int().nonnegat
 
 export type HighScores = z.infer<typeof high_scores_schema>;
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  high_scores: high_scores_schema.catch(() => ({})),
+  eaten: z.number().int().nonnegative().catch(0),
+  speed: speed_schema.catch(Speed.NORMAL),
+  wrap: z.boolean().catch(false),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { high_scores: {}, eaten: 0, speed: Speed.NORMAL, wrap: false };
+}
+
 export type Rng = () => number;
 
 export interface Point {

@@ -31,8 +31,8 @@
     BoardFileSchema,
     create_pad,
     DEFAULT_BOARD_ID,
-    DEFAULT_VOLUME,
     EMPTY_FILE,
+    EMPTY_STORAGE,
     free_keys,
     decode_bytes,
     is_audio,
@@ -41,11 +41,10 @@
     MAX_VIDEO_SECONDS,
     move_pad,
     PlayMode,
-    PlayModeSchema,
     sound_in_use,
     sounds_freed_by_board,
+    StorageSchema,
     unique_board_name,
-    VolumeSchema,
     type Board,
     type Pad,
   } from "./board";
@@ -73,8 +72,7 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const data = storage.file("board.json", EMPTY_FILE, BoardFileSchema);
-  const volume = storage.persisted("volume", DEFAULT_VOLUME, VolumeSchema);
-  const mode = storage.persisted<PlayMode>("mode", PlayMode.RESTART, PlayModeSchema);
+  const settings = storage.file("storage.json", EMPTY_STORAGE, StorageSchema);
   const active_id = storage.window("board", DEFAULT_BOARD_ID, z.string());
   const imported = storage.window("imported", false, z.boolean());
 
@@ -83,9 +81,9 @@
 
   const { player, release } = acquire_player();
   onDestroy(release);
-  $effect(() => player.set_volume(volume.value));
+  $effect(() => player.set_volume(settings.value.volume));
   $effect(() => {
-    player.mode = mode.value;
+    player.mode = settings.value.mode;
   });
 
   let root = $state<HTMLDivElement>();
@@ -401,11 +399,11 @@
     <Button size="sm" variant="primary" aria-label="Add sounds…" title="Add sounds…" onclick={add_from_files}><PlusIcon weight="bold" /><span class="hidden @md:inline">Add sounds…</span></Button>
     <Separator vertical class="hidden @md:block" />
     <IconButton label="Stop all (Esc)" size="sm" disabled={playing_count === 0} onclick={() => player.stop_all()}><StopIcon weight="fill" /></IconButton>
-    <Segmented size="sm" label="Pressing a playing pad again" options={MODE_OPTIONS} bind:value={mode.value} />
+    <Segmented size="sm" label="Pressing a playing pad again" options={MODE_OPTIONS} bind:value={settings.value.mode} />
     <label class="flex min-w-36 flex-1 items-center gap-2 px-1 text-foreground/80 @md:flex-none @md:px-0" title="Master volume">
       <span class="sr-only">Master volume</span>
-      {#if volume.value === 0}<SpeakerXIcon class="size-4 shrink-0" weight="bold" />{:else}<SpeakerHighIcon class="size-4 shrink-0" weight="bold" />{/if}
-      <Slider min={0} max={1} step={0.01} bind:value={volume.value} size="sm" class="flex-1 @md:w-28 @md:flex-none" />
+      {#if settings.value.volume === 0}<SpeakerXIcon class="size-4 shrink-0" weight="bold" />{:else}<SpeakerHighIcon class="size-4 shrink-0" weight="bold" />{/if}
+      <Slider min={0} max={1} step={0.01} bind:value={settings.value.volume} size="sm" class="flex-1 @md:w-28 @md:flex-none" />
     </label>
   </Toolbar>
 

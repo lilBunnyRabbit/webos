@@ -15,7 +15,7 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { PageSize } from "./geometry";
   import { run_job } from "./job";
   import { images_pdf_name } from "./naming";
@@ -47,11 +47,7 @@
     { value: "72", label: "Wide margin" },
   ];
 
-  const settings = storage.persisted(
-    "images",
-    { size: PageSize.A4 as PageSize, margin: "36" },
-    z.object({ size: z.enum([PageSize.A4, PageSize.LETTER, PageSize.A3, PageSize.IMAGE]), margin: z.enum(["0", "18", "36", "72"]) })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let items = $state.raw<ImageItem[]>([]);
   let busy = $state(false);
@@ -113,7 +109,7 @@
     });
     if (!path) return;
     const list = items.map((item) => item.source);
-    const { size, margin } = settings.value;
+    const { size, margin } = data.value.images;
     busy = true;
     await run_job(
       app_id,
@@ -156,8 +152,8 @@
     {@render picker()}
     <IconButton label="Add images…" size="sm" onclick={pick} disabled={busy}><ImageSquareIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
-    <Select size="sm" aria-label="Page size" class="w-auto" options={SIZES} bind:value={settings.value.size} />
-    <Select size="sm" aria-label="Margin" class="w-auto" options={MARGINS} bind:value={settings.value.margin} />
+    <Select size="sm" aria-label="Page size" class="w-auto" options={SIZES} bind:value={data.value.images.size} />
+    <Select size="sm" aria-label="Margin" class="w-auto" options={MARGINS} bind:value={data.value.images.margin} />
     {#if items.length}
       <IconButton label="Remove all" size="sm" onclick={clear} disabled={busy}><TrashIcon weight="bold" /></IconButton>
     {/if}
@@ -220,6 +216,6 @@
 
   <StatusBar>
     <span>{items.length} {items.length === 1 ? "image" : "images"}</span>
-    <span>{SIZES.find((size) => size.value === settings.value.size)?.label} · {MARGINS.find((margin) => margin.value === settings.value.margin)?.label.toLowerCase()}</span>
+    <span>{SIZES.find((size) => size.value === data.value.images.size)?.label} · {MARGINS.find((margin) => margin.value === data.value.images.margin)?.label.toLowerCase()}</span>
   </StatusBar>
 </DropZone>

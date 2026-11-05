@@ -293,6 +293,18 @@ export type Saved = z.infer<typeof saved_schema>;
 
 export const pieces_schema = z.literal(PIECE_COUNTS);
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  solves: z.number().int().nonnegative().catch(0),
+  pieces: pieces_schema.catch(48),
+  game: saved_schema.nullable().catch(null),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { solves: 0, pieces: 48, game: null };
+}
+
 export function fits(saved: Saved, layout: Layout): boolean {
   return saved.width === layout.width && saved.height === layout.height && saved.positions.length === piece_total(layout) * 2;
 }

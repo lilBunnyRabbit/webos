@@ -15,7 +15,7 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import type { SectionProps } from "./sections";
   import { DEFAULT_SQUASH, SquashFormat, estimate_bytes, format_share, saved_share, squashed_size } from "./squash";
   import { images_in, squash_images, type SquashResult } from "./squash-job";
@@ -41,15 +41,7 @@
   const { picker, initial_paths, active }: SectionProps = $props();
   const { app_id, window: win, storage } = get_app_context();
 
-  const settings = storage.persisted(
-    "squash",
-    DEFAULT_SQUASH,
-    z.object({
-      format: z.enum([SquashFormat.WEBP, SquashFormat.JPEG]),
-      quality: z.number().min(1).max(100),
-      max: z.number().int().min(1).nullable(),
-    })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let root = $state<HTMLElement>();
   let entries = $state.raw<Entry[]>([]);
@@ -61,9 +53,9 @@
   let samples = $state.raw<ReadonlyMap<string, number>>(new Map());
   let results = $state.raw<ReadonlyMap<number, { key: string; result: SquashResult }>>(new Map());
 
-  const quality = $derived(clamp_quality(settings.value.quality));
-  const max = $derived(typeof settings.value.max === "number" && settings.value.max >= 1 ? Math.round(settings.value.max) : null);
-  const format = $derived(settings.value.format);
+  const quality = $derived(clamp_quality(data.value.squash.quality));
+  const max = $derived(typeof data.value.squash.max === "number" && data.value.squash.max >= 1 ? Math.round(data.value.squash.max) : null);
+  const format = $derived(data.value.squash.format);
   const key = $derived(`${format}|${quality}|${max}|${folder}`);
 
   const rows = $derived(
@@ -247,21 +239,21 @@
       <aside class="flex max-h-56 flex-col gap-4 overflow-auto border-b border-foreground/8 bg-background-light p-3 @2xl:max-h-none @2xl:border-r @2xl:border-b-0">
         <div class="flex flex-col gap-2.5">
           <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">Output</h3>
-          <Segmented size="sm" label="Format" options={FORMATS} bind:value={settings.value.format} class="self-start" />
+          <Segmented size="sm" label="Format" options={FORMATS} bind:value={data.value.squash.format} class="self-start" />
           <div class="flex flex-col gap-1">
             <label class="flex items-center justify-between gap-2 text-ui">
               Quality
               <span class="flex items-center gap-1.5">
-                <Input type="number" size="sm" min={1} max={100} bind:value={settings.value.quality} class="w-16 font-mono tabular-nums" />
+                <Input type="number" size="sm" min={1} max={100} bind:value={data.value.squash.quality} class="w-16 font-mono tabular-nums" />
                 <span class="w-6 font-mono text-2xs text-foreground/80">%</span>
               </span>
             </label>
-            <Slider size="sm" min={1} max={100} bind:value={settings.value.quality} aria-label="Quality" />
+            <Slider size="sm" min={1} max={100} bind:value={data.value.squash.quality} aria-label="Quality" />
           </div>
           <label class="flex items-center justify-between gap-2 text-ui" title="Shrinks images whose longest side is bigger; smaller ones keep their size">
             Max side
             <span class="flex items-center gap-1.5">
-              <Input type="number" size="sm" min={1} placeholder="Any" bind:value={settings.value.max} class="w-16 font-mono tabular-nums" />
+              <Input type="number" size="sm" min={1} placeholder="Any" bind:value={data.value.squash.max} class="w-16 font-mono tabular-nums" />
               <span class="w-6 font-mono text-2xs text-foreground/80">px</span>
             </span>
           </label>

@@ -160,6 +160,14 @@ export const PlayModeSchema = z.enum(PLAY_MODES);
 export const VolumeSchema = z.number().min(0).max(1);
 export const DEFAULT_VOLUME = 0.8;
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const StorageSchema = z.object({
+  volume: VolumeSchema.catch(DEFAULT_VOLUME),
+  mode: PlayModeSchema.catch(PlayMode.RESTART),
+});
+export type StorageFile = z.infer<typeof StorageSchema>;
+export const EMPTY_STORAGE: StorageFile = { volume: DEFAULT_VOLUME, mode: PlayMode.RESTART };
+
 export const PlayAction = {
   START: "start",
   RESTART: "restart",

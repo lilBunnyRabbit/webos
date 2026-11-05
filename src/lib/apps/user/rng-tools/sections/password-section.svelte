@@ -6,18 +6,17 @@
   import {
     CHARACTERS,
     CHARACTER_SETS,
-    DEFAULT_PASSWORD_SETTINGS,
     MAX_LENGTH,
     MIN_LENGTH,
     Strength,
     check_password,
     entropy_bits,
     generate_password,
-    password_settings_schema,
     strength_of,
     type CharacterSet,
     type PasswordSettings,
   } from "../password";
+  import { empty_storage, storage_schema } from "../storage";
 
   const SET_LABELS: Record<CharacterSet, string> = {
     lower: "Lowercase",
@@ -50,13 +49,13 @@
   }
 
   const { storage } = get_app_context();
-  const settings = storage.persisted<PasswordSettings>("password", DEFAULT_PASSWORD_SETTINGS, password_settings_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
-  const checked = $derived(check_password(settings.value));
+  const checked = $derived(check_password(data.value.password));
   let generated = $state.raw<Generated | null>(create());
 
   function create(): Generated | null {
-    const result = check_password(settings.value);
+    const result = check_password(data.value.password);
     if (!result.ok) return null;
     return { password: generate_password(result.value), bits: entropy_bits(result.value) };
   }
@@ -66,12 +65,12 @@
   }
 
   function update(patch: Partial<PasswordSettings>) {
-    settings.value = { ...settings.value, ...patch };
+    data.value.password = { ...data.value.password, ...patch };
     regenerate();
   }
 
   function toggle_set(set: CharacterSet, on: boolean) {
-    update({ sets: { ...settings.value.sets, [set]: on } });
+    update({ sets: { ...data.value.password.sets, [set]: on } });
   }
 </script>
 
@@ -96,19 +95,19 @@
 <Section title="Options" description="Changing an option makes a new password.">
   <SettingRow label="Length" description="{MIN_LENGTH} to {MAX_LENGTH} characters.">
     {#snippet children({ id, describedby })}
-      <Input {id} aria-describedby={describedby} type="number" min={MIN_LENGTH} max={MAX_LENGTH} step="1" size="sm" class="w-24" bind:value={() => settings.value.length, (value) => update({ length: as_number(value) })} />
+      <Input {id} aria-describedby={describedby} type="number" min={MIN_LENGTH} max={MAX_LENGTH} step="1" size="sm" class="w-24" bind:value={() => data.value.password.length, (value) => update({ length: as_number(value) })} />
     {/snippet}
   </SettingRow>
   {#each CHARACTER_SETS as set (set)}
     <SettingRow label={SET_LABELS[set]} description={SET_HINTS[set]}>
       {#snippet children({ id, describedby })}
-        <Switch {id} aria-describedby={describedby} bind:checked={() => settings.value.sets[set], (on) => toggle_set(set, on)} />
+        <Switch {id} aria-describedby={describedby} bind:checked={() => data.value.password.sets[set], (on) => toggle_set(set, on)} />
       {/snippet}
     </SettingRow>
   {/each}
   <SettingRow label="Leave out look-alikes" description="Skips I, l, 1, |, O, 0 and o.">
     {#snippet children({ id, describedby })}
-      <Switch {id} aria-describedby={describedby} bind:checked={() => settings.value.exclude_ambiguous, (exclude_ambiguous) => update({ exclude_ambiguous })} />
+      <Switch {id} aria-describedby={describedby} bind:checked={() => data.value.password.exclude_ambiguous, (exclude_ambiguous) => update({ exclude_ambiguous })} />
     {/snippet}
   </SettingRow>
 </Section>

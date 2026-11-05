@@ -86,6 +86,20 @@ export function empty_stats(): Stats {
   };
 }
 
+const DEFAULT_CUSTOM: Config = { width: 20, height: 12, mines: 40 };
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  custom: config_schema.catch(() => ({ ...DEFAULT_CUSTOM })),
+  difficulty: difficulty_schema.catch(Difficulty.BEGINNER),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { stats: empty_stats(), custom: { ...DEFAULT_CUSTOM }, difficulty: Difficulty.BEGINNER };
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(Math.round(value) || min, min), max);
 }

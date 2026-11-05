@@ -138,3 +138,16 @@ export function restore(saved: Saved): Game | null {
 
 /** A daily case in progress, kept apart from the regular save. */
 export const daily_saved_schema = z.object({ day: z.string(), game: saved_schema });
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  length: length_schema.catch(Length.L4),
+  game: saved_schema.nullable().catch(null),
+  daily: daily_saved_schema.nullable().catch(null),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { stats: empty_stats(), length: Length.L4, game: null, daily: null };
+}

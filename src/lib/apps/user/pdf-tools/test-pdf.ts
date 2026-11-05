@@ -42,6 +42,9 @@ export const test_pdf_schema = z.object({
 });
 export type TestPdfOptions = z.infer<typeof test_pdf_schema>;
 
+export const SizeBy = { NATURAL: "natural", BYTES: "bytes" } as const;
+export type SizeBy = (typeof SizeBy)[keyof typeof SizeBy];
+
 export const DEFAULT_PDF: TestPdfOptions = {
   pages: 10,
   paper: Paper.A4,

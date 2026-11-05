@@ -82,6 +82,9 @@ export const DEFAULT_SPEC: TestImageSpec = {
 
 export const DEFAULT_OUTPUT: TestOutput = { format: TestFormat.PNG, quality: 92, target: null };
 
+export const SizeBy = { DIMENSIONS: "dimensions", BYTES: "bytes" } as const;
+export type SizeBy = (typeof SizeBy)[keyof typeof SizeBy];
+
 
 export function parse_dimensions(text: string): { width: number; height: number } | null {
   const match = /^\s*(\d+)\s*[x×*]\s*(\d+)\s*$/i.exec(text);

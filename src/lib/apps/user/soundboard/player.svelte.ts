@@ -1,7 +1,7 @@
 import kernel, { type FilesService } from "$lib/core/api";
-import { create_storage_handle } from "$lib/core/contexts/app";
+import { app_data_path, live_file } from "$lib/core/contexts/app";
 import { SvelteMap } from "svelte/reactivity";
-import { DEFAULT_VOLUME, play_action, PlayAction, PlayMode, PlayModeSchema, VolumeSchema, type Pad } from "./board";
+import { EMPTY_STORAGE, play_action, PlayAction, PlayMode, StorageSchema, type Pad } from "./board";
 import { APP_ID, read_sound } from "./store";
 
 export interface PlayState {
@@ -179,9 +179,16 @@ export function sound_player(): SoundPlayer {
       shared = null;
     }
   );
-  const storage = create_storage_handle(APP_ID, {});
-  player.set_volume(storage.get("volume", VolumeSchema) ?? DEFAULT_VOLUME);
-  player.mode = storage.get("mode", PlayModeSchema) ?? PlayMode.RESTART;
+  player.set_volume(EMPTY_STORAGE.volume);
+  player.mode = EMPTY_STORAGE.mode;
+  live_file(app_data_path(APP_ID, "storage.json"), EMPTY_STORAGE, StorageSchema)
+    .read()
+    .then((saved) => {
+      if (shared !== player) return;
+      player.set_volume(saved.volume);
+      player.mode = saved.mode;
+    })
+    .catch(() => {});
   shared = player;
   return player;
 }

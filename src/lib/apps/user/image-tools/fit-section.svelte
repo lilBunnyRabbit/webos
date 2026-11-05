@@ -19,11 +19,11 @@
     Warning as WarningIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { z } from "zod";
-  import { FIT_FORMATS, FIT_QUALITY, FitFormat, LIMIT_PRESETS, format_limit, parse_limit } from "./fit";
+  import { FIT_QUALITY, FitFormat, LIMIT_PRESETS, format_limit, parse_limit } from "./fit";
   import { run_fit, type FitResult } from "./fit-job";
   import { fitted_name } from "./naming";
   import type { SectionProps } from "./sections";
+  import { empty_storage, storage_schema } from "./storage";
   import { pictures_folder } from "./test-image-job";
 
   const CUSTOM = "custom";
@@ -58,11 +58,7 @@
   const { app_id, window: win, storage } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const settings = storage.persisted(
-    "fit",
-    { limit: String(1_000_000), custom: "1.5 MB", format: FitFormat.KEEP as FitFormat, max: null as number | null },
-    z.object({ limit: z.string(), custom: z.string(), format: z.enum(FIT_FORMATS), max: z.number().int().min(1).nullable() })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let root = $state<HTMLElement>();
   let source = $state.raw<Source | null>(null);
@@ -74,9 +70,9 @@
   let copied = $state(false);
   let copied_timer: ReturnType<typeof setTimeout> | undefined;
 
-  const limit = $derived(settings.value.limit === CUSTOM ? parse_limit(settings.value.custom) : Number(settings.value.limit) || null);
-  const max = $derived(typeof settings.value.max === "number" && settings.value.max >= 1 ? Math.round(settings.value.max) : null);
-  const key = $derived(source ? `${source.name}|${source.file.size}|${limit}|${settings.value.format}|${max}` : "");
+  const limit = $derived(data.value.fit.limit === CUSTOM ? parse_limit(data.value.fit.custom) : Number(data.value.fit.limit) || null);
+  const max = $derived(typeof data.value.fit.max === "number" && data.value.fit.max >= 1 ? Math.round(data.value.fit.max) : null);
+  const key = $derived(source ? `${source.name}|${source.file.size}|${limit}|${data.value.fit.format}|${max}` : "");
   const current = $derived(result?.key === key ? result : null);
 
   let request = 0;
@@ -141,7 +137,7 @@
       const fitted = await run_fit(
         app_id,
         { name: source.name, path: source.path, file: source.file },
-        { limit, format: settings.value.format, max, ...FIT_QUALITY }
+        { limit, format: data.value.fit.format, max, ...FIT_QUALITY }
       );
       if (!fitted) return;
       let bitmap: ImageBitmap | null = null;
@@ -283,9 +279,9 @@
         <div class="flex flex-col gap-2.5">
           {@render heading("Limit")}
           <div class="flex items-center gap-1.5">
-            <Select size="sm" aria-label="Size limit" options={LIMITS} bind:value={settings.value.limit} class="min-w-0 flex-1" />
-            {#if settings.value.limit === CUSTOM}
-              <Input size="sm" aria-label="Custom limit" placeholder="1.5 MB" bind:value={settings.value.custom} class={["w-24 font-mono", limit === null && "ring-1 ring-error"]} />
+            <Select size="sm" aria-label="Size limit" options={LIMITS} bind:value={data.value.fit.limit} class="min-w-0 flex-1" />
+            {#if data.value.fit.limit === CUSTOM}
+              <Input size="sm" aria-label="Custom limit" placeholder="1.5 MB" bind:value={data.value.fit.custom} class={["w-24 font-mono", limit === null && "ring-1 ring-error"]} />
             {/if}
           </div>
           <p class="px-0.5 text-2xs text-foreground/65">
@@ -293,12 +289,12 @@
           </p>
           <label class="flex items-center justify-between gap-2 text-ui" title="AVIF and JPEG XL are smaller at the same quality, and slow: tens of seconds on a photo">
             Format
-            <Select size="sm" aria-label="Format" options={FORMATS} bind:value={settings.value.format} class="w-32" />
+            <Select size="sm" aria-label="Format" options={FORMATS} bind:value={data.value.fit.format} class="w-32" />
           </label>
           <label class="flex items-center justify-between gap-2 text-ui" title="Scales down first when the longest side is bigger">
             Max side
             <span class="flex items-center gap-1.5">
-              <Input type="number" size="sm" min={1} placeholder="Any" bind:value={settings.value.max} class="w-20 font-mono tabular-nums" />
+              <Input type="number" size="sm" min={1} placeholder="Any" bind:value={data.value.fit.max} class="w-20 font-mono tabular-nums" />
               <span class="w-6 font-mono text-2xs text-foreground/80">px</span>
             </span>
           </label>

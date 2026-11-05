@@ -52,6 +52,18 @@ export const prefs_schema = z.object({
 
 export const best_ms_schema = z.record(z.string(), z.number().positive());
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  best_ms: best_ms_schema.catch(() => ({})),
+  escapes: z.number().int().nonnegative().catch(0),
+  prefs: prefs_schema.catch(() => ({ ...DEFAULT_PREFS })),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { best_ms: {}, escapes: 0, prefs: { ...DEFAULT_PREFS } };
+}
+
 export function size_label(size: Size): string {
   return `${size} × ${size}`;
 }

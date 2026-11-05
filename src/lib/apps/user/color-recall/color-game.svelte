@@ -3,11 +3,12 @@
   import { track_play } from "$kit/games";
   import { RouteKind, route_url } from "$lib/core/api/services/router/route";
   import { Button, Segmented, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { app_data_path, get_app_context, json_file } from "$lib/core/contexts/app";
   import { day_key } from "$lib/core/utils/date";
   import { random_seed } from "$lib/core/utils/random";
   import { untrack, type Snippet } from "svelte";
-  import { z, type ZodType } from "zod";
+  import type { ZodType } from "zod";
+  import { empty_game_file, GAME_FILE, game_file_schema, legacy_schema, type Legacy } from "./game-file";
   import { Level, type Mode } from "./modes";
   import type { NextAction, RunProps } from "./run";
   import { puzzle_number, resolve_seed, type Seed } from "./seed";
@@ -37,6 +38,7 @@
   const initial = untrack(() => ({ ...props }));
 
   const { app_id, window: win, storage } = get_app_context();
+  const file = storage.file(GAME_FILE, empty_game_file(), game_file_schema);
   const apps = $derived(kernel.service<AppsService>("apps"));
   const name = $derived(apps.get(app_id)?.name ?? app_id);
   const tracker = track_play(app_id, () => win.is_visible);
@@ -48,10 +50,12 @@
   const challenge = linked !== undefined && linked !== today ? linked : null;
 
   let kind = $state<Kind>(challenge === null ? Kind.DAILY : Kind.PRACTICE);
+  // The saved level and daily come with the file; the frame waits for them, so a daily never deals over its saved attempt.
+  let loaded = $state(false);
   let practice = $state<{ seed: Seed; level: Level }>(
     challenge !== null
       ? { seed: challenge, level: initial.level ?? Level.EASY }
-      : { seed: random_seed(), level: storage.get("level", z.enum(Level)) ?? Level.EASY }
+      : { seed: random_seed(), level: Level.EASY }
   );
 
   const level = $derived(kind === Kind.PRACTICE && props.levels ? practice.level : Level.EASY);
@@ -71,10 +75,10 @@
       daily: counts,
       head: share_head(name, seed, level),
       link: route_url({ kind: RouteKind.SOLO, id: app_id, props: challenge_props(seed, level) }),
-      saved: counts ? saved_daily() : null,
+      saved: counts ? untrack(saved_daily) : null,
       next,
       onsave: (state: State) => {
-        if (counts) storage.set("daily", { day: today, state });
+        if (counts) file.value.daily = { day: today, state };
       },
       onfinish: (ms: number, score?: number) => {
         if (counts) tracker.daily(today, ms, score);
@@ -82,9 +86,37 @@
     };
   });
 
+  $effect(() => {
+    if (loaded || !file.ready) return;
+    if (untrack(() => file.value.folded)) return untrack(settle);
+    const legacy = json_file(app_data_path(app_id, "storage.json"), {}, legacy_schema);
+    $effect(() => {
+      if (!legacy.ready) return;
+      untrack(() => fold(legacy.value));
+      // Released before the board mounts: its own handle on storage.json must not share this loose one.
+      legacy.release();
+      untrack(settle);
+    });
+    return () => legacy.release();
+  });
+
+  function fold(legacy: Legacy) {
+    const { level, daily } = $state.snapshot(legacy);
+    file.value = { folded: true, level: level ?? file.value.level, daily: daily ?? file.value.daily };
+    delete legacy.level;
+    delete legacy.daily;
+  }
+
+  function settle() {
+    if (challenge === null) practice = { ...practice, level: file.value.level };
+    loaded = true;
+  }
+
   function saved_daily(): State | null {
-    const entry = storage.get("daily", z.object({ day: z.string(), state: props.schema }));
-    return entry?.day === today ? (entry.state as State) : null;
+    const entry = file.value.daily;
+    if (entry?.day !== today) return null;
+    const result = props.schema.safeParse(entry.state);
+    return result.success ? result.data : null;
   }
 
   function set_kind(next: Kind) {
@@ -92,7 +124,7 @@
   }
 
   function set_level(next: Level) {
-    storage.set("level", next);
+    file.value.level = next;
     practice = { seed: random_seed(), level: next };
   }
 
@@ -102,26 +134,28 @@
   }
 </script>
 
-<div class="grid h-full grid-rows-[auto_1fr_auto]">
-  <Toolbar>
-    <Segmented size="sm" label="Daily or practice" options={KIND_OPTIONS} bind:value={() => kind, set_kind} />
-    <div class="flex-1"></div>
-    {#if kind === Kind.PRACTICE}
-      {#if props.levels}
-        <Segmented size="sm" label="Difficulty" options={level_options} bind:value={() => practice.level, set_level} />
+{#if loaded}
+  <div class="grid h-full grid-rows-[auto_1fr_auto]">
+    <Toolbar>
+      <Segmented size="sm" label="Daily or practice" options={KIND_OPTIONS} bind:value={() => kind, set_kind} />
+      <div class="flex-1"></div>
+      {#if kind === Kind.PRACTICE}
+        {#if props.levels}
+          <Segmented size="sm" label="Difficulty" options={level_options} bind:value={() => practice.level, set_level} />
+        {/if}
+        <Button size="sm" variant="primary" onclick={new_puzzle}>New puzzle</Button>
       {/if}
-      <Button size="sm" variant="primary" onclick={new_puzzle}>New puzzle</Button>
-    {/if}
-  </Toolbar>
+    </Toolbar>
 
-  <div class="min-h-0 overflow-hidden">
-    {#key run_key}
-      {@render props.board(run)}
-    {/key}
+    <div class="min-h-0 overflow-hidden">
+      {#key run_key}
+        {@render props.board(run)}
+      {/key}
+    </div>
+
+    <StatusBar>
+      <span class="truncate">{where}</span>
+      <span class="hidden truncate @2xl:inline pointer-coarse:hidden">{props.keys}</span>
+    </StatusBar>
   </div>
-
-  <StatusBar>
-    <span class="truncate">{where}</span>
-    <span class="hidden truncate @2xl:inline pointer-coarse:hidden">{props.keys}</span>
-  </StatusBar>
-</div>
+{/if}

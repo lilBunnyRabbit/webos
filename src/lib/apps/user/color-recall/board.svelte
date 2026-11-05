@@ -4,11 +4,10 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
   import { untrack } from "svelte";
-  import { z } from "zod";
   import ChannelSlider from "./channel-slider.svelte";
   import { hex_hsb, hex_lch, hsb_hex, hsb_tracks, lch_hex, lch_tracks, OKLCH_MAX_CHROMA, Space, type Hsb, type Lch } from "./color";
   import { Level } from "./modes";
-  import { MEMORISE_MS, recall_rounds, round_score, ROUNDS, ROUND_MAX, total_score, type RecallState } from "./recall";
+  import { empty_storage, MEMORISE_MS, recall_rounds, round_score, ROUNDS, ROUND_MAX, storage_schema, total_score, type RecallState } from "./recall";
   import type { RunProps } from "./run";
   import ShareCard from "./share-card.svelte";
   import { band, format_score, recall_share } from "./share";
@@ -24,8 +23,7 @@
   ];
 
   const { window: win, storage, achievements } = get_app_context();
-  const games = storage.persisted("games", 0, z.number().int().nonnegative());
-  const space = storage.persisted<Space>("space", Space.HSB, z.enum(Space));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   const initial = untrack(() => ({ seed, saved, level }));
   const rounds = recall_rounds(initial.seed);
@@ -42,8 +40,8 @@
   let first_slider = $state<HTMLInputElement>();
 
   const current = $derived(Math.min(guesses.length, ROUNDS - 1));
-  const guess_hex = $derived(space.value === Space.HSB ? hsb_hex(hsb) : lch_hex(lch));
-  const tracks = $derived(space.value === Space.HSB ? hsb_tracks(hsb) : lch_tracks(lch));
+  const guess_hex = $derived(data.value.space === Space.HSB ? hsb_hex(hsb) : lch_hex(lch));
+  const tracks = $derived(data.value.space === Space.HSB ? hsb_tracks(hsb) : lch_tracks(lch));
   const scores = $derived(guesses.map((guess, index) => round_score(rounds[index].hex, guess)));
   const total = $derived(total_score(scores));
   const last = $derived(guesses.length - 1);
@@ -64,14 +62,14 @@
   }
 
   function set_space(next_space: Space) {
-    if (next_space === space.value) return;
+    if (next_space === data.value.space) return;
     const hex = guess_hex;
     if (next_space === Space.OKLCH) lch = round_lch(hex_lch(hex));
     else {
       const value = hex_hsb(hex);
       hsb = { h: Math.round(value.h), s: Math.round(value.s), b: Math.round(value.b) };
     }
-    space.value = next_space;
+    data.value.space = next_space;
   }
 
   function save(shown: boolean) {
@@ -110,12 +108,12 @@
   }
 
   function record_game() {
-    games.value++;
+    data.value.games++;
     achievements.achieve("first-game");
     if (daily) achievements.achieve("daily");
     if (total >= 40) achievements.achieve("score-40");
     if (initial.level === Level.HARD && total >= 35) achievements.achieve("hard-35");
-    achievements.progress("games-25", games.value);
+    achievements.progress("games-25", data.value.games);
   }
 
   function after_reveal() {
@@ -189,9 +187,9 @@
       <div class="flex flex-col gap-2 @xl:justify-center">
         <div class="flex items-center justify-between gap-2">
           <span class="text-ui font-medium">Colour {current + 1} of {ROUNDS}</span>
-          <Segmented size="sm" label="Slider colour space" options={SPACE_OPTIONS} bind:value={() => space.value, set_space} />
+          <Segmented size="sm" label="Slider colour space" options={SPACE_OPTIONS} bind:value={() => data.value.space, set_space} />
         </div>
-        {#if space.value === Space.HSB}
+        {#if data.value.space === Space.HSB}
           {@const shown = format_hsb(hsb)}
           <ChannelSlider label="Hue" min={0} max={359} step={1} bind:value={hsb.h} track={tracks[0]} shown={shown[0]} bind:element={first_slider} />
           <ChannelSlider label="Saturation" min={0} max={100} step={1} bind:value={hsb.s} track={tracks[1]} shown={shown[1]} />

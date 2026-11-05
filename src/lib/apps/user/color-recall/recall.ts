@@ -1,6 +1,6 @@
 import { create_rng, random_int, type Rng } from "$lib/core/utils/random";
 import { z } from "zod";
-import { color_difference, hsb_hex, wrap_hue, type Hsb } from "./color";
+import { color_difference, hsb_hex, Space, wrap_hue, type Hsb } from "./color";
 import { Level } from "./modes";
 import { sub_seed } from "./seed";
 
@@ -52,3 +52,14 @@ export const recall_state_schema = z.object({
   ms: z.number().nonnegative(),
 });
 export type RecallState = z.infer<typeof recall_state_schema>;
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  games: z.number().int().nonnegative().catch(0),
+  space: z.enum(Space).catch(Space.HSB),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { games: 0, space: Space.HSB };
+}

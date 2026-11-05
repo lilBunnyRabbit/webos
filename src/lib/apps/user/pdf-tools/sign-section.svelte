@@ -17,7 +17,7 @@
     X as XIcon,
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { clamp_placement, type Placement } from "./geometry";
   import { signed_name, signature_file_name } from "./naming";
   import { DATE_SCALE, Ink, ink_css, sign_pdf } from "./pdf";
@@ -62,7 +62,7 @@
     { value: Ink.BLACK, label: "Black" },
     { value: Ink.BLUE, label: "Dark blue" },
   ];
-  const options = storage.persisted("sign", { ink: Ink.BLACK as Ink, date: false }, z.object({ ink: z.enum([Ink.BLACK, Ink.BLUE]), date: z.boolean() }));
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   const slot = new PdfSlot();
   const loaded = $derived(slot.loaded);
@@ -275,7 +275,7 @@
     try {
       const bytes = await sign_pdf(
         loaded.bytes,
-        stamps.map((stamp) => ({ page: stamp.page, placement: stamp.placement, signature: stamp.signature, ink: options.value.ink, date: options.value.date ? date_text : null })),
+        stamps.map((stamp) => ({ page: stamp.page, placement: stamp.placement, signature: stamp.signature, ink: data.value.sign.ink, date: data.value.sign.date ? date_text : null })),
         loaded.source.name
       );
       await write_at(path, bytes);
@@ -357,9 +357,9 @@
                   onkeydown={(event) => on_stamp_key(event, stamp)}
                   onfocus={() => (selected = stamp.id)}
                 >
-                  <SignaturePreview signature={stamp.signature} color={ink_css(options.value.ink)} class="size-full" />
-                  {#if options.value.date}
-                    <span class="absolute top-full left-0 font-[Helvetica,Arial,sans-serif] leading-none whitespace-nowrap" style:color={ink_css(options.value.ink)} style:font-size="{date_size(stamp)}px" style:margin-top="{date_size(stamp) * 0.2}px">{date_text}</span>
+                  <SignaturePreview signature={stamp.signature} color={ink_css(data.value.sign.ink)} class="size-full" />
+                  {#if data.value.sign.date}
+                    <span class="absolute top-full left-0 font-[Helvetica,Arial,sans-serif] leading-none whitespace-nowrap" style:color={ink_css(data.value.sign.ink)} style:font-size="{date_size(stamp)}px" style:margin-top="{date_size(stamp) * 0.2}px">{date_text}</span>
                   {/if}
                   {#if is_selected}
                     <button
@@ -413,10 +413,10 @@
               {#each INKS as ink (ink.value)}
                 <span class="size-3 rounded-full ring-1 ring-foreground/30" style:background={ink_css(ink.value)} aria-hidden="true"></span>
               {/each}
-              <Segmented size="sm" label="Ink" options={INKS} bind:value={options.value.ink} />
+              <Segmented size="sm" label="Ink" options={INKS} bind:value={data.value.sign.ink} />
             </div>
             <label class="flex items-center gap-2 text-ui">
-              <Switch bind:checked={options.value.date} /> Add today's date
+              <Switch bind:checked={data.value.sign.date} /> Add today's date
             </label>
             {#if selected}
               <Button size="sm" onclick={remove_selected}><TrashIcon weight="bold" /> Remove selected</Button>

@@ -22,14 +22,13 @@
   import { fade } from "svelte/transition";
   import manifest from "./index";
   import {
-    DEFAULT_SETTINGS,
     MAX_GHOST_WORDS,
+    empty_storage,
     clamp_int,
     find_position,
     pause_settings,
-    positions_schema,
     remember_position,
-    settings_schema,
+    storage_schema,
   } from "./storage";
   import {
     MAX_PAUSE_MS,
@@ -43,7 +42,6 @@
   } from "./timeline";
   import { tokenize, type ReaderToken } from "./tokens";
   import { EMPTY_TALLY, FAST_WORDS, read_through, reported, tally, type Tally } from "./reading";
-  import { z } from "zod";
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
 
@@ -64,9 +62,12 @@
   const { window: win, storage, achievements } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
 
-  const settings = storage.persisted("settings", DEFAULT_SETTINGS, settings_schema);
-  const WORDS_KEY = "words";
-  const words_schema = z.number().int().nonnegative();
+  // Before the file handle: teardown runs in creation order, so the last count and position land before the file is released.
+  onDestroy(() => {
+    count_reading();
+    save_position();
+  });
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let root = $state<HTMLDivElement>();
   let source = $state.raw<Source | null>(null);
@@ -81,10 +82,10 @@
   let reading: Tally = EMPTY_TALLY;
 
   const tokens = $derived(source?.tokens ?? []);
-  const timeline = $derived(build_timeline(tokens, settings.value.wpm, pause_settings(settings.value)));
+  const timeline = $derived(build_timeline(tokens, data.value.settings.wpm, pause_settings(data.value.settings)));
   const current = $derived(tokens[index]);
-  const before = $derived(tokens.slice(Math.max(0, index - settings.value.ghost_words), index));
-  const after = $derived(tokens.slice(index + 1, index + 1 + settings.value.ghost_words));
+  const before = $derived(tokens.slice(Math.max(0, index - data.value.settings.ghost_words), index));
+  const after = $derived(tokens.slice(index + 1, index + 1 + data.value.settings.ghost_words));
   const entrance_ms = $derived(prefersReducedMotion.current ? 0 : (timeline.segments[0]?.base_ms ?? 0) * ENTRANCE_RATIO);
 
   // The rAF callback reads `timeline` and `index` untracked, so a rebuilt timeline (speed or pause change) continues
@@ -101,13 +102,13 @@
       if (elapsed >= timeline.total_ms) {
         index = timeline.segments.length - 1;
         progress = 0;
-        reading = tally(reading, from, index + 1, settings.value.wpm);
+        reading = tally(reading, from, index + 1, data.value.settings.wpm);
         if (read_through(reading, timeline.segments.length)) achievements.achieve("the-end");
         pause();
         return;
       }
       ({ index, progress } = position_at(timeline, elapsed));
-      reading = tally(reading, from, index, settings.value.wpm);
+      reading = tally(reading, from, index, data.value.settings.wpm);
       frame = requestAnimationFrame(step);
     });
 
@@ -118,16 +119,10 @@
     if (!win.is_visible) untrack(pause);
   });
 
-  onDestroy(() => {
-    count_reading();
-    save_position();
-  });
-
-  // Read and written straight through, not a persisted cell: on close the cell is torn down before onDestroy runs.
   function count_reading() {
     if (reading.words > 0) {
-      const total = (storage.get(WORDS_KEY, words_schema) ?? 0) + reading.words;
-      storage.set(WORDS_KEY, total);
+      const total = data.value.words + reading.words;
+      data.value.words = total;
       achievements.progress("words-10000", total);
     }
     if (reading.fast_best >= FAST_WORDS) achievements.achieve("fast");
@@ -136,8 +131,7 @@
 
   function save_position() {
     if (!source?.path) return;
-    const stored = storage.get("positions", positions_schema) ?? [];
-    storage.set("positions", remember_position(stored, source.path, index));
+    data.value.positions = remember_position(data.value.positions, source.path, index);
   }
 
   function play() {
@@ -176,7 +170,7 @@
   }
 
   function set_wpm(value: number) {
-    settings.value.wpm = clamp_int(value, MIN_WPM, MAX_WPM);
+    data.value.settings.wpm = clamp_int(value, MIN_WPM, MAX_WPM);
   }
 
   function number_setting(apply: (value: number) => void, read: () => number) {
@@ -196,7 +190,7 @@
     count_reading();
     reading = EMPTY_TALLY;
     source = next;
-    const stored = next.path ? find_position(storage.get("positions", positions_schema) ?? [], next.path) : null;
+    const stored = next.path ? find_position(data.value.positions, next.path) : null;
     index = clamp_int(stored ?? 0, 0, Math.max(0, next.tokens.length - 1));
     progress = 0;
     await tick();
@@ -230,7 +224,10 @@
   }
 
   const initial = untrack(() => initial_path);
-  if (initial) open_path(initial);
+  // Waits for the file, so the saved reading position is there when the file opens.
+  $effect(() => {
+    if (initial && data.ready) untrack(() => open_path(initial));
+  });
 
   async function pick() {
     const start_path = source?.path ? parent_path(source.path) : undefined;
@@ -267,8 +264,8 @@
       ArrowRight: () => step_to(index + (event.shiftKey ? 10 : 1)),
       Home: () => step_to(0),
       End: () => step_to(tokens.length - 1),
-      ArrowUp: () => set_wpm(settings.value.wpm + WPM_STEP),
-      ArrowDown: () => set_wpm(settings.value.wpm - WPM_STEP),
+      ArrowUp: () => set_wpm(data.value.settings.wpm + WPM_STEP),
+      ArrowDown: () => set_wpm(data.value.settings.wpm - WPM_STEP),
     };
     const action = actions[event.key];
     if (!action) return;
@@ -324,7 +321,7 @@
         <span class="min-w-0 flex-1 truncate px-1 text-ui font-medium" title={source.path ?? undefined}>{source.name}</span>
 
         <div class="flex items-center gap-1">
-          <IconButton label="Slower (↓)" size="sm" disabled={settings.value.wpm <= MIN_WPM} onclick={() => set_wpm(settings.value.wpm - WPM_STEP)}>
+          <IconButton label="Slower (↓)" size="sm" disabled={data.value.settings.wpm <= MIN_WPM} onclick={() => set_wpm(data.value.settings.wpm - WPM_STEP)}>
             <MinusIcon weight="bold" />
           </IconButton>
           <Input
@@ -334,11 +331,11 @@
             min={MIN_WPM}
             max={MAX_WPM}
             step={WPM_STEP}
-            value={settings.value.wpm}
-            onchange={number_setting(set_wpm, () => settings.value.wpm)}
+            value={data.value.settings.wpm}
+            onchange={number_setting(set_wpm, () => data.value.settings.wpm)}
             class="w-16 text-center font-mono tabular-nums"
           />
-          <IconButton label="Faster (↑)" size="sm" disabled={settings.value.wpm >= MAX_WPM} onclick={() => set_wpm(settings.value.wpm + WPM_STEP)}>
+          <IconButton label="Faster (↑)" size="sm" disabled={data.value.settings.wpm >= MAX_WPM} onclick={() => set_wpm(data.value.settings.wpm + WPM_STEP)}>
             <PlusIcon weight="bold" />
           </IconButton>
           <span class="hidden font-mono text-2xs text-foreground/80 @sm:inline">wpm</span>
@@ -363,13 +360,13 @@
               size="sm"
               min={0}
               max={MAX_GHOST_WORDS}
-              value={settings.value.ghost_words}
-              onchange={number_setting((value) => (settings.value.ghost_words = clamp_int(value, 0, MAX_GHOST_WORDS)), () => settings.value.ghost_words)}
+              value={data.value.settings.ghost_words}
+              onchange={number_setting((value) => (data.value.settings.ghost_words = clamp_int(value, 0, MAX_GHOST_WORDS)), () => data.value.settings.ghost_words)}
               class="w-14 font-mono tabular-nums"
             />
           </label>
           <label class="flex items-center gap-2" title="Hold the word before punctuation a little longer">
-            <Switch bind:checked={settings.value.pauses} />
+            <Switch bind:checked={data.value.settings.pauses} />
             Pauses
           </label>
           <label class="flex items-center gap-2" title="Extra time on the last word of a sentence. Commas, dashes and ellipses have their own">
@@ -380,11 +377,11 @@
               min={0}
               max={MAX_PAUSE_MS}
               step={100}
-              disabled={!settings.value.pauses}
-              value={settings.value.sentence_pause_ms}
+              disabled={!data.value.settings.pauses}
+              value={data.value.settings.sentence_pause_ms}
               onchange={number_setting(
-                (value) => (settings.value.sentence_pause_ms = clamp_int(value, 0, MAX_PAUSE_MS)),
-                () => settings.value.sentence_pause_ms
+                (value) => (data.value.settings.sentence_pause_ms = clamp_int(value, 0, MAX_PAUSE_MS)),
+                () => data.value.settings.sentence_pause_ms
               )}
               class="w-18 font-mono tabular-nums"
             />
@@ -402,7 +399,7 @@
         onclick={toggle}
       >
         <div class="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-baseline gap-4 font-mono">
-          <div class="ghost truncate text-right" dir="rtl" style:color={ghost_color(settings.value.ghost_words)}>
+          <div class="ghost truncate text-right" dir="rtl" style:color={ghost_color(data.value.settings.ghost_words)}>
             <span dir="ltr">
               {#each before as token, offset}<span style:color={ghost_color(before.length - offset)}>{offset ? " " : ""}{token.text}</span>{/each}
             </span>
@@ -412,7 +409,7 @@
               <span class="word col-start-1 row-start-1 text-center whitespace-pre" style:--chars={Array.from(current?.text ?? "").length} in:fade={{ duration: entrance_ms }}>{current?.text}</span>
             {/key}
           </div>
-          <div class="ghost truncate text-left" style:color={ghost_color(settings.value.ghost_words)}>
+          <div class="ghost truncate text-left" style:color={ghost_color(data.value.settings.ghost_words)}>
             {#each after as token, offset}<span style:color={ghost_color(offset + 1)}>{offset ? " " : ""}{token.text}</span>{/each}
           </div>
         </div>

@@ -5,15 +5,15 @@
   import { paint } from "$kit/utils/image";
   import { FloppyDisk as FloppyDiskIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { open_document, render_width } from "./render";
   import {
-    DEFAULT_PDF,
     estimate_pdf_size,
     MAX_PAGES,
     MAX_PDF_BYTES,
     Orientation,
     Paper,
+    SizeBy,
     pdf_bytes,
     pdf_date,
     test_pdf_name,
@@ -25,14 +25,7 @@
   const { picker, active }: { picker: Snippet; active: boolean } = $props();
   const { app_id, window: win, storage } = get_app_context();
 
-  const SizeBy = { NATURAL: "natural", BYTES: "bytes" } as const;
-  type SizeBy = (typeof SizeBy)[keyof typeof SizeBy];
-
-  const settings = storage.persisted(
-    "test-pdf",
-    { options: DEFAULT_PDF, by: SizeBy.NATURAL as SizeBy, target: "100MB" },
-    z.object({ options: test_pdf_schema, by: z.enum([SizeBy.NATURAL, SizeBy.BYTES]), target: z.string() })
-  );
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   const PAPERS = [
     { value: Paper.A4, label: "A4" },
@@ -50,18 +43,18 @@
   ];
   const PREVIEW_PAGES = 4;
 
-  const options = $derived(settings.value.options);
-  const target = $derived(settings.value.by === SizeBy.BYTES ? parse_bytes(settings.value.target) : null);
+  const options = $derived(data.value["test-pdf"].options);
+  const target = $derived(data.value["test-pdf"].by === SizeBy.BYTES ? parse_bytes(data.value["test-pdf"].target) : null);
   const target_error = $derived.by(() => {
-    if (settings.value.by !== SizeBy.BYTES) return null;
+    if (data.value["test-pdf"].by !== SizeBy.BYTES) return null;
     if (target === null) return "Give a size like 100MB or 2GB";
     if (target > MAX_PDF_BYTES) return "A PDF here can be at most 9.9 GB";
     return null;
   });
 
   function update(patch: Partial<TestPdfOptions>) {
-    const next = test_pdf_schema.safeParse({ ...settings.value.options, ...patch });
-    if (next.success) settings.value.options = next.data;
+    const next = test_pdf_schema.safeParse({ ...data.value["test-pdf"].options, ...patch });
+    if (next.success) data.value["test-pdf"].options = next.data;
   }
 
   function set_number(key: keyof TestPdfOptions, value: number) {
@@ -163,16 +156,16 @@
           size="sm"
           label="File size"
           class="self-start"
-          bind:value={settings.value.by}
+          bind:value={data.value["test-pdf"].by}
           options={[
             { value: SizeBy.NATURAL, label: "As drawn" },
             { value: SizeBy.BYTES, label: "Exact" },
           ]}
         />
-        {#if settings.value.by === SizeBy.BYTES}
+        {#if data.value["test-pdf"].by === SizeBy.BYTES}
           <label class="flex items-center justify-between gap-2 text-ui">
             Size
-            <Input size="sm" class="w-28 font-mono" placeholder="100MB" bind:value={settings.value.target} />
+            <Input size="sm" class="w-28 font-mono" placeholder="100MB" bind:value={data.value["test-pdf"].target} />
           </label>
           <p class="px-0.5 text-2xs text-foreground/65">Random data is embedded in the pages, not drawn, so the file opens quickly at any size.</p>
         {/if}
