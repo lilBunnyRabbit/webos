@@ -8,7 +8,6 @@
   import { Ticker } from "$lib/core/utils/ticker.svelte";
   import { CaretLeft, CaretRight, PencilSimple, Play, Printer, Sticker, Stop, Target, Trash } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { z } from "zod";
   import {
     calendar_weeks,
     clock_time,
@@ -43,11 +42,13 @@
   import { month_label, month_report_html } from "./report";
   import { clock_in, clock_out, edit_month, open_month, open_state, set_running_description } from "./store";
   import { TextDraft } from "./draft.svelte";
+  import { empty_storage, storage_schema } from "./storage";
   import { day_key } from "$lib/core/utils/date";
 
   const { month: initial_month, day: initial_day }: { month?: string; day?: string } = $props();
 
   const { app_id, window: win, storage } = get_app_context();
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
 
@@ -179,7 +180,7 @@
     if (!file) return;
     const current = file.target_hours;
     const target_month = month.value;
-    const last = storage.get("last_target", z.number());
+    const last = prefs.value.last_target;
     const answer = await win.prompt(`Target for ${month_label(month.value)}`, {
       detail: "Hours you mean to work this month. Leave empty for no target.",
       initial: String(current ?? last ?? ""),
@@ -190,7 +191,7 @@
     if (answer === null) return;
     const hours = parse_target(answer) ?? null;
     await write(`${target_month}-01`, (next) => set_target(next, hours));
-    if (hours !== null) storage.set("last_target", hours);
+    if (hours !== null) prefs.value.last_target = hours;
   }
 
   async function print_report() {

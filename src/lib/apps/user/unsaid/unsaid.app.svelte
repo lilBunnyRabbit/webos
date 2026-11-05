@@ -9,7 +9,6 @@
   import { random_seed } from "$lib/core/utils/random";
   import { ChatCircleSlash as ChatCircleSlashIcon, PaperPlaneRight as PaperPlaneRightIcon, SkipForward as SkipForwardIcon, Stop as StopIcon } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
-  import { z } from "zod";
   import { CATEGORY_LABELS, type Card } from "./card";
   import {
     better_best,
@@ -31,6 +30,7 @@
     wrong_guesses,
     type Round,
   } from "./round";
+  import { empty_storage, storage_schema } from "./storage";
   import { is_hit, violations } from "./words";
 
   const { seed: seed_prop }: { seed?: number } = $props();
@@ -38,8 +38,7 @@
   const { app_id, window: win, storage, achievements } = get_app_context();
   const ai = $derived(kernel.service<AiService>("ai"));
   track_play(app_id, () => win.is_visible);
-  const best = storage.persisted("best", null as number | null, z.number().int().nonnegative().nullable());
-  const guessed_total = storage.persisted("guessed", 0, z.number().int().nonnegative());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let deck = $state.raw<Card[] | null>(null);
   let round = $state.raw<Round | null>(null);
@@ -137,7 +136,7 @@
     failure = null;
     if (is_over(round) && !recorded) {
       recorded = true;
-      best.value = better_best(best.value, round_score(round));
+      data.value.best = better_best(data.value.best, round_score(round));
       report_round(round);
     } else {
       queueMicrotask(() => input?.focus());
@@ -146,12 +145,12 @@
 
   function report_round(finished: Round) {
     const { guessed, passed, first_clue } = tally(finished);
-    guessed_total.value += guessed;
+    data.value.guessed += guessed;
     achievements.achieve("first-round");
     if (passed === 0) achievements.achieve("no-pass");
     if (first_clue > 0) achievements.achieve("first-clue");
     if (first_clue === ROUND_CARDS) achievements.achieve("telepathy");
-    achievements.progress("guessed-25", guessed_total.value);
+    achievements.progress("guessed-25", data.value.guessed);
   }
 
   async function new_round() {
@@ -233,7 +232,7 @@
                   <Button size="sm" variant="primary" onclick={start}>Start</Button>
                 </BoardOverlay>
               {:else if over}
-                <BoardOverlay title="Round over" detail="{points(score)}{best.value !== null ? ` · best ${best.value}` : ''}">
+                <BoardOverlay title="Round over" detail="{points(score)}{data.value.best !== null ? ` · best ${data.value.best}` : ''}">
                   <CopyButton text={link} label="Copy a link to these cards" />
                   <Button size="sm" variant="primary" onclick={new_round}>Play again</Button>
                 </BoardOverlay>
@@ -318,7 +317,7 @@
           <span class="shrink-0 font-mono tabular-nums">{points(score)}</span>
           {#if wrong.length && !over}<span class="hidden min-w-0 truncate @md:inline">Ruled out: {wrong.join(", ")}</span>{/if}
         {/if}
-        <span class="ml-auto shrink-0 font-mono tabular-nums">Best {best.value ?? "–"}</span>
+        <span class="ml-auto shrink-0 font-mono tabular-nums">Best {data.value.best ?? "–"}</span>
       </StatusBar>
     </div>
   {/snippet}

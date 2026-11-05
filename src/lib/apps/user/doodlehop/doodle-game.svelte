@@ -17,8 +17,8 @@
   import { ImageFormat, save_image } from "$kit/utils/image";
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Eraser as EraserIcon, SkipForward as SkipForwardIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
-  import { z } from "zod";
-  import { describe_guesses, GuessesSchema, IDLE_MS, is_better, is_hit, Outcome, pick_words, ROUND_WORDS, score_of, ScoreSchema, Status, WORD_MS, type Score, type WordResult } from "./game";
+  import { empty_storage, storage_schema } from "./storage";
+  import { describe_guesses, GuessesSchema, IDLE_MS, is_better, is_hit, Outcome, pick_words, ROUND_WORDS, score_of, Status, WORD_MS, type WordResult } from "./game";
   import { GuessQueue } from "./guess-queue";
   import { GUESS_SIZE, SAVE_SIZE, type Stroke } from "./ink";
   import Recap from "./recap.svelte";
@@ -37,8 +37,7 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const { app_id, window_id, window: win, storage, achievements } = get_app_context();
   track_play(app_id, () => win.is_visible);
-  const best = storage.persisted<Score | null>("best", null, ScoreSchema.nullable());
-  const recognised_total = storage.persisted("recognised", 0, z.number().int().nonnegative());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let status = $state<Status>(Status.READY);
   let words = $state.raw<Word[]>([]);
@@ -175,14 +174,14 @@
     status = Status.OVER;
     recap_open = false;
     const final = score_of(results);
-    new_best = is_better(final, best.value);
-    if (new_best) best.value = final;
-    recognised_total.value += final.recognised;
+    new_best = is_better(final, data.value.best);
+    if (new_best) data.value.best = final;
+    data.value.recognised += final.recognised;
     achievements.achieve("first-round");
     if (final.recognised >= 3) achievements.achieve("half");
     if (final.recognised === ROUND_WORDS) achievements.achieve("perfect");
     if (results.some((result) => result.ms !== null && result.ms < 3_000)) achievements.achieve("lightning");
-    achievements.progress("recognised-50", recognised_total.value);
+    achievements.progress("recognised-50", data.value.recognised);
   }
 
   function skip() {
@@ -234,7 +233,7 @@
   const summary = $derived(
     `${score.recognised} of ${ROUND_WORDS} · ${format_time(score.ms, { tenths: true })}${new_best ? " · New best" : ""}`
   );
-  const best_line = $derived(best.value ? `Best ${best.value.recognised} · ${format_time(best.value.ms, { tenths: true })}` : "No best yet");
+  const best_line = $derived(data.value.best ? `Best ${data.value.best.recognised} · ${format_time(data.value.best.ms, { tenths: true })}` : "No best yet");
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->

@@ -8,7 +8,7 @@
     type NotificationsService,
     type ShortcutsService,
   } from "$lib/core/api";
-  import { is_system_path, PATHS } from "$lib/core/api/services/files/hierarchy";
+  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { Language, load_language, token_highlight, token_theme } from "$kit/components/code";
   import { Button, EmptyState, IconButton, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -57,6 +57,7 @@
   import { app_link, form_payload, read_answer_code, read_answer_payload, read_form_payload, type SharedAnswer } from "./link";
   import LinkBox from "./link-box.svelte";
   import type { FormsProps } from "./props";
+  import { empty_storage, storage_schema } from "./storage";
   import { report_error } from "$kit/utils/report-error";
 
   const { path: initial_path, f, a }: Partial<FormsProps> = $props();
@@ -97,8 +98,7 @@
   const chosen_answers = storage.window<string | null>("answers", null, z.string().nullable());
   // Cleared by New and Open: the window then no longer shows what its link carried.
   const from_link = storage.window("link", true, z.boolean());
-  const folder = storage.persisted("folder", PATHS.documents, z.string());
-  const respondent = storage.persisted("respondent", "", z.string());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let status = $state<Status>(Status.LOADING);
   let error = $state("");
@@ -214,7 +214,7 @@
         answers_file = parsed;
         show(parsed.form);
       } else {
-        folder.value = parent_path(target);
+        data.value.folder = parent_path(target);
         show(text);
       }
     } catch (reason) {
@@ -257,7 +257,7 @@
     if (!(await discard_ok())) return;
     const chosen = await win.pick_file({
       accept: [FORM_EXTENSION, ANSWERS_EXTENSION, ".md"],
-      start_path: path ? parent_path(path) : folder.value,
+      start_path: path ? parent_path(path) : data.value.folder,
       title: "Open in Forms",
     });
     if (!chosen) return;
@@ -287,7 +287,7 @@
       saved_source = content;
       doc_path.value = target;
       device_name = null;
-      folder.value = parent_path(target);
+      data.value.folder = parent_path(target);
       return true;
     } catch (reason) {
       report_error(app_id, "Couldn't save the form", reason);
@@ -299,7 +299,7 @@
     const target = await win.pick_save({
       name: `${stem}${FORM_EXTENSION}`,
       accept: [FORM_EXTENSION],
-      start_path: form_path && !is_system_path(form_path) ? parent_path(form_path) : folder.value,
+      start_path: form_path && !is_system_path(form_path) ? parent_path(form_path) : data.value.folder,
       title: "Save the form",
     });
     return target ? write_form(with_form_extension(target)) : false;
@@ -321,7 +321,7 @@
       const chosen = await win.pick_save({
         name: `${stem}${ANSWERS_EXTENSION}`,
         accept: [ANSWERS_EXTENSION],
-        start_path: folder.value,
+        start_path: data.value.folder,
         title: "Save the answer",
       });
       if (!chosen) return;
@@ -340,7 +340,7 @@
       const { file } = add_response(existing ?? empty_answers(incoming.source), incoming.source, incoming.response);
       await write_answers(target, file);
       if (target !== answers_path) chosen_answers.value = target;
-      folder.value = parent_path(target);
+      data.value.folder = parent_path(target);
     } catch (reason) {
       report_error(app_id, "Couldn't save the answer", reason);
     }
@@ -446,7 +446,7 @@
     const target = await win.pick_save({
       name: `${stem}.csv`,
       accept: [".csv"],
-      start_path: answers_path ? parent_path(answers_path) : folder.value,
+      start_path: answers_path ? parent_path(answers_path) : data.value.folder,
       title: "Export answers as CSV",
     });
     if (!target) return;
@@ -573,7 +573,7 @@
       </div>
     {:else if view.value === View.FILL}
       <div class="h-full overflow-auto">
-        <FillView {form} shared={{ source, name: stem }} bind:respondent={respondent.value} />
+        <FillView {form} shared={{ source, name: stem }} bind:respondent={data.value.respondent} />
       </div>
     {:else}
       <div class="h-full overflow-auto">

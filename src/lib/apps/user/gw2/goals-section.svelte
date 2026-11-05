@@ -6,7 +6,7 @@
   import { get_items, Gw2Error, Gw2ErrorKind, Scope, type Item } from "./api";
   import type { SectionProps } from "./account.svelte";
   import Gate from "./gate.svelte";
-  import { clamp_target, goal_progress, GoalsSchema, order_goals, owned_ids, type Goal } from "./goals";
+  import { clamp_target, goal_progress, order_goals, owned_ids } from "./goals";
   import { load_holdings } from "./holdings";
   import Problem from "./problem.svelte";
   import StaleNotice from "./stale-notice.svelte";
@@ -14,13 +14,14 @@
   import RefreshButton from "./refresh-button.svelte";
   import { Resource } from "./resource.svelte";
   import { Section } from "./sections";
+  import { empty_storage, storage_schema } from "./storage";
 
   let { account, picker, active, onnavigate }: SectionProps = $props();
   const { storage } = get_app_context();
 
   const PICKER_LIMIT = 40;
 
-  const goals = storage.persisted<Goal[]>("goals", [], GoalsSchema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   const holdings = new Resource(async (max_age) => {
     const result = await load_holdings(account.key.value, account.permissions, max_age);
@@ -48,12 +49,12 @@
   });
 
   const board = $derived(
-    order_goals(goals.value.map((goal) => ({ goal, progress: goal_progress(holdings.data?.holdings ?? [], goal) })))
+    order_goals(data.value.goals.map((goal) => ({ goal, progress: goal_progress(holdings.data?.holdings ?? [], goal) })))
   );
 
   const matches = $derived.by(() => {
     const needle = query.trim().toLowerCase();
-    const taken = new Set(goals.value.map((goal) => goal.item_id));
+    const taken = new Set(data.value.goals.map((goal) => goal.item_id));
     const items = [...(owned_items.data?.values() ?? [])].filter((item) => !taken.has(item.id));
     const found = needle ? items.filter((item) => item.name.toLowerCase().includes(needle)) : items;
     return found.sort((a, b) => a.name.localeCompare(b.name)).slice(0, PICKER_LIMIT);
@@ -81,8 +82,8 @@
   });
 
   function add(item: Item) {
-    goals.value = [
-      ...goals.value,
+    data.value.goals = [
+      ...data.value.goals,
       { id: crypto.randomUUID(), item_id: item.id, name: item.name, icon: item.icon, target: clamp_target(new_target) },
     ];
     adding = false;
@@ -90,11 +91,11 @@
   }
 
   function set_target(id: string, value: number) {
-    goals.value = goals.value.map((goal) => (goal.id === id ? { ...goal, target: clamp_target(value) } : goal));
+    data.value.goals = data.value.goals.map((goal) => (goal.id === id ? { ...goal, target: clamp_target(value) } : goal));
   }
 
   function remove(id: string) {
-    goals.value = goals.value.filter((goal) => goal.id !== id);
+    data.value.goals = data.value.goals.filter((goal) => goal.id !== id);
   }
 
   function holdings_problem(error: Gw2Error): Gw2Error {

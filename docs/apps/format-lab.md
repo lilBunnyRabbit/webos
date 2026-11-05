@@ -93,7 +93,7 @@ convert <path…> --to avif|jxl|webp|jpeg|png [-q 1–100] [-o folder]
 
 | What | Where | Format |
 |------|-------|--------|
-| Per-format settings | `localStorage` `app.format-lab.settings`, `storage.persisted()` (`format-lab.app.svelte:66`) | `{ jpeg, webp, avif, jxl: { quality, effort, lossless } }` (`settings.ts:21`) |
+| Per-format settings | `settings` in `/var/lib/apps/format-lab/storage.json` (`storage.file()`, `storage_schema` in `settings.ts`; the old `app.format-lab.settings`, moved in by the 4.0 boot copy) | `{ jpeg, webp, avif, jxl: { quality, effort, lossless } }` (`settings.ts:21`); an invalid value falls back to the defaults |
 | Saved images | Beside the source, or a picked folder (default `/home/Pictures`) | The encoded bytes |
 
 Nothing else is stored; results live in memory until the window closes.

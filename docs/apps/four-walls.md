@@ -80,8 +80,9 @@ Layout: in a wide box Hold and Next stand beside the board; in a tall one (phone
 
 ## Data
 
-- `app.four-walls.best` (`storage.persisted`, zod `best_schema`): `{ cycle: { score, lines }, random: { score, lines } }`, each the best of its mode; the daily counts as Random. Reset in the Best sheet.
-- `app.four-walls.mode`: the last picked mode, like Blocks.
+- `/var/lib/apps/four-walls/storage.json` (`storage_schema`, `game.ts`), under the old `app.four-walls.*` key names the 4.0 boot copy moved in; each field falls back on its own:
+  - `best` (`best_schema`): `{ cycle: { score, lines }, random: { score, lines } }`, each the best of its mode; the daily counts as Random. Reset in the Best sheet.
+  - `mode`: the last picked mode, like Blocks. The window shows the board once the file is read, dealing again in that mode when it differs from the default.
 - Play time through `track_play`; a finished daily goes to Game Hub with `play.daily(day, ms, score)`, ranked by score (`daily_rank: DailyRank.SCORE_DESC`), so the best score of the day stays.
 - `daily` prop (`YYYY-MM-DD`), and `four-walls daily [day]` in the shell (`today`, `yesterday`, `-N` or a date, through `parse_day`).
 - **Guide** (`guide.md`, ADR-085): the goal, the zones and corner-to-corner lines, the middle four cells, keyboard and touch controls, modes, daily and scoring. The window's `?` button or F1 shows it; it opens by itself the first time Four Walls is launched with no props, so a daily from Game Hub skips it. Keep it in step with [Lines and collapse](#lines-and-collapse) and [Controls](#controls).

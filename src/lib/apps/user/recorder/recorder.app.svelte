@@ -32,6 +32,7 @@
   import { untrack } from "svelte";
   import type { Attachment } from "svelte/attachments";
   import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { error_copy, kind_of_file, PhotoFormat, RECORDINGS_DIR, Source, take_achievement, TakeKind } from "./media";
   import type { RecorderProps } from "./props";
   import { list_recordings } from "./recordings";
@@ -61,8 +62,7 @@
   // The prop only seeds a new window; a restored one keeps the source the user switched to.
   const stored_source = storage.window<Source>("source", untrack(() => initial_source) ?? Source.MIC, z.enum([Source.MIC, Source.SCREEN, Source.CAMERA]));
   if (!can_share_screen && stored_source.value === Source.SCREEN) stored_source.value = Source.MIC;
-  const mic_mix = storage.persisted("screen_mic", true, z.boolean());
-  const photo_format = storage.persisted<PhotoFormat>("photo_format", PhotoFormat.JPEG, z.enum([PhotoFormat.JPEG, PhotoFormat.PNG]));
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
 
   const session = new RecorderSession();
   $effect(() => () => session.dispose());
@@ -112,7 +112,7 @@
   }
 
   async function start() {
-    await session.start(source, { mic_mix: mic_mix.value });
+    await session.start(source, { mic_mix: prefs.value.screen_mic });
   }
 
   let saving = $state(false);
@@ -204,7 +204,7 @@
   {:else if session.phase === Phase.STARTING || session.phase === Phase.STOPPING}
     <Button size="lg" variant="primary" disabled><Spinner label={PHASE_LABEL[session.phase]} /> {PHASE_LABEL[session.phase]}…</Button>
   {:else if source === Source.CAMERA}
-    <Button size="lg" disabled={!session.preview} onclick={() => camera_video && session.photo(camera_video, photo_format.value)}>
+    <Button size="lg" disabled={!session.preview} onclick={() => camera_video && session.photo(camera_video, prefs.value.photo_format)}>
       <CameraIcon weight="bold" /> Take photo
     </Button>
     <Button size="lg" variant="primary" disabled={!session.preview} onclick={start}><RecordIcon weight="fill" /> Record video</Button>
@@ -231,14 +231,14 @@
     <div class="flex-1"></div>
     {#if source === Source.SCREEN}
       <label class="flex h-7 items-center gap-2 px-1 text-ui text-foreground/80 pointer-coarse:h-9">
-        <Switch bind:checked={mic_mix.value} disabled={locked} />
+        <Switch bind:checked={prefs.value.screen_mic} disabled={locked} />
         Include microphone
       </label>
     {:else if source === Source.CAMERA}
       {#if session.cameras.length > 1}
         <IconButton label="Switch camera" size="sm" disabled={locked} onclick={() => session.switch_camera()}><CameraRotateIcon weight="bold" /></IconButton>
       {/if}
-      <Select size="sm" aria-label="Photo format" class="w-24" options={PHOTO_FORMATS} bind:value={photo_format.value} />
+      <Select size="sm" aria-label="Photo format" class="w-24" options={PHOTO_FORMATS} bind:value={prefs.value.photo_format} />
     {/if}
   </Toolbar>
 

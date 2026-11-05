@@ -41,7 +41,7 @@ export const DIRECTION_OPTIONS = [
   { value: Direction.DECODE, label: "Decode" },
 ];
 
-/** Texts longer than this aren't saved, so a pasted file can't fill localStorage. */
+/** Texts longer than this aren't saved, so a pasted file doesn't bloat the saved state. */
 export const MAX_STORED_TEXT = 20_000;
 
 const text = z.string().catch("");

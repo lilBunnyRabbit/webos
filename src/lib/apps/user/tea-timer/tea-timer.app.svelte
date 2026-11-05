@@ -18,7 +18,6 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { z } from "zod";
   import BrewCard from "./brew-card.svelte";
   import { attempt, start_brew, steep_again, stop_brew } from "./jobs";
   import {
@@ -42,6 +41,7 @@
   } from "./tea";
   import TeaCard from "./tea-card.svelte";
   import TeaEditor from "./tea-editor.svelte";
+  import { empty_storage, storage_schema } from "./storage";
 
   const { window: win, storage, achievements } = get_app_context();
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
@@ -49,7 +49,7 @@
   const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
 
   const file = storage.file(DATA_FILE, EMPTY_TEAS, TeaDataSchema);
-  const brewed = storage.persisted("brews", 0, z.number().int().nonnegative());
+  const counts = storage.file("storage.json", empty_storage(), storage_schema);
   const teas = $derived(file.ready ? all_teas(file.value) : []);
   const brews = $derived(file.ready ? brews_of(scheduler.jobs, file.value, teas) : []);
   const hidden_count = $derived(teas.filter((tea) => tea.hidden).length);
@@ -103,9 +103,9 @@
   });
 
   function count_brew(entry: Brew) {
-    brewed.value += 1;
+    counts.value.brews += 1;
     achievements.achieve("first-brew");
-    achievements.progress("brews-50", brewed.value);
+    achievements.progress("brews-50", counts.value.brews);
     if (entry.steep > 1) achievements.achieve("resteep");
     if (entry.tea && !entry.tea.built_in) achievements.achieve("own-tea");
   }

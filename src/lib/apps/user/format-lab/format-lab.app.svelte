@@ -33,7 +33,7 @@
   import { parse_header, type ImageHeader } from "./header";
   import HeaderPanel from "./header-panel.svelte";
   import { draw_heatmap } from "./heatmap";
-  import { LAB_FORMATS, LabSettingsSchema, default_settings, type LabFormat } from "./settings";
+  import { LAB_FORMATS, empty_storage, storage_schema, type LabFormat } from "./settings";
   import { has_alpha, read_image } from "$kit/utils/codecs/source";
   import { IMAGE_ACCEPT, converted_name, is_image, is_inspectable } from "./source";
   import { report_error } from "$kit/utils/report-error";
@@ -65,7 +65,7 @@
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const theme = $derived(kernel.service<SettingsService>("settings").theme);
 
-  const settings = storage.persisted("settings", default_settings(), LabSettingsSchema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let root = $state<HTMLElement>();
   let source = $state.raw<Source | null>(null);
@@ -84,7 +84,7 @@
   let heat_color = $state<string | null>(null);
 
   const busy = $derived(job !== null && job.status === TaskJobStatus.RUNNING);
-  const keys = $derived(Object.fromEntries(LAB_FORMATS.map((format) => [format, settings_key(settings.value[format])])) as Record<LabFormat, string>);
+  const keys = $derived(Object.fromEntries(LAB_FORMATS.map((format) => [format, settings_key(data.value.settings[format])])) as Record<LabFormat, string>);
   const stale = $derived(LAB_FORMATS.filter((format) => results.get(format)?.key !== keys[format]));
   const current = (format: LabFormat) => {
     const result = results.get(format);
@@ -193,7 +193,7 @@
     const lab_source = source;
     if (!lab_source || formats.length === 0) return;
     job?.cancel();
-    const chosen = formats.map((format) => ({ format, options: { ...settings.value[format] } }));
+    const chosen = formats.map((format) => ({ format, options: { ...data.value.settings[format] } }));
     running = new Set(formats);
     errors = new Map([...errors].filter(([format]) => !formats.includes(format)));
     const started = run_lab({
@@ -421,7 +421,7 @@
         {#each LAB_FORMATS as format (format)}
           <FormatCard
             {format}
-            bind:settings={settings.value[format]}
+            bind:settings={data.value.settings[format]}
             result={results.get(format) ?? null}
             stale={stale.includes(format)}
             busy={busy && running.has(format)}

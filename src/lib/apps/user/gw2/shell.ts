@@ -1,10 +1,10 @@
 import kernel, { type AppsService } from "$lib/core/api";
 import { ShellError, type Tagged } from "$lib/core/api/services/shell/type";
-import { create_storage_handle } from "$lib/core/contexts/app";
-import { z } from "zod";
+import { live_file } from "$lib/core/contexts/app";
 import { Gw2Error, vault, VaultPeriod, type VaultObjective } from "./api";
 import { format_progress } from "./format";
-import { APP_ID, KEY_STORAGE, Section } from "./sections";
+import { APP_ID, Section } from "./sections";
+import { empty_storage, STORAGE_PATH, storage_schema } from "./storage";
 
 export function objective_value(objective: VaultObjective): Tagged {
   return {
@@ -20,7 +20,7 @@ export function objective_value(objective: VaultObjective): Tagged {
 }
 
 export async function* daily(): AsyncGenerator<Tagged> {
-  const key = create_storage_handle(APP_ID, {}).get(KEY_STORAGE, z.string());
+  const { key } = await live_file(STORAGE_PATH, empty_storage(), storage_schema).read();
   if (!key) throw new ShellError("gw2 daily: no API key yet; add one in GW2 Tracker › API key");
   try {
     const { data } = await vault(key, VaultPeriod.DAILY);

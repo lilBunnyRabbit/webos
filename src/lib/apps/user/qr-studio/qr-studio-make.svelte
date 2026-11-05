@@ -15,13 +15,13 @@
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
-  import { z } from "zod";
   import { encode, type QrCode } from "./encode/encode";
   import { Charset } from "./encode/segments";
   import { Ecc, ECC_LEVELS, ECC_RECOVERY, MAX_VERSION, MIN_VERSION } from "./encode/tables";
   import { content_payload, content_schema, ContentKind, DEFAULT_CONTENT, type Content } from "./payload";
   import QrStudioContent from "./qr-studio-content.svelte";
-  import { DEFAULT_STYLE, image_side, module_path, qr_canvas, qr_svg, type Style } from "./render";
+  import { image_side, module_path, qr_canvas, qr_svg, type Style } from "./render";
+  import { AUTO, empty_storage, Format, storage_schema } from "./storage";
 
   const { tabs, initial_text, on_explain }: { tabs: Snippet; initial_text?: string; on_explain: (text: string, ecc: Ecc) => void } = $props();
   const { app_id, window: win, storage } = get_app_context();
@@ -29,36 +29,12 @@
   const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const Format = { PNG: "png", SVG: "svg" } as const;
-  type Format = (typeof Format)[keyof typeof Format];
-  const AUTO = "auto";
-
   const content = storage.window<Content>(
     "content",
     untrack(() => (initial_text === undefined ? DEFAULT_CONTENT : { ...DEFAULT_CONTENT, kind: ContentKind.TEXT, text: initial_text })),
     content_schema
   );
-  const options = storage.persisted(
-    "options",
-    { ecc: Ecc.M as Ecc, min_version: MIN_VERSION, mask: AUTO as string, format: Format.PNG as Format },
-    z.object({
-      ecc: z.enum([Ecc.L, Ecc.M, Ecc.Q, Ecc.H]),
-      min_version: z.number().int().min(MIN_VERSION).max(MAX_VERSION),
-      mask: z.enum([AUTO, "0", "1", "2", "3", "4", "5", "6", "7"]),
-      format: z.enum([Format.PNG, Format.SVG]),
-    })
-  );
-  const style = storage.persisted<Style>(
-    "style",
-    DEFAULT_STYLE,
-    z.object({
-      quiet: z.number().int().min(0).max(20),
-      scale: z.number().int().min(1).max(64),
-      dark: z.string().regex(/^#[0-9a-f]{6}$/i),
-      light: z.string().regex(/^#[0-9a-f]{6}$/i),
-      transparent: z.boolean(),
-    })
-  );
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
 
   const ECCS = ECC_LEVELS.map((level) => ({ value: level, label: level }));
   const MASKS = [{ value: AUTO, label: "Auto: lowest penalty" }, ...Array.from({ length: 8 }, (_, i) => ({ value: String(i), label: `Mask ${i}` }))];
@@ -68,7 +44,7 @@
   ];
 
   const payload = $derived(content_payload(content.value));
-  const ecc = $derived(payload.fixed?.ecc ?? options.value.ecc);
+  const ecc = $derived(payload.fixed?.ecc ?? prefs.value.options.ecc);
   type Result = { code: QrCode; error: null } | { code: null; error: string } | null;
   const result = $derived.by<Result>(() => {
     if (payload.text === "") return null;
@@ -76,9 +52,9 @@
       const code = encode(payload.text, {
         ecc,
         charset: payload.charset,
-        min_version: payload.fixed?.version ?? options.value.min_version,
+        min_version: payload.fixed?.version ?? prefs.value.options.min_version,
         max_version: payload.fixed?.version,
-        mask: options.value.mask === AUTO ? null : Number(options.value.mask),
+        mask: prefs.value.options.mask === AUTO ? null : Number(prefs.value.options.mask),
       });
       return { code, error: null };
     } catch (error) {
@@ -86,8 +62,8 @@
     }
   });
   const code = $derived(result?.code ?? null);
-  const preview_path = $derived(code ? module_path(code.size, (index) => code.modules[index] === 1, style.value.quiet) : "");
-  const side = $derived(code ? code.size + style.value.quiet * 2 : 0);
+  const preview_path = $derived(code ? module_path(code.size, (index) => code.modules[index] === 1, prefs.value.style.quiet) : "");
+  const side = $derived(code ? code.size + prefs.value.style.quiet * 2 : 0);
 
   const Check = { IDLE: "idle", CHECKING: "checking", OK: "ok", FOUND: "found", DIFFERENT: "different", FAILED: "failed" } as const;
   type Check = (typeof Check)[keyof typeof Check];
@@ -96,7 +72,7 @@
 
   $effect(() => {
     const current = code;
-    const look = $state.snapshot(style.value);
+    const look = $state.snapshot(prefs.value.style);
     const expected = payload.text;
     const latin2 = payload.charset === Charset.LATIN2;
     if (!current) {
@@ -127,12 +103,12 @@
   }
 
   function svg_text(current: QrCode): string {
-    return qr_svg(current.size, current.modules, $state.snapshot(style.value));
+    return qr_svg(current.size, current.modules, $state.snapshot(prefs.value.style));
   }
 
   async function save() {
     if (!code) return;
-    const format = options.value.format;
+    const format = prefs.value.options.format;
     const path = await win.pick_save({
       name: `qr-code.${format}`,
       accept: format === Format.SVG ? [".svg", "image/svg+xml"] : [".png", "image/png"],
@@ -146,7 +122,7 @@
         if (!folder) throw new Error(`Folder not found: ${parent_path(path)}`);
         await files.create_file(folder, base_name(path), { content: new Blob([svg_text(code)], { type: "image/svg+xml" }), overwrite: true });
       } else {
-        await write_image(path, qr_canvas(code.size, code.modules, $state.snapshot(style.value)), { format: ImageFormat.PNG });
+        await write_image(path, qr_canvas(code.size, code.modules, $state.snapshot(prefs.value.style)), { format: ImageFormat.PNG });
       }
       notifications.notify(app_id, { title: "QR code saved", message: path });
     } catch (reason) {
@@ -161,9 +137,9 @@
   async function copy() {
     if (!code) return;
     try {
-      if (options.value.format === Format.SVG) await clipboard.copy_text(svg_text(code));
+      if (prefs.value.options.format === Format.SVG) await clipboard.copy_text(svg_text(code));
       else {
-        const blob = await encode_image(qr_canvas(code.size, code.modules, $state.snapshot(style.value)), ImageFormat.PNG);
+        const blob = await encode_image(qr_canvas(code.size, code.modules, $state.snapshot(prefs.value.style)), ImageFormat.PNG);
         await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
       }
     } catch (reason) {
@@ -175,11 +151,11 @@
   }
 
   function set_int(key: "quiet" | "scale", value: number, min: number, max: number) {
-    if (Number.isFinite(value)) style.value[key] = Math.min(max, Math.max(min, Math.round(value)));
+    if (Number.isFinite(value)) prefs.value.style[key] = Math.min(max, Math.max(min, Math.round(value)));
   }
 
   function set_min_version(value: number) {
-    if (Number.isFinite(value)) options.value.min_version = Math.min(MAX_VERSION, Math.max(MIN_VERSION, Math.round(value)));
+    if (Number.isFinite(value)) prefs.value.options.min_version = Math.min(MAX_VERSION, Math.max(MIN_VERSION, Math.round(value)));
   }
 </script>
 
@@ -191,9 +167,9 @@
   <label class="flex items-center justify-between gap-2 text-ui" class:opacity-38={disabled}>
     {label}
     <span class="flex items-center gap-2">
-      <span class="font-mono text-2xs text-foreground/80 uppercase">{style.value[key]}</span>
-      <span class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-foreground/15 ring-inset pointer-coarse:size-9" style:background={style.value[key]}>
-        <input type="color" class="absolute inset-0 cursor-pointer opacity-0" aria-label={label} {disabled} bind:value={style.value[key]} />
+      <span class="font-mono text-2xs text-foreground/80 uppercase">{prefs.value.style[key]}</span>
+      <span class="relative size-7 shrink-0 cursor-pointer overflow-hidden rounded-md ring-1 ring-foreground/15 ring-inset pointer-coarse:size-9" style:background={prefs.value.style[key]}>
+        <input type="color" class="absolute inset-0 cursor-pointer opacity-0" aria-label={label} {disabled} bind:value={prefs.value.style[key]} />
       </span>
     </span>
   </label>
@@ -203,11 +179,11 @@
   <Toolbar>
     {@render tabs()}
     <span class="min-w-0 flex-1"></span>
-    <Select size="sm" class="w-auto" aria-label="Format" options={FORMATS} bind:value={options.value.format} />
-    <IconButton size="sm" label={copied ? "Copied" : `Copy as ${options.value.format.toUpperCase()}`} disabled={!code} onclick={copy}>
+    <Select size="sm" class="w-auto" aria-label="Format" options={FORMATS} bind:value={prefs.value.options.format} />
+    <IconButton size="sm" label={copied ? "Copied" : `Copy as ${prefs.value.options.format.toUpperCase()}`} disabled={!code} onclick={copy}>
       {#if copied}<CheckIcon weight="bold" class="text-success" />{:else}<CopyIcon weight="bold" />{/if}
     </IconButton>
-    <Button variant="primary" size="sm" aria-label="Save as {options.value.format.toUpperCase()}" disabled={!code} onclick={save}><FloppyDiskIcon weight="bold" /> <span class="hidden @md:inline">Save…</span></Button>
+    <Button variant="primary" size="sm" aria-label="Save as {prefs.value.options.format.toUpperCase()}" disabled={!code} onclick={save}><FloppyDiskIcon weight="bold" /> <span class="hidden @md:inline">Save…</span></Button>
   </Toolbar>
 
   <div class="min-h-0 overflow-auto @2xl:grid @2xl:grid-cols-[20rem_minmax(0,1fr)] @2xl:overflow-hidden">
@@ -220,8 +196,8 @@
           role="img"
           aria-label="QR code, version {result.code.version}"
         >
-          {#if !style.value.transparent}<rect width={side} height={side} fill={style.value.light} />{/if}
-          <path fill={style.value.dark} d={preview_path} />
+          {#if !prefs.value.style.transparent}<rect width={side} height={side} fill={prefs.value.style.light} />{/if}
+          <path fill={prefs.value.style.dark} d={preview_path} />
         </svg>
         <div class="flex flex-wrap items-center justify-center gap-2" aria-live="polite">
           {#if check === Check.OK}
@@ -266,7 +242,7 @@
           {#if payload.fixed}
             <span class="font-mono text-ui">{ecc}</span>
           {:else}
-            <Segmented size="sm" label="Error correction" options={ECCS} bind:value={options.value.ecc} />
+            <Segmented size="sm" label="Error correction" options={ECCS} bind:value={prefs.value.options.ecc} />
           {/if}
         </div>
         <label class="flex items-center justify-between gap-2 text-ui">
@@ -278,11 +254,11 @@
             max={MAX_VERSION}
             class="w-20 font-mono tabular-nums"
             disabled={Boolean(payload.fixed)}
-            value={payload.fixed?.version ?? options.value.min_version}
+            value={payload.fixed?.version ?? prefs.value.options.min_version}
             oninput={(event) => set_min_version(event.currentTarget.valueAsNumber)}
           />
         </label>
-        <Select size="sm" aria-label="Mask" options={MASKS} bind:value={options.value.mask} />
+        <Select size="sm" aria-label="Mask" options={MASKS} bind:value={prefs.value.options.mask} />
       </div>
 
       <div class="flex flex-col gap-2.5">
@@ -290,19 +266,19 @@
         <label class="flex flex-col gap-1 text-ui">
           <span class="flex items-baseline justify-between gap-2">
             Module size
-            <span class="font-mono text-2xs text-foreground/65 tabular-nums">{style.value.scale} px{code ? ` · ${image_side(code.size, style.value)} px image` : ""}</span>
+            <span class="font-mono text-2xs text-foreground/65 tabular-nums">{prefs.value.style.scale} px{code ? ` · ${image_side(code.size, prefs.value.style)} px image` : ""}</span>
           </span>
-          <Slider size="sm" min={1} max={40} bind:value={style.value.scale} />
+          <Slider size="sm" min={1} max={40} bind:value={prefs.value.style.scale} />
         </label>
         <label class="flex items-center justify-between gap-2 text-ui">
           <span>Quiet zone <span class="text-2xs text-foreground/65">modules, 4 is standard</span></span>
-          <Input type="number" size="sm" min={0} max={20} class="w-20 font-mono tabular-nums" value={style.value.quiet} oninput={(event) => set_int("quiet", event.currentTarget.valueAsNumber, 0, 20)} />
+          <Input type="number" size="sm" min={0} max={20} class="w-20 font-mono tabular-nums" value={prefs.value.style.quiet} oninput={(event) => set_int("quiet", event.currentTarget.valueAsNumber, 0, 20)} />
         </label>
         {@render swatch("Modules", "dark")}
-        {@render swatch("Background", "light", style.value.transparent)}
+        {@render swatch("Background", "light", prefs.value.style.transparent)}
         <label class="flex items-center justify-between gap-2 text-ui">
           Transparent background
-          <Switch bind:checked={style.value.transparent} />
+          <Switch bind:checked={prefs.value.style.transparent} />
         </label>
       </div>
     </aside>

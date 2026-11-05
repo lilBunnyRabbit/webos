@@ -37,14 +37,15 @@
   } from "./klondike";
   import PlayingCard, { SUIT_ICONS } from "./playing-card.svelte";
   import {
-    draw_schema,
     EMPTY_SAVE,
     empty_stats,
+    empty_storage,
     record_played,
     record_win,
     save_file_schema,
     stats_key,
-    stats_schema,
+    STORAGE_FILE,
+    storage_schema,
     to_saved,
     type Saved,
   } from "./save";
@@ -64,8 +65,7 @@
 
   const { window_id, app_id, window: win, storage, achievements } = get_app_context();
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
-  const stats = storage.persisted("stats", empty_stats(), stats_schema);
-  const draw_pref = storage.persisted<Draw>("draw", 1, draw_schema);
+  const prefs = storage.file(STORAGE_FILE, empty_storage(), storage_schema);
   // Window state survives session restore, so a restored window doesn't deal its launch request again.
   const dealt = storage.window("dealt", false);
   // Declared before the save file: teardown runs in creation order, so the last elapsed time lands before it's released.
@@ -76,7 +76,7 @@
   const reduced_motion = matchMedia("(prefers-reduced-motion: reduce)");
 
   // The daily deal is Draw 1 for everyone, so times compare.
-  const initial_draw: Draw = daily ? 1 : draw_pref.value;
+  const initial_draw: Draw = 1;
   const initial_seed = daily ? daily_seed(daily, app_id) : random_seed();
   let seed = $state(initial_seed);
   let draw = $state<Draw>(initial_draw);
@@ -95,7 +95,7 @@
   const game = $derived(states[states.length - 1]);
   const won = $derived(is_won(game));
   const finishing = $derived(loaded && can_auto_complete(game));
-  const entry = $derived(stats.value[stats_key(draw)]);
+  const entry = $derived(prefs.value.stats[stats_key(draw)]);
   const score = $derived(won && result ? result.score : game.score);
   const shown_ms = $derived(won && result ? result.ms : watch.elapsed);
 
@@ -119,11 +119,15 @@
   });
 
   $effect(() => {
-    if (loaded || !save.ready) return;
+    if (loaded || !save.ready || !prefs.ready) return;
     untrack(() => {
       const saved = save.value.game;
       const same_day = !daily || save.value.day === daily;
       if (saved && same_day && (daily || !saved.won)) restore(saved);
+      else if (!daily && prefs.value.draw !== draw) {
+        draw = prefs.value.draw;
+        states = [deal(seed, draw)];
+      }
       loaded = true;
       persist();
       if (requested_draw && !dealt.value) {
@@ -195,7 +199,7 @@
     if (!watch.running) watch.start();
     if (!counted) {
       counted = true;
-      stats.value = record_played(stats.value, draw);
+      prefs.value.stats = record_played(prefs.value.stats, draw);
     }
     states = [...states, next];
     moves = [...moves, move];
@@ -211,14 +215,14 @@
     const best = entry.won > 0 && (entry.best_score === null || total > entry.best_score);
     result = { ms, score: total, best };
     celebrate = true;
-    stats.value = record_win(stats.value, draw, ms, total);
+    prefs.value.stats = record_win(prefs.value.stats, draw, ms, total);
     if (daily) tracker.daily(daily, ms);
     held = null;
     achievements.achieve("first-win");
     if (draw === 3) achievements.achieve("draw-3");
     if (daily) achievements.achieve("daily");
     if (ms < 120_000) achievements.achieve("fast");
-    achievements.progress("wins-25", stats.value.draw1.won + stats.value.draw3.won);
+    achievements.progress("wins-25", prefs.value.stats.draw1.won + prefs.value.stats.draw3.won);
   }
 
   function draw_card() {
@@ -263,12 +267,12 @@
   }
 
   async function new_game() {
-    if (await confirm_discard("Start a new game?", "New game")) reset(random_seed(), draw_pref.value, false);
+    if (await confirm_discard("Start a new game?", "New game")) reset(random_seed(), prefs.value.draw, false);
   }
 
   async function deal_requested(next: Draw) {
     if (!(await confirm_discard("Start a new game?", "New game"))) return;
-    draw_pref.value = next;
+    prefs.value.draw = next;
     reset(random_seed(), next, false);
   }
 
@@ -280,7 +284,7 @@
     const next: Draw = value === "3" ? 3 : 1;
     if (next === draw) return;
     if (!(await confirm_discard(`Switch to Draw ${next}?`, "Switch"))) return;
-    draw_pref.value = next;
+    prefs.value.draw = next;
     reset(random_seed(), next, false);
   }
 
@@ -290,7 +294,7 @@
       confirm_label: "Reset",
       danger: true,
     });
-    if (confirmed) stats.value = empty_stats();
+    if (confirmed) prefs.value.stats = empty_stats();
   }
 
   function move_cursor(step: number) {
@@ -485,7 +489,7 @@
               <Button size="sm" variant="primary" onclick={() => reset(seed, draw, true)}>Play again</Button>
             {:else}
               <Button size="sm" onclick={() => reset(seed, draw, true)}>Replay deal</Button>
-              <Button size="sm" variant="primary" onclick={() => reset(random_seed(), draw_pref.value, false)}>New game</Button>
+              <Button size="sm" variant="primary" onclick={() => reset(random_seed(), prefs.value.draw, false)}>New game</Button>
             {/if}
           </BoardOverlay>
         </div>
@@ -505,7 +509,7 @@
           <Button size="sm" variant="quiet" onclick={reset_stats}>Reset</Button>
         {/snippet}
         {#each DRAW_MODES as mode (mode)}
-          {@const each = stats.value[stats_key(mode)]}
+          {@const each = prefs.value.stats[stats_key(mode)]}
           <div class="flex flex-col gap-0.5 px-4 py-2.5">
             <span class={cn("text-ui", mode === draw ? "font-medium" : "text-foreground/80")}>Draw {mode}</span>
             <span class="font-mono text-2xs text-foreground/65 tabular-nums">

@@ -51,14 +51,14 @@ Game app frame: toolbar with the case title, `Case NNNN` and New case (F2); the 
 
 | What | Where |
 |------|-------|
-| Case in progress or last finished | `app.alibi.case`: `{ seed, transcript: [{ role, content, stopped? }], picks: [{ statement, card }] }`, zod-checked on load (`saved_schema`, `case.ts:174`). The case itself is rebuilt from the seed |
+| Case in progress or last finished | `case` in `/var/lib/apps/alibi/storage.json` (`storage.ts`; the old `app.alibi.case`, moved in by the 4.0 boot copy): `{ seed, transcript: [{ role, content, stopped? }], picks: [{ statement, card }] }`, zod-checked on load (`saved_schema`, `case.ts:174`). The case itself is rebuilt from the seed. The window waits for the file before showing a case, and writes the case on every change once it has a question or an accusation (a streaming answer is saved as stopped until it ends) |
 | Play time | `track_play` into `/var/lib/games/plays.json` |
-| Cases closed in all | `app.alibi.closed`, for the `cases-10` achievement |
+| Cases closed in all | `closed` in the same file, for the `cases-10` achievement |
 | Achievements | `/var/lib/apps/alibi/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)) |
 
 Written only once the case has a question or an accusation, so opening a `seed` link doesn't replace a saved case until it's played. New case clears it. Props: `{ seed?: number }` opens that case; with a saved case of the same seed it resumes. No daily, no shell commands (ADR-061).
 
-**Achievements** (ADR-078), reported from `accuse()` when the accusation solves the case (a lost case earns nothing): `first-case`, `clean` (no wrong accusation), `few-questions` (3 answered questions or fewer, `answered_in`: a question still waiting for its first word when the case closes is dropped from the transcript, so it doesn't count), `cases-10` (progress: `app.alibi.closed`), secret `silent` (no answered question).
+**Achievements** (ADR-078), reported from `accuse()` when the accusation solves the case (a lost case earns nothing): `first-case`, `clean` (no wrong accusation), `few-questions` (3 answered questions or fewer, `answered_in`: a question still waiting for its first word when the case closes is dropped from the transcript, so it doesn't count), `cases-10` (progress: `closed`), secret `silent` (no answered question).
 
 ## Dependencies & licences
 

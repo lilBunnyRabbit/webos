@@ -4,7 +4,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
   import { tick, untrack } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { MISS_PENALTY_MS, ODD_MS, odd_round, remaining_ms, type OddState } from "./odd";
   import type { RunProps } from "../color-recall/run";
   import ShareCard from "../color-recall/share-card.svelte";
@@ -13,7 +13,7 @@
   let { seed, daily, head, link, saved, onsave, onfinish, next }: RunProps<OddState> = $props();
 
   const { window: win, storage, achievements } = get_app_context();
-  const spotted = storage.persisted("spotted", 0, z.number().int().nonnegative());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const initial = untrack(() => ({ seed, saved }));
   const clock = new Stopwatch(() => win.is_visible, initial.saved?.ms ?? 0);
 
@@ -49,12 +49,12 @@
     done = true;
     save();
     onfinish(ODD_MS, hits);
-    spotted.value += hits;
+    data.value.spotted += hits;
     achievements.achieve("first-run");
     if (daily) achievements.achieve("daily");
     if (hits >= 15 && misses === 0) achievements.achieve("flawless");
     achievements.progress("score-20", hits);
-    achievements.progress("spotted-500", spotted.value);
+    achievements.progress("spotted-500", data.value.spotted);
   }
 
   async function focus_tile(index: number) {

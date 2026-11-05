@@ -18,12 +18,10 @@
     UsersThree as UsersThreeIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import { z } from "zod";
   import BooksView from "./books.svelte";
   import CustomerFace from "./customer.svelte";
   import {
     accuracy,
-    best_run_schema,
     better_run,
     can_hire,
     current_item,
@@ -38,20 +36,18 @@
     MAX_JAIL_DAYS,
     MAX_TRUST,
     Mood,
-    NO_BEST,
     patron_label,
     Phase,
     run_summary,
     SALE_DISCOUNT,
     save_run,
-    saved_run_schema,
+    storage_schema,
+    empty_storage,
     spotless_day,
     Stage,
     staff_price,
     stars,
-    type BestRun,
     type Run,
-    type SavedRun,
   } from "./game";
   import Police from "./police.svelte";
   import { PRODUCT_INFO } from "./products";
@@ -62,9 +58,7 @@
 
   const { app_id, window: win, storage, achievements } = get_app_context();
   track_play(app_id, () => win.is_visible);
-  const best = storage.persisted<BestRun>("best", NO_BEST, best_run_schema);
-  const sales_total = storage.persisted("sales", 0, z.number().int().nonnegative());
-  const saved = storage.persisted<SavedRun | null>("run", null, saved_run_schema.nullable());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let board: HTMLDivElement | undefined = $state();
   let root: HTMLDivElement | undefined = $state();
@@ -72,9 +66,9 @@
   const shop = new Shop(Math.random, {
     on_end: record_day,
     on_close: (closed) => {
-      saved.value = save_run(closed);
+      data.value.run = save_run(closed);
     },
-    on_lost: () => storage.remove("run"),
+    on_lost: () => (data.value.run = null),
   });
   $effect(() => () => shop.destroy());
 
@@ -158,7 +152,7 @@
   });
 
   function record_day(ended: Run) {
-    sales_total.value += ended.today.served;
+    data.value.sales += ended.today.served;
     if (!ended.jailed) achievements.achieve("first-day");
     if (stars(ended.today, ended.jailed) === 3) achievements.achieve("three-stars");
     if (spotless_day(ended)) achievements.achieve("spotless");
@@ -167,9 +161,9 @@
     if (ended.roster.some((entry) => entry.trust >= MAX_TRUST)) achievements.achieve("best-friend");
     achievements.progress("days-7", ended.days_survived);
     achievements.progress("money-1000", Math.floor(ended.totals.money / 100));
-    achievements.progress("sales-500", sales_total.value);
+    achievements.progress("sales-500", data.value.sales);
     const summary = run_summary(ended);
-    if (better_run(summary, best.value)) best.value = summary;
+    if (better_run(summary, data.value.best)) data.value.best = summary;
   }
 
   function focus_board() {
@@ -178,14 +172,14 @@
 
   function start() {
     if (run.phase === Phase.GAME_OVER) shop.new_run();
-    else if (run.phase === Phase.READY && saved.value) shop.continue_run(saved.value);
+    else if (run.phase === Phase.READY && data.value.run) shop.continue_run(data.value.run);
     else shop.start();
     focus_board();
   }
 
   async function new_shop() {
     const playing = run.phase !== Phase.READY && run.phase !== Phase.GAME_OVER;
-    if (playing || saved.value) {
+    if (playing || data.value.run) {
       const go = await win.confirm("Start a new shop?", {
         detail: "Your shop, its regulars and its cash are gone for good.",
         confirm_label: "New shop",
@@ -193,7 +187,7 @@
       });
       if (!go) return;
     }
-    storage.remove("run");
+    data.value.run = null;
     shop.new_run();
     focus_board();
   }
@@ -484,15 +478,15 @@
       </section>
     </div>
 
-    {#if run.phase === Phase.READY}
+    {#if run.phase === Phase.READY && data.ready}
       <BoardOverlay
         title="Checkout Challenge"
-        detail={saved.value
-          ? `Day ${saved.value.day} done · Cash ${money(saved.value.money)} · Jail ${saved.value.jail_days}/${MAX_JAIL_DAYS}`
+        detail={data.value.run
+          ? `Day ${data.value.run.day} done · Cash ${money(data.value.run.money)} · Jail ${data.value.run.jail_days}/${MAX_JAIL_DAYS}`
           : undefined}
         class="rounded-none"
       >
-        {#if saved.value}
+        {#if data.value.run}
           <Button variant="secondary" onclick={new_shop}>New shop</Button>
           <Button variant="primary" onclick={start}>Continue</Button>
         {:else}
@@ -524,7 +518,7 @@
         class="rounded-none"
       >
         <p class="basis-full font-mono text-2xs text-foreground/65 tabular-nums">
-          Best {money(best.value.money)} · {best.value.days} days
+          Best {money(data.value.best.money)} · {data.value.best.days} days
         </p>
         <Button variant="primary" onclick={start}>New shop</Button>
       </BoardOverlay>
@@ -535,7 +529,7 @@
     <span class="tabular-nums">Today {money(run.today.money)}</span>
     <span class="tabular-nums">Accuracy {run.today.served ? `${today_accuracy}%` : "–"}</span>
     <span class="hidden tabular-nums @md:inline">Regulars {run.roster.length}</span>
-    <span class="hidden tabular-nums @lg:inline">Best {money(best.value.money)}</span>
+    <span class="hidden tabular-nums @lg:inline">Best {money(data.value.best.money)}</span>
     <span class="hidden @3xl:inline">Enter rings up · H hires staff</span>
   </StatusBar>
 </div>

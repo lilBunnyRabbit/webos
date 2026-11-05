@@ -6,13 +6,11 @@
   import { day_key } from "$lib/core/utils/date";
   import { random_seed } from "$lib/core/utils/random";
   import { untrack } from "svelte";
-  import { z } from "zod";
   import { TIER_NAMES, TIERS } from "./atlas";
   import Dex from "./dex.svelte";
   import {
     ATLAS_MODELS,
     challenge_props,
-    dex_schema,
     draw_run,
     is_pool,
     MIXED,
@@ -20,13 +18,13 @@
     puzzle_number,
     record_dex,
     resolve_seed,
-    run_state_schema,
     share_head,
     type Pool,
     type RunState,
     type Seed,
   } from "./game";
   import Run from "./run.svelte";
+  import { empty_storage, storage_schema } from "./storage";
 
   interface Props {
     seed?: Seed;
@@ -62,7 +60,7 @@
   const challenge = linked !== undefined && linked !== today ? linked : null;
   const linked_pool = initial.pool && is_pool(initial.pool) ? initial.pool : MIXED;
 
-  const dex = storage.persisted("dex", {}, dex_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let view = $state<View>(View.PLAY);
   let kind = $state<Kind>(challenge === null ? Kind.DAILY : Kind.PRACTICE);
@@ -75,7 +73,7 @@
   const pool_options = $derived(
     (BASE_POOLS.includes(practice.pool) ? BASE_POOLS : [...BASE_POOLS, practice.pool]).map((value) => ({ value, label: pool_label(value) }))
   );
-  const collected = $derived(ATLAS_MODELS.filter((item) => dex.value[item.id] !== undefined).length);
+  const collected = $derived(ATLAS_MODELS.filter((item) => data.value.dex[item.id] !== undefined).length);
   const where = $derived(
     kind === Kind.DAILY ? `Daily #${puzzle_number(today)} · ${today}` : typeof seed === "string" ? `Challenge · ${seed}` : `Practice · ${pool_label(pool)}`
   );
@@ -90,7 +88,7 @@
       saved: counts ? saved_daily() : null,
       next: counts ? { label: "Practice", run: () => (kind = Kind.PRACTICE) } : { label: "New run", run: new_run },
       onsave: (state: RunState) => {
-        if (counts) storage.set("daily", { day: today, state });
+        if (counts) data.value.daily = { day: today, state };
       },
       onfinish: (ms: number, score: number) => {
         if (counts) tracker.daily(today, ms, score);
@@ -99,12 +97,12 @@
   });
 
   function saved_daily(): RunState | null {
-    const entry = storage.get("daily", z.object({ day: z.string(), state: run_state_schema }));
+    const entry = untrack(() => $state.snapshot(data.value.daily));
     return entry?.day === today ? entry.state : null;
   }
 
   function on_round(model_id: string, delta: number) {
-    dex.value = record_dex(dex.value, model_id, delta);
+    data.value.dex = record_dex(data.value.dex, model_id, delta);
   }
 
   function set_view(next: View) {
@@ -146,10 +144,10 @@
 
   <div class="min-h-0 overflow-hidden">
     {#if view === View.ATLAS}
-      <Dex dex={dex.value} {open} onopen={(id) => (open = id)} onpractice={practice_model} />
-    {:else}
+      <Dex dex={data.value.dex} {open} onopen={(id) => (open = id)} onpractice={practice_model} />
+    {:else if data.ready}
       {#key run_key}
-        <Run {...run} collected={new Set(Object.keys(dex.value))} onround={on_round} />
+        <Run {...run} collected={new Set(Object.keys(data.value.dex))} onround={on_round} />
       {/key}
     {/if}
   </div>

@@ -1,23 +1,25 @@
 <script lang="ts">
-  import kernel, { type AppsService, type FilesService, type WidgetProps } from "$lib/core/api";
+  import kernel, { Platform, type AppsService, type FilesService, type WidgetProps } from "$lib/core/api";
   import { Button } from "$lib/core/components/ui";
-  import { create_storage_handle } from "$lib/core/contexts/app";
+  import { json_file } from "$lib/core/contexts/app";
   import { report_error } from "$kit/utils/report-error";
   import { PencilSimpleLine as PencilIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { z } from "zod";
   import { add_line, capture, writable, type Added } from "./capture";
   import { inbox_path, remove_from_inbox } from "./inbox";
   import { APP_ID, JOURNAL_ROOT } from "./journal";
   import { MOOD_LABELS, type Mood } from "./mood";
   import MoodPicker from "./mood-picker.svelte";
+  import { empty_storage, STORAGE_PATH, storage_schema } from "./storage";
   import { child, list_journals, type JournalRef } from "./store";
 
   let { size }: WidgetProps = $props();
 
   const files = $derived(kernel.service<FilesService>("files"));
   const apps = $derived(kernel.service<AppsService>("apps"));
-  const last_journal = create_storage_handle(APP_ID, {}).persisted<string | null>("journal", null, z.string().nullable());
+  const mobile = kernel.platform === Platform.MOBILE;
+  const data = json_file(STORAGE_PATH, empty_storage(mobile), storage_schema(mobile));
+  $effect(() => () => data.release());
 
   let journals = $state.raw<JournalRef[]>([]);
   let loaded = $state(false);
@@ -39,7 +41,7 @@
   $effect(() => () => clearTimeout(clear_timer));
 
   const targets = $derived(writable(journals));
-  const target = $derived(targets.find((journal) => journal.name === last_journal.value) ?? targets[0] ?? null);
+  const target = $derived(targets.find((journal) => journal.name === data.value.journal) ?? targets[0] ?? null);
 
   function done(added: Added, what: string) {
     last = { ...added, what };

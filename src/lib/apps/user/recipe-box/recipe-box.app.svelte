@@ -16,11 +16,11 @@
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { z } from "zod";
-  import { APP_ID, COOK_FILES, UnitSystem } from "./constants";
+  import { empty_storage, storage_schema } from "./storage";
+  import { APP_ID, COOK_FILES } from "./constants";
   import CookMode from "./cook-mode.svelte";
   import { parse_cook, recipe_servings, recipe_tags, recipe_title } from "./cooklang";
-  import { DEFAULT_FOLDER, ensure_folder, recipe_template } from "./library";
+  import { ensure_folder, recipe_template } from "./library";
   import LibraryView from "./library-view.svelte";
   import RecipeView from "./recipe-view.svelte";
   import ScaleControls from "./scale-controls.svelte";
@@ -48,8 +48,7 @@
     { value: View.EDIT, label: "Edit" },
   ];
 
-  const folder = storage.persisted("folder", DEFAULT_FOLDER, z.string().startsWith("/"));
-  const system = storage.persisted<UnitSystem>("units", UnitSystem.WRITTEN, z.enum(UnitSystem));
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
 
   let view = $state<View>(View.LIBRARY);
   let path = $state<string | null>(null);
@@ -119,14 +118,14 @@
 
   async function open() {
     if (!(await discard_ok())) return;
-    const chosen = await win.pick_file({ accept: COOK_FILES, start_path: path ? parent_path(path) : folder.value, title: "Open in Recipe Box" });
+    const chosen = await win.pick_file({ accept: COOK_FILES, start_path: path ? parent_path(path) : prefs.value.folder, title: "Open in Recipe Box" });
     if (chosen) await load(chosen);
   }
 
   async function folder_handle() {
-    await ensure_folder(folder.value);
-    const directory = await files.get_directory(folder.value);
-    if (!directory) throw new Error(`Folder not found: ${folder.value}`);
+    await ensure_folder(prefs.value.folder);
+    const directory = await files.get_directory(prefs.value.folder);
+    if (!directory) throw new Error(`Folder not found: ${prefs.value.folder}`);
     return directory;
   }
 
@@ -141,7 +140,7 @@
     try {
       const handle = await files.create_file(await folder_handle(), `${chosen.trim()}.cook`, { content: recipe_template(chosen.trim()) });
       edit_panel = EditPanel.SOURCE;
-      await load(`${folder.value}/${handle.name}`, View.EDIT);
+      await load(`${prefs.value.folder}/${handle.name}`, View.EDIT);
     } catch (reason) {
       report_error(APP_ID, "Couldn't create the recipe", reason);
     }
@@ -155,16 +154,16 @@
       const directory = await folder_handle();
       const created: string[] = [];
       for (const file of picked) created.push((await files.create_file(directory, file.name, { content: await file.text() })).name);
-      if (created.length === 1) await load(`${folder.value}/${created[0]}`);
-      else notifications.notify(APP_ID, { title: `Imported ${created.length} recipes`, message: tilde_path(folder.value) });
+      if (created.length === 1) await load(`${prefs.value.folder}/${created[0]}`);
+      else notifications.notify(APP_ID, { title: `Imported ${created.length} recipes`, message: tilde_path(prefs.value.folder) });
     } catch (reason) {
       report_error(APP_ID, "Couldn't import the recipes", reason);
     }
   }
 
   async function change_folder() {
-    const chosen = await win.pick_directory({ start_path: folder.value, title: "Recipes folder" });
-    if (chosen) folder.value = chosen;
+    const chosen = await win.pick_directory({ start_path: prefs.value.folder, title: "Recipes folder" });
+    if (chosen) prefs.value.folder = chosen;
   }
 
   async function save(): Promise<boolean> {
@@ -204,14 +203,14 @@
 </script>
 
 {#snippet controls()}
-  <ScaleControls bind:amount {base} bind:system={system.value} />
+  <ScaleControls bind:amount {base} bind:system={prefs.value.units} />
 {/snippet}
 
 <div class="flex h-full flex-col">
   <Toolbar>
     {#if view === View.LIBRARY}
-      <span class="min-w-0 flex-1 truncate text-ui font-medium" title={folder.value}>
-        Recipes <span class="font-mono text-2xs font-normal text-foreground/65">{tilde_path(folder.value)}</span>
+      <span class="min-w-0 flex-1 truncate text-ui font-medium" title={prefs.value.folder}>
+        Recipes <span class="font-mono text-2xs font-normal text-foreground/65">{tilde_path(prefs.value.folder)}</span>
       </span>
       <IconButton size="sm" label="Open…" onclick={open}><FolderOpenIcon /></IconButton>
       <IconButton size="sm" label="Import from device…" onclick={import_device}><DevicesIcon /></IconButton>
@@ -229,7 +228,7 @@
   </Toolbar>
 
   {#if view === View.LIBRARY}
-    <LibraryView folder={folder.value} onopen={open_path} onnew={new_recipe} />
+    <LibraryView folder={prefs.value.folder} onopen={open_path} onnew={new_recipe} />
   {:else if loading}
     <div class="grid flex-1 place-items-center"><Spinner label="Opening" /></div>
   {:else if load_error}
@@ -241,16 +240,16 @@
     </EmptyState>
   {:else if view === View.RECIPE}
     <div class="min-h-0 flex-1 overflow-y-auto">
-      <RecipeView {recipe} {title} {tags} {factor} system={system.value} {controls} />
+      <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} {controls} />
     </div>
   {:else if view === View.TABLE}
     <div class="min-h-0 flex-1 overflow-y-auto">
       <div class="px-4 pt-4 @lg:px-6">{@render controls()}</div>
-      <TableView {recipe} {title} {factor} system={system.value} />
+      <TableView {recipe} {title} {factor} system={prefs.value.units} />
     </div>
   {:else if view === View.COOK}
     <div class="min-h-0 flex-1">
-      <CookMode bind:this={cook} {recipe} {factor} system={system.value} {timers} bind:index={cook_index} />
+      <CookMode bind:this={cook} {recipe} {factor} system={prefs.value.units} {timers} bind:index={cook_index} />
     </div>
   {:else}
     <div class="flex min-h-0 flex-1 flex-col">
@@ -269,7 +268,7 @@
           <CodeView value={text} label="Recipe source" onchange={(value) => (text = value)} class="min-h-0 flex-1" />
         </div>
         <div class={cn("min-h-0 overflow-y-auto @4xl:block", edit_panel === EditPanel.PREVIEW ? "block" : "hidden")} aria-label="Preview">
-          <RecipeView {recipe} {title} {tags} {factor} system={system.value} />
+          <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} />
         </div>
       </div>
     </div>

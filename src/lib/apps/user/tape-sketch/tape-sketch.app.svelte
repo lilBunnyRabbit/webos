@@ -30,7 +30,6 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { onMount, untrack, type Component } from "svelte";
-  import { z } from "zod";
   import {
     add_dim,
     add_marker,
@@ -79,6 +78,7 @@
   import { create_sketch, edge_count, point_map, Unit, UNITS, type Point, type Sketch, type Target } from "./model";
   import { rotate, turn_camera } from "./rotation";
   import { sketch_bounds } from "./scene";
+  import { empty_storage, storage_schema } from "./storage";
   import TapeSketchCanvas, { type Hit, type TapEvent } from "./tape-sketch-canvas.svelte";
   import TapeSketchMeasure from "./tape-sketch-measure.svelte";
   import TapeSketchWalk from "./tape-sketch-walk.svelte";
@@ -93,7 +93,7 @@
   const apps = $derived(kernel.service<AppsService>("apps"));
 
   const editor = new Editor();
-  const snap = storage.persisted("snap", true, z.boolean());
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
 
   let view = $state<View>({ scale: 1, offset_x: 0, offset_y: 0 });
   let rotation = $state(0);
@@ -334,22 +334,22 @@
     const mark = (on: boolean) => (on ? " ✓" : "");
     const choice = await dialogs.menu(
       [
-        { id: "off", label: `Off${mark(!snap.value)}` },
+        { id: "off", label: `Off${mark(!prefs.value.snap)}` },
         { separator: true },
         ...SNAP_PRESETS.map((preset) => ({
           id: preset.id,
-          label: `${preset.label} · ${MAGNET_DETAILS[preset.id]}${mark(snap.value && magnet === preset.id)}`,
+          label: `${preset.label} · ${MAGNET_DETAILS[preset.id]}${mark(prefs.value.snap && magnet === preset.id)}`,
         })),
         {
           id: SnapPreset.CUSTOM,
-          label: magnet === SnapPreset.CUSTOM ? `Custom · ${sketch.snap.join("°, ")}°${mark(snap.value)}` : "Custom…",
+          label: magnet === SnapPreset.CUSTOM ? `Custom · ${sketch.snap.join("°, ")}°${mark(prefs.value.snap)}` : "Custom…",
         },
       ],
       { anchor: below(event) }
     );
     if (!choice) return;
     if (choice === "off") {
-      snap.value = false;
+      prefs.value.snap = false;
       return;
     }
     let angles = SNAP_PRESETS.find((preset) => preset.id === choice)?.angles ?? null;
@@ -366,7 +366,7 @@
         return;
       }
     }
-    snap.value = true;
+    prefs.value.snap = true;
     const next = angles!;
     editor.apply((value) => set_snap(value, next));
   }
@@ -509,7 +509,7 @@
       return;
     }
     let p = at;
-    if (drawing && snap.value) {
+    if (drawing && prefs.value.snap) {
       const last = value.points.find((point) => point.id === drawing.points.at(-1));
       if (last) p = snap_dir(last, at, snap_directions(value.snap));
     }
@@ -881,7 +881,7 @@
     <IconButton label="Redo (Mod+Shift+Z)" size="sm" class="shrink-0" disabled={!editor.redoable} onclick={() => editor.redo()}><ArrowClockwiseIcon weight="bold" /></IconButton>
     <span class="flex-1"></span>
     {#if editor.tool === Tool.CORNERS || editor.tool === Tool.WALK}
-      {@const on = snap.value || editor.tool === Tool.WALK}
+      {@const on = prefs.value.snap || editor.tool === Tool.WALK}
       <Button
         size="sm"
         variant="quiet"

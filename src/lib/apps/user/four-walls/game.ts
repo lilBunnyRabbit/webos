@@ -481,6 +481,17 @@ export function empty_best(): Best {
   return { cycle: { score: 0, lines: 0 }, random: { score: 0, lines: 0 } };
 }
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  best: best_schema.catch(empty_best),
+  mode: mode_schema.catch(Mode.CYCLE),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { best: empty_best(), mode: Mode.CYCLE };
+}
+
 export function record_best(best: Best, game: Pick<GameState, "mode" | "score" | "lines">): Best {
   const entry = best[game.mode];
   return {

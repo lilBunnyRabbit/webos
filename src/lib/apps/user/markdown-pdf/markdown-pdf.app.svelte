@@ -33,7 +33,7 @@
   import hack_bold_url from "../../../../assets/fonts/hack-bold.woff2?url";
   import {
     count_pages,
-    DEFAULT_SETTINGS,
+    empty_storage,
     document_css,
     marks_html,
     page_box,
@@ -42,7 +42,7 @@
     preview_shell,
     print_document,
     PX_PER_MM,
-    SettingsSchema,
+    storage_schema,
     type DocumentMeta,
     type FontUrls,
     with_launch_settings,
@@ -76,14 +76,18 @@
   const Status = { EMPTY: "empty", LOADING: "loading", READY: "ready", MISSING: "missing", ERROR: "error" } as const;
   type Status = (typeof Status)[keyof typeof Status];
 
-  const settings = storage.persisted("settings", DEFAULT_SETTINGS, SettingsSchema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const view = storage.window<View>("view", View.SPLIT, z.enum(View));
   // A restored window gets `false` back, so a launch's settings and print apply once, not on every session restore.
   const fresh = storage.window("fresh", true, z.boolean());
   let print_pending = untrack(() => fresh.value && print === true);
-  untrack(() => {
-    if (fresh.value) settings.value = with_launch_settings(settings.value, launch_settings);
-    fresh.value = false;
+  const apply_launch = untrack(() => fresh.value);
+  untrack(() => (fresh.value = false));
+  let settled = $state(false);
+  $effect(() => {
+    if (!data.ready || untrack(() => settled)) return;
+    if (apply_launch) untrack(() => (data.value.settings = with_launch_settings($state.snapshot(data.value.settings), launch_settings)));
+    settled = true;
   });
   const panel_open = storage.window("panel", false, z.boolean());
   const doc_path = storage.window<string | null>(
@@ -109,9 +113,9 @@
   const ready = $derived(status === Status.READY);
 
   let rendered = $state.raw<Rendered>(render_markdown(""));
-  const body = $derived((settings.value.toc ? toc_html(rendered.headings) : "") + rendered.html);
+  const body = $derived((data.value.settings.toc ? toc_html(rendered.headings) : "") + rendered.html);
   const meta: DocumentMeta = $derived({ title: rendered.title ?? stem, date: format_date(Date.now()) });
-  const box = $derived(page_box(settings.value));
+  const box = $derived(page_box(data.value.settings));
 
   let frame = $state<HTMLIFrameElement | null>(null);
   let frame_doc = $state.raw<Document | null>(null);
@@ -259,7 +263,7 @@
 
   async function export_pdf() {
     if (!ready) return;
-    const html = print_document(body, settings.value, meta, FONTS);
+    const html = print_document(body, data.value.settings, meta, FONTS);
     try {
       await print_html(html, { title: stem });
     } catch (reason) {
@@ -268,7 +272,7 @@
   }
 
   $effect(() => {
-    if (!print_pending || status !== Status.READY) return;
+    if (!print_pending || status !== Status.READY || !settled) return;
     print_pending = false;
     untrack(() => {
       rendered = render_markdown(text);
@@ -299,7 +303,7 @@
   $effect(() => {
     const style = frame_doc?.getElementById("style");
     if (!style) return;
-    style.textContent = document_css(settings.value, "column") + preview_css(settings.value, { desk: theme.background_darker, foreground: theme.foreground });
+    style.textContent = document_css(data.value.settings, "column") + preview_css(data.value.settings, { desk: theme.background_darker, foreground: theme.foreground });
     measure();
   });
 
@@ -322,7 +326,7 @@
   $effect(() => {
     const marks = frame_doc?.getElementById("marks");
     if (!marks) return;
-    marks.innerHTML = marks_html(pages, settings.value, meta);
+    marks.innerHTML = marks_html(pages, data.value.settings, meta);
   });
 
   // A save from anywhere (another window, Explorer) bumps the folder's revision; a clean buffer follows it.
@@ -402,7 +406,7 @@
     </div>
 
     {#if panel_open.value}
-      <SettingsPanel bind:settings={settings.value} onclose={() => (panel_open.value = false)} />
+      <SettingsPanel bind:settings={data.value.settings} onclose={() => (panel_open.value = false)} />
     {/if}
 
     {#if status !== Status.READY}
@@ -440,7 +444,7 @@
     {#if ready}
       <span class="ml-auto shrink-0">{pages} {pages === 1 ? "page" : "pages"}</span>
       <span class="shrink-0">{rendered.words} words</span>
-      <span class="hidden shrink-0 @md:inline">{PAGE_SIZE_LABELS[settings.value.page_size]} {settings.value.orientation}</span>
+      <span class="hidden shrink-0 @md:inline">{PAGE_SIZE_LABELS[data.value.settings.page_size]} {data.value.settings.orientation}</span>
     {/if}
   </StatusBar>
 </div>

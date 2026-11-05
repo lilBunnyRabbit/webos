@@ -1,7 +1,7 @@
 <script lang="ts">
-  import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type NotificationsService, type SchedulerService } from "$lib/core/api";
+  import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type FilesService, type NotificationsService, type SchedulerService } from "$lib/core/api";
   import { Button, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
-  import { get_app_context } from "$lib/core/contexts/app";
+  import { app_data_path, get_app_context } from "$lib/core/contexts/app";
   import {
     Alarm as AlarmIcon,
     Clock as ClockIcon,
@@ -28,11 +28,12 @@
     format_until,
     landing_tab,
     laps_of,
+    LEGACY_FILE,
+    legacy_stopwatch,
     migrate_stopwatch,
     next_alarm,
     running_count,
     stopwatch_of,
-    StopwatchSchema,
     type Alarm,
     type AlarmDraft,
     type StopwatchState,
@@ -51,6 +52,7 @@
   const desktop = $derived(kernel.service<DesktopService>("desktop"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
+  const files = $derived(kernel.service<FilesService>("files"));
 
   const file = storage.file(DATA_FILE, EMPTY_CLOCK, ClockDataSchema);
   const stopwatch = {
@@ -70,11 +72,19 @@
     if (landed || !file.ready) return;
     landed = true;
     untrack(() => {
-      if (migrate_stopwatch(file.value, storage.get("stopwatch", StopwatchSchema))) storage.remove("stopwatch");
       const landing = landing_tab(initial_tab, running_count(timers, stopwatch_of(file.value)));
       if (landing) tab.value = landing;
     });
+    fold_legacy().catch((error) => console.error("Failed to fold the old stopwatch:", error));
   });
+
+  async function fold_legacy() {
+    const legacy = await files.get_file(app_data_path(app_id, LEGACY_FILE));
+    if (!legacy) return;
+    migrate_stopwatch(file.value, legacy_stopwatch(await legacy.text()));
+    const folder = await files.get_directory(app_data_path(app_id));
+    if (folder) await files.delete_entry(folder, LEGACY_FILE);
+  }
 
   // Seconds everywhere else sit on the shared clock's second; a timer ends between them.
   const ticker = new Ticker(

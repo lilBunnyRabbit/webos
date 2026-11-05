@@ -39,6 +39,19 @@ export const empty_stats = (): Stats => ({ draw1: empty_entry(), draw3: empty_en
 
 export const stats_key = (draw: Draw): keyof Stats => (draw === 1 ? "draw1" : "draw3");
 
+export const STORAGE_FILE = "storage.json";
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  draw: draw_schema.catch(1),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { stats: empty_stats(), draw: 1 };
+}
+
 export function record_played(stats: Stats, draw: Draw): Stats {
   const key = stats_key(draw);
   return { ...stats, [key]: { ...stats[key], played: stats[key].played + 1 } };

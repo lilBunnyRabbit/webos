@@ -8,14 +8,14 @@
   import { sort_share } from "./share";
   import { fewest_swaps, is_solved, scramble, sort_puzzle, SORT_CONFIGS, swap, valid_order, type SortState } from "./sort";
   import { Level } from "../color-recall/modes";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
 
   let { seed, level, daily, head, link, saved, onsave, onfinish, next }: RunProps<SortState> = $props();
 
   const DRAG_PX = 6;
 
   const { window: win, storage, achievements } = get_app_context();
-  const sorts = storage.persisted("sorts", 0, z.number().int().nonnegative());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const initial = untrack(() => ({ seed, saved, level }));
   const puzzle = sort_puzzle(initial.seed, SORT_CONFIGS[initial.level]);
   const restored = initial.saved && valid_order(initial.saved.order, puzzle) ? initial.saved : null;
@@ -38,12 +38,12 @@
   }
 
   function record_sort() {
-    sorts.value++;
+    data.value.sorts++;
     achievements.achieve("first-sort");
     if (daily) achievements.achieve("daily");
     if (initial.level === Level.HARD) achievements.achieve("hard");
     if (moves <= fewest) achievements.achieve("no-wasted-swaps");
-    achievements.progress("sorts-25", sorts.value);
+    achievements.progress("sorts-25", data.value.sorts);
   }
 
   function apply(a: number, b: number) {

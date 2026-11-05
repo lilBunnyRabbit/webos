@@ -10,5 +10,3 @@ export const Section = {
 export type Section = (typeof Section)[keyof typeof Section];
 
 export const SECTION_IDS = Object.values(Section) as [Section, ...Section[]];
-
-export const KEY_STORAGE = "key";

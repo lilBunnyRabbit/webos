@@ -803,6 +803,18 @@ export type BestRun = z.infer<typeof best_run_schema>;
 
 export const NO_BEST: BestRun = { money: 0, days: 0, accuracy: 0 };
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  best: best_run_schema.catch(() => ({ ...NO_BEST })),
+  sales: z.number().int().nonnegative().catch(0),
+  run: saved_run_schema.nullable().catch(null),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { best: { ...NO_BEST }, sales: 0, run: null };
+}
+
 export function run_summary(run: Run): BestRun {
   return { money: Math.max(0, run.money), days: run.days_survived, accuracy: accuracy(run.totals) };
 }

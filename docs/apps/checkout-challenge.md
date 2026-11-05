@@ -130,9 +130,10 @@ All in `game.ts`; a first pass, to be tuned after play.
 
 ## Data
 
-- `app.checkout-challenge.run` (localStorage, app storage): the shop between days, `saved_run_schema` with `version: 1`: day, cash (cents, may be negative), jail days, days survived, the sale switch, run totals, the roster, the next patron id, stock, and `staff_left` and `police_left` (customers still owed by staff and still under police watch; added after the first saves, so `.default(0)` reads an older save as none, without a version bump). Written by `on_close` when a day's restock is done (and when the sale switch flips); read by Continue (`load_run`, back at that day's end, then the next day's warm-up). Nothing mid-day: closing the window during a day loses that day. Removed by New shop and when the shop is closed.
-- `app.checkout-challenge.best`: the best run `{ money, days, accuracy }`, `best_run_schema`. Money is cash in hand (at least 0); best = most money, more days breaks a tie. Compared when a day is over (after its restock, or when the shop closes).
-- `app.checkout-challenge.sales`: customers served in all, every shop added up, for `sales-500`.
+- `/var/lib/apps/checkout-challenge/storage.json` (`storage_schema`, `game.ts`) holds three fields under the old `app.checkout-challenge.*` key names the 4.0 boot copy moved in; each falls back to its default on its own, and the start overlay waits for the file.
+- `run`: the shop between days, `saved_run_schema` with `version: 1`: day, cash (cents, may be negative), jail days, days survived, the sale switch, run totals, the roster, the next patron id, stock, and `staff_left` and `police_left` (customers still owed by staff and still under police watch; added after the first saves, so `.default(0)` reads an older save as none, without a version bump). Written by `on_close` when a day's restock is done (and when the sale switch flips); read by Continue (`load_run`, back at that day's end, then the next day's warm-up). Nothing mid-day: closing the window during a day loses that day. Removed by New shop and when the shop is closed.
+- `best`: the best run `{ money, days, accuracy }`, `best_run_schema`. Money is cash in hand (at least 0); best = most money, more days breaks a tie. Compared when a day is over (after its restock, or when the shop closes).
+- `sales`: customers served in all, every shop added up, for `sales-500`.
 - `/var/lib/apps/checkout-challenge/achievements.json`: achievements, written by the OS ([achievements](../system/services/achievements.md)).
 - `/var/lib/games/plays.json`: play time and sessions through `track_play` (Game Hub).
 - No props, no shell commands (`app launch checkout-challenge`), no files.

@@ -23,7 +23,7 @@
   import AgendaView from "./agenda-view.svelte";
   import {
     DaySchema,
-    DEFAULT_SOURCES,
+    empty_storage,
     draft_of,
     EMPTY_EVENTS,
     EVENTS_FILE,
@@ -39,7 +39,7 @@
     new_draft,
     range,
     skip_occurrence,
-    SourcesSchema,
+    storage_schema,
     span_title,
     step,
     time_of,
@@ -67,7 +67,7 @@
   const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
 
   const file = storage.file(EVENTS_FILE, EMPTY_EVENTS, EventsFileSchema);
-  const sources = storage.persisted("sources", DEFAULT_SOURCES, SourcesSchema);
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
   const view = storage.window<View>("view", untrack(() => initial_view ?? View.MONTH), z.enum(View));
   const anchor = storage.window<string>("anchor", untrack(() => initial_day ?? day_key(new Date())), DaySchema);
   let selected = $state(untrack(() => anchor.value));
@@ -89,13 +89,13 @@
   const last = $derived(visible_days[visible_days.length - 1]);
 
   const occurrences = $derived(file.ready ? group_by_day(expand(file.value.events, first, last)) : new Map<string, Occurrence[]>());
-  const work = new WorkHoursSource(() => (sources.value.work_hours ? months_in(first, last) : []));
-  const kanban = new KanbanSource(() => sources.value.kanban);
+  const work = new WorkHoursSource(() => (prefs.value.sources.work_hours ? months_in(first, last) : []));
+  const kanban = new KanbanSource(() => prefs.value.sources.kanban);
 
   const day_sources: DaySources = {
     events: (day) => occurrences.get(day) ?? [],
-    due: (day) => (sources.value.kanban ? kanban.on(day) : []),
-    work: (day) => (sources.value.work_hours ? work.day(day) : undefined),
+    due: (day) => (prefs.value.sources.kanban ? kanban.on(day) : []),
+    work: (day) => (prefs.value.sources.work_hours ? work.day(day) : undefined),
   };
 
   let draft = $state<EventDraft | null>(null);
@@ -189,14 +189,14 @@
     const pinned = can_pin ? widget_on_desktop() : undefined;
     const choice = await dialogs.menu(
       [
-        { id: "work", label: sources.value.work_hours ? "Hide worked hours" : "Show worked hours", icon: ClockUserIcon },
-        { id: "kanban", label: sources.value.kanban ? "Hide Kanban due dates" : "Show Kanban due dates", icon: KanbanIcon },
+        { id: "work", label: prefs.value.sources.work_hours ? "Hide worked hours" : "Show worked hours", icon: ClockUserIcon },
+        { id: "kanban", label: prefs.value.sources.kanban ? "Hide Kanban due dates" : "Show Kanban due dates", icon: KanbanIcon },
         ...(can_pin ? [{ separator: true as const }, { id: "widget", label: pinned ? "Remove from desktop" : "Add to desktop", icon: StickerIcon }] : []),
       ],
       { anchor: anchor_at }
     );
-    if (choice === "work") sources.value = { ...sources.value, work_hours: !sources.value.work_hours };
-    else if (choice === "kanban") sources.value = { ...sources.value, kanban: !sources.value.kanban };
+    if (choice === "work") prefs.value.sources = { ...prefs.value.sources, work_hours: !prefs.value.sources.work_hours };
+    else if (choice === "kanban") prefs.value.sources = { ...prefs.value.sources, kanban: !prefs.value.sources.kanban };
     else if (choice === "widget") await toggle_widget(pinned);
   }
 
@@ -227,7 +227,7 @@
     view.value === View.MONTH ? [...occurrences.entries()].filter(([day]) => month_of(day) === month).reduce((sum, [, list]) => sum + list.length, 0) : [...occurrences.values()].reduce((sum, list) => sum + list.length, 0)
   );
   const range_worked = $derived(
-    sources.value.work_hours ? visible_days.filter((day) => view.value !== View.MONTH || month_of(day) === month).reduce((sum, day) => sum + day_minutes(work.day(day)), 0) : 0
+    prefs.value.sources.work_hours ? visible_days.filter((day) => view.value !== View.MONTH || month_of(day) === month).reduce((sum, day) => sum + day_minutes(work.day(day)), 0) : 0
   );
   const upcoming = $derived(next_reminder(scheduler.list(app_id), now));
 

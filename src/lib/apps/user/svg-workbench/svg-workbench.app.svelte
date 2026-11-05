@@ -51,16 +51,15 @@
     png_name,
     png_size,
     svg_size,
-    type OptimizeOptions,
   } from "./optimize";
   import { rasterize } from "./raster";
   import { write_new, write_over } from "./shell";
   import SvgStage, { Backdrop } from "./svg-stage.svelte";
   import { report_error } from "$kit/utils/report-error";
+  import { empty_storage, MAX_PNG, storage_schema } from "./storage";
 
   const ACCEPT = [".svg", "image/svg+xml"];
   const DIFFERENCE_SIZE = 512;
-  const MAX_PNG = 8192;
 
   const View = { OPTIONS: "options", COMPARE: "compare", MARKUP: "markup", PNG: "png", COMPONENT: "component" } as const;
   type View = (typeof View)[keyof typeof View];
@@ -86,21 +85,7 @@
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const options = storage.persisted<OptimizeOptions>(
-    "options",
-    DEFAULT_OPTIONS,
-    z.object({
-      precision: z.number().int().min(MIN_PRECISION).max(MAX_PRECISION),
-      multipass: z.boolean(),
-      keep_ids: z.boolean(),
-      merge_paths: z.boolean(),
-      strip_size: z.boolean(),
-      strip_title: z.boolean(),
-      pretty: z.boolean(),
-    })
-  );
-  const png_sizes = storage.persisted("png-sizes", [64, 128, 256, 512], z.array(z.number().int().min(1).max(MAX_PNG)));
-  const backdrop = storage.persisted<Backdrop>("backdrop", Backdrop.CHECKER, z.enum([Backdrop.CHECKER, Backdrop.LIGHT, Backdrop.DARK]));
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
   const view = storage.window<View>("view", View.COMPARE, z.enum([View.OPTIONS, View.COMPARE, View.MARKUP, View.PNG, View.COMPONENT]));
 
   let root = $state<HTMLElement>();
@@ -159,7 +144,7 @@
 
   $effect(() => {
     const text = source?.text;
-    const settings = $state.snapshot(options.value);
+    const settings = $state.snapshot(prefs.value.options);
     if (text === undefined) return;
     const id = ++optimize_run;
     optimize_svg(text, settings).then(
@@ -223,7 +208,7 @@
 
   $effect(() => {
     if (shown !== View.MARKUP || !source || output === null) return;
-    const settings = $state.snapshot(options.value);
+    const settings = $state.snapshot(prefs.value.options);
     if (settings.pretty) {
       markup = output;
       return;
@@ -303,11 +288,11 @@
     }
   }
 
-  const chosen_sizes = $derived([...new Set(png_sizes.value)].sort((a, b) => a - b));
+  const chosen_sizes = $derived([...new Set(prefs.value["png-sizes"])].sort((a, b) => a - b));
   let custom_size = $state<number | null>(null);
 
   function toggle_size(value: number, on: boolean) {
-    png_sizes.value = on ? [...png_sizes.value, value] : png_sizes.value.filter((item) => item !== value);
+    prefs.value["png-sizes"] = on ? [...prefs.value["png-sizes"], value] : prefs.value["png-sizes"].filter((item) => item !== value);
   }
 
   function add_custom() {
@@ -397,7 +382,7 @@
 {#snippet toggle(label: string, title: string, key: "multipass" | "keep_ids" | "merge_paths" | "strip_size" | "strip_title" | "pretty")}
   <label class="flex min-h-7 items-center justify-between gap-3 text-ui" {title}>
     {label}
-    <Switch bind:checked={options.value[key]} />
+    <Switch bind:checked={prefs.value.options[key]} />
   </label>
 {/snippet}
 
@@ -446,9 +431,9 @@
           <h3 class="px-0.5 text-2xs font-medium tracking-wide text-foreground/65 uppercase">SVGO</h3>
           <label class="flex items-center justify-between gap-2 text-ui" title="Decimals kept in coordinates and other numbers">
             Precision
-            <Input type="number" size="sm" min={MIN_PRECISION} max={MAX_PRECISION} bind:value={options.value.precision} class="w-16 font-mono tabular-nums" />
+            <Input type="number" size="sm" min={MIN_PRECISION} max={MAX_PRECISION} bind:value={prefs.value.options.precision} class="w-16 font-mono tabular-nums" />
           </label>
-          <Slider size="sm" min={MIN_PRECISION} max={MAX_PRECISION} step={1} bind:value={options.value.precision} aria-label="Precision" />
+          <Slider size="sm" min={MIN_PRECISION} max={MAX_PRECISION} step={1} bind:value={prefs.value.options.precision} aria-label="Precision" />
         </div>
         <div class="flex flex-col gap-1.5">
           {@render toggle("Multipass", "Run the plugins again until nothing changes", "multipass")}
@@ -458,7 +443,7 @@
           {@render toggle("Remove title", "Drop <title>, the tooltip and accessible name", "strip_title")}
           {@render toggle("Pretty output", "Indent the markup instead of one line", "pretty")}
         </div>
-        <Button size="sm" class="self-start" onclick={() => (options.value = { ...DEFAULT_OPTIONS })}>Reset</Button>
+        <Button size="sm" class="self-start" onclick={() => (prefs.value.options = { ...DEFAULT_OPTIONS })}>Reset</Button>
       </aside>
 
       <div class={["min-h-0 flex-col @2xl:flex", view.value === View.OPTIONS ? "hidden" : "flex"]}>
@@ -487,7 +472,7 @@
                 { value: Backdrop.LIGHT, label: "Light" },
                 { value: Backdrop.DARK, label: "Dark" },
               ]}
-              bind:value={backdrop.value}
+              bind:value={prefs.value.backdrop}
             />
             <span class="ml-auto flex items-center gap-0.5">
               <IconButton label="Zoom out" size="sm" disabled={camera.scale <= 1} onclick={() => zoom_by(1 / 1.5)}><MagnifyingGlassMinusIcon weight="bold" /></IconButton>
@@ -503,7 +488,7 @@
                 { label: "Optimised", src: output_url, caption: after === null ? "…" : format_bytes(after) },
               ]}
               {ratio}
-              backdrop={backdrop.value}
+              backdrop={prefs.value.backdrop}
               bind:camera
             />
           {:else}
@@ -516,7 +501,7 @@
                 },
               ]}
               {ratio}
-              backdrop={backdrop.value}
+              backdrop={prefs.value.backdrop}
               bind:camera
             />
           {/if}

@@ -295,9 +295,21 @@ export function is_stopwatch_active(state: StopwatchState): boolean {
   return state.started_at !== null || state.before_ms > 0;
 }
 
+/** The 4.0 boot copy of `app.clock.stopwatch`, folded into the data file and then deleted. */
+export const LEGACY_FILE = "storage.json";
+
+export function legacy_stopwatch(text: string): StopwatchState | null {
+  try {
+    const result = z.object({ stopwatch: StopwatchSchema }).safeParse(JSON.parse(text));
+    return result.success ? result.data.stopwatch : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The stopwatch used to live in `app.clock.stopwatch` localStorage. Copies it into the data file unless the file
- * already has one. True when the old key can go.
+ * already has one. True when the old copy can go.
  */
 export function migrate_stopwatch(data: ClockData, stored: StopwatchState | null): boolean {
   if (!stored) return false;

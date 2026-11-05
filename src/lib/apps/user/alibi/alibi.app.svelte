@@ -8,15 +8,13 @@
   import { AiGate } from "$kit/components/ai-gate";
   import { track_play } from "$kit/games";
   import { Detective as DetectiveIcon, PaperPlaneRight as PaperPlaneRightIcon, Scales as ScalesIcon, Stop as StopIcon, Warning as WarningIcon } from "phosphor-svelte";
-  import { onDestroy, tick, untrack } from "svelte";
-  import { z } from "zod";
+  import { tick, untrack } from "svelte";
   import {
     answered_in,
     judge,
     lie_of,
     new_case,
     questions_in,
-    saved_schema,
     score,
     status,
     Status,
@@ -29,6 +27,7 @@
     type Turn,
   } from "./case";
   import { Flash } from "$kit/utils/flash.svelte";
+  import { empty_storage, storage_schema } from "./storage";
 
   const { seed: seed_prop }: { seed?: number } = $props();
   const linked = untrack(() => seed_prop);
@@ -38,13 +37,23 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   track_play(app_id, () => win.is_visible);
 
-  const closed = storage.persisted("closed", 0, z.number().int().nonnegative());
-  const saved = storage.get("case", saved_schema);
-  const resumed = saved && (linked === undefined || saved.seed === linked) ? saved : null;
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
-  let game = $state.raw<Case>(new_case(resumed?.seed ?? linked ?? random_seed()));
-  let transcript = $state<Turn[]>(resumed?.transcript ?? []);
-  let picks = $state<Pick[]>(resumed?.picks ?? []);
+  let game = $state.raw<Case>(new_case(linked ?? random_seed()));
+  let transcript = $state<Turn[]>([]);
+  let picks = $state<Pick[]>([]);
+  let loaded = $state(false);
+
+  $effect(() => {
+    if (!data.ready || untrack(() => loaded)) return;
+    const saved = untrack(() => $state.snapshot(data.value.case));
+    if (saved && (linked === undefined || saved.seed === linked)) {
+      game = new_case(saved.seed);
+      transcript = saved.transcript;
+      picks = saved.picks;
+    }
+    loaded = true;
+  });
   let chosen_statement = $state<string | null>(null);
   let chosen_card = $state<string | null>(null);
   let draft = $state("");
@@ -100,10 +109,11 @@
   }
 
   // A linked case that hasn't been played yet leaves the saved one alone.
-  function save() {
-    if (transcript.length || picks.length) storage.set("case", to_saved());
-  }
-  onDestroy(save);
+  $effect(() => {
+    if (!loaded || !(transcript.length || picks.length)) return;
+    const saved = to_saved();
+    untrack(() => (data.value.case = saved));
+  });
 
   $effect(() => () => controller?.abort());
 
@@ -164,7 +174,6 @@
       }
     } finally {
       if (controller === own) controller = null;
-      save();
     }
   }
 
@@ -185,16 +194,15 @@
       controller?.abort();
       if (result === Status.SOLVED) report_solved(asked);
     }
-    save();
   }
 
   function report_solved(asked: number) {
-    closed.value += 1;
+    data.value.closed += 1;
     achievements.achieve("first-case");
     if (wrong === 0) achievements.achieve("clean");
     if (asked <= 3) achievements.achieve("few-questions");
     if (asked === 0) achievements.achieve("silent");
-    achievements.progress("cases-10", closed.value);
+    achievements.progress("cases-10", data.value.closed);
   }
 
   async function start_over() {
@@ -207,7 +215,7 @@
     }
     controller?.abort();
     controller = null;
-    storage.remove("case");
+    data.value.case = null;
     game = new_case(random_seed());
     transcript = [];
     picks = [];
@@ -231,6 +239,7 @@
   }
 </script>
 
+{#if loaded}
 <AiGate
   features={[AiFeature.PROMPT]}
   icon={DetectiveIcon}
@@ -415,3 +424,4 @@
     </div>
   {/snippet}
 </AiGate>
+{/if}

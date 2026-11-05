@@ -11,8 +11,18 @@ export type QrEntry = z.infer<typeof QrEntry>;
 
 export const QrEntries = z.array(QrEntry);
 
-// Every entry carries a PNG thumbnail in localStorage, whose quota is a few MB for the whole origin.
+// Every entry carries a PNG thumbnail inline, and each scan rewrites the whole list.
 export const HISTORY_LIMIT = 50;
+
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  entries: QrEntries.catch([]),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { entries: [] };
+}
 
 const THUMBNAIL_SIZE = 200;
 

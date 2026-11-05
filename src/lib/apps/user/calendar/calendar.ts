@@ -70,6 +70,18 @@ export const SourcesSchema = z.object({ work_hours: z.boolean(), kanban: z.boole
 export type Sources = z.infer<typeof SourcesSchema>;
 export const DEFAULT_SOURCES: Sources = { work_hours: true, kanban: true };
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  sources: z
+    .object({ work_hours: z.boolean().catch(true), kanban: z.boolean().catch(true) })
+    .catch(() => ({ ...DEFAULT_SOURCES })),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { sources: { ...DEFAULT_SOURCES } };
+}
+
 export function parse_events(text: string): EventsFile | null {
   try {
     const result = EventsFileSchema.safeParse(JSON.parse(text));

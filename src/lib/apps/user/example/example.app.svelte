@@ -2,9 +2,9 @@
   import { untrack } from "svelte";
   import kernel, { Platform, type AppsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
-  import { z } from "zod";
   import { Badge, Button, Section } from "$lib/core/components/ui";
   import { ListChecks as ListChecksIcon, Play as PlayIcon, Plus as PlusIcon } from "phosphor-svelte";
+  import { empty_storage, storage_schema } from "./storage";
   import { run_example_task } from "./task";
 
   const { count: initial_count }: { count?: number } = $props();
@@ -12,7 +12,7 @@
   const { window, storage } = get_app_context();
   // Mobile windows are always fullscreen: no size to show, nothing to maximize or restore (ADR-016).
   const mobile = kernel.platform === Platform.MOBILE;
-  const count = storage.persisted("count", untrack(() => initial_count) ?? 0, z.number());
+  const data = storage.file("storage.json", empty_storage(untrack(() => initial_count)), storage_schema);
 </script>
 
 <div class="mx-auto flex max-w-xl flex-col gap-6 p-4 @md:p-6">
@@ -21,12 +21,12 @@
     <p class="text-ui text-foreground/65">A tour of the app context: persisted storage and the window handle.</p>
   </header>
 
-  <Section title="Persisted counter" description="Stored under app.example.count and shared live by every Example window.">
+  <Section title="Persisted counter" description="Stored in /var/lib/apps/example/storage.json and shared live by every Example window.">
     <div class="flex items-center justify-between gap-4 px-4 py-4">
-      <span class="font-mono text-3xl font-semibold tabular-nums">{count.value}</span>
+      <span class="font-mono text-3xl font-semibold tabular-nums">{data.value.count}</span>
       <div class="flex gap-1.5">
-        <Button onclick={() => (count.value = 0)}>Reset</Button>
-        <Button variant="primary" onclick={() => count.value++}><PlusIcon weight="bold" /> Increment</Button>
+        <Button onclick={() => (data.value.count = 0)}>Reset</Button>
+        <Button variant="primary" onclick={() => data.value.count++}><PlusIcon weight="bold" /> Increment</Button>
       </div>
     </div>
   </Section>

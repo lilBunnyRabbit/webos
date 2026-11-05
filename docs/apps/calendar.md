@@ -70,7 +70,8 @@ The status bar and the widget show the soonest pending `calendar:` job (`next_re
 |-------|------|
 | `/var/lib/apps/calendar/events.json` | `{ version: 1, events }`: id, title, day, all_day, start, end (`24:00` allowed), repeat `{ every, until }`, skip, notes, color, reminder (minutes before, or `null`). Shared cell between windows, the widget, the shell and the handler (`json_file`) |
 | `/var/lib/scheduler/jobs.json` | the reminder jobs ([scheduler](../system/services/scheduler.md)) |
-| `app.calendar.*` | which sources show (Work Hours, Kanban), per-window view and anchor day |
+| `/var/lib/apps/calendar/storage.json` | `sources`: which sources show (Work Hours, Kanban); `storage_schema` in `calendar.ts`, the old `app.calendar.sources` moved in by the 4.0 boot copy |
+| Window state | per-window view and anchor day (session restore) |
 
 Props: `day` (`YYYY-MM-DD`), `view` (`month`, `week`, `agenda`).
 

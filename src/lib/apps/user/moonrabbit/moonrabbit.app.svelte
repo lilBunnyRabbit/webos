@@ -7,13 +7,13 @@
   import { day_key } from "$lib/core/utils/date";
   import { report_error } from "$kit/utils/report-error";
   import { onDestroy, untrack } from "svelte";
-  import { z } from "zod";
   import CreateJournal from "./create-journal.svelte";
   import { APP_ID, JOURNAL_ROOT } from "./journal";
   import JournalView from "./journal-view.svelte";
   import { ask_delete, ask_rename } from "./manage";
   import { lock_journal } from "./sessions";
   import { JournalSession } from "./session.svelte";
+  import { empty_storage, storage_schema } from "./storage";
   import { list_journals, type JournalRef } from "./store";
   import { create_journal, delete_journal, rename_journal, type Unlocked } from "./unlock";
   import UnlockView from "./unlock-view.svelte";
@@ -23,10 +23,7 @@
   const scheduler = $derived(kernel.service<SchedulerService>("scheduler"));
   const mobile = kernel.platform === Platform.MOBILE;
 
-  const last_journal = storage.persisted<string | null>("journal", null, z.string().nullable());
-  const idle_minutes = storage.persisted("idle-minutes", 5, z.number().int().min(0).max(120));
-  const quick_declined = storage.persisted<string[]>("quick-offer-declined", [], z.array(z.string()));
-  const hidden_seconds = storage.persisted("hidden-seconds", mobile ? 0 : 60, z.number().int().min(0).max(3600));
+  const data = storage.file("storage.json", empty_storage(mobile), storage_schema(mobile));
 
   let journals = $state.raw<JournalRef[]>([]);
   let loaded = $state(false);
@@ -49,7 +46,7 @@
     untrack(reload);
   });
 
-  const selected = $derived(journals.find((journal) => journal.name === last_journal.value) ?? journals[0] ?? null);
+  const selected = $derived(journals.find((journal) => journal.name === data.value.journal) ?? journals[0] ?? null);
 
   function open(unlocked: Unlocked, from_recovery: boolean) {
     session?.lock();
@@ -58,7 +55,7 @@
     });
     recovered = from_recovery;
     last_activity = Date.now();
-    last_journal.value = unlocked.ref.name;
+    data.value.journal = unlocked.ref.name;
     session = next;
   }
 
@@ -80,7 +77,7 @@
 
   function switch_to(name: string) {
     lock();
-    last_journal.value = name;
+    data.value.journal = name;
   }
 
   async function rename(ref: JournalRef) {
@@ -92,7 +89,7 @@
       if (id) lock_journal(id, own ?? undefined);
       if (own) own.set_ref(await rename_journal(files, own.ref, name));
       else await rename_journal(files, ref, name);
-      if (last_journal.value === ref.name) last_journal.value = name;
+      if (data.value.journal === ref.name) data.value.journal = name;
       await reload();
     } catch (reason) {
       report_error(APP_ID, "Couldn't rename the journal", reason);
@@ -105,8 +102,8 @@
     try {
       if (id) lock_journal(id);
       await delete_journal(files, scheduler, ref);
-      if (id) quick_declined.value = quick_declined.value.filter((declined) => declined !== id);
-      if (last_journal.value === ref.name) last_journal.value = null;
+      if (id) data.value["quick-offer-declined"] = data.value["quick-offer-declined"].filter((declined) => declined !== id);
+      if (data.value.journal === ref.name) data.value.journal = null;
       await reload();
     } catch (reason) {
       report_error(APP_ID, "Couldn't delete the journal", reason);
@@ -122,8 +119,8 @@
   });
 
   $effect(() => {
-    if (!session || idle_minutes.value === 0) return;
-    const limit = idle_minutes.value * 60_000;
+    if (!session || data.value["idle-minutes"] === 0) return;
+    const limit = data.value["idle-minutes"] * 60_000;
     const timer = setInterval(() => {
       if (Date.now() - last_activity >= limit) lock();
     }, 5_000);
@@ -132,11 +129,11 @@
 
   $effect(() => {
     if (!session || win.is_visible || session.picking > 0) return;
-    if (hidden_seconds.value === 0) {
+    if (data.value["hidden-seconds"] === 0) {
       lock();
       return;
     }
-    const timer = setTimeout(lock, hidden_seconds.value * 1000);
+    const timer = setTimeout(lock, data.value["hidden-seconds"] * 1000);
     return () => clearTimeout(timer);
   });
 
@@ -146,15 +143,15 @@
 </script>
 
 <div class="@container h-full overflow-auto bg-background" onpointerdowncapture={active} onkeydowncapture={active} oninputcapture={active} onwheelcapture={active} role="presentation">
-  {#if !loaded}
+  {#if !loaded || !data.ready}
     <div class="grid h-full place-items-center"><Spinner label="Looking for journals" /></div>
   {:else if session}
     <JournalView
       {session}
       {journals}
       {recovered}
-      bind:idle_minutes={idle_minutes.value}
-      bind:hidden_seconds={hidden_seconds.value}
+      bind:idle_minutes={data.value["idle-minutes"]}
+      bind:hidden_seconds={data.value["hidden-seconds"]}
       onlock={lock}
       onswitch={switch_to}
       onnew={() => {
@@ -179,13 +176,13 @@
       <UnlockView
         {journals}
         journal={selected}
-        declined={quick_declined.value}
+        declined={data.value["quick-offer-declined"]}
         onunlocked={open}
-        onselect={(name) => (last_journal.value = name)}
+        onselect={(name) => (data.value.journal = name)}
         onnew={() => (creating = true)}
         onrename={() => rename(selected)}
         ondelete={() => remove(selected)}
-        ondecline={(id) => (quick_declined.value = [...quick_declined.value, id])}
+        ondecline={(id) => (data.value["quick-offer-declined"] = [...data.value["quick-offer-declined"], id])}
       />
     {/key}
   {/if}

@@ -28,11 +28,11 @@
     clear_name,
     create_game,
     empty_stats,
+    empty_storage,
     hard_drop,
     HEIGHT,
     hold,
     Mode,
-    mode_schema,
     MODES,
     move,
     NEXT_COUNT,
@@ -43,12 +43,11 @@
     set_status,
     soft_drop,
     SPRINT_LINES,
-    stats_schema,
+    storage_schema,
     Status,
     tick,
     WIDTH,
     type GameState,
-    type Stats,
   } from "./game";
 
   const MODE_LABELS: Record<Mode, string> = { marathon: "Marathon", sprint: `Sprint ${SPRINT_LINES}` };
@@ -61,14 +60,24 @@
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const { app_id, window: win, storage, achievements } = get_app_context();
   const play = track_play(app_id, () => win.is_visible);
-  const stats = storage.persisted<Stats>("stats", empty_stats(), stats_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   // Per window, so two open games don't switch each other's mode; storage only remembers the last pick.
   let daily = $state(daily_day ?? null);
   // The daily is a sprint so its result is a time, which is what Game Hub records and compares.
-  let mode = $state<Mode>(daily_day ? Mode.SPRINT : (storage.get("mode", mode_schema) ?? Mode.MARATHON));
+  let mode = $state<Mode>(daily_day ? Mode.SPRINT : Mode.MARATHON);
   let rng: Rng = untrack(() => fresh_rng());
   let game = $state.raw<GameState>(untrack(() => create_game(rng, { mode })));
+  let loaded = $state(false);
+  $effect(() => {
+    if (!data.ready || untrack(() => loaded)) return;
+    untrack(() => {
+      if (daily_day || data.value.mode === mode) return;
+      mode = data.value.mode;
+      game = create_game(rng, { mode });
+    });
+    loaded = true;
+  });
   const clock = new Stopwatch(() => win.is_visible);
   let final_ms = $state(0);
   let new_best = $state(false);
@@ -89,8 +98,8 @@
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const running = $derived(game.status === Status.PLAYING && !blocked);
   const can_pause = $derived(game.status === Status.PLAYING || game.status === Status.PAUSED);
-  const marathon = $derived(stats.value.marathon);
-  const sprint = $derived(stats.value.sprint);
+  const marathon = $derived(data.value.stats.marathon);
+  const sprint = $derived(data.value.stats.sprint);
   const elapsed = $derived(clock.elapsed);
   const best_label = $derived(
     mode === Mode.MARATHON
@@ -180,14 +189,14 @@
     final_ms = clock.pause();
     if (end.mode === Mode.MARATHON) {
       new_best = end.score > 0 && end.score > marathon.best_score;
-      stats.value = record_marathon(stats.value, end, day_key());
+      data.value.stats = record_marathon(data.value.stats, end, day_key());
       achievements.progress("level-10", end.level);
-      achievements.progress("lines-500", stats.value.marathon.total_lines);
+      achievements.progress("lines-500", data.value.stats.marathon.total_lines);
       return;
     }
     const won = end.status === Status.WON;
     new_best = won && (sprint.best_ms === null || final_ms < sprint.best_ms);
-    stats.value = record_sprint(stats.value, won ? final_ms : null);
+    data.value.stats = record_sprint(data.value.stats, won ? final_ms : null);
     if (won && daily) play.daily(daily, final_ms);
     if (!won) return;
     achievements.achieve("sprint");
@@ -237,7 +246,7 @@
   function set_mode(next: Mode) {
     daily = null;
     mode = next;
-    storage.set("mode", next);
+    data.value.mode = next;
     new_game();
   }
 
@@ -377,10 +386,11 @@
       confirm_label: "Reset",
       danger: true,
     });
-    if (confirmed) stats.value = empty_stats();
+    if (confirmed) data.value.stats = empty_stats();
   }
 </script>
 
+{#if loaded}
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div bind:this={root} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown} onkeyup={on_keyup}>
   <Toolbar>
@@ -520,11 +530,11 @@
       </Section>
 
       <Section title="High scores" description="The best marathon games.">
-        {#if stats.value.scores.length === 0}
+        {#if data.value.stats.scores.length === 0}
           <p class="px-4 py-2.5 text-ui text-foreground/65">No finished marathon yet.</p>
         {:else}
           <ol>
-            {#each stats.value.scores as entry, i (i)}
+            {#each data.value.stats.scores as entry, i (i)}
               <li class="flex items-baseline gap-3 px-4 py-1.5">
                 <span class="w-4 font-mono text-2xs text-foreground/65 tabular-nums">{i + 1}</span>
                 <span class="flex-1 font-mono text-ui tabular-nums">{entry.score}</span>
@@ -551,6 +561,7 @@
     <span class="hidden @2xl:inline">Arrows move · Up rotates · Space drops · C holds · P pauses</span>
   </StatusBar>
 </div>
+{/if}
 
 <style>
   .stage {

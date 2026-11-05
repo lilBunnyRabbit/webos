@@ -37,6 +37,7 @@
   } from "phosphor-svelte";
   import { flushSync, onDestroy, untrack } from "svelte";
   import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { ASPECT_PRESETS, CropFrame, aspect_of, fit_aspect } from "$kit/components/crop-frame";
   import {
     DEFAULT_ADJUSTMENTS,
@@ -81,7 +82,7 @@
   ];
 
   const tool = storage.window<Tool>("tool", Tool.ADJUST, z.enum(TOOLS));
-  const quality = storage.persisted("quality", 92, z.number().int().min(10).max(100));
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
 
   interface AdjustmentControl {
     key: keyof Adjustments;
@@ -320,7 +321,7 @@
     if (!source) return false;
     const state = doc;
     try {
-      await write_image(path, render_final(source.bitmap, state.operations, state.adjustments), { format, quality: quality.value / 100 });
+      await write_image(path, render_final(source.bitmap, state.operations, state.adjustments), { format, quality: prefs.value.quality / 100 });
       file_path = path;
       file_name = base_name(path);
       saved = state;
@@ -659,8 +660,8 @@
         {#if has_quality(sheet_format)}
           <label class="flex items-center gap-2 text-ui text-foreground/80">
             Quality
-            <Slider size="sm" min={10} max={100} class="flex-1" bind:value={quality.value} />
-            {@render value_label(`${quality.value}%`)}
+            <Slider size="sm" min={10} max={100} class="flex-1" bind:value={prefs.value.quality} />
+            {@render value_label(`${prefs.value.quality}%`)}
           </label>
         {:else}
           <p class="text-ui text-foreground/65">Lossless, keeps transparency.</p>

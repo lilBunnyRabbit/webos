@@ -17,7 +17,7 @@
   import { untrack } from "svelte";
   import { create_qr_detector, detect_qr } from "$kit/utils/qr";
   import { CameraScan } from "$kit/utils/qr-scan.svelte";
-  import { HISTORY_LIMIT, QrEntries, is_url, thumbnail, type QrEntry } from "./qr";
+  import { HISTORY_LIMIT, empty_storage, is_url, storage_schema, thumbnail } from "./qr";
 
   const { path }: { path?: string } = $props();
   const { window: win, storage, app_id } = get_app_context();
@@ -27,7 +27,7 @@
   const detector_ready = create_qr_detector();
   let detector_error = $state<string | null>(null);
   detector_ready.catch((reason) => (detector_error = error_message(reason)));
-  const entries = storage.persisted<QrEntry[]>("entries", [], QrEntries);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let dragging = $state(false);
 
@@ -39,7 +39,7 @@
 
   function add_entry(content: string, image_url: string) {
     const entry = { id: crypto.randomUUID(), content, image_url, scanned_at: Date.now() };
-    entries.value = [entry, ...entries.value].slice(0, HISTORY_LIMIT);
+    data.value.entries = [entry, ...data.value.entries].slice(0, HISTORY_LIMIT);
   }
 
   async function scan_file(file: File) {
@@ -88,17 +88,17 @@
   });
 
   function remove(id: string) {
-    entries.value = entries.value.filter((entry) => entry.id !== id);
+    data.value.entries = data.value.entries.filter((entry) => entry.id !== id);
   }
 
   async function clear_all() {
-    const count = entries.value.length;
+    const count = data.value.entries.length;
     const confirmed = await win.confirm(`Clear ${count === 1 ? "1 scanned code" : `${count} scanned codes`}?`, {
       detail: "The history and its thumbnails are deleted.",
       confirm_label: "Clear",
       danger: true,
     });
-    if (confirmed) entries.value = [];
+    if (confirmed) data.value.entries = [];
   }
 
   function scan_first(list: File[]) {
@@ -144,7 +144,7 @@
     </Toolbar>
 
     <div class="min-h-0 overflow-auto">
-      {#if !camera.active && entries.value.length === 0}
+      {#if !camera.active && data.ready && data.value.entries.length === 0}
         <EmptyState icon={QrCodeIcon} title="No QR codes scanned yet" description="Open an image or use the camera. You can also paste or drop an image here.">
           {#snippet actions()}
             <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Open image…</Button>
@@ -160,12 +160,12 @@
             </div>
           {/if}
 
-          {#if entries.value.length > 0}
+          {#if data.value.entries.length > 0}
             <Section title="History" description={`Newest first, up to ${HISTORY_LIMIT}. Kept in this app's storage.`}>
               {#snippet actions()}
-                <Button variant="quiet" size="sm" onclick={clear_all}><TrashIcon weight="bold" /> Clear all ({entries.value.length})</Button>
+                <Button variant="quiet" size="sm" onclick={clear_all}><TrashIcon weight="bold" /> Clear all ({data.value.entries.length})</Button>
               {/snippet}
-              {#each entries.value as entry (entry.id)}
+              {#each data.value.entries as entry (entry.id)}
                 {@const link = is_url(entry.content)}
                 <div class="flex items-start gap-3 p-2">
                   <img src={entry.image_url} alt="Scanned QR code" class="size-16 shrink-0 rounded-md bg-background-darker object-contain" />

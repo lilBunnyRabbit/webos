@@ -36,6 +36,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { default_mode, DiffMode, ignore_whitespace_diff, map_line, SCAN_LIMIT, summarize, type DiffSummary } from "./diff";
   import { DIFF_ACCEPT } from "./index";
   import { DiffSide } from "./side.svelte";
@@ -51,9 +52,7 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const chosen_mode = storage.window<DiffMode | null>("mode", null, z.enum([DiffMode.SPLIT, DiffMode.UNIFIED]).nullable());
-  const collapse = storage.persisted("collapse", true, z.boolean());
-  const ignore_space = storage.persisted("ignore-whitespace", false, z.boolean());
-  const wrap = storage.persisted("wrap", false, z.boolean());
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
 
   const left = new DiffSide(() => files);
   const right = new DiffSide(() => files);
@@ -169,7 +168,7 @@
 
   $effect(() => {
     if (!host || !measured) return;
-    const options = { mode, collapse: collapse.value, ignore_space: ignore_space.value, wrap: wrap.value };
+    const options = { mode, collapse: prefs.value.collapse, ignore_space: prefs.value["ignore-whitespace"], wrap: prefs.value.wrap };
     void revision;
     const target = host;
     last_focused = null;
@@ -381,13 +380,13 @@
     <span class="flex-1"></span>
     <IconButton label="Swap sides" size="sm" onclick={swap}><ArrowsLeftRightIcon weight="bold" /></IconButton>
     <Separator vertical class="hidden @md:block" />
-    <IconButton label="Collapse unchanged lines" size="sm" pressed={collapse.value} onclick={() => (collapse.value = !collapse.value)}>
+    <IconButton label="Collapse unchanged lines" size="sm" pressed={prefs.value.collapse} onclick={() => (prefs.value.collapse = !prefs.value.collapse)}>
       <ArrowsInLineVerticalIcon weight="bold" />
     </IconButton>
-    <IconButton label="Ignore whitespace" size="sm" pressed={ignore_space.value} onclick={() => (ignore_space.value = !ignore_space.value)}>
+    <IconButton label="Ignore whitespace" size="sm" pressed={prefs.value["ignore-whitespace"]} onclick={() => (prefs.value["ignore-whitespace"] = !prefs.value["ignore-whitespace"])}>
       <ParagraphIcon weight="bold" />
     </IconButton>
-    <IconButton label="Wrap lines" size="sm" pressed={wrap.value} onclick={() => (wrap.value = !wrap.value)}>
+    <IconButton label="Wrap lines" size="sm" pressed={prefs.value.wrap} onclick={() => (prefs.value.wrap = !prefs.value.wrap)}>
       <TextAlignLeftIcon weight="bold" />
     </IconButton>
   </Toolbar>
@@ -419,7 +418,7 @@
       <span class="shrink-0 text-error">−{summary.removed}</span>
       <span class="-ml-2 shrink-0 text-success">+{summary.added}</span>
     {/if}
-    {#if ignore_space.value}<span class="hidden @sm:inline">Whitespace ignored</span>{/if}
+    {#if prefs.value["ignore-whitespace"]}<span class="hidden @sm:inline">Whitespace ignored</span>{/if}
     <span class="ml-auto hidden @md:inline">{left.text.split("\n").length} ↔ {right.text.split("\n").length} lines</span>
   </StatusBar>
 </div>

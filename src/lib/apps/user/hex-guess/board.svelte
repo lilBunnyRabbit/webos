@@ -6,7 +6,7 @@
   import { cn } from "$lib/core/utils";
   import { ArrowDown as ArrowDownIcon, ArrowUp as ArrowUpIcon, Backspace as BackspaceIcon, Check as CheckIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import { HEX_DIGITS, HEX_GUESSES, HEX_LENGTH, hex_hints, hex_status, hex_target, HexStatus, Hint, is_hex_digit, type HexState } from "./hex";
   import type { RunProps } from "../color-recall/run";
   import ShareCard from "../color-recall/share-card.svelte";
@@ -16,7 +16,7 @@
   let { seed, daily, head, link, saved, onsave, onfinish, next }: RunProps<HexState> = $props();
 
   const { window: win, storage, achievements } = get_app_context();
-  const wins = storage.persisted("wins", 0, z.number().int().nonnegative());
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
   const initial = untrack(() => ({ seed, saved }));
   const target = hex_target(initial.seed);
   const clock = new Stopwatch(() => win.is_visible, initial.saved?.ms ?? 0);
@@ -47,12 +47,12 @@
   }
 
   function record_win(used: number) {
-    wins.value++;
+    data.value.wins++;
     achievements.achieve("first-win");
     if (daily) achievements.achieve("daily");
     if (used <= 4) achievements.achieve("four");
     if (used <= 3) achievements.achieve("three");
-    achievements.progress("wins-25", wins.value);
+    achievements.progress("wins-25", data.value.wins);
   }
 
   function submit() {

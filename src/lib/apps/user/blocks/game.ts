@@ -335,6 +335,17 @@ export function empty_stats(): Stats {
   };
 }
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  mode: mode_schema.catch(Mode.MARATHON),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { stats: empty_stats(), mode: Mode.MARATHON };
+}
+
 export function record_marathon(stats: Stats, game: GameState, day: string): Stats {
   const marathon = stats.marathon;
   const scores = [...stats.scores, { score: game.score, lines: game.lines, level: game.level, day }]

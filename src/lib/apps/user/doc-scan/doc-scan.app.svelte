@@ -26,7 +26,7 @@
   import { scan_name } from "./layout";
   import PageEditor from "./page-editor.svelte";
   import { ScanPage } from "./page.svelte";
-  import { PageFilter } from "./warp";
+  import { empty_storage, storage_schema } from "./storage";
 
   interface Props {
     photo?: boolean;
@@ -39,10 +39,9 @@
   const files = $derived(kernel.service<FilesService>("files"));
 
   const IMAGE_ACCEPT = ["image/*"];
-  const filter = storage.persisted<PageFilter>("filter", PageFilter.COLOR, z.enum(PageFilter));
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
   // Props come back with a restored window, the pages don't: without this a reload would ask for a photo again.
   const launched = storage.window("launched", false, z.boolean());
-  const scanned = storage.persisted("pages", 0, z.number().int().nonnegative());
   // A page saved again (a fix, a reorder) is still one page scanned.
   const counted = new Set<string>();
 
@@ -64,13 +63,13 @@
     return win.on_back(() => (close_editor(), true));
   });
   $effect(() => {
-    if (page) filter.value = page.filter;
+    if (page) prefs.value.filter = page.filter;
   });
 
   function add(sources: { blob: Blob; name: string }[]) {
     const images = sources.filter(({ blob, name }) => blob.type.startsWith("image/") || is_image_name(name));
     if (!images.length) return report_error(app_id, "Nothing to scan", "Pick a photo or another picture.");
-    const added = images.map(({ blob, name }) => new ScanPage(blob, name, filter.value));
+    const added = images.map(({ blob, name }) => new ScanPage(blob, name, prefs.value.filter));
     pages = [...pages, ...added];
     void (async () => {
       for (const each of added) if (!each.disposed) await each.prepare();
@@ -127,10 +126,10 @@
   function count_pages() {
     const fresh = pages.filter((each) => !counted.has(each.id));
     for (const each of fresh) counted.add(each.id);
-    scanned.value += fresh.length;
+    prefs.value.pages += fresh.length;
     achievements.achieve("first-pdf");
     achievements.progress("booklet", pages.length);
-    achievements.progress("pages-100", scanned.value);
+    achievements.progress("pages-100", prefs.value.pages);
   }
 
   async function save(): Promise<boolean> {

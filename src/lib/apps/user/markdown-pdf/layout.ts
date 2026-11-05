@@ -59,6 +59,16 @@ export const SettingsSchema: z.ZodType<PdfSettings> = z.object({
   page_numbers: z.boolean(),
 });
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  settings: SettingsSchema.catch(() => ({ ...DEFAULT_SETTINGS })),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { settings: { ...DEFAULT_SETTINGS } };
+}
+
 export function with_launch_settings(settings: PdfSettings, props: Omit<MarkdownPdfProps, "path">): PdfSettings {
   return {
     ...settings,

@@ -80,8 +80,8 @@ Each word keeps its strokes and the last guesses. The recap draws them with the 
 
 | What | Where |
 |------|-------|
-| Best round `{ recognised, ms }` | `app.doodlehop.best` (app storage) |
-| Drawings recognised in all | `app.doodlehop.recognised` (app storage), for the `recognised-50` achievement |
+| Best round `{ recognised, ms }` | `best` in `/var/lib/apps/doodlehop/storage.json` (`storage.ts`; the old `app.doodlehop.*` keys, moved in by the 4.0 boot copy) |
+| Drawings recognised in all | `recognised` in the same file, for the `recognised-50` achievement |
 | Achievements | `/var/lib/apps/doodlehop/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)) |
 | Play time | `/var/lib/games/plays.json` through `track_play` |
 | Saved drawings | Wherever the user picks, PNG |

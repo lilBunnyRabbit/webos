@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import kernel, { type ShortcutsService } from "$lib/core/api";
   import { Button, Kbd, Section, Segmented } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -14,7 +14,7 @@
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const tester = new KeyTester(kernel.service<ShortcutsService>("shortcuts").mac);
-  const shape = storage.persisted("shape", Shape.ANSI as Shape, z.enum(Shape));
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
   let layout = $state.raw<ReadonlyMap<string, string> | null>(null);
   let capture: HTMLTextAreaElement | null = $state(null);
   let focused = $state(false);
@@ -32,7 +32,7 @@
   });
 
   $effect(() => {
-    if (tester.presses.has("IntlBackslash")) shape.value = Shape.ISO;
+    if (tester.presses.has("IntlBackslash")) prefs.value.shape = Shape.ISO;
   });
 
   function onkeydown(event: KeyboardEvent) {
@@ -153,14 +153,14 @@
           { value: Shape.ANSI, label: "ANSI" },
           { value: Shape.ISO, label: "ISO" },
         ]}
-        bind:value={shape.value}
+        bind:value={prefs.value.shape}
       />
       <Button size="sm" variant="quiet" onclick={() => tester.reset()} aria-label="Reset">
         <ArrowCounterClockwiseIcon class="size-4" /> <span class="hidden @md:inline">Reset</span>
       </Button>
     {/snippet}
     <div class="p-3">
-      <KeyHeatmap shape={shape.value} presses={tester.presses} held={tester.held} {layout} mac={shortcuts.mac} />
+      <KeyHeatmap shape={prefs.value.shape} presses={tester.presses} held={tester.held} {layout} mac={shortcuts.mac} />
     </div>
   </Section>
 

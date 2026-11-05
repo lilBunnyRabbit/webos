@@ -43,7 +43,6 @@
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { onMount, untrack } from "svelte";
-  import { z } from "zod";
   import { build_face, build_family, build_variable, drawn_characters, family_name, has_alphabet, variable_blockers } from "./build";
   import { CHAR_SET_LABELS, set_characters, type CharSet } from "./charsets";
   import { FontEditor } from "./editor.svelte";
@@ -84,7 +83,8 @@
     type FontProject,
     type Layer,
   } from "./model";
-  import { PRESSURE_MODES, PressureMode } from "./pressure";
+  import { PressureMode } from "./pressure";
+  import { empty_storage, storage_schema } from "./storage";
   import { find_marks } from "./scan";
   import type { Quad } from "$kit/utils/perspective";
   import { load_scan, scan_guides, type ScanImage } from "./scan-image";
@@ -99,10 +99,7 @@
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const apps = $derived(kernel.service<AppsService>("apps"));
 
-  const sample = storage.persisted("sample", "The quick brown fox jumps over the lazy dog", z.string().max(500));
-  const show_guide = storage.persisted("show-guide", true, z.boolean());
-  const pressure_mode = storage.persisted<PressureMode>("pressure", PressureMode.SPEED, z.enum(PRESSURE_MODES));
-  const edit_spacing = storage.persisted("edit-spacing", false, z.boolean());
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
   const PRESSURE_OPTIONS = [
     { value: PressureMode.EVEN, label: "Even" },
     { value: PressureMode.SPEED, label: "Speed" },
@@ -531,7 +528,7 @@
         <span class="ml-1 font-mono text-2xs text-foreground/65 tabular-nums">{code}</span>
         <div class="flex-1"></div>
         {#if glyph.guide}
-          <IconButton label="Show guide" size="sm" pressed={show_guide.value} onclick={() => (show_guide.value = !show_guide.value)}><EyeIcon weight="bold" /></IconButton>
+          <IconButton label="Show guide" size="sm" pressed={prefs.value["show-guide"]} onclick={() => (prefs.value["show-guide"] = !prefs.value["show-guide"])}><EyeIcon weight="bold" /></IconButton>
         {/if}
         <Button size="sm" variant="quiet" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" />Undo</Button>
         <Button size="sm" variant="quiet" disabled={!canvas_glyph.strokes.length} onclick={clear_glyph}><EraserIcon weight="bold" />Clear</Button>
@@ -567,8 +564,8 @@
           <span class="w-7 text-right font-mono text-2xs tabular-nums">{width}</span>
         </label>
         <div class="flex items-center gap-1">
-          <Segmented size="sm" label="Mouse and touch line" options={PRESSURE_OPTIONS} bind:value={pressure_mode.value} />
-          <IconButton label="Edit spacing" size="sm" class="shrink-0" pressed={edit_spacing.value} onclick={() => (edit_spacing.value = !edit_spacing.value)}><ArrowsOutLineHorizontalIcon weight="bold" /></IconButton>
+          <Segmented size="sm" label="Mouse and touch line" options={PRESSURE_OPTIONS} bind:value={prefs.value.pressure} />
+          <IconButton label="Edit spacing" size="sm" class="shrink-0" pressed={prefs.value["edit-spacing"]} onclick={() => (prefs.value["edit-spacing"] = !prefs.value["edit-spacing"])}><ArrowsOutLineHorizontalIcon weight="bold" /></IconButton>
         </div>
       </div>
 
@@ -578,9 +575,9 @@
           glyph={canvas_glyph}
           metrics={project.metrics}
           width={canvas_width}
-          pressure_mode={pressure_mode.value}
-          edit_spacing={edit_spacing.value}
-          show_guide={show_guide.value}
+          pressure_mode={prefs.value.pressure}
+          edit_spacing={prefs.value["edit-spacing"]}
+          show_guide={prefs.value["show-guide"]}
           onstroke={(stroke) => editor.apply((value) => add_stroke(value, editor.char, stroke, layer.layer))}
           onundo={() => editor.undo()}
           onnudge={(lsb, rsb) => editor.apply((value) => update_glyph(value, editor.char, (item) => ({ ...item, lsb, rsb })))}
@@ -589,7 +586,7 @@
 
       <FontMakerFilmstrip {project} characters={editor.characters} selected={editor.char} onselect={(char) => (editor.char = char)} />
 
-      {#if edit_spacing.value}
+      {#if prefs.value["edit-spacing"]}
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-ui">
           <span class="flex items-center gap-1">
             <span class="text-foreground/65">Left</span>
@@ -609,7 +606,7 @@
       </div>
       {/if}
 
-      <FontMakerPreview {project} bind:sample={sample.value} onchange={(change) => editor.apply(change)} />
+      <FontMakerPreview {project} bind:sample={prefs.value.sample} onchange={(change) => editor.apply(change)} />
     </section>
 
     {#if loading}

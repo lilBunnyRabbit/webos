@@ -27,6 +27,8 @@
     parse_number,
     resolve_pair,
     saved_state_schema,
+    storage_schema,
+    empty_storage,
     search_other_quantities,
     unit_label,
     unit_matches,
@@ -53,21 +55,19 @@
   type Side = "from" | "to";
 
   const { storage } = get_app_context();
-  // Per window so two converters don't fight; "last" only seeds the next new window.
-  const view = storage.window(
-    "view",
-    storage.get("last", saved_state_schema) ?? DEFAULT_STATE,
-    saved_state_schema
-  );
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
+  // Per window so two converters don't fight; "last" only seeds a new window, whose own view stays null until changed.
+  const view = storage.window<SavedState | null>("view", null, saved_state_schema.nullable());
+  const current = $derived(view.value ?? prefs.value.last ?? DEFAULT_STATE);
 
   const uid = $props.id();
 
   let source = $state<{ side: Side; text: string }>({ side: "from", text: "1" });
   let query = $state("");
 
-  const quantity = $derived(view.value.quantity);
+  const quantity = $derived(current.quantity);
   const table = $derived(TABLES[quantity]);
-  const pair = $derived(resolve_pair(quantity, view.value.units[quantity]));
+  const pair = $derived(resolve_pair(quantity, current.units[quantity]));
   const unit_options = $derived(table.units.map((unit) => ({ value: unit.id, label: unit_label(unit) })));
 
   const amount = $derived(parse_number(source.text));
@@ -91,16 +91,16 @@
 
   function save(next: SavedState) {
     view.value = next;
-    storage.set("last", next);
+    prefs.value.last = next;
   }
 
   function set_units(next_quantity: Quantity, from: string, to: string) {
-    save({ quantity: next_quantity, units: { ...view.value.units, [next_quantity]: { from, to } } });
+    save({ quantity: next_quantity, units: { ...current.units, [next_quantity]: { from, to } } });
   }
 
   function set_quantity(next: Quantity) {
     if (next === quantity) return;
-    save({ ...view.value, quantity: next });
+    save({ ...current, quantity: next });
     query = "";
   }
 
@@ -120,8 +120,8 @@
   }
 
   function jump_to(next_quantity: Quantity, unit: Unit) {
-    const current = resolve_pair(next_quantity, view.value.units[next_quantity]);
-    const from = current.from === unit ? current.to : current.from;
+    const current_pair = resolve_pair(next_quantity, current.units[next_quantity]);
+    const from = current_pair.from === unit ? current_pair.to : current_pair.from;
     set_units(next_quantity, from.id, unit.id);
     query = "";
   }
@@ -154,6 +154,7 @@
   </div>
 {/snippet}
 
+{#if view.value || prefs.ready}
 <div class="flex h-full flex-col @2xl:flex-row">
   <SideNav label="Quantities" items={NAV_ITEMS} bind:value={() => quantity, set_quantity} />
 
@@ -270,3 +271,4 @@
     </div>
   </main>
 </div>
+{/if}

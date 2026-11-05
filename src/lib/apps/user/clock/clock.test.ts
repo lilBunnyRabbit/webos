@@ -34,6 +34,7 @@ import {
   EMPTY_STOPWATCH,
   fit_items,
   landing_tab,
+  legacy_stopwatch,
   migrate_stopwatch,
   running_count,
   stopwatch_of,
@@ -252,6 +253,13 @@ describe("the data file", () => {
     const nothing = clock();
     expect(migrate_stopwatch(nothing, null)).toBe(false);
     expect(nothing.stopwatch).toBeUndefined();
+  });
+
+  it("reads the stopwatch from the boot copy's storage.json", () => {
+    const stopwatch = { started_at: null, before_ms: 7, laps: [] };
+    expect(legacy_stopwatch(JSON.stringify({ stopwatch }))).toEqual(stopwatch);
+    expect(legacy_stopwatch('{"stopwatch":"broken"}')).toBeNull();
+    expect(legacy_stopwatch("not json")).toBeNull();
   });
 });
 

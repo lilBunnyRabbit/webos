@@ -17,7 +17,7 @@
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import Preview from "./preview.svelte";
-  import { CardFont, DEFAULT_PACK, MAX_PADDING, PackSchema, card_title, file_stem, pack_name } from "./pack";
+  import { CardFont, MAX_PADDING, card_title, empty_storage, file_stem, pack_name, storage_schema } from "./pack";
   import { build_pack, card_style, close_source, draw_card, load_card_fonts, load_icon_source, render_icons, type IconSource } from "./render";
   import { is_svg } from "./svg";
   import { report_error } from "$kit/utils/report-error";
@@ -40,7 +40,7 @@
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
 
-  const options = storage.persisted("options", structuredClone(DEFAULT_PACK), PackSchema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   let root = $state<HTMLElement>();
   let source = $state.raw<IconSource | null>(null);
@@ -53,8 +53,8 @@
 
   load_card_fonts().finally(() => (fonts_ready = true));
 
-  const icon = $derived(options.value.icon);
-  const card_options = $derived(options.value.card);
+  const icon = $derived(data.value.options.icon);
+  const card_options = $derived(data.value.options.card);
   const theme_background = $derived(settings.theme.background);
   const theme_hex = $derived(to_hex([theme_background])[0]);
   const style = $derived(card_style(card_options, theme_background));
@@ -112,7 +112,7 @@
     if (!target) return;
     saving = true;
     try {
-      await write_at(target, await build_pack(source, $state.snapshot(options.value), style));
+      await write_at(target, await build_pack(source, $state.snapshot(data.value.options), style));
       notifications.notify(app_id, { title: "Icon pack saved", message: target });
     } catch (reason) {
       console.error(`[${app_id}] Couldn't save the icon pack`, reason);
@@ -202,43 +202,43 @@
           {@render heading("Icon")}
           <div class="flex items-center gap-2 text-ui">
             <span class="w-24 shrink-0">Background</span>
-            {@render swatch("Background colour", icon.background, (value) => (options.value.icon.background = value))}
+            {@render swatch("Background colour", icon.background, (value) => (data.value.options.icon.background = value))}
             <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80 uppercase">{icon.background}</span>
           </div>
           <label class="flex items-center justify-between gap-2 text-ui" title="Favicons and PWA icons only: Apple and maskable icons need a solid background, so they keep the colour">
             Transparent
-            <Switch bind:checked={options.value.icon.transparent} />
+            <Switch bind:checked={data.value.options.icon.transparent} />
           </label>
-          {@render percent("Padding", icon.padding, MAX_PADDING, (value) => (options.value.icon.padding = value), "Space around the icon on every side")}
+          {@render percent("Padding", icon.padding, MAX_PADDING, (value) => (data.value.options.icon.padding = value), "Space around the icon on every side")}
           {@render percent(
             "Maskable",
             icon.maskable_padding,
             MAX_PADDING,
-            (value) => (options.value.icon.maskable_padding = value),
+            (value) => (data.value.options.icon.maskable_padding = value),
             "Padding of the maskable icon, which Android crops to its own shape. About 20% keeps a square logo inside the safe zone"
           )}
-          {@render percent("Corners", icon.radius, 50, (value) => (options.value.icon.radius = value), "Preview only: rounds the installed app and rounded Android icons")}
+          {@render percent("Corners", icon.radius, 50, (value) => (data.value.options.icon.radius = value), "Preview only: rounds the installed app and rounded Android icons")}
           <label class="flex items-center justify-between gap-2 text-ui">
             Show safe zone
-            <Switch bind:checked={options.value.icon.safe_zone} />
+            <Switch bind:checked={data.value.options.icon.safe_zone} />
           </label>
         </div>
 
         <div class={["flex flex-col gap-2.5", panel !== Panel.CARD && "hidden @2xl:flex"]}>
           {@render heading("Social card")}
-          <Input size="sm" aria-label="Title" placeholder={file_stem(source.name)} bind:value={options.value.card.title} />
-          <Input size="sm" aria-label="Subtitle" placeholder="Subtitle" bind:value={options.value.card.subtitle} />
+          <Input size="sm" aria-label="Title" placeholder={file_stem(source.name)} bind:value={data.value.options.card.title} />
+          <Input size="sm" aria-label="Subtitle" placeholder="Subtitle" bind:value={data.value.options.card.subtitle} />
           <div class="flex items-center gap-2 text-ui">
             <span class="w-24 shrink-0">Background</span>
-            {@render swatch("Card background", card_options.background ?? theme_hex, (value) => (options.value.card.background = value))}
+            {@render swatch("Card background", card_options.background ?? theme_hex, (value) => (data.value.options.card.background = value))}
             <span class="min-w-0 flex-1 truncate font-mono text-2xs text-foreground/80 uppercase">{card_options.background ?? "Theme"}</span>
             {#if card_options.background}
-              <IconButton label="Use the theme background" size="sm" onclick={() => (options.value.card.background = null)}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
+              <IconButton label="Use the theme background" size="sm" onclick={() => (data.value.options.card.background = null)}><ArrowCounterClockwiseIcon weight="bold" /></IconButton>
             {/if}
           </div>
           <div class="flex items-center gap-2 text-ui">
             <span class="w-24 shrink-0">Font</span>
-            <Segmented size="sm" label="Font" options={FONTS} bind:value={options.value.card.font} />
+            <Segmented size="sm" label="Font" options={FONTS} bind:value={data.value.options.card.font} />
           </div>
         </div>
       </aside>

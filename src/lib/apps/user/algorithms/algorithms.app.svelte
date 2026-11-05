@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { NotificationType, type ClipboardService, type FilesService, type NotificationsService } from "$lib/core/api";
-  import { is_system_path, PATHS } from "$lib/core/api/services/files/hierarchy";
+  import { is_system_path } from "$lib/core/api/services/files/hierarchy";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
   import { RouteKind, route_url } from "$lib/core/api/services/router/route";
   import { EmptyState, IconButton, SideNav, Spinner, Toolbar } from "$lib/core/components/ui";
@@ -26,6 +26,7 @@
   } from "phosphor-svelte";
   import { onMount, untrack, type Component } from "svelte";
   import { z } from "zod";
+  import { empty_storage, storage_schema } from "./storage";
   import AlgorithmPage from "./algorithm-page.svelte";
   import { CATALOG, entry_for, Group, GROUP_NAMES, in_group } from "./catalog";
   import { clean_params, type Definition, type Params } from "./engine/definition";
@@ -60,7 +61,7 @@
   const section = storage.window<string>("section", untrack(() => props.section ?? CATALOG[0].id), z.string());
   const inputs = storage.window<Record<string, unknown>>("inputs", {}, z.record(z.string(), z.unknown()));
   const all_params = storage.window<Record<string, Params>>("params", {}, z.record(z.string(), z.record(z.string(), z.union([z.number(), z.string()]))));
-  const folder = storage.persisted("folder", PATHS.documents, z.string());
+  const prefs = storage.file("storage.json", empty_storage(), storage_schema);
 
   let path = $state<string | null>(untrack(() => props.path ?? null));
   let loaded = $state.raw<{ id: string; definition: Definition } | null>(null);
@@ -129,14 +130,14 @@
       if (parsed.params) all_params.value = { ...all_params.value, [parsed.algorithm]: parsed.params };
       section.value = parsed.algorithm;
       path = target;
-      folder.value = parent_path(target);
+      prefs.value.folder = parent_path(target);
     } catch (reason) {
       report_error(app_id, "Couldn't open the file", reason);
     }
   }
 
   async function open() {
-    const chosen = await win.pick_file({ accept: [ALGO_EXTENSION], start_path: path ? parent_path(path) : folder.value, title: "Open in Algorithms" });
+    const chosen = await win.pick_file({ accept: [ALGO_EXTENSION], start_path: path ? parent_path(path) : prefs.value.folder, title: "Open in Algorithms" });
     if (chosen) await open_path(chosen);
   }
 
@@ -144,7 +145,7 @@
     if (!definition) return;
     let target = path && !is_system_path(path) ? path : null;
     if (!target) {
-      const chosen = await win.pick_save({ name: `${entry.id}${ALGO_EXTENSION}`, accept: [ALGO_EXTENSION], start_path: folder.value, title: "Save the input" });
+      const chosen = await win.pick_save({ name: `${entry.id}${ALGO_EXTENSION}`, accept: [ALGO_EXTENSION], start_path: prefs.value.folder, title: "Save the input" });
       if (!chosen) return;
       target = chosen.toLowerCase().endsWith(ALGO_EXTENSION) ? chosen : `${chosen}${ALGO_EXTENSION}`;
     }
@@ -154,7 +155,7 @@
       const content = serialize_algo_file({ version: 1, algorithm: entry.id, input: $state.snapshot(input), ...(Object.keys(params).length ? { params } : {}) });
       await files.create_file(directory, base_name(target), { content, overwrite: true });
       path = target;
-      folder.value = parent_path(target);
+      prefs.value.folder = parent_path(target);
     } catch (reason) {
       report_error(app_id, "Couldn't save", reason);
     }

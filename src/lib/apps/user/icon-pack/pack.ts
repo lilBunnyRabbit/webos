@@ -57,6 +57,16 @@ export const PackSchema: z.ZodType<PackOptions> = z.object({
   }),
 });
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  options: PackSchema.catch(() => structuredClone(DEFAULT_PACK)),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { options: structuredClone(DEFAULT_PACK) };
+}
+
 export const FAVICON_SIZES = [16, 32, 48] as const;
 export const APPLE_SIZE = 180;
 export const CARD_WIDTH = 1200;

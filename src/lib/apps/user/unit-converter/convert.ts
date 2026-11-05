@@ -107,6 +107,16 @@ export const saved_state_schema = z.object({
 });
 export type SavedState = z.infer<typeof saved_state_schema>;
 
+// Field names stay the old localStorage keys: the 4.0 boot copy writes them into storage.json as they were.
+export const storage_schema = z.object({
+  last: saved_state_schema.nullable().catch(null),
+});
+export type StorageFile = z.infer<typeof storage_schema>;
+
+export function empty_storage(): StorageFile {
+  return { last: null };
+}
+
 export interface UnitPair {
   from: Unit;
   to: Unit;

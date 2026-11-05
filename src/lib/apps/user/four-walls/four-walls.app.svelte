@@ -34,11 +34,11 @@
     create_game,
     Direction,
     empty_best,
-    best_schema,
+    empty_storage,
+    storage_schema,
     hard_drop,
     hold,
     Mode,
-    mode_schema,
     MODES,
     move,
     NEXT_COUNT,
@@ -51,7 +51,6 @@
     step_of,
     tick,
     to_frame,
-    type Best,
     type GameState,
   } from "./game";
 
@@ -74,14 +73,24 @@
   const settings = $derived(kernel.service<SettingsService>("settings"));
   const { app_id, window: win, storage, achievements } = get_app_context();
   const play = track_play(app_id, () => win.is_visible);
-  const best = storage.persisted<Best>("best", empty_best(), best_schema);
+  const data = storage.file("storage.json", empty_storage(), storage_schema);
 
   // Per window, so two open games don't switch each other's mode; storage only remembers the last pick.
   let daily = $state(daily_day ?? null);
   // The daily deals Random from the day's seed, so every player gets the same pieces and walls.
-  let mode = $state<Mode>(daily_day ? Mode.RANDOM : (storage.get("mode", mode_schema) ?? Mode.CYCLE));
+  let mode = $state<Mode>(daily_day ? Mode.RANDOM : Mode.CYCLE);
   let rng: Rng = untrack(() => fresh_rng());
   let game = $state.raw<GameState>(untrack(() => create_game(rng, { mode })));
+  let loaded = $state(false);
+  $effect(() => {
+    if (!data.ready || untrack(() => loaded)) return;
+    untrack(() => {
+      if (daily_day || data.value.mode === mode) return;
+      mode = data.value.mode;
+      game = create_game(rng, { mode });
+    });
+    loaded = true;
+  });
   const clock = new Stopwatch(() => win.is_visible);
   let final_ms = $state(0);
   let new_best = $state(false);
@@ -110,7 +119,7 @@
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const running = $derived(game.status === Status.PLAYING && !blocked);
   const can_pause = $derived(game.status === Status.PLAYING || game.status === Status.PAUSED);
-  const mode_best = $derived(best.value[mode]);
+  const mode_best = $derived(data.value.best[mode]);
 
   function fresh_rng(): Rng {
     return create_rng(daily ? daily_seed(daily, app_id) : random_seed());
@@ -207,8 +216,8 @@
   function finish(end: GameState) {
     release();
     final_ms = clock.pause();
-    new_best = end.score > 0 && end.score > best.value[end.mode].score;
-    best.value = record_best(best.value, end);
+    new_best = end.score > 0 && end.score > data.value.best[end.mode].score;
+    data.value.best = record_best(data.value.best, end);
     achievements.progress("level-10", end.level);
     achievements.progress("lines-50", end.lines);
     if (!daily) return;
@@ -258,7 +267,7 @@
   function set_mode(next_mode: Mode) {
     daily = null;
     mode = next_mode;
-    storage.set("mode", next_mode);
+    data.value.mode = next_mode;
     new_game();
   }
 
@@ -415,7 +424,7 @@
       confirm_label: "Reset",
       danger: true,
     });
-    if (confirmed) best.value = empty_best();
+    if (confirmed) data.value.best = empty_best();
   }
 
   const BackIcon = $derived(ARROW_ICONS[pad.back]);
@@ -424,6 +433,7 @@
   const DropIcon = $derived(DROP_ICONS[way]);
 </script>
 
+{#if loaded}
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div bind:this={root} class="grid h-full grid-rows-[auto_1fr_auto]" onkeydown={on_keydown} onkeyup={on_keyup}>
   <Toolbar>
@@ -537,7 +547,7 @@
           <div class="flex flex-col gap-0.5 px-4 py-2.5">
             <span class={cn("text-ui", mode === each ? "font-medium" : "text-foreground/80")}>{MODE_LABELS[each]}</span>
             <span class="font-mono text-2xs text-foreground/65 tabular-nums">
-              Score {best.value[each].score} · Lines {best.value[each].lines}
+              Score {data.value.best[each].score} · Lines {data.value.best[each].lines}
             </span>
           </div>
         {/each}
@@ -564,6 +574,7 @@
     <span class="hidden @2xl:inline">Arrows steer and drop · X rotates · Space drops · C holds · P pauses</span>
   </StatusBar>
 </div>
+{/if}
 
 <style>
   .stage {
