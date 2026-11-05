@@ -249,3 +249,13 @@ export const progress_schema = z.object({
   elapsed: z.number().nonnegative(),
 });
 export type Progress = z.infer<typeof progress_schema>;
+
+export const stored_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  "stats-color": stats_schema.catch(empty_stats),
+  game: saved_schema.nullable().catch(null),
+  size: size_schema.catch(Size.S10),
+  mode: mode_schema.catch(Mode.BW),
+});
+export type Stored = z.infer<typeof stored_schema>;
+export const empty_stored = (): Stored => stored_schema.parse({});

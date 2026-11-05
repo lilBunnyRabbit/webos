@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { SHIPS, type Controls, type Point, type ShipDesign, type ShipId } from "./ships";
+import { ship_id_schema, ShipId, SHIPS, type Controls, type Point, type ShipDesign } from "./ships";
 
 export { type Point };
 
@@ -292,6 +292,18 @@ export function score(state: GameState): Score | null {
 
 export const best_scores_schema = z.record(z.string(), z.number().int().nonnegative());
 export type BestScores = z.infer<typeof best_scores_schema>;
+
+export const stored_schema = z.object({
+  best: best_scores_schema.catch({}),
+  landings: z.number().int().nonnegative().catch(0),
+  ship: ship_id_schema.catch(ShipId.PODS),
+  gravity: gravity_schema.catch(DEFAULT_ENVIRONMENT.gravity),
+  air: z.boolean().catch(DEFAULT_ENVIRONMENT.air),
+  wind: z.boolean().catch(DEFAULT_ENVIRONMENT.wind),
+  infinite_fuel: z.boolean().catch(DEFAULT_ENVIRONMENT.infinite_fuel),
+});
+export type Stored = z.infer<typeof stored_schema>;
+export const empty_stored = (): Stored => stored_schema.parse({});
 
 export function mode_key(ship: ShipId, env: Environment): string {
   return [ship, env.gravity, env.air ? "air" : "", env.air && env.wind ? "wind" : "", env.infinite_fuel ? "inf" : ""].filter(Boolean).join("-");

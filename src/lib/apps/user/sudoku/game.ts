@@ -267,3 +267,18 @@ export function daily_game(day: string, size: Size = Size.NINE): Game {
 
 /** A daily puzzle in progress, kept apart from the regular save. */
 export const daily_saved_schema = z.object({ day: z.string(), game: saved_schema });
+
+/** `storage.json`: the keys it had in localStorage. 9×9 keeps the bare names it had before 6×6 existed. */
+export const stored_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  "stats-6x6": stats_schema.catch(empty_stats),
+  game: saved_schema.nullable().catch(null),
+  daily: daily_saved_schema.nullable().catch(null),
+  "daily-6x6": daily_saved_schema.nullable().catch(null),
+  difficulty: difficulty_schema.catch(Difficulty.EASY),
+  size: size_schema.catch(Size.NINE),
+});
+export type Stored = z.infer<typeof stored_schema>;
+export const empty_stored = (): Stored => stored_schema.parse({});
+export const STATS_KEY = { [Size.NINE]: "stats", [Size.SIX]: "stats-6x6" } as const;
+export const DAILY_KEY = { [Size.NINE]: "daily", [Size.SIX]: "daily-6x6" } as const;

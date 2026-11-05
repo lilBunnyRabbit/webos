@@ -41,7 +41,6 @@
     hint,
     Mark,
     Mode,
-    mode_schema,
     new_game,
     progress_schema,
     record,
@@ -49,12 +48,11 @@
     resume,
     rows_done,
     runs_done,
-    saved_schema,
     Size,
-    size_schema,
     SIZES,
-    stats_schema,
     with_marks,
+    empty_stored,
+    stored_schema,
     type Game,
   } from "./game";
   import { col_of, is_color, row_of } from "./puzzle";
@@ -88,9 +86,9 @@
   ] as const;
 
   const { app_id, window_id, window: win, storage, achievements } = get_app_context();
+  // Already read: the app component mounts this only once the file is ready.
+  const store = storage.file("storage.json", empty_stored(), stored_schema);
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
-  const stats_bw = storage.persisted("stats", empty_stats(), stats_schema);
-  const stats_color = storage.persisted("stats-color", empty_stats(), stats_schema);
   const progress = storage.window("progress", null, progress_schema.nullable());
 
   const kind = untrack(() => source.kind);
@@ -100,15 +98,15 @@
 
   /** Free play keeps the last puzzle touched in storage; a file or the daily keeps its marks with the window. */
   function initial(): { game: Game; size: Size; mode: Mode; elapsed: number } {
-    const fallback_size = storage.get("size", size_schema) ?? Size.S10;
-    const fallback_mode = storage.get("mode", mode_schema) ?? Mode.BW;
+    const fallback_size = store.value.size;
+    const fallback_mode = store.value.mode;
     const from_progress = (game: Game) => {
       const saved = progress.value;
       const back = saved && saved.key === progress_key ? resume(game, saved.marks, saved.hints) : null;
       return { game: back ?? game, elapsed: back ? saved!.elapsed : 0 };
     };
     if (source.kind === "free") {
-      const saved = storage.get("game", saved_schema);
+      const saved = store.value.game;
       const restored = saved ? restore(saved) : null;
       if (restored && saved) return { game: restored, size: saved.size, mode: saved.mode ?? Mode.BW, elapsed: saved.elapsed };
       return { game: new_game(fallback_size, random_seed(), fallback_mode), size: fallback_size, mode: fallback_mode, elapsed: 0 };
@@ -148,8 +146,8 @@
   const filled = $derived(game.marks.filter((mark) => mark > 0).length);
   const target = $derived(puzzle.solution.filter((cell) => cell > 0).length);
   const tracks_stats = kind === "free" || kind === "daily";
-  const stats = $derived(mode === Mode.COLOR ? stats_color : stats_bw);
-  const best = $derived(tracks_stats ? stats.value[size].best : null);
+  const stats_key = $derived(mode === Mode.COLOR ? "stats-color" : "stats");
+  const best = $derived(tracks_stats ? store.value[stats_key][size].best : null);
   const started = $derived(clock.running || game.marks.some((mark) => mark !== Mark.EMPTY));
   const file_name = $derived(source.kind === "file" ? base_name(source.path) : null);
   const label = $derived.by(() => {
@@ -207,7 +205,7 @@
   function save() {
     if (kind === "test") return;
     if (kind === "free") {
-      storage.set("game", { size, mode, seed: puzzle.seed, marks: [...game.marks], hints: game.hints, elapsed: clock.read() });
+      store.value.game = { size, mode, seed: puzzle.seed, marks: [...game.marks], hints: game.hints, elapsed: clock.read() };
     } else if (progress_key) {
       progress.value = { key: progress_key, marks: [...game.marks], hints: game.hints, elapsed: clock.read() };
     }
@@ -242,8 +240,8 @@
     if (kind !== "test") report_solve();
     if (!tracks_stats) return;
     new_best = game.hints === 0 && (best === null || time < best);
-    stats.value = record(stats.value, size, time, game.hints);
-    const both = [...Object.values(stats_bw.value), ...Object.values(stats_color.value)];
+    store.value[stats_key] = record(store.value[stats_key], size, time, game.hints);
+    const both = [...Object.values(store.value.stats), ...Object.values(store.value["stats-color"])];
     achievements.progress("solves-25", both.reduce((sum, entry) => sum + entry.solved, 0));
     on_solved?.(time);
   }
@@ -305,8 +303,8 @@
     if (!confirmed) return;
     size = next_size;
     mode = next_mode;
-    storage.set("size", next_size);
-    storage.set("mode", next_mode);
+    store.value.size = next_size;
+    store.value.mode = next_mode;
     game = new_game(next_size, random_seed(), next_mode);
     clock.reset();
     new_best = false;
@@ -325,7 +323,7 @@
       confirm_label: "Reset",
       danger: true,
     });
-    if (confirmed) stats.value = empty_stats();
+    if (confirmed) store.value[stats_key] = empty_stats();
   }
 </script>
 
@@ -463,7 +461,7 @@
             <Button size="sm" variant="quiet" onclick={reset_stats}>Reset</Button>
           {/snippet}
           {#each SIZES as each (each)}
-            {@const entry = stats.value[each]}
+            {@const entry = store.value[stats_key][each]}
             <div class="flex flex-col gap-0.5 px-4 py-2.5">
               <span class={cn("text-ui", each === size ? "font-medium" : "text-foreground/80")}>{each}×{each}</span>
               <span class="font-mono text-2xs text-foreground/80 tabular-nums">

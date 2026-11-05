@@ -61,12 +61,14 @@ The reason shows in the status line for six seconds (`Flash` from `$kit/utils/fl
 
 ## Data
 
+`/var/lib/apps/sun-and-moon/storage.json` holds one field per entry (`stored_schema` in `game.ts`), each with its own fallback, so one bad value resets only that field. Its field names are the localStorage keys of before 4.0, so the copy the OS makes at boot carries over as it is. `sun-and-moon.app.svelte` reads it first and mounts the game (`play.svelte`) only once it is read, so a saved game is never replaced by a fresh one.
+
 | What | Where | Format |
 |------|-------|--------|
-| Game in progress | `app.sun-and-moon.game` | `{ size, seed, values, hints, elapsed }`: the puzzle is its seed, so only the marks are saved |
-| Daily in progress | `app.sun-and-moon.daily` | `{ day, game }`, apart from the regular game |
-| Last size | `app.sun-and-moon.size` | `"6"` or `"8"` |
-| Stats | `app.sun-and-moon.stats` | Per size `{ solved, best }`; best only counts solves without hints |
+| Game in progress | `storage.json` › `game` | `{ size, seed, values, hints, elapsed }`: the puzzle is its seed, so only the marks are saved |
+| Daily in progress | `storage.json` › `daily` | `{ day, game }`, apart from the regular game |
+| Last size | `storage.json` › `size` | `"6"` or `"8"` |
+| Stats | `storage.json` › `stats` | Per size `{ solved, best }`; best only counts solves without hints |
 | Daily results, play time | `/var/lib/games/plays.json` | Games kit (`track_play`), ranked by time |
 | Achievements | `/var/lib/apps/sun-and-moon/achievements.json` | Written by the OS ([achievements](../system/services/achievements.md)) |
 

@@ -15,9 +15,9 @@
   import { untrack } from "svelte";
   import {
     DAILY_SIZE,
-    daily_saved_schema,
     daily_seed_of,
     empty_stats,
+    empty_stored,
     extend,
     found_cells,
     hint,
@@ -27,11 +27,9 @@
     record,
     reset,
     restore,
-    saved_schema,
     Size,
-    size_schema,
     SIZES,
-    stats_schema,
+    stored_schema,
     to_saved,
     undo,
     with_found,
@@ -57,12 +55,12 @@
   const daily_day = untrack(() => daily_prop);
 
   const { window_id, app_id, window: win, storage, achievements } = get_app_context();
+  const store = storage.file("storage.json", empty_stored(), stored_schema);
   const play = track_play(app_id, () => win.is_visible);
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
-  const stats = storage.persisted("stats", empty_stats(), stats_schema);
 
   let daily = $state(daily_day ?? null);
-  let size = $state<Size>(daily_day ? DAILY_SIZE : (storage.get("size", size_schema) ?? Size.MEDIUM));
+  let size = $state<Size>(daily_day ? DAILY_SIZE : Size.MEDIUM);
   let dictionary = $state.raw<Dictionary | null>(null);
   let game = $state.raw<Game | null>(null);
   let load_error = $state<string | null>(null);
@@ -85,7 +83,7 @@
   const hinted = $derived(game ? hinted_cells(game) : new Map<number, number>());
   const colour_of = $derived(new Map(game?.found.map((tunnel, order) => [tunnel, order % TRAILS.length]) ?? []));
   const elapsed = $derived(clock.elapsed);
-  const best = $derived(stats.value[size].best);
+  const best = $derived(store.value.stats[size].best);
   const total = $derived(game?.puzzle.tunnels.length ?? 0);
   const path_text = $derived(game ? path.map((cell) => game!.puzzle.letters[cell]).join("") : "");
 
@@ -103,15 +101,23 @@
     return "Trace words through neighbouring letters";
   });
 
-  void start();
+  let started = false;
+  $effect(() => {
+    if (started || !store.ready) return;
+    started = true;
+    untrack(() => {
+      if (!daily_day) size = store.value.size;
+      void start();
+    });
+  });
 
   async function start() {
     if (daily_day) {
-      const saved_daily = storage.get("daily", daily_saved_schema);
+      const saved_daily = store.value.daily;
       await begin(DAILY_SIZE, daily_seed_of(daily_day), saved_daily?.day === daily_day ? saved_daily.game : null);
       return;
     }
-    const saved = storage.get("game", saved_schema);
+    const saved = store.value.game;
     if (saved) await begin(saved.size, saved.seed, saved);
     else await begin(size, random_seed(), null);
   }
@@ -167,8 +173,8 @@
   function save() {
     if (!game) return;
     const data = to_saved(game, clock.read());
-    if (daily) storage.set("daily", { day: daily, game: data });
-    else storage.set("game", data);
+    if (daily) store.value.daily = { day: daily, game: data };
+    else store.value.game = data;
   }
 
   function start_clock() {
@@ -180,7 +186,7 @@
     const time = clock.pause();
     if (daily) play.daily(daily, time);
     new_best = game.hints === 0 && (best === null || time < best);
-    stats.value = record(stats.value, size, time, game.hints);
+    store.value.stats = record(store.value.stats, size, time, game.hints);
     report_solve(game.hints === 0);
   }
 
@@ -188,7 +194,7 @@
     achievements.achieve("first-solve");
     if (daily) achievements.achieve("daily");
     if (size === Size.LARGE && clean) achievements.achieve("large");
-    achievements.progress("solves-25", Object.values(stats.value).reduce((sum, entry) => sum + entry.solved, 0));
+    achievements.progress("solves-25", Object.values(store.value.stats).reduce((sum, entry) => sum + entry.solved, 0));
   }
 
   function submit() {
@@ -252,7 +258,7 @@
       if (!confirmed) return;
     }
     daily = null;
-    storage.set("size", next);
+    store.value.size = next;
     game = null;
     clock.reset();
     await begin(next, random_seed(), null);
@@ -377,7 +383,7 @@
       confirm_label: "Reset",
       danger: true,
     });
-    if (confirmed) stats.value = empty_stats();
+    if (confirmed) store.value.stats = empty_stats();
   }
 </script>
 
@@ -553,7 +559,7 @@
           <Button size="sm" variant="quiet" onclick={reset_stats}>Reset</Button>
         {/snippet}
         {#each SIZES as each (each)}
-          {@const entry = stats.value[each]}
+          {@const entry = store.value.stats[each]}
           <div class="flex flex-col gap-0.5 px-4 py-2.5">
             <span class={cn("text-ui", each === size ? "font-medium" : "text-foreground/80")}>{LABELS[each]} · {LEVELS[each].rows}×{LEVELS[each].cols}</span>
             <span class="font-mono text-2xs text-foreground/65 tabular-nums">

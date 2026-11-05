@@ -18,6 +18,7 @@ import {
   record,
   restore,
   saved_schema,
+  stored_schema,
   to_saved,
   toggle_note,
   wave_delays,
@@ -302,5 +303,17 @@ describe("6×6", () => {
     expect(daily_game("2026-10-22", Size.SIX).puzzle.givens).toEqual(today.puzzle.givens);
     expect(daily_game("2026-10-23", Size.SIX).puzzle.givens).not.toEqual(today.puzzle.givens);
     expect(daily_game("2026-10-22").size).toBe(Size.NINE);
+  });
+});
+
+describe("stored_schema", () => {
+  it("resets only the field that doesn't parse", () => {
+    const stats = { ...empty_stats(), easy: { solved: 3, best: 90_000 } };
+    const stored = stored_schema.parse({ stats, difficulty: "impossible", size: Size.SIX, game: { seed: -1 } });
+    expect(stored.stats).toEqual(stats);
+    expect(stored.size).toBe(Size.SIX);
+    expect(stored.difficulty).toBe(Difficulty.EASY);
+    expect(stored.game).toBeNull();
+    expect(stored["stats-6x6"]).toEqual(empty_stats());
   });
 });

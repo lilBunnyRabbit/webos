@@ -50,7 +50,7 @@ Measured in Node under Vitest on the dev machine (60 seeds per size, the real li
 - a cell in the same row or column as the end joins one step at a time while the steps are free, so a fast finger that skips a letter still lands;
 - anything else (diagonal, too far, past 7 letters) leaves the path as it is.
 
-The board is one pointer target with capture (`tunnels.app.svelte:271`). While dragging, a cell counts only when the pointer is within 0.42 of a cell of its centre (`locate`, `tunnels.app.svelte:260`), so cutting a corner doesn't catch the neighbour. The drag ends on `lostpointercapture` (`tunnels.app.svelte:298`), which checks the word. Tapping works too: tap letters one by one, tap the last one again to check. Keyboard: arrows move, Space adds the letter, Enter checks, Backspace drops a letter, Escape clears.
+The board is one pointer target with capture (`tunnels.app.svelte:300`). While dragging, a cell counts only when the pointer is within 0.42 of a cell of its centre (`locate`, `tunnels.app.svelte:276`), so cutting a corner doesn't catch the neighbour. The drag ends on `lostpointercapture` (`tunnels.app.svelte:314`), which checks the word. Tapping works too: tap letters one by one, tap the last one again to check. Keyboard: arrows move, Space adds the letter, Enter checks, Backspace drops a letter, Escape clears.
 
 `judge` (`game.ts:62`) locks a hidden word when the path covers exactly its cells and spells an accepted word. A real word on the wrong cells says so ("is a word, but not one of these"), a non-word says "isn't a word here", fewer than 5 letters gives the length rule.
 
@@ -75,12 +75,14 @@ Both come from ENABLE (public domain); the answers are its common words, filtere
 
 ## Data
 
+`/var/lib/apps/tunnels/storage.json` holds one field per entry (`stored_schema` in `game.ts`), each with its own fallback, so one bad value resets only that field. Its field names are the localStorage keys of before 4.0, so the copy the OS makes at boot carries over as it is. The word list loads first anyway, so the window starts the game once the file is read (`start`), with the default size until then.
+
 | What | Where |
 |------|-------|
-| Puzzle in progress | `app.tunnels.game`: size, seed, found tunnel indices in order, revealed letters per tunnel, hints, elapsed ms |
-| Daily in progress | `app.tunnels.daily`: `{ day, game }`, kept apart so it never replaces the regular game |
-| Size | `app.tunnels.size` |
-| Statistics | `app.tunnels.stats`: solved and best (no hints) per size |
+| Puzzle in progress | `storage.json` › `game`: size, seed, found tunnel indices in order, revealed letters per tunnel, hints, elapsed ms |
+| Daily in progress | `storage.json` › `daily`: `{ day, game }`, kept apart so it never replaces the regular game |
+| Size | `storage.json` › `size` |
+| Statistics | `storage.json` › `stats`: solved and best (no hints) per size |
 | Daily result | `/var/lib/games/plays.json` through `track_play` |
 | Achievements | `/var/lib/apps/tunnels/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)) |
 

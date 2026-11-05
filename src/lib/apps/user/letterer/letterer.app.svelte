@@ -11,10 +11,10 @@
   import { key_marks } from "./feedback";
   import {
     BOARD_COUNTS,
-    daily_saved_schema,
     daily_seed_of,
     DAILY_VARIANT,
     DEFAULT_VARIANT,
+    empty_stored,
     EMPTY_RECORD,
     hard_allowed,
     max_rows,
@@ -26,12 +26,10 @@
     record_game,
     record_run,
     replay,
-    saved_schema,
-    stats_schema,
     Status,
+    stored_schema,
     uses_words,
     variant_key,
-    variant_schema,
     word_length,
     type BoardCount,
     type Game,
@@ -67,12 +65,12 @@
   const daily_day = untrack(() => daily_prop);
 
   const { window_id, app_id, window: win, storage } = get_app_context();
+  const store = storage.file("storage.json", empty_stored(), stored_schema);
   const play_tracker = track_play(app_id, () => win.is_visible);
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
-  const stats = storage.persisted("stats", {}, stats_schema);
 
   // Per window, so two open games don't switch each other's mode; storage only remembers the last pick.
-  let pick = $state<Variant>(storage.get("variant", variant_schema) ?? DEFAULT_VARIANT);
+  let pick = $state<Variant>(DEFAULT_VARIANT);
   let daily = $state<string | null>(daily_day ?? null);
   let words = $state.raw<Words>(NO_WORDS);
   let game = $state.raw<Game | null>(null);
@@ -94,7 +92,7 @@
   const finished = $derived(game !== null && game.status !== Status.PLAYING);
   const used = $derived(game?.guesses.length ?? 0);
   const stats_key = $derived(variant_key(variant));
-  const record = $derived(stats.value[stats_key] ?? EMPTY_RECORD);
+  const record = $derived(store.value.stats[stats_key] ?? EMPTY_RECORD);
   const elapsed = $derived(clock.elapsed);
   const visible_rows = $derived.by(() => {
     if (!game) return 6;
@@ -169,17 +167,25 @@
     return () => clearTimeout(timer);
   });
 
-  untrack(() => boot());
+  let booted = false;
+  $effect(() => {
+    if (booted || !store.ready) return;
+    booted = true;
+    untrack(() => {
+      pick = $state.snapshot(store.value.variant);
+      void boot();
+    });
+  });
 
   async function boot() {
     if (daily_day) {
-      const saved_daily = storage.get("daily", daily_saved_schema);
+      const saved_daily = store.value.daily;
       const saved = saved_daily?.day === daily_day ? saved_daily.game : null;
       const variant = saved?.variant ?? { ...DAILY_VARIANT, hard: pick.hard };
       await begin(variant, daily_seed_of(daily_day), saved);
       return;
     }
-    const saved = storage.get("game", saved_schema);
+    const saved = store.value.game;
     if (saved && saved.guesses.length) await begin(saved.variant, saved.seed, saved);
     else await begin(pick, random_seed(), null);
   }
@@ -209,19 +215,19 @@
   function save() {
     if (!game) return;
     const data: Saved = { variant: game.variant, seed: game.seed, guesses: [...game.guesses], elapsed: clock.read() };
-    if (daily) storage.set("daily", { day: daily, game: data });
-    else storage.set("game", data);
+    if (daily) store.value.daily = { day: daily, game: data };
+    else store.value.game = data;
   }
 
   function finish(done: Game) {
     const time = clock.pause();
     const key = variant_key(done.variant);
     if (done.variant.mode === Mode.SURVIVAL) {
-      stats.value = record_run(stats.value, key, done.round);
+      store.value.stats = record_run(store.value.stats, key, done.round);
       return;
     }
     const won = done.status === Status.WON;
-    stats.value = record_game(stats.value, key, won, done.guesses.length);
+    store.value.stats = record_game(store.value.stats, key, won, done.guesses.length);
     if (won && daily) play_tracker.daily(daily, time);
   }
 
@@ -279,7 +285,7 @@
     if (!(await confirm_abandon())) return;
     daily = null;
     pick = next;
-    storage.set("variant", next);
+    store.value.variant = next;
     await begin(next, random_seed(), null);
     board_element?.focus({ preventScroll: true });
   }
@@ -300,7 +306,7 @@
 
   function set_hard(hard: boolean) {
     pick = { ...pick, hard };
-    storage.set("variant", pick);
+    store.value.variant = pick;
     if (game && !finished && used === 0) {
       game = { ...game, variant: { ...game.variant, hard } };
       save();
@@ -313,7 +319,7 @@
       confirm_label: "Reset",
       danger: true,
     });
-    if (confirmed) stats.value = {};
+    if (confirmed) store.value.stats = {};
   }
 </script>
 

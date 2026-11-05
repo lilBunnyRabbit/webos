@@ -67,13 +67,16 @@ Hints are counted; best times count only solves without hints.
 
 ## Data
 
-| Key | What |
+`/var/lib/apps/plots/storage.json` holds one field per entry (`stored_schema` in `game.ts`), each with its own fallback, so one bad value resets only that field. Its field names are the localStorage keys of before 4.0, so the copy the OS makes at boot carries over as it is. `plots.app.svelte` reads it first and mounts the game (`play.svelte`) only once it is read, so a saved game is never replaced by a fresh one.
+
+| Field | What |
 |-----|------|
-| `app.plots.game` | Free-play game in progress: `{ size, seed, plots, hints, elapsed }`, each plot `[row, col, width, height]`. The puzzle is its seed |
-| `app.plots.daily` | Daily in progress: `{ day, game }` |
-| `app.plots.stats` | Per size `{ solved, best }` |
-| `app.plots.size` | Last size |
-| `/var/lib/apps/plots/achievements.json` | Achievements, written by the OS ([achievements](../system/services/achievements.md)) |
+| `game` | Free-play game in progress: `{ size, seed, plots, hints, elapsed }`, each plot `[row, col, width, height]`. The puzzle is its seed |
+| `daily` | Daily in progress: `{ day, game }` |
+| `stats` | Per size `{ solved, best }` |
+| `size` | Last size |
+
+Achievements are in `/var/lib/apps/plots/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)).
 
 A solved daily calls `PlayTracker.daily(day, ms)`; the manifest leaves `daily_rank` at its default, time ascending. Props: `daily` (`YYYY-MM-DD`), the Game Hub contract. The daily seed is `daily_seed(day, "plots")`, size 7×7. No shell commands beyond `games daily`.
 

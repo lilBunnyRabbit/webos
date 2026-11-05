@@ -170,3 +170,13 @@ export const DAILY_DIFFICULTY = Difficulty.MEDIUM;
 export function daily_game(day: string): Game {
   return new_game(DAILY_DIFFICULTY, daily_seed(day, "sokoban"));
 }
+
+export const stored_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  bests: bests_schema.catch({}),
+  game: saved_schema.nullable().catch(null),
+  daily: daily_saved_schema.nullable().catch(null),
+  difficulty: difficulty_schema.catch(Difficulty.EASY),
+});
+export type Stored = z.infer<typeof stored_schema>;
+export const empty_stored = (): Stored => stored_schema.parse({});

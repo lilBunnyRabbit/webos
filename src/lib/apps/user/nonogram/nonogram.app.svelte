@@ -9,7 +9,7 @@
   import { blank_drawing } from "./drawing";
   import Editor from "./editor.svelte";
   import { NONOGRAM_EXTENSION, parse_nonogram, type Drawing } from "./file";
-  import type { Mode, Size } from "./game";
+  import { empty_stored, stored_schema, type Mode, type Size } from "./game";
   import { base_name } from "$lib/core/api/services/files/path";
   import Play, { type Source } from "./play.svelte";
   import { report_error } from "$kit/utils/report-error";
@@ -18,6 +18,7 @@
 
   const { app_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
+  const store = storage.file("storage.json", empty_stored(), stored_schema);
 
   // Window state survives session restore, so a restored window doesn't act on its launch request again.
   const handled = storage.window("handled", false);
@@ -90,7 +91,7 @@
   }
 </script>
 
-{#if loading}
+{#if loading || !store.ready}
   <div class="grid h-full place-items-center"><Spinner /></div>
 {:else if load_error}
   <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't open the puzzle" description={load_error}>

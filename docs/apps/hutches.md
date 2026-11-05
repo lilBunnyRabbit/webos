@@ -64,14 +64,17 @@ Hints are counted; best times count only solves without hints.
 
 ## Data
 
-| Key | What |
+`/var/lib/apps/hutches/storage.json` holds one field per entry (`stored_schema` in `game.ts`), each with its own fallback, so one bad value resets only that field. Its field names are the localStorage keys of before 4.0, so the copy the OS makes at boot carries over as it is. `hutches.app.svelte` reads it first and mounts the game (`play.svelte`) only once it is read, so a saved game is never replaced by a fresh one.
+
+| Field | What |
 |-----|------|
-| `app.hutches.game` | Free-play game in progress: `{ size, seed, marks, hints, elapsed }`. The puzzle is its seed |
-| `app.hutches.daily` | Daily in progress: `{ day, game }` |
-| `app.hutches.stats` | Per size `{ solved, best }` |
-| `app.hutches.size` | Last size |
-| `app.hutches.auto-cross` | Auto-cross switch |
-| `/var/lib/apps/hutches/achievements.json` | Achievements, written by the OS ([achievements](../system/services/achievements.md)) |
+| `game` | Free-play game in progress: `{ size, seed, marks, hints, elapsed }`. The puzzle is its seed |
+| `daily` | Daily in progress: `{ day, game }` |
+| `stats` | Per size `{ solved, best }` |
+| `size` | Last size |
+| `auto-cross` | Auto-cross switch |
+
+Achievements are in `/var/lib/apps/hutches/achievements.json`, written by the OS ([achievements](../system/services/achievements.md)).
 
 A solved daily calls `PlayTracker.daily(day, ms)`; the manifest leaves `daily_rank` at its default, time ascending. Props: `daily` (`YYYY-MM-DD`), the Game Hub contract. The daily seed is `daily_seed(day, "hutches")`, size 8×8. No shell commands beyond `games daily`.
 

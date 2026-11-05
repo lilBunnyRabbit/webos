@@ -262,3 +262,13 @@ export function daily_game(day: string): Game {
 
 /** A daily puzzle in progress, kept apart from the regular save. */
 export const daily_saved_schema = z.object({ day: z.string(), game: saved_schema });
+
+export const stored_schema = z.object({
+  stats: stats_schema.catch(empty_stats),
+  "auto-cross": z.boolean().catch(false),
+  game: saved_schema.nullable().catch(null),
+  daily: daily_saved_schema.nullable().catch(null),
+  size: size_schema.catch(Size.S8),
+});
+export type Stored = z.infer<typeof stored_schema>;
+export const empty_stored = (): Stored => stored_schema.parse({});

@@ -249,3 +249,12 @@ export const saved_schema = z.object({
 export type Saved = z.infer<typeof saved_schema>;
 
 export const daily_saved_schema = z.object({ day: z.string(), game: saved_schema });
+
+export const stored_schema = z.object({
+  stats: stats_schema.catch({}),
+  variant: variant_schema.catch(DEFAULT_VARIANT),
+  game: saved_schema.nullable().catch(null),
+  daily: daily_saved_schema.nullable().catch(null),
+});
+export type Stored = z.infer<typeof stored_schema>;
+export const empty_stored = (): Stored => stored_schema.parse({});

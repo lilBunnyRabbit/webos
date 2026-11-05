@@ -54,23 +54,51 @@ const OnionSchema = z.object({
   tint: z.boolean(),
 });
 
-/** Must run during component init: `persisted` saves through an effect. */
+const PrefsSchema = z.object({
+  tool: z.enum(TOOLS).catch(Tool.PENCIL),
+  size: z.number().int().min(1).max(MAX_BRUSH).catch(1),
+  shape: z.enum([BrushShape.SQUARE, BrushShape.ROUND]).catch(BrushShape.SQUARE),
+  pixel_perfect: z.boolean().catch(true),
+  pattern: z.enum(PATTERNS).catch(Pattern.SOLID),
+  contiguous: z.boolean().catch(true),
+  filled: z.boolean().catch(false),
+  mirror_x: z.boolean().catch(false),
+  mirror_y: z.boolean().catch(false),
+  grid: z.boolean().catch(true),
+  tile: z.number().int().min(0).max(256).catch(0),
+  onion: OnionSchema.catch({ enabled: false, before: 1, after: 1, opacity: 40, tint: true }),
+  play_mode: z.enum(PLAY_MODES).catch(PlayMode.LOOP),
+  side: PanelSchema.catch({ size: SIDE.default, collapsed: false }),
+  strip: PanelSchema.catch({ size: STRIP.default, collapsed: false }),
+});
+type Stored = z.infer<typeof PrefsSchema>;
+
+/** Must run during component init: `storage.file` releases the file with the component. Defaults show until it is read. */
 export function create_prefs(storage: StorageHandle): Prefs {
+  const file = storage.file("storage.json", PrefsSchema.parse({}), PrefsSchema);
+  const box = <K extends keyof Stored>(key: K): Box<Stored[K]> => ({
+    get value() {
+      return file.value[key];
+    },
+    set value(value: Stored[K]) {
+      file.value[key] = value;
+    },
+  });
   return {
-    tool: storage.persisted<Tool>("tool", Tool.PENCIL, z.enum(TOOLS)),
-    size: storage.persisted("size", 1, z.number().int().min(1).max(MAX_BRUSH)),
-    shape: storage.persisted<BrushShape>("shape", BrushShape.SQUARE, z.enum([BrushShape.SQUARE, BrushShape.ROUND])),
-    pixel_perfect: storage.persisted("pixel_perfect", true, z.boolean()),
-    pattern: storage.persisted<Pattern>("pattern", Pattern.SOLID, z.enum(PATTERNS)),
-    contiguous: storage.persisted("contiguous", true, z.boolean()),
-    filled: storage.persisted("filled", false, z.boolean()),
-    mirror_x: storage.persisted("mirror_x", false, z.boolean()),
-    mirror_y: storage.persisted("mirror_y", false, z.boolean()),
-    grid: storage.persisted("grid", true, z.boolean()),
-    tile: storage.persisted("tile", 0, z.number().int().min(0).max(256)),
-    onion: storage.persisted<Onion>("onion", { enabled: false, before: 1, after: 1, opacity: 40, tint: true }, OnionSchema),
-    play_mode: storage.persisted<PlayMode>("play_mode", PlayMode.LOOP, z.enum(PLAY_MODES)),
-    side: storage.persisted<Panel>("side", { size: SIDE.default, collapsed: false }, PanelSchema),
-    strip: storage.persisted<Panel>("strip", { size: STRIP.default, collapsed: false }, PanelSchema),
+    tool: box("tool"),
+    size: box("size"),
+    shape: box("shape"),
+    pixel_perfect: box("pixel_perfect"),
+    pattern: box("pattern"),
+    contiguous: box("contiguous"),
+    filled: box("filled"),
+    mirror_x: box("mirror_x"),
+    mirror_y: box("mirror_y"),
+    grid: box("grid"),
+    tile: box("tile"),
+    onion: box("onion"),
+    play_mode: box("play_mode"),
+    side: box("side"),
+    strip: box("strip"),
   };
 }
