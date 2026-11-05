@@ -1,5 +1,6 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
+  import { untrack } from "svelte";
   import { Badge, Button, EmptyState, IconButton, Input, Section, Select, SideNav } from "$lib/core/components/ui";
   import type { IconComponent } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
@@ -56,9 +57,18 @@
 
   const { storage } = get_app_context();
   const prefs = storage.file("storage.json", empty_storage(), storage_schema);
-  // Per window so two converters don't fight; "last" only seeds a new window, whose own view stays null until changed.
+  // Per window so two converters don't fight; "last" seeds a new window once, then the window owns its view.
   const view = storage.window<SavedState | null>("view", null, saved_state_schema.nullable());
-  const current = $derived(view.value ?? prefs.value.last ?? DEFAULT_STATE);
+  const current = $derived(view.value ?? DEFAULT_STATE);
+
+  let seeded = false;
+  $effect(() => {
+    if (seeded || !prefs.ready) return;
+    seeded = true;
+    untrack(() => {
+      if (view.value === null) view.value = prefs.value.last ? $state.snapshot(prefs.value.last) : structuredClone(DEFAULT_STATE);
+    });
+  });
 
   const uid = $props.id();
 

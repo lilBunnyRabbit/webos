@@ -64,7 +64,7 @@ Apps' `storage.json` keys, listed by their localStorage name before 4.0 (`app.{i
 | `app.blocks.{mode,stats}` | `user/blocks` | Last mode; marathon and sprint stats, top five marathon scores |
 | `app.checkout-challenge.{run,best,sales}` | `user/checkout-challenge` | The shop between days (versioned); best run; customers served over every day (achievements) |
 | `app.calendar.sources` | `user/calendar` | Which sources show on the calendar |
-| `app.clock.stopwatch` | `user/clock` | Legacy: the stopwatch before it moved into `/var/lib/apps/clock/clock.json` (2026-10-21). The first Clock window after the boot copy folds it from `storage.json` into `clock.json` when that has none, then deletes `storage.json` |
+| `app.clock.stopwatch` | `user/clock` | Legacy: the stopwatch before it moved into `/var/lib/apps/clock/clock.json` (2026-10-21). The first Clock window after the boot copy folds it from `storage.json` into `clock.json` when that has none, saves `clock.json` at once and deletes `storage.json` only once the file on disk holds a stopwatch |
 | `app.color-recall.{level,space,daily,games}` | `user/color-recall` | Last practice level; the slider space (HSB or OKLCH); the daily attempt `{ day, state }`, so a daily is played once; games finished (achievements). `level` and `daily` belong to the frame the four colour games share (`color-recall/color-game.svelte`): it folds them out of `storage.json` into `color-game.json` once (`{ folded, level, daily }`), so each board owns `storage.json` alone; the same goes for Gradient Sort, Hex Guess and Odd One Out. Before the split (ADR-071) these were `app.color-games.*`, which stay unread |
 | `app.colour-atlas.{dex,daily}` | `user/colour-atlas` | Collected models, model id → best ΔE2000; the daily attempt `{ day, state }` (each submitted round's slider values and the time), so a daily is played once |
 | `app.crack-the-code.{stats,daily,game,length}` | `user/crack-the-code` | Stats per code length; daily case; case in progress; last length |
@@ -87,13 +87,15 @@ Apps' `storage.json` keys, listed by their localStorage name before 4.0 (`app.{i
 | `app.icon-pack.options` | `user/icon-pack` | Icon and card options |
 | `app.image-editor.quality` | `user/image-editor` | Export quality (10–100) |
 | `app.image-tools.sprite-settings` | `user/image-tools` | Sprites section grid settings |
+| `app.image-tools.squash` | `user/image-tools` | Squash section settings |
 | `app.image-tools.test-image` | `user/image-tools` | Test image section: pattern, markings, size and format |
 | `app.image-tools.fit` | `user/image-tools` | Fit section: size limit (preset or custom), format, max side |
 | `app.image-tools.poster` | `user/image-tools` | Poster print section: paper, orientation, sheets across, overlap, margin, crop marks, map |
+| `app.hopsprite.{tool,size,shape,pixel_perfect,pattern,contiguous,filled,mirror_x,mirror_y,grid,tile,onion,play_mode,side,strip}` | `user/hopsprite` | Last tool and brush (size, shape, pixel perfect, pattern, contiguous fill, filled shapes), mirror axes, grid, tile preview, onion skin, play mode; side panel and frame strip size and collapsed |
 | `app.hutches.{stats,daily,game,size,auto-cross}` | `user/hutches` | Stats per size; daily puzzle; game in progress; last size; auto-cross switch |
 | `app.jigsaw.{game,pieces,solves}` | `user/jigsaw` | Puzzle in progress (picture path, seed, piece positions, time; only for a picture from WebOS files); last piece count; puzzles finished (achievements) |
 | `app.kakuro.{stats,daily,game,size}` | `user/kakuro` | Stats; daily puzzle; game in progress; last size |
-| `app.lunar-lander.{best,landings}` | `user/lunar-lander` | Best score per ship and planet; safe landings (achievements) |
+| `app.lunar-lander.{best,landings,ship,gravity,air,wind,infinite_fuel}` | `user/lunar-lander` | Best score per ship and planet; safe landings (achievements); last ship, gravity, air, wind and infinite fuel picks |
 | `app.markdown-pdf.settings` | `user/markdown-pdf` | Page and print settings |
 | `app.maze.{prefs,best_ms,escapes}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size; mazes escaped (achievements) |
 | `app.moonrabbit.{journal,idle-minutes,hidden-seconds,quick-offer-declined}` | `user/moonrabbit` | Last journal's folder name (read by the widget too); auto-lock after idle (minutes, 0 = never) and when hidden (seconds); journal ids whose quick-unlock offer was declined |
@@ -102,7 +104,7 @@ Apps' `storage.json` keys, listed by their localStorage name before 4.0 (`app.{i
 | `app.nonogram.{stats,stats-color,size,mode,game}` | `user/nonogram` | Stats per mode; last size and mode; game in progress |
 | `app.nurikabe.{stats,daily,game,size}` | `user/nurikabe` | Stats; daily puzzle; game in progress; last size |
 | `app.odd-one-out.{daily,spotted}` | `user/odd-one-out` | The daily attempt `{ day, state }` (in `color-game.json`, see Color Recall); odd tiles found (achievements) |
-| `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent}` | `user/paint` | Tool settings, colours, 8 recent colours |
+| `app.paint.{tool,size,tolerance,fill_mode,primary,secondary,recent,saved_new}` | `user/paint` | Tool settings, colours, 8 recent colours; new images saved (achievements) |
 | `app.plots.{stats,daily,game,size}` | `user/plots` | Stats per size; daily puzzle; plots in progress; last size |
 | `app.pdf-tools.{sign,export,images,test-pdf}` | `user/pdf-tools` | Sign ink and date option; Export, Images and Test PDF section settings |
 | `app.qr-reader.entries` | `user/qr-reader` | Scanned codes with PNG thumbnails, the 50 newest |
@@ -111,19 +113,23 @@ Apps' `storage.json` keys, listed by their localStorage name before 4.0 (`app.{i
 | `app.quick-notes.notes-status` | `user/quick-notes` | Notes status filter |
 | `app.recorder.{screen_mic,photo_format}` | `user/recorder` | Mic with screen recording; photo format |
 | `app.rng-tools.{section,number,dice.notation,list,password,coin.tally,draws}` | `user/rng-tools` | Last section and per-section settings; coin tally; Draws presets |
-| `app.snake.{speed,wrap,high_scores}` | `user/snake` | Last mode; high score per speed and wall mode |
+| `app.snake.{speed,wrap,high_scores,eaten}` | `user/snake` | Last mode; high score per speed and wall mode; points scored in all (achievements) |
+| `app.sokoban.{stats,bests,game,daily,difficulty}` | `user/sokoban` | Stats; fewest moves and pushes per level; game in progress; daily puzzle; last difficulty |
 | `app.solitaire.{stats,draw}` | `user/solitaire` | Stats; draw one or three (both also read by `solitaire` and `solitaire stats`) |
 | `app.svg-workbench.{options,png-sizes,backdrop}` | `user/svg-workbench` | Optimizer options; PNG export sizes; preview backdrop |
 | `app.tape-sketch.snap` | `user/tape-sketch` | Magnet on or off |
 | `app.tea-timer.brews` | `user/tea-timer` | Cups brewed (achievements) |
 | `app.soundboard.{volume,mode}` | `user/soundboard` | Volume and play mode |
-| `app.speed-reader.{settings,positions}` | `user/speed-reader` | WPM, context words, pause; reading position per file path (50) |
+| `app.speed-reader.{settings,words,positions}` | `user/speed-reader` | WPM, context words, pause; words read (achievements); reading position per file path (50) |
+| `app.sun-and-moon.{stats,daily,game,size}` | `user/sun-and-moon` | Stats; daily puzzle; game in progress; last size |
 | `app.sudoku.{stats,stats-6x6,daily,daily-6x6,game,difficulty,size}` | `user/sudoku` | Stats per size (9×9 keeps the unsuffixed key); daily puzzle per size; game in progress (with its size); last difficulty and size |
+| `app.tight-spot.*` | `user/tight-spot` | Free-form: `last` (the game last entered) and each game's last choices as `{game}.*` keys ([details](../apps/tight-spot.md)) |
 | `app.tic-tac-toe.{stats,mode}` | `user/tic-tac-toe` | Win/loss/draw counts; last mode |
 | `app.time-since.sort` | `user/time-since` | Counter sort |
+| `app.tunnels.{stats,daily,game,size}` | `user/tunnels` | Stats; daily puzzle; game in progress; last size |
 | `app.twenty-forty-eight.{best,game}` | `user/twenty-forty-eight` | Best score; game in progress with its undo step |
 | `app.unsaid.{best,guessed}` | `user/unsaid` | Lowest round score (`number` or `null`); cards guessed (achievements) |
-| `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity; a new window shows it until its own view changes |
+| `app.unit-converter.last` | `user/unit-converter` | Last quantity and units per quantity; a new window copies it once the file is read, then keeps its own view |
 | `app.warren.{groups,smart,units,marks,spelling,ignored,dictionary}` | `user/warren` | Open sidebar groups; smart punctuation on or off; margin units; ¶ marks; the spelling list on or off; words ignored in every document (lower case); the personal dictionary, also fed to the spell checker ([details](../apps/warren.md#spelling-list)) |
 | `app.word-search.{stats,daily,game,difficulty}` | `user/word-search` | Stats; daily puzzle; game in progress; last difficulty |
 | `app.letterer.{stats,variant,game,daily}` | `user/letterer` | Stats per mode and length; last mode, length, boards and hard mode; game in progress; daily word |

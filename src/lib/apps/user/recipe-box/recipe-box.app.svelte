@@ -207,70 +207,74 @@
 {/snippet}
 
 <div class="flex h-full flex-col">
-  <Toolbar>
-    {#if view === View.LIBRARY}
-      <span class="min-w-0 flex-1 truncate text-ui font-medium" title={prefs.value.folder}>
-        Recipes <span class="font-mono text-2xs font-normal text-foreground/65">{tilde_path(prefs.value.folder)}</span>
-      </span>
-      <IconButton size="sm" label="Open…" onclick={open}><FolderOpenIcon /></IconButton>
-      <IconButton size="sm" label="Import from device…" onclick={import_device}><DevicesIcon /></IconButton>
-      <IconButton size="sm" label="Change recipes folder…" onclick={change_folder}><FolderSimpleIcon /></IconButton>
-      <Button size="sm" variant="primary" onclick={new_recipe}><PlusIcon />New</Button>
-    {:else}
-      <IconButton size="sm" label="All recipes" onclick={to_library}><ArrowLeftIcon /></IconButton>
-      <span class="min-w-0 flex-1 truncate text-ui font-medium" title={path ?? undefined}>{title}{dirty ? " •" : ""}</span>
-      <Segmented size="sm" label="View" options={VIEWS} bind:value={() => view as RecipeView, (next) => (view = next)} class="hidden @xl:inline-flex" />
-      <Select size="sm" aria-label="View" class="w-auto @xl:hidden" options={VIEWS} bind:value={() => view as RecipeView, (next) => (view = next)} />
-      {#if view === View.EDIT || dirty}
-        <IconButton size="sm" label="Save" disabled={!dirty} onclick={save}><FloppyDiskIcon /></IconButton>
-      {/if}
-    {/if}
-  </Toolbar>
-
-  {#if view === View.LIBRARY}
-    <LibraryView folder={prefs.value.folder} onopen={open_path} onnew={new_recipe} />
-  {:else if loading}
-    <div class="grid flex-1 place-items-center"><Spinner label="Opening" /></div>
-  {:else if load_error}
-    <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't open the recipe" description={load_error}>
-      {#snippet actions()}
-        <Button size="sm" onclick={open}>Open a recipe…</Button>
-        <Button size="sm" variant="quiet" onclick={to_library}>All recipes</Button>
-      {/snippet}
-    </EmptyState>
-  {:else if view === View.RECIPE}
-    <div class="min-h-0 flex-1 overflow-y-auto">
-      <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} {controls} />
-    </div>
-  {:else if view === View.TABLE}
-    <div class="min-h-0 flex-1 overflow-y-auto">
-      <div class="px-4 pt-4 @lg:px-6">{@render controls()}</div>
-      <TableView {recipe} {title} {factor} system={prefs.value.units} />
-    </div>
-  {:else if view === View.COOK}
-    <div class="min-h-0 flex-1">
-      <CookMode bind:this={cook} {recipe} {factor} system={prefs.value.units} {timers} bind:index={cook_index} />
-    </div>
+  {#if !prefs.ready}
+    <div class="grid flex-1 place-items-center"><Spinner label="Loading" /></div>
   {:else}
-    <div class="flex min-h-0 flex-1 flex-col">
-      <Segmented
-        size="sm"
-        label="Edit panel"
-        options={[
-          { value: EditPanel.SOURCE, label: "Source" },
-          { value: EditPanel.PREVIEW, label: "Preview" },
-        ]}
-        bind:value={edit_panel}
-        class="mx-3 mt-3 shrink-0 *:flex-1 @4xl:hidden"
-      />
-      <div class="grid min-h-0 flex-1 @4xl:grid-cols-2">
-        <div class={cn("min-h-0 flex-col p-3 @4xl:flex @4xl:border-r @4xl:border-foreground/8", edit_panel === EditPanel.SOURCE ? "flex" : "hidden")}>
-          <CodeView value={text} label="Recipe source" onchange={(value) => (text = value)} class="min-h-0 flex-1" />
-        </div>
-        <div class={cn("min-h-0 overflow-y-auto @4xl:block", edit_panel === EditPanel.PREVIEW ? "block" : "hidden")} aria-label="Preview">
-          <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} />
+    <Toolbar>
+      {#if view === View.LIBRARY}
+        <span class="min-w-0 flex-1 truncate text-ui font-medium" title={prefs.value.folder}>
+          Recipes <span class="font-mono text-2xs font-normal text-foreground/65">{tilde_path(prefs.value.folder)}</span>
+        </span>
+        <IconButton size="sm" label="Open…" onclick={open}><FolderOpenIcon /></IconButton>
+        <IconButton size="sm" label="Import from device…" onclick={import_device}><DevicesIcon /></IconButton>
+        <IconButton size="sm" label="Change recipes folder…" onclick={change_folder}><FolderSimpleIcon /></IconButton>
+        <Button size="sm" variant="primary" onclick={new_recipe}><PlusIcon />New</Button>
+      {:else}
+        <IconButton size="sm" label="All recipes" onclick={to_library}><ArrowLeftIcon /></IconButton>
+        <span class="min-w-0 flex-1 truncate text-ui font-medium" title={path ?? undefined}>{title}{dirty ? " •" : ""}</span>
+        <Segmented size="sm" label="View" options={VIEWS} bind:value={() => view as RecipeView, (next) => (view = next)} class="hidden @xl:inline-flex" />
+        <Select size="sm" aria-label="View" class="w-auto @xl:hidden" options={VIEWS} bind:value={() => view as RecipeView, (next) => (view = next)} />
+        {#if view === View.EDIT || dirty}
+          <IconButton size="sm" label="Save" disabled={!dirty} onclick={save}><FloppyDiskIcon /></IconButton>
+        {/if}
+      {/if}
+    </Toolbar>
+
+    {#if view === View.LIBRARY}
+      <LibraryView folder={prefs.value.folder} onopen={open_path} onnew={new_recipe} />
+    {:else if loading}
+      <div class="grid flex-1 place-items-center"><Spinner label="Opening" /></div>
+    {:else if load_error}
+      <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't open the recipe" description={load_error}>
+        {#snippet actions()}
+          <Button size="sm" onclick={open}>Open a recipe…</Button>
+          <Button size="sm" variant="quiet" onclick={to_library}>All recipes</Button>
+        {/snippet}
+      </EmptyState>
+    {:else if view === View.RECIPE}
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} {controls} />
+      </div>
+    {:else if view === View.TABLE}
+      <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="px-4 pt-4 @lg:px-6">{@render controls()}</div>
+        <TableView {recipe} {title} {factor} system={prefs.value.units} />
+      </div>
+    {:else if view === View.COOK}
+      <div class="min-h-0 flex-1">
+        <CookMode bind:this={cook} {recipe} {factor} system={prefs.value.units} {timers} bind:index={cook_index} />
+      </div>
+    {:else}
+      <div class="flex min-h-0 flex-1 flex-col">
+        <Segmented
+          size="sm"
+          label="Edit panel"
+          options={[
+            { value: EditPanel.SOURCE, label: "Source" },
+            { value: EditPanel.PREVIEW, label: "Preview" },
+          ]}
+          bind:value={edit_panel}
+          class="mx-3 mt-3 shrink-0 *:flex-1 @4xl:hidden"
+        />
+        <div class="grid min-h-0 flex-1 @4xl:grid-cols-2">
+          <div class={cn("min-h-0 flex-col p-3 @4xl:flex @4xl:border-r @4xl:border-foreground/8", edit_panel === EditPanel.SOURCE ? "flex" : "hidden")}>
+            <CodeView value={text} label="Recipe source" onchange={(value) => (text = value)} class="min-h-0 flex-1" />
+          </div>
+          <div class={cn("min-h-0 overflow-y-auto @4xl:block", edit_panel === EditPanel.PREVIEW ? "block" : "hidden")} aria-label="Preview">
+            <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} />
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
   {/if}
 </div>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import kernel, { NotificationType, Platform, type DesktopItem, type DesktopService, type DialogsService, type FilesService, type NotificationsService, type SchedulerService } from "$lib/core/api";
   import { Button, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { flush_writers } from "$lib/core/api/services/files/latest-writer";
   import { app_data_path, get_app_context } from "$lib/core/contexts/app";
   import {
     Alarm as AlarmIcon,
@@ -12,7 +13,7 @@
     Sticker as StickerIcon,
     Timer as TimerIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import { z } from "zod";
   import AllTab from "./all-tab.svelte";
   import AlarmsTab from "./alarms-tab.svelte";
@@ -81,7 +82,13 @@
   async function fold_legacy() {
     const legacy = await files.get_file(app_data_path(app_id, LEGACY_FILE));
     if (!legacy) return;
-    migrate_stopwatch(file.value, legacy_stopwatch(await legacy.text()));
+    if (migrate_stopwatch(file.value, legacy_stopwatch(await legacy.text()))) {
+      // The old copy goes only once the data file holds the stopwatch: a reload before the delayed save would lose it.
+      await tick();
+      await flush_writers();
+      const saved = await files.get_file(app_data_path(app_id, DATA_FILE));
+      if (!saved || !legacy_stopwatch(await saved.text())) return;
+    }
     const folder = await files.get_directory(app_data_path(app_id));
     if (folder) await files.delete_entry(folder, LEGACY_FILE);
   }

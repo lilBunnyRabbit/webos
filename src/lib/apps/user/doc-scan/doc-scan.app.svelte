@@ -151,11 +151,19 @@
   }
 
   const initial = untrack(() => ({ photo, paths: [...(paths ?? []), ...(path ? [path] : [])] }));
+  // Pages take the saved filter, so launch paths wait for the data file.
+  let launch_paths: string[] = [];
   if (!launched.value) {
     launched.value = true;
-    if (initial.paths.length) void open_paths(initial.paths);
+    if (initial.paths.length) launch_paths = initial.paths;
     else if (initial.photo) void take();
   }
+  $effect(() => {
+    if (!prefs.ready || !launch_paths.length) return;
+    const list = launch_paths;
+    launch_paths = [];
+    void open_paths(list);
+  });
 
   onDestroy(() => {
     for (const each of pages) each.dispose();
