@@ -58,7 +58,7 @@
   const OVERVIEW_MARGIN = 3;
   const DAILY_MODE = "f1";
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
@@ -70,7 +70,7 @@
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
-  let track = $state<TrackId>(storage.get("f1.track", track_id_schema) ?? TrackId.MEADOW);
+  let track = $state<TrackId>(track_id_schema.catch(TrackId.MEADOW).parse(untrack(() => prefs.value["f1.track"])));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let new_best = $state(false);
@@ -337,7 +337,7 @@
   function set_track(next: string) {
     daily = null;
     track = track_id_schema.catch(TrackId.MEADOW).parse(next);
-    storage.set("f1.track", track);
+    prefs.value["f1.track"] = track;
     load(make_round());
   }
 

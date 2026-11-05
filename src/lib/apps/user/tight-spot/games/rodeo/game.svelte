@@ -59,7 +59,7 @@
   const OVERVIEW_MARGIN = 1;
   const DAILY_MODE = "rodeo";
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
@@ -67,8 +67,14 @@
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
-  let vehicle = $state<Vehicle>(storage.get("rodeo.vehicle", vehicle_schema) ?? Vehicle.HATCH);
-  let course = $state(storage.get("rodeo.course", z.number().int().min(1).max(COURSE_COUNT)) ?? 1);
+  const stored = z
+    .object({
+      "rodeo.vehicle": vehicle_schema.catch(Vehicle.HATCH),
+      "rodeo.course": z.number().int().min(1).max(COURSE_COUNT).catch(1),
+    })
+    .parse(untrack(() => prefs.value));
+  let vehicle = $state<Vehicle>(stored["rodeo.vehicle"]);
+  let course = $state(stored["rodeo.course"]);
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let new_best = $state(false);
@@ -301,7 +307,7 @@
   function next_course() {
     daily = null;
     course = (course % COURSE_COUNT) + 1;
-    storage.set("rodeo.course", course);
+    prefs.value["rodeo.course"] = course;
     load(make_round());
   }
 
@@ -314,14 +320,14 @@
   function set_course(next: string) {
     daily = null;
     course = Math.max(1, Math.min(COURSE_COUNT, Number(next)));
-    storage.set("rodeo.course", course);
+    prefs.value["rodeo.course"] = course;
     load(make_round());
   }
 
   function set_vehicle(next: Vehicle) {
     daily = null;
     vehicle = next;
-    storage.set("rodeo.vehicle", next);
+    prefs.value["rodeo.vehicle"] = next;
     load(make_round());
   }
 

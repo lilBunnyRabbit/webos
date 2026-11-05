@@ -80,7 +80,7 @@
   const TIP_MS = 650;
   const VERDICTS = { crooked: "Not straight in the bay", backwards: "Facing the wrong way", outside: "Not inside a bay" } as const;
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
@@ -89,11 +89,20 @@
 
   // Per window, so two open games don't change each other's mode; storage only remembers the last pick.
   let daily = $state(daily_day ?? null);
-  let mode = $state<Mode>(daily_day ? Mode.SCENARIO : (storage.get("parking.mode", mode_schema) ?? Mode.SCENARIO));
-  let pick = $state<ScenarioPick>(storage.get("parking.pick", pick_schema) ?? ANY);
-  let vehicle_pick = $state<VehiclePick>(storage.get("parking.vehicle", vehicle_pick_schema) ?? ANY);
-  let level = $state(Math.min(LEVEL_COUNT, storage.get("parking.level", z.number().int().min(1)) ?? 1));
-  let course = $state(COURSES[course_index(storage.get("parking.course", z.string()) ?? "")].id);
+  const stored = z
+    .object({
+      "parking.mode": mode_schema.catch(Mode.SCENARIO),
+      "parking.pick": pick_schema.catch(ANY),
+      "parking.vehicle": vehicle_pick_schema.catch(ANY),
+      "parking.level": z.number().int().min(1).catch(1),
+      "parking.course": z.string().catch(""),
+    })
+    .parse(untrack(() => prefs.value));
+  let mode = $state<Mode>(daily_day ? Mode.SCENARIO : stored["parking.mode"]);
+  let pick = $state<ScenarioPick>(stored["parking.pick"]);
+  let vehicle_pick = $state<VehiclePick>(stored["parking.vehicle"]);
+  let level = $state(Math.min(LEVEL_COUNT, stored["parking.level"]));
+  let course = $state(COURSES[course_index(stored["parking.course"])].id);
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let new_best = $state(false);
@@ -203,7 +212,7 @@
   }
 
   $effect(() => {
-    if (data.ready) untrack(() => adopt_legacy(storage, data));
+    if (data.ready) untrack(() => adopt_legacy(prefs, data));
   });
 
   // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
@@ -211,7 +220,7 @@
     if (!data.ready || level <= max_level) return;
     untrack(() => {
       level = max_level;
-      storage.set("parking.level", level);
+      prefs.value["parking.level"] = level;
       if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
     });
   });
@@ -220,7 +229,7 @@
     if (!data.ready || course_index(course) < open_courses) return;
     untrack(() => {
       course = COURSES[open_courses - 1].id;
-      storage.set("parking.course", course);
+      prefs.value["parking.course"] = course;
       if (game.status === Status.READY && game.round.course !== undefined) load(make_round());
     });
   });
@@ -474,10 +483,10 @@
   function next_round() {
     if (game.round.course !== undefined && has_next_level && game.status === Status.PARKED) {
       course = COURSES[course_index(game.round.course) + 1].id;
-      storage.set("parking.course", course);
+      prefs.value["parking.course"] = course;
     } else if (game.round.level !== undefined && has_next_level && game.status === Status.PARKED) {
       level = game.round.level + 1;
-      storage.set("parking.level", level);
+      prefs.value["parking.level"] = level;
     }
     load(make_round());
   }
@@ -490,33 +499,33 @@
   function set_mode(next: Mode) {
     daily = null;
     mode = next;
-    storage.set("parking.mode", next);
+    prefs.value["parking.mode"] = next;
     load(make_round());
   }
 
   function set_pick(next: ScenarioPick) {
     daily = null;
     pick = next;
-    storage.set("parking.pick", next);
+    prefs.value["parking.pick"] = next;
     load(make_round());
   }
 
   function set_vehicle(next: VehiclePick) {
     daily = null;
     vehicle_pick = next;
-    storage.set("parking.vehicle", next);
+    prefs.value["parking.vehicle"] = next;
     load(make_round());
   }
 
   function set_course(next: string) {
     course = COURSES[Math.min(course_index(next), open_courses - 1)].id;
-    storage.set("parking.course", course);
+    prefs.value["parking.course"] = course;
     load(make_round());
   }
 
   function set_level(next: string) {
     level = Math.max(1, Math.min(max_level, Number(next)));
-    storage.set("parking.level", level);
+    prefs.value["parking.level"] = level;
     load(make_round());
   }
 

@@ -77,18 +77,24 @@
   const DAILY_MODE = "airport";
   const LIMIT_DEGREES = (STEERING_LIMIT * 180) / Math.PI;
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
   const speech = $derived(kernel.service<SpeechService>("speech"));
   const save = storage.file("airport.json", EMPTY_SAVE, save_schema);
   const input = new DriveInput();
-  const level_schema = z.number().int().min(1).max(12);
+  const stored = z
+    .object({
+      "airport.job": job_schema.catch(Job.PUSHBACK),
+      "airport.mode": mode_schema.catch(Mode.RANDOM),
+    })
+    .parse(untrack(() => prefs.value));
+  const level_schema = z.number().int().min(1).max(12).catch(1);
 
   let daily = $state<string | null>(daily_day ?? null);
-  let job = $state<Job>(storage.get("airport.job", job_schema) ?? Job.PUSHBACK);
-  let mode = $state<Mode>(storage.get("airport.mode", mode_schema) ?? Mode.RANDOM);
+  let job = $state<Job>(stored["airport.job"]);
+  let mode = $state<Mode>(stored["airport.mode"]);
   let level = $state(untrack(() => stored_level(job)));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
@@ -162,7 +168,7 @@
   );
 
   function stored_level(which: Job): number {
-    return Math.min(LEVEL_COUNTS[which], storage.get(`airport.level.${which}`, level_schema) ?? 1);
+    return Math.min(LEVEL_COUNTS[which], level_schema.parse(prefs.value[`airport.level.${which}`]));
   }
 
   function moves_text(count: number): string {
@@ -404,7 +410,7 @@
   function next_round() {
     if (game.round.level !== undefined && has_next_level && game.status === Status.DONE) {
       level = Math.min(max_level, game.round.level + 1);
-      storage.set(`airport.level.${job}`, level);
+      prefs.value[`airport.level.${job}`] = level;
     }
     load(make_round());
   }
@@ -418,7 +424,7 @@
     daily = null;
     job = next;
     level = stored_level(next);
-    storage.set("airport.job", next);
+    prefs.value["airport.job"] = next;
     load(make_round());
   }
 
@@ -429,9 +435,9 @@
     } else {
       mode = Mode.LEVELS;
       level = Math.max(1, Math.min(level_count, Number(next)));
-      storage.set(`airport.level.${job}`, level);
+      prefs.value[`airport.level.${job}`] = level;
     }
-    storage.set("airport.mode", mode);
+    prefs.value["airport.mode"] = mode;
     load(make_round());
   }
 

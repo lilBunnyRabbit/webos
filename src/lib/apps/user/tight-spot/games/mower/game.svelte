@@ -73,7 +73,7 @@
   // Past this much mown an arrow on the edge of the view leads to the nearest long grass left.
   const POINT_FROM = 0.8;
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
@@ -82,8 +82,14 @@
   const layer = new LawnLayer();
 
   let daily = $state<string | null>(daily_day ?? null);
-  let mode = $state<Mode>(storage.get("mower.mode", mode_schema) ?? Mode.LAWNS);
-  let level = $state(storage.get("mower.level", z.number().int().min(1).max(LEVEL_COUNT)) ?? 1);
+  const stored = z
+    .object({
+      "mower.mode": mode_schema.catch(Mode.LAWNS),
+      "mower.level": z.number().int().min(1).max(LEVEL_COUNT).catch(1),
+    })
+    .parse(untrack(() => prefs.value));
+  let mode = $state<Mode>(stored["mower.mode"]);
+  let level = $state(stored["mower.level"]);
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let measured = $state.raw<Measured | null>(null);
@@ -398,7 +404,7 @@
   function next_round() {
     if (game.round.level !== undefined && has_next_level && game.status === Status.DONE) {
       level = Math.min(max_level, game.round.level + 1);
-      storage.set("mower.level", level);
+      prefs.value["mower.level"] = level;
     }
     load(make_round());
   }
@@ -411,13 +417,13 @@
   function set_mode(next: Mode) {
     daily = null;
     mode = next;
-    storage.set("mower.mode", next);
+    prefs.value["mower.mode"] = next;
     load(make_round());
   }
 
   function set_level(next: string) {
     level = Math.max(1, Math.min(max_level, Number(next)));
-    storage.set("mower.level", level);
+    prefs.value["mower.level"] = level;
     load(make_round());
   }
 

@@ -7,7 +7,7 @@
   import { MapTrifold as MapIcon, Signpost as SignpostIcon } from "phosphor-svelte";
   import { untrack, type Component } from "svelte";
   import { SvelteMap } from "svelte/reactivity";
-  import { z } from "zod";
+  import { PREFS_FILE, prefs_schema } from "./core/prefs";
   import { DriveSettings } from "./core/settings.svelte";
   import { Vehicle } from "./core/vehicle";
   import { game_of, GAMES, is_daily_game, YARD, type DailyGame, type GameChoice } from "./games";
@@ -20,7 +20,7 @@
   const { app_id, window: win, storage } = get_app_context();
   // One Game Hub session per window, whichever game or the yard is up.
   const play = track_play(app_id, () => win.is_visible);
-  const settings = new DriveSettings(storage);
+  const prefs = storage.file(PREFS_FILE, {}, prefs_schema);
   const loaded = new SvelteMap<string, Component<GameProps>>();
 
   // A daily opens its game (`mode`, else a `game` with a daily, else parking); a game that hasn't shipped yet opens the yard.
@@ -33,8 +33,18 @@
   let from = $state<string | null>(null);
   let below = $state(false);
   let vehicle = $state<Vehicle>(Vehicle.HATCH);
-  let last = $state<string | null>(storage.get("last", z.string()) ?? null);
-  if (first !== YARD) remember(first);
+  let last = $state<string | null>(null);
+  let settings = $state.raw<DriveSettings | null>(null);
+
+  // The saved choices decide what opens: nothing renders until they're read, and nothing is saved before that.
+  $effect(() => {
+    if (!prefs.ready || settings) return;
+    untrack(() => {
+      settings = new DriveSettings(prefs);
+      last = typeof prefs.value.last === "string" ? prefs.value.last : null;
+      if (first !== YARD) remember(first);
+    });
+  });
 
   const loading = $derived(active === YARD ? null : (game_of(active) ?? null));
   const Game = $derived(active === YARD ? null : (loaded.get(active) ?? null));
@@ -59,7 +69,7 @@
 
   function remember(id: string) {
     last = id;
-    storage.set("last", id);
+    prefs.value.last = id;
   }
 
   function open(id: string, from_below = false) {
@@ -98,11 +108,13 @@
   </Button>
 {/snippet}
 
-{#if active === YARD}
-  <Yard {settings} bind:vehicle {from} from_below={below} {last} {menu} onenter={open} />
+{#if !settings}
+  <div class="h-full"></div>
+{:else if active === YARD}
+  <Yard {settings} {prefs} bind:vehicle {from} from_below={below} {last} {menu} onenter={open} />
 {:else if Game}
   {#key active}
-    <Game {settings} {daily} {menu} {play} onexit={() => open(YARD)} />
+    <Game {settings} {prefs} {daily} {menu} {play} onexit={() => open(YARD)} />
   {/key}
 {:else if loading}
   <div class="grid h-full grid-rows-[auto_1fr] @container">

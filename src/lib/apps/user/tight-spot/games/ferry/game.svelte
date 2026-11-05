@@ -77,7 +77,7 @@
   // The gauge's ends: a load past this reads as hard over, and the limit band stays wide enough to see.
   const GAUGE_RANGE = 0.4;
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
@@ -85,8 +85,14 @@
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
-  let mode = $state<Mode>(storage.get("ferry.mode", mode_schema) ?? Mode.SAILINGS);
-  let level = $state(Math.min(LEVEL_COUNT, storage.get("ferry.level", z.number().int().min(1)) ?? 1));
+  const stored = z
+    .object({
+      "ferry.mode": mode_schema.catch(Mode.SAILINGS),
+      "ferry.level": z.number().int().min(1).catch(1),
+    })
+    .parse(untrack(() => prefs.value));
+  let mode = $state<Mode>(stored["ferry.mode"]);
+  let level = $state(Math.min(LEVEL_COUNT, stored["ferry.level"]));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let par = $state.raw<Par | null>(null);
@@ -204,7 +210,7 @@
     if (!data.ready || level <= max_level) return;
     untrack(() => {
       level = max_level;
-      storage.set("ferry.level", level);
+      prefs.value["ferry.level"] = level;
       if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
     });
   });
@@ -436,7 +442,7 @@
   function next_round() {
     if (game.round.level !== undefined && has_next_level && game.status === Status.DONE) {
       level = Math.min(max_level, game.round.level + 1);
-      storage.set("ferry.level", level);
+      prefs.value["ferry.level"] = level;
     }
     load(make_round());
   }
@@ -449,13 +455,13 @@
   function set_mode(next: Mode) {
     daily = null;
     mode = next;
-    storage.set("ferry.mode", next);
+    prefs.value["ferry.mode"] = next;
     load(make_round());
   }
 
   function set_level(next: string) {
     level = Math.max(1, Math.min(max_level, Number(next)));
-    storage.set("ferry.level", level);
+    prefs.value["ferry.level"] = level;
     load(make_round());
   }
 

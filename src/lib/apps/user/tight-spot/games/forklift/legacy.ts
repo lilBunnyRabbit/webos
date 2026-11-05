@@ -1,5 +1,7 @@
 import kernel, { type FilesService } from "$lib/core/api";
-import { app_data_path, type StorageHandle } from "$lib/core/contexts/app";
+import { app_data_path } from "$lib/core/contexts/app";
+import { z } from "zod";
+import type { Prefs } from "../../core/prefs";
 import { better, bests_schema, data_schema, levels_schema, type Bests, type ForkliftData, type LevelStars, type Result } from "./game";
 
 const KEYS = { bests: "forklift.best", levels: "forklift.levels" } as const;
@@ -10,10 +12,12 @@ interface Legacy {
   levels: LevelStars;
 }
 
-function read_legacy(storage: StorageHandle): Legacy | null {
-  const bests = storage.get(KEYS.bests, bests_schema);
-  const levels = storage.get(KEYS.levels, levels_schema);
-  return bests || levels ? { bests: bests ?? {}, levels: levels ?? {} } : null;
+const legacy_schema = z.object({ [KEYS.bests]: bests_schema.catch({}), [KEYS.levels]: levels_schema.catch({}) });
+
+function read_legacy(prefs: Prefs): Legacy | null {
+  if (!Object.values(KEYS).some((key) => key in prefs.value)) return null;
+  const legacy = legacy_schema.parse(prefs.value);
+  return { bests: legacy[KEYS.bests], levels: legacy[KEYS.levels] };
 }
 
 function merge_best(saved: Result | undefined, old: Result): Result {
@@ -49,16 +53,16 @@ async function read_saved(): Promise<ForkliftData | null> {
 }
 
 // The in-memory file is shared by every window and written 300 ms late, so it holding the keys proves nothing: they go
-// only once the file on disk holds them, checked against the keys as they are then (a stale older tab may still write).
-export async function adopt_legacy(storage: StorageHandle, data: { value: ForkliftData }): Promise<void> {
-  const legacy = read_legacy(storage);
+// only once the file on disk holds them, checked against the keys as they are then (a restored backup brings them back).
+export async function adopt_legacy(prefs: Prefs, data: { value: ForkliftData }): Promise<void> {
+  const legacy = read_legacy(prefs);
   if (!legacy) return;
   if (!holds(data.value, legacy)) {
     data.value = fold(data.value, legacy);
     return;
   }
   const saved = await read_saved();
-  const latest = read_legacy(storage);
+  const latest = read_legacy(prefs);
   if (!saved || !latest || !holds(saved, latest)) return;
-  for (const key of Object.values(KEYS)) storage.remove(key);
+  for (const key of Object.values(KEYS)) delete prefs.value[key];
 }

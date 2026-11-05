@@ -26,7 +26,7 @@ export default define_game({
 });
 ```
 
-The component takes `GameProps`: `settings` (the shared `DriveSettings`, owned per window by the shell), `daily` (the day of the daily the app was opened with, given only to the game it names), `menu` (the Games switcher snippet: render it first in the toolbar), `play` (the window's Game Hub tracker) and `onexit` (back to the yard). It keeps all its own state; nothing is shared through a context. Bests, levels and ghosts go in a file in the app data folder (`storage.file("{id}.json", …)`, ADR-035); only last choices go under `app.tight-spot.{id}.*` localStorage, never at the top level, which holds the shared settings.
+The component takes `GameProps`: `settings` (the shared `DriveSettings`, owned per window by the shell), `prefs` (the app's `storage.json`, already read), `daily` (the day of the daily the app was opened with, given only to the game it names), `menu` (the Games switcher snippet: render it first in the toolbar), `play` (the window's Game Hub tracker) and `onexit` (back to the yard). It keeps all its own state; nothing is shared through a context. Bests, levels and ghosts go in a file in the app data folder (`storage.file("{id}.json", …)`, ADR-035); only last choices go in `storage.json` as `{id}.*` keys (never bare keys, which are the shared settings), through the `prefs` prop: parse them once at the top with a zod object, `.catch(default)` per field, and save with `prefs.value["{id}.level"] = level`.
 
 The shell lazy-loads the component the first time it's entered, shows the game's toolbar over "Opening …" meanwhile, and returns to the yard with an error toast if the chunk fails.
 
@@ -79,7 +79,7 @@ The shell lazy-loads the component the first time it's entered, shows the game's
 - **Judging and scoring**: stars, par, precision, bests, levels, random rounds, the daily.
 - **Cards, HUD text, keys** beyond the shared ones, and its touch control over the pedals.
 - **Achievements** with ids prefixed by the game (`forklift-…`), progress through `achievements.progress`.
-- **Storage keys** under `app.tight-spot.{id}.*`, each with a zod schema.
+- **Storage keys** `{id}.*` in `storage.json`, each with a zod schema and a `.catch` default.
 - **Docs**: a section on the Drive Hub page and in the guide.
 
 ## The component

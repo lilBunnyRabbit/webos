@@ -55,7 +55,7 @@
   const FLASH_MS = 2600;
   const SEVERITY_LABEL = { minor: "Minor", serious: "Serious", dangerous: "Dangerous" } as const;
 
-  const { settings, menu, onexit }: GameProps = $props();
+  const { settings, prefs, menu, onexit }: GameProps = $props();
 
   const { window: win, storage, achievements } = get_app_context();
   const speech = $derived(kernel.service<SpeechService>("speech"));
@@ -64,8 +64,14 @@
   const sounds = new Sounds(() => settings);
   const the_town = town();
 
-  let route = $state<RouteId>(storage.get("test.route", route_id_schema) ?? RouteId.MARKET);
-  let hint_seen = $state(storage.get("test.landscape-hint", z.boolean()) ?? false);
+  const stored = z
+    .object({
+      "test.route": route_id_schema.catch(RouteId.MARKET),
+      "test.landscape-hint": z.boolean().catch(false),
+    })
+    .parse(untrack(() => prefs.value));
+  let route = $state<RouteId>(stored["test.route"]);
+  let hint_seen = $state(stored["test.landscape-hint"]);
   let game = $state.raw<GameState>(create_game(untrack(() => route)));
   let new_best = $state(false);
   let board_size = $state({ width: 0, height: 0, dpr: 1 });
@@ -274,7 +280,7 @@
     if (game.status !== Status.READY && game.status !== Status.PAUSED) return;
     if (game.status === Status.READY && !hint_seen && upright && matchMedia("(pointer: coarse)").matches) {
       hint_seen = true;
-      storage.set("test.landscape-hint", true);
+      prefs.value["test.landscape-hint"] = true;
     }
     const before = game;
     game = set_status(game, Status.DRIVING);
@@ -314,7 +320,7 @@
 
   function set_route(next: string) {
     route = route_id_schema.catch(RouteId.MARKET).parse(next);
-    storage.set("test.route", route);
+    prefs.value["test.route"] = route;
     load(route);
   }
 

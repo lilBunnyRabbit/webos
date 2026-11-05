@@ -2,6 +2,7 @@ import type { Achievement } from "$lib/core/api/services/achievements/definition
 import type { PlayTracker } from "$kit/games";
 import type { IconComponentProps } from "phosphor-svelte";
 import type { Component, Snippet } from "svelte";
+import type { Prefs } from "../core/prefs";
 import type { DriveSettings } from "../core/settings.svelte";
 
 export const Building = {
@@ -19,6 +20,8 @@ export type Building = (typeof Building)[keyof typeof Building];
 
 export interface GameProps {
   settings: DriveSettings;
+  /** `storage.json`, read before the game mounts. */
+  prefs: Prefs;
   /** The day of a daily the app was opened with; a game without dailies ignores it. */
   daily?: string;
   menu?: Snippet;

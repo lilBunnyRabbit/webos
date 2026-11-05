@@ -13,7 +13,6 @@
   import { Button, Segmented, Select } from "$lib/core/components/ui";
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
-  import { z } from "zod";
   import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, view_stretch, type Camera, type Insets } from "../core/camera";
   import { veil, type Palette } from "../core/draw";
   import DriveFrame from "../core/drive-frame.svelte";
@@ -26,6 +25,7 @@
   import { frame_loop } from "../core/loop";
   import RoundCard from "../core/round-card.svelte";
   import { End, sensor } from "../core/sensors";
+  import type { Prefs } from "../core/prefs";
   import SettingsPanel from "../core/settings-panel.svelte";
   import type { DriveSettings } from "../core/settings.svelte";
   import { Sounds } from "../core/sound";
@@ -52,6 +52,7 @@
 
   interface Props {
     settings: DriveSettings;
+    prefs: Prefs;
     vehicle: Vehicle;
     /** The game just left: the vehicle comes out of its doorway instead of starting at the gate. */
     from: string | null;
@@ -62,7 +63,7 @@
     onenter: (id: string, below?: boolean) => void;
   }
 
-  let { settings, vehicle = $bindable(), from, from_below, last, menu, onenter }: Props = $props();
+  let { settings, prefs, vehicle = $bindable(), from, from_below, last, menu, onenter }: Props = $props();
 
   const CONTACT_FADE = 0.8;
   const YARD_SPAN = 34;
@@ -76,8 +77,8 @@
   let moved_note = $state<string | null>(null);
   let moved_timer: ReturnType<typeof setTimeout> | undefined;
 
-  const { window: win, storage } = get_app_context();
-  const intro_seen = storage.persisted("yard_intro", false, z.boolean());
+  const { window: win } = get_app_context();
+  const intro_seen = $derived(prefs.value.yard_intro === true);
   const input = new DriveInput();
   const sounds = new Sounds(() => settings);
 
@@ -124,7 +125,7 @@
   const door_game = $derived(below ? PARKING : door === null ? null : GAMES[door]);
   const at_pad = $derived(on_pad(YARD, car, spec));
   const last_plot = $derived(last ? GAMES.findIndex((game) => game.id === last) : -1);
-  const card = $derived(door_game ? "door" : at_pad ? "pad" : moved || intro_seen.value ? null : "welcome");
+  const card = $derived(door_game ? "door" : at_pad ? "pad" : moved || intro_seen ? null : "welcome");
   // Held sideways the touch controls take both sides, so a card stays at the bottom between them.
   const side_card = $derived(size.height > 0 && size.width > size.height * 1.2 && !sideways());
   const wheel_degrees = $derived(Math.round((car.steer / lock) * 450));
@@ -194,7 +195,7 @@
   function wake() {
     awake = true;
     moved = true;
-    intro_seen.value = true;
+    prefs.value.yard_intro = true;
   }
 
   function sideways(): boolean {
@@ -386,8 +387,8 @@
   function enter() {
     if (!door_game) return;
     if (!below) return onenter(door_game.id);
-    storage.set("parking.mode", Mode.SCENARIO);
-    storage.set("parking.pick", Scenario.MULTI_STOREY);
+    prefs.value["parking.mode"] = Mode.SCENARIO;
+    prefs.value["parking.pick"] = Scenario.MULTI_STOREY;
     onenter(door_game.id, true);
   }
 

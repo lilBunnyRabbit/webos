@@ -88,7 +88,7 @@
   const SIDE_STICK = 0.5;
   const DAILY_MODE = "forklift";
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
@@ -96,9 +96,16 @@
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
-  let mode = $state<Mode>(storage.get("forklift.mode", mode_schema) ?? Mode.JOBS);
-  let size = $state(storage.get("forklift.size", size_schema) ?? 2);
-  let level = $state(Math.min(LEVEL_COUNT, storage.get("forklift.level", z.number().int().min(1)) ?? 1));
+  const stored = z
+    .object({
+      "forklift.mode": mode_schema.catch(Mode.JOBS),
+      "forklift.size": size_schema.catch(2),
+      "forklift.level": z.number().int().min(1).catch(1),
+    })
+    .parse(untrack(() => prefs.value));
+  let mode = $state<Mode>(stored["forklift.mode"]);
+  let size = $state(stored["forklift.size"]);
+  let level = $state(Math.min(LEVEL_COUNT, stored["forklift.level"]));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let par = $state.raw<Par | null>(null);
@@ -205,7 +212,7 @@
   }
 
   $effect(() => {
-    if (data.ready) untrack(() => adopt_legacy(storage, data));
+    if (data.ready) untrack(() => adopt_legacy(prefs, data));
   });
 
   // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
@@ -213,7 +220,7 @@
     if (!data.ready || level <= max_level) return;
     untrack(() => {
       level = max_level;
-      storage.set("forklift.level", level);
+      prefs.value["forklift.level"] = level;
       if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
     });
   });
@@ -525,7 +532,7 @@
   function next_round() {
     if (game.round.level !== undefined && has_next_level && game.status === Status.DONE) {
       level = Math.min(max_level, game.round.level + 1);
-      storage.set("forklift.level", level);
+      prefs.value["forklift.level"] = level;
     }
     load(make_round());
   }
@@ -538,20 +545,20 @@
   function set_mode(next: Mode) {
     daily = null;
     mode = next;
-    storage.set("forklift.mode", next);
+    prefs.value["forklift.mode"] = next;
     load(make_round());
   }
 
   function set_size(next: string) {
     daily = null;
     size = Math.max(1, Math.min(4, Number(next)));
-    storage.set("forklift.size", size);
+    prefs.value["forklift.size"] = size;
     load(make_round());
   }
 
   function set_level(next: string) {
     level = Math.max(1, Math.min(max_level, Number(next)));
-    storage.set("forklift.level", level);
+    prefs.value["forklift.level"] = level;
     load(make_round());
   }
 
