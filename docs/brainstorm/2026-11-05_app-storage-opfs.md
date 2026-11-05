@@ -24,6 +24,9 @@ Root cause of the difficulty: `get` is synchronous and the handle is built durin
 - The copy runs when any `app.*` key exists, not behind a done flag. A restore of an older backup sets `app.*` keys and reloads, so the next boot folds them in. Keys from localStorage overwrite matching keys already in `storage.json`. A key is deleted only after its file is written.
 - Out-of-window code (shell commands, players) uses the stable `json_file(app_data_path(id, "storage.json"), …)` and `release()`. No new API.
 
+- **`StorageHandle.remove` removed too** (lead, during the 4.0 build: it only deleted a localStorage key, no caller). Reviewer flagged it as an API break the ADR had kept; the owner was told and said to push (2026-11-05).
+- Known trade-offs accepted for 4.0: a change made in the first milliseconds before `storage.json` loads is overwritten; two tabs now save the whole file, so the last tab to save wins for every key (cross-tab file sync stays on the ROADMAP).
+
 ## Key takeaways
 
 - 4.0 = all app data in OPFS, one storage API (`file()`), deprecated manifest fields gone.
