@@ -767,6 +767,7 @@ Owner ideas with no design yet. Each needs a brainstorm before anything is built
   - [x] Store redesign (2026-10-27, 3.74.0, [brainstorm](brainstorm/2026-10-27_app-store-design.md)): Discover (featured carousel, shelves, categories), All apps and categories, Library (size, time used, Uninstall) and Updates (Update all) as places, an Install / Open / Update / progress button on every app, a store-like app page with goals; the OS counts each app's active time (`/var/lib/apps/usage.json`)
   - [x] Follow-ups (owner, 2026-10-27): `list` and `listings` take `{ all: true }` instead of "call `catalogue()` first"; `define_app`'s `version` deprecated and dropped from every app; the manifest import rule lifted
   - [x] Try examples (2026-11-06, 4.4.0, [brainstorm](brainstorm/2026-11-06_app-discoverability.md)): every app's `meta.ts` names one concrete thing to do with it (`example`), shown as "Try: …" on App Store cards and the app page, and matched by search
+  - [x] App screenshots (2026-11-06, 4.4.0, [brainstorm](brainstorm/2026-11-06_app-discoverability.md)): a `preview.webp` for fifteen apps on their App Store page and announcement, taken by `scripts/previews/capture.mjs` with sample content
   - [ ] Rough edges: a page or app fetched with a `?retry=` query misses the cache offline in a later session; a fork build shows empty categories with a 0 count; a dirty window answered "Don't save" comes back without those changes when Restart app is cancelled
 
 ---

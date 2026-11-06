@@ -105,7 +105,9 @@
     <img
       {src}
       alt="{manifest.name} in use"
-      class="aspect-video w-full rounded-xl bg-background-darker object-cover ring-1 ring-foreground/8"
+      width="1200"
+      height="750"
+      class="aspect-[8/5] w-full rounded-xl bg-background-darker object-cover ring-1 ring-foreground/8"
     />
   {/if}
 {/snippet}

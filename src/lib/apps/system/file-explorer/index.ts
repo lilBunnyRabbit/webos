@@ -15,5 +15,6 @@ export default define_app({
   // A folder path to open at; defaults to /home.
   props: FILE_PROPS,
   highlights: () => import("./highlights"),
+  preview: () => import("./preview.webp?url"),
   component: () => import("./file-explorer.app.svelte"),
 });

@@ -14,5 +14,6 @@ export default define_app({
   highlights: () => import("./highlights"),
   guide: () => import("./guide.md?raw"),
   defaults: { constraints: { width: { min: 340 }, height: { min: 420 } } },
+  preview: () => import("./preview.webp?url"),
   component: () => import("./color-tools.app.svelte"),
 });

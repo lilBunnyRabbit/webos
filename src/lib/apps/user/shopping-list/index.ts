@@ -22,5 +22,6 @@ export default define_app({
     { id: "bought-100", title: "Regular", text: "Clear 100 items from the cart, each item counted once per trip.", goal: 100 },
     { id: "shared", title: "Two phones, one list", text: "Apply changes from another phone." },
   ],
+  preview: () => import("./preview.webp?url"),
   component: () => import("./shopping-list.app.svelte"),
 });

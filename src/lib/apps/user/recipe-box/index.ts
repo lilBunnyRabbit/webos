@@ -16,5 +16,6 @@ export default define_app({
   defaults: { constraints: { width: { min: 320 }, height: { min: 360 } } },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  preview: () => import("./preview.webp?url"),
   component: () => import("./recipe-box.app.svelte"),
 });

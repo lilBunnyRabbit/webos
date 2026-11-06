@@ -21,5 +21,6 @@ export default define_app({
   highlights: () => import("./highlights"),
   guide: () => import("./guide.md?raw"),
   guide_on_launch: false,
+  preview: () => import("./preview.webp?url"),
   component: () => import("./image-tools.app.svelte"),
 });

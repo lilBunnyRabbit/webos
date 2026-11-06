@@ -27,5 +27,6 @@ export default define_app({
   shell: () => import("./commands"),
   widget: () => import("./widget.svelte"),
   widget_size: { min: { w: 2, h: 2 }, max: { w: 6, h: 5 }, default: { w: 3, h: 2 } },
+  preview: () => import("./preview.webp?url"),
   component: () => import("./quick-notes.app.svelte"),
 });

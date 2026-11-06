@@ -17,5 +17,6 @@ export default define_app({
   }),
   highlights: () => import("./highlights"),
   guide: () => import("./guide.md?raw"),
+  preview: () => import("./preview.webp?url"),
   component: () => import("./terminal.app.svelte"),
 });

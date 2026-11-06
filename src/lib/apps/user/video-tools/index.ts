@@ -15,5 +15,6 @@ export default define_app({
   defaults: { constraints: { width: { min: 340 }, height: { min: 380 } } },
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
+  preview: () => import("./preview.webp?url"),
   component: () => import("./video-tools.app.svelte"),
 });

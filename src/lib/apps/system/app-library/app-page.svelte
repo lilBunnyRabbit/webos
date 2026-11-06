@@ -216,9 +216,11 @@
   </div>
 
   {#if manifest.preview}
-    {#await manifest.preview() then image}
-      <img src={image.default} alt="{manifest.name} in use" class="aspect-video w-full rounded-xl bg-background-darker object-cover ring-1 ring-foreground/8" />
-    {/await}
+    <div class="aspect-[8/5] w-full overflow-hidden rounded-xl bg-background-darker ring-1 ring-foreground/8">
+      {#await manifest.preview() then image}
+        <img src={image.default} alt="{manifest.name} in use" width="1200" height="750" decoding="async" class="size-full object-cover object-top" />
+      {/await}
+    </div>
   {/if}
 
   {#await manifest.highlights?.() then module}

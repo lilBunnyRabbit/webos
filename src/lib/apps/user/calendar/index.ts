@@ -20,5 +20,6 @@ export default define_app({
   highlights: () => import("./highlights"),
   widget: () => import("./widget.svelte"),
   widget_size: { min: { w: 2, h: 2 }, max: { w: 5, h: 5 }, default: { w: 3, h: 3 } },
+  preview: () => import("./preview.webp?url"),
   component: () => import("./calendar.app.svelte"),
 });

@@ -21,5 +21,6 @@ export default define_app({
   shell: () => import("./commands"),
   highlights: () => import("./highlights"),
   guide: () => import("./guide.md?raw"),
+  preview: () => import("./preview.webp?url"),
   component: () => import("./pdf-tools.app.svelte"),
 });

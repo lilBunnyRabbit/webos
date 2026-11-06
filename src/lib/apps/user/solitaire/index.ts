@@ -34,5 +34,6 @@ export default define_app({
     { id: "wins-25", title: "Card shark", text: "Win 25 games.", goal: 25 },
     { id: "fast", title: "Fast hands", text: "Win in under 2 minutes.", secret: true },
   ],
+  preview: () => import("./preview.webp?url"),
   component: () => import("./solitaire.app.svelte"),
 });

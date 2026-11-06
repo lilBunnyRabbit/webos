@@ -31,5 +31,6 @@ export default define_app({
     { id: "bare-hands", title: "Bare hands", text: "Win on Intermediate or Expert without placing a flag.", secret: true },
   ],
   guide: () => import("./guide.md?raw"),
+  preview: () => import("./preview.webp?url"),
   component: () => import("./minesweeper.app.svelte"),
 });

@@ -14,6 +14,11 @@ export const CHANGELOG: Release[] = [
         apps: ["app-library"],
         text: "Every app in the App Store now suggests one thing to try with it, like shrinking a photo under 1 MB or scaling a recipe for six people.",
       },
+      {
+        kind: IMPROVED,
+        apps: ["app-library"],
+        text: "App pages in the App Store show a picture of the app in use, starting with fifteen of the most useful ones.",
+      },
     ],
   },
   {

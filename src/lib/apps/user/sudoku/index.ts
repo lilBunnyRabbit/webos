@@ -37,5 +37,6 @@ export default define_app({
     { id: "solves-50", title: "Grid regular", text: "Solve 50 puzzles.", goal: 50 },
     { id: "speedrun", title: "Speedrun", text: "Solve an Easy 9×9 puzzle in under 3 minutes without a hint.", secret: true },
   ],
+  preview: () => import("./preview.webp?url"),
   component: () => import("./sudoku.app.svelte"),
 });

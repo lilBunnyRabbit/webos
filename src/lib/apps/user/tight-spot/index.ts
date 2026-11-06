@@ -37,5 +37,6 @@ export default define_app({
     valet: DailyRank.SCORE_DESC,
   },
   achievements: GAMES.flatMap((game) => game.achievements),
+  preview: () => import("./preview.webp?url"),
   component: () => import("./tight-spot.app.svelte"),
 });
