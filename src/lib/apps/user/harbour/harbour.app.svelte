@@ -331,6 +331,7 @@
     game = { ...game, boat: { ...game.boat, vx: 0, vy: 0, r: 0, power: 0, gear: 0 } };
     const ref = ref_for(gate);
     card = { gate, ref, chart: null, failed: false };
+    opening_daily = null;
     if (!settings_file.value.seen_hint) settings_file.value.seen_hint = true;
     chart_for(ref, (chart) => {
       if (card?.ref === ref) card = { ...card, chart };

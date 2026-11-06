@@ -26,7 +26,7 @@ Each step (`step_boat`, semi-implicit Euler at the frame loop's ≤ 1/120 s step
    - surge drag `−(Xu·u + Xuu·u|u|)`;
    - a two-point keel at ±0.3 L: each point's sway `v + r·x` gives `−½(Yv·vᵢ + Yvv·vᵢ|vᵢ|)`, summed into sway force and yaw moment, so yaw damping and the pivot point come out of the same two terms; plus a small extra `−Nr·r`;
    - thrust `gear · power · (ahead or astern thrust)`. A shaft boat pushes along the keel; an outboard turns the thrust by the rudder angle at `x = −0.45 L`, so it steers ahead, astern and from rest;
-   - the rudder (or the outboard leg) at `−0.45 L`: side force `−C_r · sin δ · q` with `q = u|u|` (halved astern, so it's weak and reversed) plus the prop wash `wash · thrust share` going ahead; a quarter of that as drag by `sin² δ`;
+   - the rudder (or the outboard leg) at `−0.45 L`: side force `−C_r · sin δ · q` with `q = u|u|` (halved astern, so it's weak and reversed) plus the prop wash `wash · thrust share` going ahead; a quarter of that as drag by `sin² δ`, against the flow over the rudder (so it brakes astern too);
    - prop walk: astern `−walk · |T|` sideways at the prop (ahead 3 % of that the other way), fading out by 1.2 m/s: the stern walks to port;
    - an outside push (contacts) rotated into the body frame.
 4. Accelerations over the effective masses `m(1 + added.surge)`, `m(1 + added.sway)`, `I = m(0.25 L)²(1 + added.yaw)`, rotated back to the world, velocity first, then pose.

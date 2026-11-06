@@ -50,6 +50,11 @@ describe("handling", () => {
     expect(boat.heading).toBeGreaterThan(0.02);
   });
 
+  test("full astern with the wheel hard over stays near astern speed", () => {
+    const boat = run(create_boat({ x: 0, y: 0, heading: 0 }), 60, -1, 1);
+    expect(speed(boat)).toBeLessThan(SPECS[BoatId.YACHT].astern_speed);
+  });
+
   test("coasting comes to a dead stop", () => {
     const boat = run({ ...create_boat({ x: 0, y: 0, heading: 0 }), vx: 1 }, 90, 0);
     expect(speed(boat)).toBe(0);
