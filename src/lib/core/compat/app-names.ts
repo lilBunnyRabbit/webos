@@ -18,6 +18,7 @@ export const APP_NAMES: Record<string, string> = {
   "gif-player": "GIF Player",
   glimpse: "Glimpse",
   gw2: "GW2 Tracker",
+  harbour: "Harbour",
   "hid-lab": "Keyboard & HID Lab",
   hopsprite: "Hopsprite",
   "icon-pack": "Icon Pack",

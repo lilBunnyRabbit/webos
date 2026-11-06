@@ -56,6 +56,7 @@
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
   import { DropZone, type SourceFile } from "$kit/components/drop-zone";
+  import { KeyHint, SpeedChip, SteeringWheel } from "$kit/components/play2d";
   import { QuadFrame } from "$kit/components/quad-frame";
   import type { Quad } from "$kit/utils/perspective";
   import { SwipeCompare } from "$kit/components/swipe-compare";
@@ -148,6 +149,7 @@
   };
   let trim = $state({ start: 0.2, end: 1.8 });
   let wave_selection = $state<Span | null>({ start: 0.8, end: 1.1 });
+  let wheel = $state(0.2);
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -508,6 +510,20 @@
             <span class="font-mono text-2xs text-foreground/80 tabular-nums"
               >{trim.start.toFixed(2)}–{trim.end.toFixed(2)} s{wave_selection ? `, selected ${wave_selection.start.toFixed(2)}–${wave_selection.end.toFixed(2)} s` : ""}</span
             >
+          </div>
+        </Section>
+        <Section
+          title="Top-down game HUD"
+          description="The play2d pieces from $kit: a steering wheel you drag round by the rim (it holds its angle, the hub centres it), the speed chip in km/h or knots, and key hints. Drive Hub's games and Harbour use them, with the round card for start and result."
+          flush
+        >
+          <div class="flex flex-wrap items-center gap-4">
+            <SteeringWheel class="w-32" value={wheel} onchange={(value) => (wheel = value)} oncentre={() => (wheel = 0)} />
+            <div class="flex flex-col items-start gap-2">
+              <SpeedChip speed={4.2} />
+              <SpeedChip speed={1.2} unit="kn" />
+              <span class="flex gap-2.5 text-2xs text-foreground/65"><KeyHint key_name="W" text="ahead" /><KeyHint key_name="Esc" text="pause" /></span>
+            </div>
           </div>
         </Section>
         <Section

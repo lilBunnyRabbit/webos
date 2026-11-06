@@ -1,6 +1,6 @@
 # ADR-096: Harbour, a boat docking sim, and the play2d kit
 **Date:** 2026-11-06
-**Status:** Accepted
+**Status:** Implemented (P1)
 
 ## Context
 The owner wants a boat docking game in Drive Hub's top-down style, kept to its simple vibe ([brainstorm](../brainstorm/2026-11-06_harbour.md)). Drive Hub's core (`tight-spot/core/`, ADR-086 to ADR-088) is kinematic, with no mass and no slip, so a boat can't be one more vehicle. Its car-agnostic pieces (geometry, SAT collision, camera, frame loop, seeds, palette reader, small HUD components) are what a second 2D game needs. The [shared 2D layer brainstorm](../brainstorm/2026-10-28_shared-2d-layer.md) left the shape of a shared layer open until the boat was picked up.
@@ -93,3 +93,16 @@ A `daily` prop (ADR-050), so Game Hub's daily row opens it, plus `daily_rank`. N
 - The autopilot can fail where a human would succeed. Generated levels may then drift easier, and the hard levels can be hand-checked.
 - The frame loop's display-dependent step means a browser run isn't bit-identical to a Node proof. This doesn't affect play.
 - P2 adds wind with gusts, current, a bow thruster, the twin-screw cruiser, and stern-to and buoy spots. P3 adds lines as tethers, the lock and the ferry.
+
+## Revisions
+
+**2026-11-06, built (P1).** What the build decided inside the ADR, or had to change:
+- **The proof's planner is Harbour's own.** Drive Hub's `planner.ts` is bound to `vehicle.ts` (gears, hitches, portals, support), so it couldn't move to the kit without the car. `harbour/core/planner.ts` is a small hybrid A* over forward arcs with the boat's turning circle (1.4 × its steady radius at slow ahead), grown hull box against the scene.
+- **Kit additions beyond the list:** `play2d/canvas.ts` (`View`, `begin_frame`, `path`, `fill`, `trace`, split out of Drive Hub's `draw.ts` with the palette), `penetration()` in collision, an optional `max_angle` on `fit()` (Harbour judges 8°, the cars 5°), and a `unit` prop on `SpeedChip` (`kn`). Sound, gamepad and prefs stayed in Drive Hub: they carry car code (sensors, the crab key).
+- **Alongside berth length is 0.75 L.** The 70 % cover rule along a full-length berth needs the hull within 0.3 m from transom to bow taper, which in practice means under 2°; at 0.75 L the 8° rule still binds.
+- **Contact stiffness is per boat** (a fender's natural frequency of 4 rad/s, hard sides 8), and a hard touch is graded at the first instant of contact only, as decided.
+- **Settling at rest:** below 0.15 m/s with no power the motion decays at 0.35 /s before the dead band, or a coasting yacht creeps for a minute.
+- **Par** is `ceil(1.4 × autopilot time + 8)` s. Random and daily seeds try up to 16 layouts until one is proven; levels are proven by the tests, and charting runs in a worker while the start card is up.
+- **Level numbers floor for the RIB** (`max(L, 6)` gaps, `max(L, 6.5)` fairways): its turning circle is wider for its length than the yacht's, so pure boat-length scaling made levels 6 and 7 unprovable.
+- **Hold-to-thrust** gives half ahead or astern while held.
+

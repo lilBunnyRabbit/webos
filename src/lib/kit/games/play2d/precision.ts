@@ -41,10 +41,10 @@ function ray_to_edge(from: Vec, direction: Vec, shape: Polygon): number {
  * How well a footprint sits in its bay. The gaps to the bay's sides and ends are the shortest rays from any of
  * `points` (every corner of every body), so centring judges the whole footprint; the angle is the worst of `headings`
  * against the bay's axis (either way round for an `either` bay, decided by the first heading). Each error is a share of
- * what the bay allows (half the side room, half the end room, the 5° that still counts as straight) and the score is
- * 100 × Π(1 − e²): 100 dead centre and square, 0 against a line or at 5°.
+ * what the bay allows (half the side room, half the end room, the `max_angle` that still counts as straight, 5° by default) and the score is
+ * 100 × Π(1 − e²): 100 dead centre and square, 0 against a line or at `max_angle`.
  */
-export function fit(points: readonly Vec[], headings: readonly number[], bay: Bay): Precision {
+export function fit(points: readonly Vec[], headings: readonly number[], bay: Bay, max_angle = MAX_ANGLE): Precision {
   const reverse = bay.either && angle_between(headings[0], bay.heading) > Math.PI / 2;
   const axis = reverse ? bay.heading + Math.PI : bay.heading;
   const along = { x: Math.cos(axis), y: Math.sin(axis) };
@@ -60,7 +60,7 @@ export function fit(points: readonly Vec[], headings: readonly number[], bay: Ba
   const depth = (front - rear) / 2;
   const angle = Math.max(...headings.map((heading) => angle_between(heading, axis)));
   const share = (off: number, room: number) => (room > 1e-9 ? clamp(Math.abs(off) / room, 0, 1) : 0);
-  const errors = [share(side, (right + left) / 2), share(depth, (front + rear) / 2), share(angle, MAX_ANGLE)];
+  const errors = [share(side, (right + left) / 2), share(depth, (front + rear) / 2), share(angle, max_angle)];
   const score = 100 * errors.reduce((product, e) => product * (1 - e * e), 1);
   return { score, side: Math.abs(side), depth: Math.abs(depth), angle };
 }

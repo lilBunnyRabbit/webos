@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.6.0",
+    date: "2026-11-06",
+    title: "Harbour",
+    introduces: ["harbour"],
+    changes: [
+      {
+        kind: NEW,
+        apps: ["harbour"],
+        text: "Harbour is a boat docking game: sail a RIB or a yacht around a small harbour and bring it gently alongside or into a box berth, with momentum, prop walk and fenders to kiss.",
+      },
+    ],
+  },
+  {
     version: "4.5.0",
     date: "2026-11-06",
     title: "Easier Recipe Box",
