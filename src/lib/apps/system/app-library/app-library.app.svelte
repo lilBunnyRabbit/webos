@@ -11,7 +11,7 @@
     type VersionService,
     type WindowsService,
   } from "$lib/core/api";
-  import { FEATURED } from "./featured";
+  import { FEATURED, START_HERE } from "./featured";
   import { INTERESTS } from "$lib/core/api/services/apps/suggestions";
   import { get_app_context } from "$lib/core/contexts/app";
   import { SentenceSearch } from "$lib/core/components/apps/sentence-search.svelte";
@@ -28,7 +28,7 @@
     WifiSlash as WifiSlashIcon,
     X as XIcon,
   } from "phosphor-svelte";
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import { z } from "zod";
   import AppList from "./app-list.svelte";
   import AppPage from "./app-page.svelte";
@@ -36,7 +36,17 @@
   import Browse from "./browse.svelte";
   import { CATEGORY_ICONS } from "./category-icons";
   import Discover from "./discover.svelte";
-  import { app_updates, collections, hero_cards, LibrarySortBy, new_apps, recently_updated, type Shelf } from "./discover";
+  import {
+    app_updates,
+    category_examples,
+    collections,
+    hero_cards,
+    LibrarySortBy,
+    new_apps,
+    picked_apps,
+    recently_updated,
+    type Shelf,
+  } from "./discover";
   import {
     category_counts,
     category_of,
@@ -79,6 +89,7 @@
   const collection_id = storage.window<string | null>("collection", null, z.string().nullable());
 
   let query = $state("");
+  let results_heading = $state<HTMLHeadingElement>();
   let base: HTMLElement | null = $state(null);
 
   // Boot knows only the installed apps (ADR-077): the Store asks for the rest, again when the connection comes back.
@@ -149,6 +160,10 @@
       { id: "updated", label: "Recently updated", description: "Changed in the latest releases", apps: recently_updated(manifests, version.changelog) },
       ...collections(manifests, INTERESTS),
     ].filter((shelf) => shelf.apps.length > 0)
+  );
+  const start = $derived(picked_apps(manifests, START_HERE));
+  const examples = $derived(
+    category_examples(manifests, [...START_HERE, ...FEATURED.map(({ app }) => app), ...INTERESTS.flatMap((interest) => interest.apps)])
   );
   const collection = $derived(collection_id.value ? (shelves.find((shelf) => shelf.id === collection_id.value) ?? null) : null);
 
@@ -301,7 +316,22 @@
     <div class="relative min-h-0 min-w-0 flex-1">
       <main bind:this={base} class={cn("absolute inset-0 overflow-y-auto overscroll-contain", (middle || selected) && "hidden")}>
         {#if place.value === StorePlace.DISCOVER}
-          <Discover {hero} {shelves} {counts} total={manifests.length} onselect={select} oncategory={go} onshelf={open_shelf} />
+          <Discover
+            {hero}
+            {start}
+            {shelves}
+            {counts}
+            {examples}
+            total={manifests.length}
+            onselect={select}
+            oncategory={go}
+            onshelf={open_shelf}
+            onask={async (text) => {
+              query = text;
+              await tick();
+              results_heading?.focus();
+            }}
+          />
         {:else if place.value === StorePlace.APPS}
           <Browse
             title={browse_title}
@@ -326,11 +356,11 @@
           {#if searching}
             <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 pt-5 pb-8 @2xl:px-8">
               <div class="flex items-center gap-2">
-                <h2 class="min-w-0 flex-1 text-xl font-semibold">Results for “{query.trim()}”</h2>
+                <h2 bind:this={results_heading} tabindex="-1" class="min-w-0 flex-1 text-xl font-semibold focus-visible:outline-none">Results for “{query.trim()}”</h2>
                 <ViewToggle bind:view={view.value} />
               </div>
               {#if results.length === 0 && !sentence.pending}
-                <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10">
+                <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing fits “${query.trim()}” yet. Try other words, or browse All apps.`} class="py-10">
                   {#snippet actions()}<Button size="sm" onclick={() => (query = "")}>Clear search</Button>{/snippet}
                 </EmptyState>
               {/if}

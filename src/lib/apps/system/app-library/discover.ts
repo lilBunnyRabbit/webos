@@ -5,7 +5,7 @@ import type { AppUsage } from "$lib/core/api";
 import { AppCategory, type AppId, type AppListing } from "$lib/core/api/services/apps/type";
 import { introduced_apps } from "$lib/core/api/services/version/history";
 import type { Change, Release } from "$lib/core/api/services/version/type";
-import { app_story } from "./library";
+import { app_story, category_of, LibraryCategory } from "./library";
 
 export interface HeroCard {
   manifest: AppListing;
@@ -31,6 +31,9 @@ const HERO_NEW = 3;
 const HERO_LIMIT = 6;
 const MIN_SHELF = 3;
 const RECENT_RELEASES = 6;
+const CATEGORY_EXAMPLES = 3;
+
+type TileCategory = Exclude<LibraryCategory, "all">;
 
 function index_of(listings: readonly AppListing[]): Map<AppId, AppListing> {
   return new Map(listings.map((manifest) => [manifest.id, manifest]));
@@ -47,6 +50,24 @@ export function hero_cards(listings: readonly AppListing[], changelog: readonly 
   for (const { app, release } of introduced_apps(changelog).slice(0, HERO_NEW)) add(app, `New in ${release.version}`);
   for (const pick of featured) add(pick.app, "Featured", pick.tagline);
   return cards.slice(0, HERO_LIMIT);
+}
+
+export function picked_apps(listings: readonly AppListing[], ids: readonly AppId[]): AppListing[] {
+  const known = index_of(listings);
+  return ids.flatMap((id) => known.get(id) ?? []);
+}
+
+export function category_examples(listings: readonly AppListing[], picks: readonly AppId[], limit = CATEGORY_EXAMPLES): Record<TileCategory, string[]> {
+  const rank = new Map<AppId, number>();
+  for (const id of picks) if (!rank.has(id)) rank.set(id, rank.size);
+  const order = (a: AppListing, b: AppListing) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity) || a.name.localeCompare(b.name);
+  const groups = new Map<TileCategory, AppListing[]>();
+  for (const manifest of listings) groups.set(category_of(manifest), [...(groups.get(category_of(manifest)) ?? []), manifest]);
+  const tiles = Object.values(LibraryCategory).filter((id): id is TileCategory => id !== LibraryCategory.ALL);
+  return Object.fromEntries(tiles.map((id) => [id, (groups.get(id) ?? []).sort(order).slice(0, limit).map((manifest) => manifest.name)])) as Record<
+    TileCategory,
+    string[]
+  >;
 }
 
 export function new_apps(listings: readonly AppListing[], changelog: readonly Release[]): AppListing[] {

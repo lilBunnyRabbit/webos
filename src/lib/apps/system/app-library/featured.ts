@@ -15,3 +15,7 @@ export const FEATURED: FeaturedApp[] = [
   { app: "warren", tagline: "A calm page to write on, out as Word or PDF." },
   { app: "format-lab", tagline: "One picture, four formats, side by side." },
 ];
+
+export const START_HERE: AppId[] = ["quick-notes", "file-explorer", "calendar", "clock", "image-tools", "solitaire"];
+
+export const ASK_EXAMPLES: string[] = ["Edit a photo", "Split a PDF", "Play a puzzle"];

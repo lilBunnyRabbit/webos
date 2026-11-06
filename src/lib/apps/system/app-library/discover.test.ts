@@ -1,7 +1,19 @@
 import { describe, expect, test } from "vitest";
 import { AppCategory, type AppListing } from "$lib/core/api/services/apps/type";
 import { ChangeKind, type Release } from "$lib/core/api/services/version/type";
-import { app_updates, collections, hero_cards, is_game, LibrarySortBy, new_apps, recently_updated, release_of, sort_library } from "./discover";
+import {
+  app_updates,
+  category_examples,
+  collections,
+  hero_cards,
+  is_game,
+  LibrarySortBy,
+  new_apps,
+  picked_apps,
+  recently_updated,
+  release_of,
+  sort_library,
+} from "./discover";
 
 const app = (id: string, extra: Partial<AppListing> = {}) =>
   ({ id, name: id[0].toUpperCase() + id.slice(1), category: AppCategory.UTILITIES, system: false, description: `${id} app`, ...extra }) as AppListing;
@@ -78,5 +90,19 @@ describe("helpers", () => {
     const list = APPS.slice(0, 4);
     expect(sort_library(list, LibrarySortBy.RECENT, usage, size).map((manifest) => manifest.id)).toEqual(["snake", "paint", "clock", "notes"]);
     expect(sort_library(list, LibrarySortBy.SIZE, usage, size).map((manifest) => manifest.id)).toEqual(["notes", "clock", "paint", "snake"]);
+  });
+});
+
+describe("picks", () => {
+  test("picked_apps keeps the order and skips unknown ids", () => {
+    expect(picked_apps(APPS, ["clock", "missing", "snake"]).map((manifest) => manifest.id)).toEqual(["clock", "snake"]);
+  });
+
+  test("category_examples puts picks first, then names, a few per category", () => {
+    const examples = category_examples(APPS, ["timer", "missing", "timer"]);
+    expect(examples[AppCategory.UTILITIES]).toEqual(["Timer", "Clock", "Notes"]);
+    expect(examples[AppCategory.GAMES]).toEqual(["Snake"]);
+    expect(examples.system).toEqual(["Settings"]);
+    expect(examples[AppCategory.MEDIA]).toEqual([]);
   });
 });
