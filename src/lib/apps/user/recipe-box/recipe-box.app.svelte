@@ -230,7 +230,15 @@
     await files.create_file(directory, base_name(target), { content, overwrite: true });
   }
 
-  async function save(): Promise<boolean> {
+  let saving: Promise<boolean> | null = null;
+
+  function save(): Promise<boolean> {
+    if (!path && !dirty) return Promise.resolve(false);
+    saving ??= write_out().finally(() => (saving = null));
+    return saving;
+  }
+
+  async function write_out(): Promise<boolean> {
     try {
       const content = text;
       if (path) {
@@ -251,11 +259,15 @@
   async function set_favorite(on: boolean) {
     try {
       if (path) {
-        const next = with_favorite(saved_text, on);
+        const file = await files.get_file(path);
+        if (!file) throw new Error(`File not found: ${path}`);
+        const next = with_favorite(await file.text(), on);
         await write(path, next);
+        text = dirty ? with_favorite(text, on) : next;
         saved_text = next;
+      } else {
+        text = with_favorite(text, on);
       }
-      text = with_favorite(text, on);
     } catch (reason) {
       report_error(APP_ID, "Couldn't change favourites", reason);
     }

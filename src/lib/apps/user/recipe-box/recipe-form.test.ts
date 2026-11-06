@@ -97,6 +97,11 @@ describe("form_issues", () => {
   test("names what the form can't keep", () => {
     expect(form_issues("== Dough ==\nMix @flour{}.\n\n> Rest overnight.\n\n-- a comment")).toEqual([FormIssue.SECTIONS, FormIssue.NOTES, FormIssue.COMMENTS]);
     expect(form_issues("Salt the water, add @salt{1%tsp}.")).toEqual([FormIssue.MOVED]);
+    expect(form_issues("---\ntitle: Pie\n# from grandma\ndescription: >\n  Flaky crust.\n---\nBake @pie{}.")).toEqual([FormIssue.HEADER]);
+  });
+
+  test("keeps optional cookware", () => {
+    expect(form_issues("Blend @soup{} in a #?blender{}.")).toEqual([]);
   });
 });
 

@@ -184,7 +184,8 @@ function item_source(item: StepItem): string {
   if (item.kind === "text") return item.value;
   if (item.kind === "ingredient") return item.name;
   const amount = item.amount ? `${item.amount.fixed ? "=" : ""}${item.amount.text}${item.amount.unit ? `%${item.amount.unit}` : ""}` : "";
-  return `${item.kind === "cookware" ? "#" : "~"}${item.name}{${amount}}`;
+  if (item.kind === "cookware") return `#${item.optional ? "?" : ""}${item.name}{${amount}}`;
+  return `~${item.name}{${amount}}`;
 }
 
 function is_needs_step(items: StepItem[]): boolean {
@@ -230,6 +231,7 @@ export const FormIssue = {
   NOTES: "notes",
   COMMENTS: "comments",
   REFERENCES: "references",
+  HEADER: "header",
   MOVED: "moved",
 } as const;
 export type FormIssue = (typeof FormIssue)[keyof typeof FormIssue];
@@ -241,12 +243,21 @@ function body_of(source: string): string {
   return end > 0 ? lines.slice(end + 1).join("\n") : lines.join("\n");
 }
 
+function unreadable_header(source: string): boolean {
+  const lines = source.replace(/\r\n?/g, "\n").split("\n");
+  if (lines[0]?.trim() !== "---") return false;
+  const end = lines.findIndex((line, index) => index > 0 && line.trim() === "---");
+  if (end < 0) return false;
+  return lines.slice(1, end).some((line) => line.trim() !== "" && !/^\s*-\s+/.test(line) && !/^[^\s#][^:]*:/.test(line));
+}
+
 export function form_issues(source: string): FormIssue[] {
   const recipe = parse_cook(source);
   const issues: FormIssue[] = [];
   if (recipe.sections.some((section) => section.name !== null)) issues.push(FormIssue.SECTIONS);
   if (recipe.sections.some((section) => section.blocks.some((block) => block.kind === "note"))) issues.push(FormIssue.NOTES);
   if (/--|\[-/.test(body_of(source))) issues.push(FormIssue.COMMENTS);
+  if (unreadable_header(source)) issues.push(FormIssue.HEADER);
   const items = steps(recipe).flatMap((step) => step.items);
   if (items.some((item) => item.kind === "ingredient" && item.reference !== null)) issues.push(FormIssue.REFERENCES);
   if (issues.length > 0) return issues;

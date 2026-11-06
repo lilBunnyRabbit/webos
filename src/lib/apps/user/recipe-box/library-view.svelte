@@ -1,6 +1,6 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
-  import { tilde_path } from "$lib/core/api/services/files/path";
+  import { parent_path, tilde_path } from "$lib/core/api/services/files/path";
   import { Badge, Button, EmptyState, IconButton, Input, Spinner } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
   import {
@@ -36,9 +36,17 @@
   const shown = $derived(entries.filter((entry) => recipe_matches(entry, query, tag)));
   const rows = $derived(tag === null ? shelves(shown) : []);
 
+  const subfolders = $derived(
+    [...new Set(entries.map((entry) => parent_path(entry.path)))]
+      .filter((path) => path !== folder)
+      .sort()
+      .join("\n")
+  );
+
   $effect(() => {
     const target = folder;
     files.revision(target);
+    for (const path of subfolders.split("\n")) if (path) files.revision(path);
     let live = true;
     void (async () => {
       try {

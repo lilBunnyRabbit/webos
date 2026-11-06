@@ -23,6 +23,7 @@
     [FormIssue.NOTES]: "its notes are dropped",
     [FormIssue.COMMENTS]: "its comments are dropped",
     [FormIssue.REFERENCES]: "links to other recipes become plain ingredients",
+    [FormIssue.HEADER]: "header lines it can't read are dropped",
     [FormIssue.MOVED]: "some amounts move to where the ingredient is first mentioned",
   };
 

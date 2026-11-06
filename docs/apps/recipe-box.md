@@ -13,11 +13,11 @@ Pure logic is Node-tested beside it: `cooklang.ts` (parser), `amounts.ts` (scali
 
 The window holds the file's text (`text`) and what's on disk (`saved_text`); dirty is `text !== saved_text`. Form and Source are two editors over `text`:
 
-- Entering Form (switching to Edit, switching Source → Form, or a recipe finishing loading while Edit is up) rebuilds the form from `text` with `form_from_cook` (`recipe-form.ts:200`).
+- Entering Form (switching to Edit, switching Source → Form, or a recipe finishing loading while Edit is up) rebuilds the form from `text` with `form_from_cook` (`recipe-form.ts:201`).
 - Every input in the form (one `oninput` on the `<form>`, plus the add, remove and move buttons) writes `text = form_to_cook(form)` (`recipe-form.ts:166`), so the preview, Save, dirty and Recipe, Table and Cook all read the same thing.
 - Source edits `text` directly and is exact.
 
-A new recipe (New, or a paste) is a draft with no path: Save creates `{title}.cook` in the recipes folder with a free name (`create_file` without overwrite), then saves in place like any file.
+A new recipe (New, or a paste) is a draft with no path: Save creates `{title}.cook` in the recipes folder with a free name (`create_file` without overwrite), then saves in place like any file. Save on an untouched draft does nothing, and a second Save while one runs waits for it instead of creating a second file.
 
 ### Writing Cooklang from the form
 
@@ -44,7 +44,7 @@ No plural or synonym matching: `ripe bananas` in the list and `bananas` in a ste
 
 `form_from_cook` collects one ingredient row per marker in step order and turns each step into plain text: ingredients become their name, cookware and timers stay as their Cooklang (`#pot{}`, `~{10%minutes}`) so they re-serialize as they were. Row order is rebuilt from the steps, so moving rows only changes the You'll need order until the form is left.
 
-What the form can't keep is reported, never silently dropped: `form_issues` (`recipe-form.ts:244`) lists
+What the form can't keep is reported, never silently dropped: `form_issues` (`recipe-form.ts:254`) lists
 
 | Issue | Saving from the form |
 |-------|----------------------|
@@ -52,9 +52,10 @@ What the form can't keep is reported, never silently dropped: `form_issues` (`re
 | `notes` | `>` notes are dropped |
 | `comments` | `--` and `[- -]` comments are dropped |
 | `references` | `@./other/recipe{}` becomes a plain ingredient |
+| `header` | front matter lines the parser skips (`#` comments, nested or block YAML like `description: >`) are dropped |
 | `moved` | an amount moves to the first mention of the ingredient (checked by writing the form back and comparing the parsed steps) |
 
-Form shows a warning naming them with Edit the source; Source is unchanged. Comments in the front matter aren't checked (the parser ignores them there too).
+Form shows a warning naming them with Edit the source; Source is unchanged.
 
 ### The paste parser
 
@@ -72,11 +73,11 @@ The result opens in the form as an unsaved draft (`pasted_form`); nothing is wri
 
 ### Favourites and the source link
 
-The heart writes `favorite: true` or removes it (and any `favourite:`) through `set_meta` (`recipe-form.ts:264`), which touches that one front matter line and nothing else, so it never rewrites a hand-made file. On the open recipe it writes the change into the file and into the editor text separately, so unsaved edits stay unsaved and stay. A card's heart reads, edits and writes that file. `source:` starting with `http(s)://` shows as "From {host}" and opens in a new tab.
+The heart writes `favorite: true` or removes it (and any `favourite:`) through `set_meta` (`recipe-form.ts:275`), which touches that one front matter line and nothing else, so it never rewrites a hand-made file. On the open recipe it reads the file from disk (another window may have saved it), writes the change, and applies it to the editor text separately, so unsaved edits stay unsaved and stay. A card's heart reads, edits and writes that file. `source:` starting with `http(s)://` shows as "From {host}" and opens in a new tab.
 
 ### Shelves
 
-`shelves` (`library.ts`): Favourites, one per tag (alphabetical), then Untagged; a recipe is on every shelf of its tags. Search filters before grouping. A shelf is a horizontal snap row; one shelf only (no tags, no favourites) is shown as the plain grid. A tag chip shows that tag as a grid.
+`shelves` (`library.ts`): Favourites, one per tag (alphabetical), then Untagged; a recipe is on every shelf of its tags. Search filters before grouping. The library re-reads on the revision of the recipes folder and of every subfolder holding a recipe. A shelf is a horizontal snap row; one shelf only (no tags, no favourites) is shown as the plain grid. A tag chip shows that tag as a grid.
 
 ## Data
 
