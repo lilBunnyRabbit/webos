@@ -530,8 +530,8 @@
         {#if glyph.guide}
           <IconButton label="Show guide" size="sm" pressed={prefs.value["show-guide"]} onclick={() => (prefs.value["show-guide"] = !prefs.value["show-guide"])}><EyeIcon weight="bold" /></IconButton>
         {/if}
-        <Button size="sm" variant="quiet" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" />Undo</Button>
-        <Button size="sm" variant="quiet" disabled={!canvas_glyph.strokes.length} onclick={clear_glyph}><EraserIcon weight="bold" />Clear</Button>
+        <Button size="sm" variant="quiet" aria-label="Undo" disabled={!editor.undoable} onclick={() => editor.undo()}><ArrowCounterClockwiseIcon weight="bold" /><span class="hidden @min-[22rem]:inline">Undo</span></Button>
+        <Button size="sm" variant="quiet" aria-label="Clear" disabled={!canvas_glyph.strokes.length} onclick={clear_glyph}><EraserIcon weight="bold" /><span class="hidden @min-[22rem]:inline">Clear</span></Button>
       </div>
 
       {#if layers.length > 1}
@@ -569,7 +569,7 @@
         </div>
       </div>
 
-      <div class="canvas-wrap min-h-48 flex-1 overflow-hidden rounded-lg bg-background ring-1 ring-foreground/8">
+      <div class="canvas-wrap min-h-48 overflow-hidden rounded-lg bg-background ring-1 ring-foreground/8">
         <FontMakerCanvas
           char={editor.char}
           glyph={canvas_glyph}
@@ -647,9 +647,17 @@
 
   .canvas-wrap {
     container-type: size;
+    flex: 1 0 auto;
+    aspect-ratio: 11 / 10;
+    max-height: 100%;
   }
 
   @container (width >= 44rem) {
+    .canvas-wrap {
+      flex: 1 1 0%;
+      aspect-ratio: auto;
+    }
+
     .body {
       grid-template-columns: minmax(16rem, 1fr) minmax(22rem, 1.15fr);
     }

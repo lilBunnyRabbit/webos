@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.0.2",
+    date: "2026-11-06",
+    title: "Bigger drawing box on phones",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["font-maker"],
+        text: "Font Maker's drawing box now fills the width of small phones instead of staying a narrow strip.",
+      },
+    ],
+  },
+  {
     version: "4.0.1",
     date: "2026-11-06",
     title: "Drive Hub on iPhone",
