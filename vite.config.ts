@@ -245,10 +245,20 @@ export default defineConfig({
         test: {
           name: "unit",
           include: ["src/**/*.test.ts", "tooling/**/*.test.ts"],
-          exclude: ["src/**/*.browser.test.ts"],
+          exclude: ["src/**/*.browser.test.ts", "src/**/*.slow.test.ts"],
           environment: "node",
           // Seeded puzzle generators run 2 s here and 2-3x that on the CI runner: the default 5 s fails them at random.
           testTimeout: 20_000,
+        },
+      },
+      {
+        extends: true,
+        test: {
+          // Exhaustive sweeps (every level, every generated spot): `bun run test:slow` before changing what they cover (ADR-027).
+          name: "slow",
+          include: ["src/**/*.slow.test.ts"],
+          environment: "node",
+          testTimeout: 300_000,
         },
       },
       {

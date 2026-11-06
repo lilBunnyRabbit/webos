@@ -12,6 +12,8 @@
 > - `IService.destroy?()` may return a promise. `boot_test_kernel().shutdown()` is async and awaits each service's `destroy()`; ShellService's returns its pending history save. The production kernel still doesn't await.
 > - Replaces the `vi.waitFor` retry around `clear_opfs()` in the shell tests and the `shell.remember` stub in the mounts tests.
 
+> **Revision 2026-11-06: app tests only for changed apps, slow sweeps local** (owner). The deploy job's unit tests took 8.9 min, almost all of it Drive Hub's planner sweeps. CI's deploy job now runs the unit tests of `src/lib/core`, `src/lib/kit`, `src/lib/apps/system` and `tooling` always, plus each user app whose folder changed since the live release (`scripts/changed-apps.ts` diffs against `version.json`'s commit; every app when that can't be read). Exhaustive sweeps are `*.slow.test.ts` in a third Vitest project, `slow`, which neither CI nor `bun run test` runs; `bun run test:slow` runs them before changing what they cover. Accepted gap: a kit or core change that breaks an app's logic isn't caught by CI's tests until that app changes or someone runs the full suite locally.
+
 > **Revision 2026-10-21: core browser tests in CI's fork job** (owner, [brainstorm](../brainstorm/2026-10-21_health-pass.md))
 > - The `fork` job (user apps deleted) installs Playwright Chromium and runs the browser tests under `src/lib/core`, `src/lib/kit` and `src/lib/apps/system`. The `deploy` job still runs unit tests only.
 > - Core tests never launch a real user app: `TestAppsService` (`services/apps/test-apps.ts`) drops the user apps and registers stand-ins (`example` with props, `board` with a widget, `notes` with shell commands, `game`). The version tests mock `./changelog` with a fixture.
@@ -35,7 +37,7 @@ There were no tests. Services grew subtle: session restore, directory revisions,
 
 **Scope:** pure `.ts`, OPFS + FilesService, services through a real kernel. No component tests.
 
-**Scripts:** `bun run test` runs both projects. `bun run test:unit` runs Node only.
+**Scripts:** `bun run test` runs both projects. `bun run test:unit` runs Node only. `bun run test:slow` runs the `*.slow.test.ts` sweeps (2026-11-06).
 
 **CI:** `deploy.yml` runs `bun run test:unit` after `check` and before `build`. Red unit tests block the deploy. No Playwright in CI for now (owner).
 

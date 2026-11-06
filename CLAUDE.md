@@ -21,9 +21,10 @@ bun install
 bun dev
 bun run check   # must stay at 0 errors
 bun run test    # unit (Node) + browser (Chromium) tests, ADR-027
+bun run test:slow  # exhaustive sweeps (*.slow.test.ts): before changing what they cover
 ```
 
-Tests sit next to their source: `*.test.ts` runs in Node, `*.browser.test.ts` in real Chromium (OPFS). Anything touching OPFS or the DOM goes in a browser test; no fakes. First run: `bunx playwright install chromium`.
+Tests sit next to their source: `*.test.ts` runs in Node, `*.browser.test.ts` in real Chromium (OPFS), `*.slow.test.ts` for exhaustive sweeps (every level, every seed) that only run locally. CI runs core, kit and system tests plus the apps changed since the live release. Anything touching OPFS or the DOM goes in a browser test; no fakes. First run: `bunx playwright install chromium`.
 
 ## Architecture in one screen
 

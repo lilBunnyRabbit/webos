@@ -288,7 +288,8 @@ Use the newest platform API that fits (PRINCIPLES, CLAUDE.md). When it isn't bro
 | `bun run check` | `svelte-check` + `tsc`. Must stay at 0 errors |
 | `bun run build` | Production build (also writes `version.json`) |
 | `bun run test` | Vitest, both projects: `unit` (Node) and `browser` (Chromium through Playwright). First run needs `bunx playwright install chromium` |
-| `bun run test:unit` | Node project only. CI runs this before `build`; the fork job also runs the core, kit and system app browser tests |
+| `bun run test:unit` | Node project only. The fork job runs it and the core, kit and system app browser tests; the deploy job runs the unit tests of core, kit, system and the user apps changed since the live release (`scripts/changed-apps.ts`) |
+| `bun run test:slow` | The `slow` project: `*.slow.test.ts`, exhaustive sweeps (every level, every seed) too slow for every push. Not in CI or `bun run test`; run it before changing what a sweep covers |
 | `bun run budget` | After a build: entry chunk gz size against the 190 KB budget. CI runs it after `build` |
 | `bun run og` | Renders `scripts/og/og.html` to `public/og.png` (the 1200×630 link preview card) through Playwright |
 

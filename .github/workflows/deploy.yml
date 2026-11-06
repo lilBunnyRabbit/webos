@@ -70,6 +70,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -82,9 +84,10 @@ jobs:
       - name: Check
         run: bun run check
 
-      # ADR-027: unit tests gate the deploy. Browser tests need Playwright and run locally for now.
+      # ADR-027: unit tests gate the deploy: core, kit and system always, a user app's only when its folder changed since
+      # the live release (every app when that can't be read). The full suite and the slow sweeps run locally.
       - name: Unit tests
-        run: bun run test:unit
+        run: bunx vitest run --project unit src/lib/core src/lib/kit src/lib/apps/system tooling $(bun scripts/changed-apps.ts)
 
       # The live catalogue keeps unchanged apps' versions (ADR-077). Downloaded here, so the build makes no request;
       # missing (the first deploy, or Pages down) leaves the build's warning and every app on this release.
