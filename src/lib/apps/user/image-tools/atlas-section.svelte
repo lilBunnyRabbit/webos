@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { has_drag_paths, read_drag_paths, read_os_entries } from "$lib/core/components/files/drag";
@@ -370,10 +371,12 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
     {:else}
       <EmptyState
-        icon={SquaresFourIcon}
-        title="No frames yet"
-        description="Packs many images into one sprite sheet, with a JSON or CSS map of where each one went. Add a folder of frames, or drop or paste images here."
+        title="Pack images into one sheet"
+        description="Packs many small images into one sprite sheet, with a JSON or CSS map of where each one went."
+        steps={["Add a folder of frames", "Pick the map format and size", "Export the sheet and its map"]}
+        hint="Or drop images anywhere here, or paste them."
       >
+        {#snippet illustration()}<ToolArt tool="atlas" />{/snippet}
         {#snippet actions()}
           <Button variant="primary" onclick={pick_folder}><FolderOpenIcon weight="bold" /> Add a folder…</Button>
           <Button onclick={pick_image}><PlusIcon weight="bold" /> Add images…</Button>

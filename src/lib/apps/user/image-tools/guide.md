@@ -1,6 +1,6 @@
 ## Getting around
 
-Pick a tool from the list on the left, or from the menu in the toolbar on a narrow window or a phone. Each tool keeps its image and settings while you switch to another.
+Image Tools opens on its home: a card per tool with what it does and what it takes in. Pick one there, from the list on the left, or from the menu in the toolbar on a narrow window or a phone; **Home** at the top goes back. Opening images with Image Tools goes straight to a tool. Each tool keeps its image and settings while you switch to another.
 
 ## Bringing images in
 

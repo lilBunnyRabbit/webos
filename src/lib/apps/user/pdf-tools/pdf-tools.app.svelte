@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Select, SideNav } from "$lib/core/components/ui";
+  import { Select, SideNav, ToolHome } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import {
     ArrowsSplit as ArrowsSplitIcon,
     Export as ExportIcon,
+    House as HouseIcon,
     Images as ImagesIcon,
     PenNib as PenNibIcon,
     Ruler as RulerIcon,
@@ -17,7 +18,7 @@
   import ImagesSection from "./images-section.svelte";
   import MergeSection from "./merge-section.svelte";
   import OrganizeSection from "./organize-section.svelte";
-  import { SECTION_IDS, Section, initial_section, launch_paths, type LaunchProps } from "./sections";
+  import { HOME, Section, VIEW_IDS, initial_view, launch_paths, type LaunchProps, type View } from "./sections";
   import SignSection from "./sign-section.svelte";
   import SignaturesSection from "./signatures-section.svelte";
   import SplitSection from "./split-section.svelte";
@@ -26,21 +27,33 @@
   const props: LaunchProps = $props();
   const { storage, window: win } = get_app_context();
 
-  const launch = untrack(() => ({ section: initial_section(props), paths: launch_paths(props) }));
-  const section = storage.window<Section>("section", launch.section, z.enum(SECTION_IDS));
+  const launch = untrack(() => ({ view: initial_view(props), paths: launch_paths(props) }));
+  const section = storage.window<View>("section", launch.view, z.enum(VIEW_IDS));
 
+  const PAGES = "Pages";
+  const SIGN = "Sign";
+  const CONVERT = "Convert";
   const SECTIONS = [
-    { value: Section.ORGANIZE, label: "Organize", icon: SquaresFourIcon },
-    { value: Section.MERGE, label: "Merge", icon: StackIcon },
-    { value: Section.SPLIT, label: "Split", icon: ArrowsSplitIcon },
-    { value: Section.SIGN, label: "Sign", icon: PenNibIcon },
-    { value: Section.IMAGES, label: "Images to PDF", icon: ImagesIcon },
-    { value: Section.EXPORT, label: "Export images", icon: ExportIcon },
-    { value: Section.SIGNATURES, label: "Signatures", icon: SignatureIcon },
-    { value: Section.TEST_PDF, label: "Test PDF", icon: RulerIcon },
+    { value: Section.ORGANIZE, label: "Organize", icon: SquaresFourIcon, group: PAGES, takes: "1 PDF", description: "Reorders, rotates and deletes pages, or adds blank ones." },
+    { value: Section.MERGE, label: "Merge", icon: StackIcon, group: PAGES, takes: "2+ PDFs", description: "Puts several PDFs together into one file." },
+    { value: Section.SPLIT, label: "Split", icon: ArrowsSplitIcon, group: PAGES, takes: "1 PDF", description: "Splits a PDF by page ranges, or every page into its own file." },
+    { value: Section.SIGN, label: "Sign", icon: PenNibIcon, group: SIGN, takes: "1 PDF", description: "Places your drawn signature on any page and saves a signed copy." },
+    { value: Section.SIGNATURES, label: "Signatures", icon: SignatureIcon, group: SIGN, takes: "nothing", description: "Draws and keeps the signatures Sign uses." },
+    { value: Section.IMAGES, label: "Images to PDF", icon: ImagesIcon, group: CONVERT, takes: "images", description: "Makes a PDF with one image per page." },
+    { value: Section.EXPORT, label: "Export images", icon: ExportIcon, group: CONVERT, takes: "1 PDF", description: "Saves pages as PNG or JPEG images." },
+    { value: Section.TEST_PDF, label: "Test PDF", icon: RulerIcon, group: CONVERT, takes: "nothing", description: "Makes a PDF of any page count, page size or exact file size." },
   ];
+  const NAV = [{ value: HOME, label: "Home", icon: HouseIcon }, ...SECTIONS];
 
-  const paths_for = (target: Section) => (launch.section === target ? launch.paths : []);
+  $effect(() =>
+    win.on_back(() => {
+      if (section.value === HOME) return false;
+      section.value = HOME;
+      return true;
+    })
+  );
+
+  const paths_for = (target: Section) => (launch.view === target ? launch.paths : []);
 
   let sign_with = $state<string | null>(untrack(() => props.signature ?? null));
 
@@ -62,14 +75,17 @@
 </script>
 
 {#snippet picker()}
-  <Select size="sm" aria-label="Tool" class="w-auto max-w-40 @2xl:hidden" options={SECTIONS} bind:value={section.value} />
+  <Select size="sm" aria-label="Tool" class="w-auto max-w-40 @2xl:hidden" options={NAV} bind:value={section.value} />
 {/snippet}
 
 <div class="flex h-full flex-col @2xl:flex-row">
   <div class="hidden @2xl:flex">
-    <SideNav label="PDF tools" items={SECTIONS} bind:value={section.value} />
+    <SideNav label="PDF tools" items={NAV} bind:value={section.value} />
   </div>
   <div class="min-h-0 min-w-0 flex-1">
+    {#if section.value === HOME}
+      <ToolHome title="PDF Tools" description="Work on PDFs on this device: nothing is uploaded. Pick a tool, then open, drop or paste a PDF into it." tools={SECTIONS} onpick={(value) => (section.value = value)} />
+    {/if}
     <div class="h-full" hidden={section.value !== Section.ORGANIZE}>
       <OrganizeSection {picker} initial_paths={paths_for(Section.ORGANIZE)} active={section.value === Section.ORGANIZE}
         ondirty={(dirty, save) => report(Section.ORGANIZE, dirty, save)}

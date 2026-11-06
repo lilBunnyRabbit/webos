@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type AppsService, type FilesService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Input, Segmented, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -230,7 +231,13 @@
     {#if loading}
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
     {:else}
-      <EmptyState icon={ArrowsInIcon} title="No images yet" description="Saves smaller WebP or JPEG copies of many images at once. Add images or a folder, drop them here or paste them.">
+      <EmptyState
+        title="Make many images smaller"
+        description="Saves lighter WebP or JPEG copies of a whole batch at once, and estimates what each one saves before you start."
+        steps={["Add images or a folder", "Pick the format and quality", "Squash them"]}
+        hint="Or drop images anywhere here, or paste them."
+      >
+        {#snippet illustration()}<ToolArt tool="squash" />{/snippet}
         {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add images…</Button><Button onclick={pick_folder}><FolderPlusIcon weight="bold" /> Add a folder…</Button>{/snippet}
       </EmptyState>
     {/if}

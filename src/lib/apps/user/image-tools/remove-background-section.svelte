@@ -1,11 +1,11 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { paste_files } from "$kit/utils/paste";
   import { format_bytes, error_message } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
-    Eraser as EraserIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     Plus as PlusIcon,
@@ -166,7 +166,13 @@
       {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !result}
-    <EmptyState icon={EraserIcon} title="No image open" description="Makes chosen colours transparent. Open an image, drop it here or paste it.">
+    <EmptyState
+      title="Make a backdrop see-through"
+      description="Turns the colours you pick transparent, like the flat background behind a logo or a product shot."
+      steps={["Open an image", "Pick the colours to remove", "Save it as PNG or WebP"]}
+      hint="Or drop an image anywhere here, or paste one."
+    >
+      {#snippet illustration()}<ToolArt tool="remove-background" />{/snippet}
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}

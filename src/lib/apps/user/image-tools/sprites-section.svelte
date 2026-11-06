@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { paste_files } from "$kit/utils/paste";
@@ -25,7 +26,6 @@
     Crosshair as CrosshairIcon,
     Eye as EyeIcon,
     EyeSlash as EyeSlashIcon,
-    FilmStrip as FilmStripIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     MagnifyingGlassMinus as MagnifyingGlassMinusIcon,
@@ -378,10 +378,12 @@
       </EmptyState>
     {:else}
       <EmptyState
-        icon={FilmStripIcon}
-        title="No sprite sheet open"
-        description="Slice a sheet into frames, fix what doesn't line up, preview the animation and export. Open one, or drop or paste it here."
+        title="Slice a sprite sheet"
+        description="Cuts a sheet of animation frames apart, lets you fix the ones that don't line up and plays the result."
+        steps={["Open a sprite sheet", "Set the grid or detect it", "Preview, then export the frames"]}
+        hint="Or drop a sheet anywhere here, or paste one."
       >
+        {#snippet illustration()}<ToolArt tool="sprites" />{/snippet}
         {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a sheet…</Button>{/snippet}
       </EmptyState>
     {/if}

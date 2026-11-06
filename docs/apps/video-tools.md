@@ -6,6 +6,8 @@ Id `video-tools` · Source: `src/lib/apps/user/video-tools/`, capture and encodi
 
 Trims a video to a WebM clip, turns part of it into a GIF, or saves its sound. Pick the part with the two scrubber handles or with I and O, choose **Clip**, **GIF** or **Sound**, and save. **Skip pauses** on Clip and GIF leaves out the stretches where nothing on screen changes, so a screen recording or a timelapse plays without them. `video trim`, `video gif` and `video audio` do the same from the Terminal (without Skip pauses).
 
+With no video open, the window shows what it does: a drawing of a video cut down to a clip, a GIF or its sound (`empty-art.svelte`, from the kit's `tool-art` pieces), three steps, Open a video… and the drop and paste hint. Video Tools is one tool with three outputs, so it has no home screen ([Multi-tool app](../design/patterns.md#multi-tool-app)).
+
 ## How it works
 
 ### Play and capture (kit `video/capture.ts`)

@@ -6,6 +6,8 @@ Id `image-tools` · Source: `src/lib/apps/user/image-tools/`, writers in `src/li
 
 One app with a section per small image job: remove background, join, trim, split, sprites, atlas, patch, redact, squash, fit under a size, convert, compare, poster print, test image. This page covers the parts with non-obvious internals: Fit (getting an image under an upload limit while keeping as much quality as it can), Convert (one image in every format) and the formats both write through the kit's encoder table. The other sections are forms over canvas operations.
 
+With no `section` prop and no images the app opens on its **home** (`ToolHome`): a card per section with what it does and what it takes in, under four groups (Edit, Combine and cut, Size and format, Check and print). One list in `image-tools.app.svelte` (`SECTIONS`: label, icon, group, takes, description) feeds the home, the SideNav and the narrow `Select`; Home is their first item and the window's `section` value `home` (`VIEW_IDS` in `sections.ts`; the `section` prop stays the tools only). `initial_view` sends one image to Remove background and several to Join, as before. On a phone, Back from a tool returns to the home. Each section's empty state draws what it does (`tool-art.svelte`, from the kit's `tool-art` pieces), with three steps, its open action and the drop and paste hint.
+
 Every section except Test image takes an image three ways: Open…, a drop, and Ctrl+V anywhere in the window, through the kit's `paste_files` on the section's root while the section is the active one (ADR-076). Join, Atlas, Squash, Compare and Patch take every pasted image; the others take one, and several open the clipboard view to pick.
 
 ## How it works
@@ -67,8 +69,9 @@ Through the kit's encoder table (`kit/utils/codecs/encoders.ts`, [app API](../sy
 ## Data
 
 - `/var/lib/apps/image-tools/storage.json`: the sections' settings, one field each under the old `app.image-tools.*` key names the 4.0 boot copy moved in: `fit` (limit, a preset or `custom`, the custom text, format and max side), `squash`, `poster`, `test-image`, `sprite-settings`. One schema for the whole file (`storage.ts`), since whichever section opens it first parses it for all; each field falls back to its default on its own. Sprites starts on the default grid while the file loads and takes the saved settings once it has.
-- Props: `section` (`fit` opens Fit), `path` (the image), `paths` (several images: Join, Squash and Atlas take them all, Patch and Compare the first two, the other sections the first).
-- Guide (`guide.md`): getting images in, where each tool saves, the Redact and Patch canvas tools, Sprites' keys and gestures, the shell commands. `guide_on_launch: false`: each tool explains itself in its empty state, so the guide waits for the `?` button or F1.
+- Props: `section` (`fit` opens Fit), `path` (the image), `paths` (several images: Join, Squash and Atlas take them all, Patch and Compare the first two, the other sections the first). None of them: the home.
+- Window state (`storage.window`): `section`, a section id or `home`.
+- Guide (`guide.md`): getting images in, where each tool saves, the Redact and Patch canvas tools, Sprites' keys and gestures, the shell commands. `guide_on_launch: false`: the home and each tool's empty state explain the tools, so the guide waits for the `?` button or F1.
 - Output names: `{stem}-fit{ext}` (Fit, `image fit`), `{stem}-squashed{ext}` (Squash, `squash --under`), `{stem}{ext}`, `{stem}-formats/` and `{stem}-formats.zip` (Convert, `image convert-all`).
 - Convert keeps nothing between visits.
 

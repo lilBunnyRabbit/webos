@@ -24,6 +24,7 @@
     StatusBar,
     Switch,
     Textarea,
+    ToolHome,
     Toolbar,
   } from "$lib/core/components/ui";
   import {
@@ -58,6 +59,7 @@
   import { QuadFrame } from "$kit/components/quad-frame";
   import type { Quad } from "$kit/utils/perspective";
   import { SwipeCompare } from "$kit/components/swipe-compare";
+  import { ArtArrow, ArtChecker, ArtPhoto } from "$kit/components/tool-art";
   import { QrFrames } from "$kit/components/qr-transfer";
   import { Waveform, type Span } from "$kit/components/waveform";
   import type { Pcm } from "$kit/utils/audio";
@@ -115,6 +117,12 @@
     { value: "alerts", label: "Alerts", icon: BellIcon, group: "System" },
   ];
   let demo_page = $state("text");
+  const DEMO_TOOLS = [
+    { value: "trim", label: "Trim", icon: EraserIcon, group: "Edit", takes: "1 image", description: "Cuts the empty, see-through border off an image." },
+    { value: "paint", label: "Fill", icon: PaintBucketIcon, group: "Edit", takes: "1 image", description: "Floods an area with one colour." },
+    { value: "shapes", label: "Pack", icon: ShapesIcon, group: "Combine", takes: "2+ images", description: "Packs many images into one sheet." },
+  ];
+  let demo_tool = $state<string | null>(null);
   let demo_open = $state(false);
   let demo_width = $state<"wide" | "narrow">("wide");
   let demo_root: HTMLElement | null = $state(null);
@@ -305,6 +313,12 @@
               </div>
             </SideNav>
           </div>
+        </Section>
+        <Section title="Tool home" description="The home of an app made of tools: a card per tool with what it does and what it takes. Picking one opens it." flush>
+          <div class="@container h-80 overflow-hidden rounded-xl bg-background ring-1 ring-foreground/10">
+            <ToolHome title="Demo Tools" description="Pick a tool to see what it needs." tools={DEMO_TOOLS} onpick={(value) => (demo_tool = value)} />
+          </div>
+          {#if demo_tool}<p class="mt-2 text-2xs text-foreground/80">Picked <span class="font-mono">{demo_tool}</span></p>{/if}
         </Section>
         <Section title="Resize handle" description="A splitter between two panes: drag, arrow keys, Home and End; double-click or Enter folds the pane." flush>
           <div class="flex h-32 overflow-hidden rounded-xl ring-1 ring-foreground/10">
@@ -625,6 +639,23 @@
             class="py-8"
           >
             {#snippet actions()}<Button size="sm" variant="primary">Try again</Button><Button size="sm" variant="quiet">Close window</Button>{/snippet}
+          </EmptyState>
+          <EmptyState
+            title="Cut off empty borders"
+            description="A tool waiting for its input shows what it does: a drawing from the app kit's tool-art pieces, two or three steps, the action and how else to get files in."
+            steps={["Open an image", "Check the trimmed size", "Save the tight copy"]}
+            hint="Or drop an image anywhere here, or paste one."
+            class="h-auto"
+          >
+            {#snippet illustration()}
+              <svg viewBox="0 0 240 100" xmlns="http://www.w3.org/2000/svg" fill="none">
+                <ArtChecker x={12} y={8} width={88} height={84} />
+                <ArtPhoto x={34} y={30} width={44} height={40} />
+                <ArtArrow x1={110} x2={136} />
+                <ArtPhoto x={150} y={22} width={64} height={56} />
+              </svg>
+            {/snippet}
+            {#snippet actions()}<Button size="sm" variant="primary">Open an image…</Button>{/snippet}
           </EmptyState>
         </Section>
       {/if}

@@ -11,7 +11,6 @@
     FilePlus as FilePlusIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
-    SquaresFour as SquaresFourIcon,
     Trash as TrashIcon,
   } from "phosphor-svelte";
   import { untrack, type Snippet } from "svelte";
@@ -225,13 +224,14 @@
     {/if}
   </Toolbar>
 
-  <div class="min-h-0 overflow-auto bg-background-darker">
+  <div class={cn("min-h-0 overflow-auto", loaded && "bg-background-darker")}>
     {#if !loaded}
       <PdfPlaceholder
         {slot}
-        icon={SquaresFourIcon}
-        title="No PDF open"
-        description="Reorder, rotate and delete pages, or add blank ones. Drag pages to move them."
+        tool="organize"
+        title="Put pages in order"
+        description="Reorder, rotate and delete pages, or add blank ones, then save the PDF."
+        steps={["Open a PDF", "Drag, rotate or delete pages", "Save it"]}
         onopen={pick}
       />
     {:else}

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { NotificationType, type AppsService, type FilesService, type NotificationsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { paste_files } from "$kit/utils/paste";
@@ -9,7 +10,6 @@
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     Rows as RowsIcon,
-    SquareSplitHorizontal as SquareSplitHorizontalIcon,
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
@@ -207,10 +207,12 @@
       </EmptyState>
     {:else}
       <EmptyState
-        icon={SquareSplitHorizontalIcon}
-        title="Split an image into tiles"
-        description="Cut an image into equal squares for grid layouts. Open one, or drop or paste it here."
+        title="Cut an image into tiles"
+        description="Cuts one image into equal squares for a grid layout and saves every tile."
+        steps={["Open an image", "Pick how many tiles", "Save them into a folder"]}
+        hint="Or drop an image anywhere here, or paste one."
       >
+        {#snippet illustration()}<ToolArt tool="split" />{/snippet}
         {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
       </EmptyState>
     {/if}

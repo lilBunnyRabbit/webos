@@ -102,7 +102,14 @@
 
   <div class="min-h-0 overflow-auto">
     {#if !loaded}
-      <PdfPlaceholder {slot} icon={ArrowsSplitIcon} title="No PDF open" description="Split a PDF by page ranges, extract pages, or give every page its own file." onopen={pick} />
+      <PdfPlaceholder
+        {slot}
+        tool="split"
+        title="Split a PDF into parts"
+        description="Splits by page ranges, pulls out the pages you need, or gives every page its own file."
+        steps={["Open a PDF", "Type the ranges or pick a mode", "Save the files"]}
+        onopen={pick}
+      />
     {:else}
       <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-5 @md:px-6">
         <Group title="How to split" description={DESCRIPTIONS[mode.value]}>

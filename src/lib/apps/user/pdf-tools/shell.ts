@@ -384,7 +384,7 @@ export async function tools({ args, session }: CommandContext<{ section?: Sectio
     args.path === undefined
       ? undefined
       : (await source(session.cwd, args.path, args.section === Section.IMAGES ? "image" : "pdf")).path!;
-  apps().launch(APP_ID, { section: args.section ?? (path ? undefined : Section.ORGANIZE), path });
+  apps().launch(APP_ID, { section: args.section, path });
 }
 
 export interface SignatureValue extends Tagged {

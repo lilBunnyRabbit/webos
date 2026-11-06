@@ -12,7 +12,6 @@
     BracketsSquare as BracketsSquareIcon,
     CaretLeft as CaretLeftIcon,
     CaretRight as CaretRightIcon,
-    FilmSlate as FilmSlateIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     Pause as PauseIcon,
@@ -34,6 +33,7 @@
     gif_frame_count,
     gif_size,
   } from "$kit/utils/video/plan";
+  import EmptyArt from "./empty-art.svelte";
   import Scrubber from "./scrubber.svelte";
   import { DEFAULT_SETTINGS, SETTINGS_FILE, SettingsSchema } from "./settings";
   import { SKIP_SENSITIVITY } from "./skip";
@@ -356,10 +356,12 @@
     </EmptyState>
   {:else if !loaded}
     <EmptyState
-      icon={FilmSlateIcon}
-      title="No video open"
-      description="Trim a video to a WebM clip, turn part of it into a GIF, or save its sound. Open one, drop it here or paste it."
+      title="Cut a clip, a GIF or the sound"
+      description="Trims a video to a WebM clip, turns part of it into a GIF, or saves its sound, all on this device."
+      steps={["Open a video", "Set the start and end", "Save it as a clip, GIF or sound"]}
+      hint="Or drop a video anywhere here, or paste one."
     >
+      {#snippet illustration()}<EmptyArt />{/snippet}
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open a video…</Button>{/snippet}
     </EmptyState>
   {:else}

@@ -19,6 +19,7 @@ export { default as Spinner } from "./spinner.svelte";
 export { default as StatusBar } from "./status-bar.svelte";
 export { default as Switch } from "./switch.svelte";
 export { default as Textarea } from "./textarea.svelte";
+export { default as ToolHome } from "./tool-home.svelte";
 export { default as Toolbar } from "./toolbar.svelte";
 export * from "./variants";
 export * from "./types";

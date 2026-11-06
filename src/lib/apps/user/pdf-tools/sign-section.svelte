@@ -315,9 +315,10 @@
     <div class="min-h-0 overflow-auto">
       <PdfPlaceholder
         {slot}
-        icon={PenNibIcon}
-        title="No PDF open"
-        description="Place a signature you drew on any page, then save a signed copy."
+        tool="sign"
+        title="Sign a PDF"
+        description="Places a signature you drew on any page and saves a signed copy. The original stays as it was."
+        steps={["Open a PDF", "Draw or pick a signature", "Click where it goes, then save"]}
         onopen={pick}
       />
     </div>

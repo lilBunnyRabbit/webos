@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { paste_files } from "$kit/utils/paste";
@@ -198,7 +199,13 @@
     {#if loading}
       <div class="grid h-full place-items-center"><Spinner label="Loading images" /></div>
     {:else}
-      <EmptyState icon={RowsIcon} title="No images yet" description="Joins images into one, stacked or side by side. Add them one by one, drop them here or paste them.">
+      <EmptyState
+        title="Put images together"
+        description="Joins two or more images into one, stacked top to bottom or side by side."
+        steps={["Add two or more images", "Pick the direction and alignment", "Save the joined image"]}
+        hint="Or drop images anywhere here, or paste them."
+      >
+        {#snippet illustration()}<ToolArt tool="join" />{/snippet}
         {#snippet actions()}<Button variant="primary" onclick={pick}><PlusIcon weight="bold" /> Add images…</Button>{/snippet}
       </EmptyState>
     {/if}

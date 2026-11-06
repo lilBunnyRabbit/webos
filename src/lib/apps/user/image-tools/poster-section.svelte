@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type FilesService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -7,7 +8,7 @@
   import { parent_path } from "$lib/core/api/services/files/path";
   import { error_message } from "$lib/core/utils";
   import { has_files, image_files, load_image, load_image_at, paint, type SourceImage } from "$kit/utils/image";
-  import { FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Printer as PrinterIcon, Warning as WarningIcon } from "phosphor-svelte";
+  import { FilePdf as FilePdfIcon, FolderOpen as FolderOpenIcon, Warning as WarningIcon } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { poster_name } from "./naming";
   import {
@@ -236,10 +237,12 @@
     </EmptyState>
   {:else if !source || !preview || !layout}
     <EmptyState
-      icon={PrinterIcon}
-      title="No image open"
-      description="Prints one image across several sheets as a PDF, with crop marks and a map for putting it together. Open one, drop it here or paste it."
+      title="Print one image across many sheets"
+      description="Makes a PDF that spreads your image over several pages, with overlap, crop marks and a map for taping it together."
+      steps={["Open an image", "Pick the paper and sheets across", "Make the PDF and print it"]}
+      hint="Or drop an image anywhere here, or paste one."
     >
+      {#snippet illustration()}<ToolArt tool="poster" />{/snippet}
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}

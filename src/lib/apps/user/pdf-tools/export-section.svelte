@@ -116,7 +116,14 @@
 
   <div class="min-h-0 overflow-auto">
     {#if !loaded}
-      <PdfPlaceholder {slot} icon={ExportIcon} title="No PDF open" description="Save pages as PNG or JPEG images, at the resolution you pick." onopen={pick} />
+      <PdfPlaceholder
+        {slot}
+        tool="export"
+        title="Turn pages into images"
+        description="Saves pages as PNG or JPEG images, at the resolution you pick."
+        steps={["Open a PDF", "Pick the pages and resolution", "Export the images"]}
+        onopen={pick}
+      />
     {:else}
       <div class="mx-auto flex max-w-2xl flex-col gap-6 px-4 py-5 @md:px-6 @xl:flex-row @xl:items-start">
         <div class="mx-auto w-40 shrink-0 @xl:mx-0">

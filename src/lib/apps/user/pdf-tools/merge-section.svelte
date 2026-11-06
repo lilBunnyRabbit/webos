@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type AppsService } from "$lib/core/api";
   import { DropZone, source_at, type SourceFile } from "$kit/components/drop-zone";
   import { Button, EmptyState, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -140,7 +141,13 @@
 
   <div class="min-h-0 overflow-auto">
     {#if !items.length}
-      <EmptyState icon={StackIcon} title="Nothing to merge yet" description="Add two or more PDFs, put them in order, then merge them into one file.">
+      <EmptyState
+        title="Merge PDFs into one"
+        description="Puts two or more PDFs together into one file, in the order you set."
+        steps={["Add two or more PDFs", "Put them in order", "Merge them"]}
+        hint="Or drop PDFs anywhere here, or paste them."
+      >
+        {#snippet illustration()}<ToolArt tool="merge" />{/snippet}
         {#snippet actions()}
           <Button variant="primary" onclick={pick}><FilePlusIcon weight="bold" /> Add PDFs…</Button>
         {/snippet}

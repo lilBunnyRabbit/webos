@@ -1,11 +1,11 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type SettingsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Select, Slider, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { paste_files } from "$kit/utils/paste";
   import { error_message, format_bytes, resolve_token } from "$lib/core/utils";
   import {
-    EyeSlash as EyeSlashIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     MagnifyingGlass as MagnifyingGlassIcon,
@@ -382,10 +382,12 @@
     </EmptyState>
   {:else if !source || !preview}
     <EmptyState
-      icon={EyeSlashIcon}
-      title="No image open"
-      description="Covers names, faces or numbers with a box, pixels or a heavy blur, and saves a fresh copy without the original's metadata. Open an image, drop it here or paste it."
+      title="Hide what shouldn't be seen"
+      description="Covers names, faces or numbers with a box, pixels or a heavy blur, and saves a fresh copy without the original's metadata."
+      steps={["Open a screenshot or photo", "Draw over what to hide", "Save the clean copy"]}
+      hint="Or drop an image anywhere here, or paste one."
     >
+      {#snippet illustration()}<ToolArt tool="redact" />{/snippet}
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}

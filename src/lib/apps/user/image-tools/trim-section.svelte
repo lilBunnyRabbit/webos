@@ -1,11 +1,11 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import { Button, EmptyState, IconButton, Input, Segmented, Select, Separator, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { paste_files } from "$kit/utils/paste";
   import { format_bytes, error_message } from "$lib/core/utils";
   import {
     ArrowRight as ArrowRightIcon,
-    Crop as CropIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     Warning as WarningIcon,
@@ -175,7 +175,13 @@
       {#snippet actions()}<Button onclick={pick}><FolderOpenIcon weight="bold" /> Open another…</Button>{/snippet}
     </EmptyState>
   {:else if !source || !bounds || !cropped}
-    <EmptyState icon={CropIcon} title="No image open" description="Trims transparent borders from an image. Open one, drop it here or paste it.">
+    <EmptyState
+      title="Cut off empty borders"
+      description="Finds where the see-through edges of an image end and crops the picture tight around what's left."
+      steps={["Open an image with see-through edges", "Check the trimmed size", "Save the tight copy"]}
+      hint="Or drop an image anywhere here, or paste one."
+    >
+      {#snippet illustration()}<ToolArt tool="trim" />{/snippet}
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}

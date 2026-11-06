@@ -1,4 +1,4 @@
-Pick a tool from the side list (or the menu at the top in a narrow window). Every tool opens a PDF with **Open…**, or you can drop files onto it. Nothing leaves your device.
+PDF Tools opens on its home: a card per tool with what it does and what it takes. Pick one there, from the side list, or from the menu at the top in a narrow window; **Home** at the top of the list goes back. Every tool opens a PDF with **Open…**, or you can drop files onto it. Nothing leaves your device.
 
 ## Organize
 

@@ -27,6 +27,22 @@ A notice about the open document (Text Editor's "changed on disk") is a strip be
 
 `SideNav` with the page as its child (drill-in): side by side from `@2xl`; below, a list of pages that drills into one, with a Back bar and the phone's Back. Group the pages under overlines when there are more than about seven. Persist the open section and `open` in window storage. Apps whose nav filters one view (App Store's categories) or switches tools inside a toolbar keep the tab row.
 
+### Multi-tool app
+
+**Image Tools, PDF Tools**: one app, a tool per section, each taking files. Clicking a tool's name tells you nothing about it, so the app opens on a home:
+
+```
+┌ SideNav ─┬ ToolHome ──────────────────────────┐
+│ Home     │  h1 app name, one line             │
+│ GROUP    │  GROUP                             │
+│ tools    │  ┌ card ┐ ┌ card ┐                 │  icon, name, takes ("1 image"), one sentence
+│ …        │  └──────┘ └──────┘                 │
+```
+
+- **Home is the default** when the app launches with no `section` and no files. Files (Open with, a drop on the icon) or a `section` prop still go straight to the tool. Home is the SideNav's top item (`House`, no group) and the first option of the narrow `Select`, and it is a value of the window's `section` (`storage.window`), not a launch prop.
+- **One list feeds the nav and the home**: `{ value, label, icon, group, takes, description }`. Group the tools when there are more than about seven (Image Tools: Edit, Combine and cut, Size and format, Check and print).
+- **Each tool's empty state shows the tool**, not its absence: an `EmptyState` with an `illustration` (before → after from the `tool-art` pieces), a title saying what it does, one sentence, 2–3 `steps`, the open action as the primary button and a `hint` for drop and paste. Apps whose tools work at once with no input (Color Tools, Dev Tools, RNG Tools) don't need a home: the tool itself is the explanation.
+
 **Dashboard app** (Kernel, Example): a centered column (`mx-auto max-w-3xl`/`max-w-4xl p-6`) of `Section`s or cards.
 
 ## Toolbars
@@ -92,7 +108,7 @@ Show the real path, not the history. `/` in mono, then each segment; the current
 ## Empty, loading and error states
 
 - **Loading:** `Spinner` centered for whole views; for lists, 5–6 skeleton rows (`bg-foreground/5 animate-pulse`) fading out downward.
-- **Empty:** `EmptyState` with a duotone icon, a short title ("This folder is empty"), one line on what to do next, and an action when there's an obvious one.
+- **Empty:** `EmptyState` with a duotone icon, a short title ("This folder is empty"), one line on what to do next, and an action when there's an obvious one. A tool waiting for its input gets the drawing, steps and hint instead (see [Multi-tool app](#multi-tool-app)).
 - **Error:** the same component with `tone="error"`. The title names the thing in plain words ("Snake didn't load", "Couldn't open the image"); the description is one sentence on the likely cause and what to do; the actions are the way out (Try again first when it can work, then the bigger hammer, then Close). Colour stays on the icon tile, never the title. A raw technical message (a URL, a stack) goes in `details`, never in the description.
 
 ## Selection and drag
@@ -120,7 +136,7 @@ Apps that take a file or a code (image tools, QR Reader, GIF Player, PDF Tools, 
   It listens on the root's own document (so a popped-out window works), acts only while the window is focused with no sheet or system dialog up, and only for targets inside the window's frame (a focused window holds the keyboard on its frame, outside the app's root) or `body`. Files on the paste that match `accept` win, even in a field. Otherwise files copied in WebOS (Explorer, desktop, `copy`) when the system clipboard's text is still their paths. Otherwise text, which a field keeps unless `ontext(text, editable)` returns `true`. One usable file, or a `multiple` caller, goes straight to `onfiles`; several open the clipboard view to pick one. Anything it doesn't claim falls through to the browser.
 - **The picker pastes too.** Every Open… has **Paste…** beside "This device…", which opens the clipboard view (the system clipboard's item and the WebOS copy, thumbnails, unaccepted items dimmed); it's the way in on a phone. Ctrl+V while the picker is up pastes into it.
 - Pasting means opening. Where paste means inserting into a document (Moonrabbit and Proposals pictures, Warren, Paint and Hopsprite) the app keeps its own handler.
-- A dropped or pasted file is a `File` in memory: nothing is written to OPFS until the user saves (ADR-031). The empty state says so in its one line: "Open an image, drop it here or paste it."
+- A dropped or pasted file is a `File` in memory: nothing is written to OPFS until the user saves (ADR-031). The empty state says so, in its one line ("Open an image, drop it here or paste it.") or in a tool's `hint` ("Or drop an image anywhere here, or paste one.").
 
 ## Dialogs and menus
 

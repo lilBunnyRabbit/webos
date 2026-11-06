@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type FilesService, type NotificationsService, type TaskJob } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -179,10 +180,12 @@
 
   {#if !input}
     <EmptyState
-      icon={SwapIcon}
-      title="No image yet"
-      description="Writes one image in every format WebOS can: PNG, JPEG, WebP, AVIF, JPEG XL, GIF, BMP, ICO, TIFF, QOI, TGA and PPM, with each one's size. Open an image, drop it here or paste it."
+      title="See an image in every format"
+      description="Writes one image as PNG, JPEG, WebP, AVIF, JPEG XL, GIF, BMP, ICO, TIFF, QOI, TGA and PPM, with the size of each."
+      steps={["Open an image", "Compare the sizes", "Save one, or all as a zip"]}
+      hint="Or drop an image anywhere here, or paste one."
     >
+      {#snippet illustration()}<ToolArt tool="convert" />{/snippet}
       {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
     </EmptyState>
   {:else}

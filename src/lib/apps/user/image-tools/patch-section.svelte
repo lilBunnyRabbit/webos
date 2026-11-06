@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type SettingsService } from "$lib/core/api";
   import { Button, Checkbox, EmptyState, IconButton, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -387,10 +388,12 @@
 
   {#if !original && !edited && !pair.loading.original && !pair.loading.edited}
     <EmptyState
-      icon={BandaidsIcon}
-      title="No images yet"
-      description="Takes back what an editor stamped on a picture, like its logo, from the original. Open the original and the edited copy, or drop both here."
+      title="Take a stamp back off"
+      description="An editor put its logo on your picture? Patch copies those spots back from the original you still have."
+      steps={["Open the original", "Open the edited copy", "Brush over what to restore, then save"]}
+      hint="Or drop both images here, or paste them."
     >
+      {#snippet illustration()}<ToolArt tool="patch" />{/snippet}
       {#snippet actions()}
         <Button variant="primary" onclick={() => pair.pick(Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open the original…</Button>
       {/snippet}

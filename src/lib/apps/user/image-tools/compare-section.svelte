@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type SettingsService } from "$lib/core/api";
   import { Button, EmptyState, IconButton, Segmented, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -143,10 +144,12 @@
 
   {#if !before && !after && !pair.loading.original && !pair.loading.edited}
     <EmptyState
-      icon={SquareHalfIcon}
-      title="No images yet"
-      description="Lays two versions of a picture over each other: wipe between them, fade one into the other, or see what changed. Open the before and the after, or drop both here."
+      title="Hold two versions up together"
+      description="Lays two versions of a picture over each other: wipe between them, fade one into the other, or see what changed."
+      steps={["Open the before", "Open the after", "Wipe, fade or show the changes"]}
+      hint="Or drop both images here, or paste them."
     >
+      {#snippet illustration()}<ToolArt tool="compare" />{/snippet}
       {#snippet actions()}
         <Button variant="primary" onclick={() => pair.pick(Slot.ORIGINAL)}><FolderOpenIcon weight="bold" /> Open the before…</Button>
       {/snippet}

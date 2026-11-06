@@ -20,6 +20,11 @@ export type Section = (typeof Section)[keyof typeof Section];
 
 export const SECTION_IDS = Object.values(Section) as [Section, ...Section[]];
 
+/** The tool cards. Not a section: no launch prop opens it, and it takes no images. */
+export const HOME = "home";
+export type View = Section | typeof HOME;
+export const VIEW_IDS: [View, ...View[]] = [HOME, ...SECTION_IDS];
+
 export interface LaunchProps {
   section?: Section;
   path?: string;
@@ -33,10 +38,12 @@ export interface SectionProps {
   active: boolean;
 }
 
-/** One image, or none, opens Remove background: unlike Trim, Split or Sprites it does something to any image. */
-export function initial_section(props: LaunchProps): Section {
+/** One image opens Remove background: unlike Trim, Split or Sprites it does something to any image. */
+export function initial_view(props: LaunchProps): View {
   if (props.section) return props.section;
-  return launch_paths(props).length > 1 ? Section.JOIN : Section.REMOVE_BACKGROUND;
+  const count = launch_paths(props).length;
+  if (!count) return HOME;
+  return count > 1 ? Section.JOIN : Section.REMOVE_BACKGROUND;
 }
 
 export function launch_paths(props: LaunchProps): string[] {

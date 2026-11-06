@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type FilesService, type NotificationsService } from "$lib/core/api";
   import { Badge, Button, EmptyState, IconButton, Input, Select, Spinner, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
@@ -264,10 +265,12 @@
       <div class="grid h-full place-items-center"><Spinner label="Loading image" /></div>
     {:else}
       <EmptyState
-        icon={ArrowsInSimpleIcon}
-        title={error ?? "No image yet"}
-        description="Makes a copy that fits under an upload limit, keeping as much quality as it can: it lowers the quality first and scales down only when it has to. Open an image, drop it here or paste it."
+        title={error ?? "Fit an image under a size limit"}
+        description="For a site that says “max 1 MB”: it lowers the quality first and scales down only when it has to."
+        steps={["Open an image", "Pick the limit and format", "Save the copy that fits"]}
+        hint="Or drop an image anywhere here, or paste one."
       >
+        {#snippet illustration()}<ToolArt tool="fit" />{/snippet}
         {#snippet actions()}<Button variant="primary" onclick={pick}><FolderOpenIcon weight="bold" /> Open an image…</Button>{/snippet}
       </EmptyState>
     {/if}

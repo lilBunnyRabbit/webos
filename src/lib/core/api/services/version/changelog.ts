@@ -10,6 +10,16 @@ export const CHANGELOG: Release[] = [
     title: "Save straight to your device",
     changes: [
       {
+        kind: IMPROVED,
+        apps: ["image-tools", "pdf-tools"],
+        text: "Image Tools and PDF Tools open on a home screen that says what each tool does and what it needs.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["image-tools", "pdf-tools", "video-tools"],
+        text: "Each tool's empty screen now shows a small picture of what it does and the steps to get there.",
+      },
+      {
         kind: NEW,
         text: "Save as has a This device… button in every app: pick any folder on your computer, Downloads included, or download the file on phones and in Safari or Firefox. Saving again updates the same file.",
       },

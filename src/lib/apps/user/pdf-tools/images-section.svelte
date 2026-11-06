@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ToolArt from "./tool-art.svelte";
   import kernel, { type AppsService } from "$lib/core/api";
   import { DropZone, source_at, type SourceFile } from "$kit/components/drop-zone";
   import { Button, EmptyState, IconButton, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
@@ -10,7 +11,6 @@
     DotsSixVertical as DotsSixVerticalIcon,
     FilePdf as FilePdfIcon,
     ImageSquare as ImageSquareIcon,
-    Images as ImagesIcon,
     Trash as TrashIcon,
     X as XIcon,
   } from "phosphor-svelte";
@@ -160,9 +160,15 @@
     <Button variant="primary" size="sm" onclick={create} disabled={!items.length || busy}><FilePdfIcon weight="bold" /> Create PDF…</Button>
   </Toolbar>
 
-  <div class="min-h-0 overflow-auto bg-background-darker">
+  <div class={cn("min-h-0 overflow-auto", items.length && "bg-background-darker")}>
     {#if !items.length}
-      <EmptyState icon={ImagesIcon} title="No images yet" description="Add PNG, JPEG or other images. Each one becomes a page, in the order shown.">
+      <EmptyState
+        title="Make a PDF from images"
+        description="Each image becomes a page, in the order shown: scans, photos of receipts, screenshots."
+        steps={["Add images", "Put them in order", "Create the PDF"]}
+        hint="Or drop images anywhere here, or paste them."
+      >
+        {#snippet illustration()}<ToolArt tool="images" />{/snippet}
         {#snippet actions()}
           <Button variant="primary" onclick={pick}><ImageSquareIcon weight="bold" /> Add images…</Button>
         {/snippet}
