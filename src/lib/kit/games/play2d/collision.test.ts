@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { contact_point, inside_convex, overlaps } from "./collision";
+import { contact_point, inside_convex, overlaps, penetration } from "./collision";
 import { oriented_box, rect } from "./geometry";
 
 describe("overlaps", () => {
@@ -30,6 +30,30 @@ describe("contact_point", () => {
     expect(at.x).toBeGreaterThan(1.7);
     expect(at.x).toBeLessThan(2.1);
     expect(at.y).toBeCloseTo(1, 1);
+  });
+});
+
+describe("penetration", () => {
+  test("depth and the way out of an overlap", () => {
+    const hit = penetration(rect(0, 0, 1, 1), rect(0.8, 0, 2, 1))!;
+    expect(hit.depth).toBeCloseTo(0.2);
+    expect(hit.normal.x).toBeCloseTo(-1);
+    expect(hit.normal.y).toBeCloseTo(0);
+    expect(hit.point.x).toBeGreaterThan(0.79);
+    expect(hit.point.x).toBeLessThan(1.01);
+    expect(penetration(rect(0.8, 0, 2, 1), rect(0, 0, 1, 1))!.normal.x).toBeCloseTo(1);
+  });
+
+  test("apart or touching is none", () => {
+    expect(penetration(rect(0, 0, 1, 1), rect(1, 0, 2, 1))).toBeNull();
+    expect(penetration(oriented_box(1.5, 1.5, Math.PI / 4, 1, 1), rect(0, 0, 1, 1))).toBeNull();
+  });
+
+  test("a turned hull is pushed off a wall's face, not round its end", () => {
+    const hit = penetration(oriented_box(0, 0.9, 0.2, 4, 2), rect(-10, 1, 10, 3))!;
+    expect(hit.normal.x).toBeCloseTo(0);
+    expect(hit.normal.y).toBeCloseTo(-1);
+    expect(hit.depth).toBeCloseTo(1.277, 2);
   });
 });
 

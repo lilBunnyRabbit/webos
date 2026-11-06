@@ -1,4 +1,4 @@
-import type { Polygon, Vec } from "./geometry";
+import { centroid, type Polygon, type Vec } from "./geometry";
 
 function project(points: Polygon, ax: number, ay: number): [number, number] {
   let min = Infinity;
@@ -93,4 +93,41 @@ export function distance_to_segment(point: Vec, a: Vec, b: Vec): { distance: num
   const t = length === 0 ? 0 : Math.max(0, Math.min(1, ((point.x - a.x) * ex + (point.y - a.y) * ey) / length));
   const at = { x: a.x + ex * t, y: a.y + ey * t };
   return { distance: Math.hypot(point.x - at.x, point.y - at.y), at };
+}
+
+export interface Penetration {
+  /** Unit axis that pushes `a` out of `b`. */
+  normal: Vec;
+  /** Metres of overlap along `normal`. */
+  depth: number;
+  /** Where the shapes meet, so a push there turns the body as well. */
+  point: Vec;
+}
+
+function shallowest(a: Polygon, b: Polygon, edges: Polygon, best: { normal: Vec; depth: number } | null): { normal: Vec; depth: number } | null {
+  for (let i = 0; i < edges.length; i++) {
+    const p = edges[i];
+    const q = edges[(i + 1) % edges.length];
+    const length = Math.hypot(q.y - p.y, p.x - q.x);
+    if (length < 1e-12) continue;
+    const ax = (q.y - p.y) / length;
+    const ay = (p.x - q.x) / length;
+    const [a0, a1] = project(a, ax, ay);
+    const [b0, b1] = project(b, ax, ay);
+    const ahead = b1 - a0;
+    const behind = a1 - b0;
+    if (ahead <= 0 || behind <= 0) return null;
+    const depth = Math.min(ahead, behind);
+    if (!best || depth < best.depth) best = { normal: ahead < behind ? { x: ax, y: ay } : { x: -ax, y: -ay }, depth };
+  }
+  return best;
+}
+
+/** The minimum translation vector of two overlapping convex polygons, null when they're apart (touching is apart, as in `overlaps`). */
+export function penetration(a: Polygon, b: Polygon): Penetration | null {
+  const on_a = shallowest(a, b, a, null);
+  if (!on_a) return null;
+  const best = shallowest(a, b, b, on_a);
+  if (!best) return null;
+  return { ...best, point: contact_point(a, b) ?? centroid(a) };
 }
