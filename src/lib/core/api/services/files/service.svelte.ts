@@ -198,8 +198,9 @@ export class FilesService implements IFilesService {
       const stamp = `${file.lastModified}:${file.size}`;
       if (save.sent.get(file.name) === stamp) continue;
       save.sent.set(file.name, stamp);
-      if (save.target && file.name === save.primary) await opfs.write_file(save.target, file);
-      else download_blob(file, file.name);
+      if (save.target && file.name === save.primary) {
+        if ((await opfs.write_picked(save.target, file, file.name)) === "downloaded") save.target = null;
+      } else download_blob(file, file.name);
     }
   }
 

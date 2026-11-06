@@ -40,3 +40,19 @@ test("a second file goes to downloads, and the first isn't sent again", async ()
   expect((click.mock.contexts[0] as HTMLAnchorElement).download).toBe("sheet.json");
   expect(await (await picked.getFile()).text()).toBe("png");
 });
+
+test("a picked file the browser won't write is downloaded instead, then every later save too", async () => {
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  vi.stubGlobal("showSaveFilePicker", async () => ({
+    name: "font.fontmaker",
+    kind: "file",
+    createWritable: async () => {
+      throw new DOMException("not allowed", "NotAllowedError");
+    },
+  }));
+  const path = (await files.save_to_device("font.fontmaker"))!;
+  await write(path, "one");
+  await write(path, "two");
+  expect(click).toHaveBeenCalledTimes(2);
+  expect((click.mock.contexts[1] as HTMLAnchorElement).download).toBe("font.fontmaker");
+});

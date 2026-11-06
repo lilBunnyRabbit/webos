@@ -22,4 +22,5 @@ The save picker (ADR-025) chooses an OPFS path or a path in a mounted folder (AD
 - Empty files are never sent, so an app that creates the file empty and writes it after delivers once.
 - In Chromium the device file keeps the name picked in the dialog, even when the app adds an extension to it.
 - A Save as that starts next to a staged file opens `/home` instead, since the staging folder is read-only in the picker.
+- 2026-11-06: mobile Chrome has the Save dialog but refuses to write the file it returns (`NotAllowedError`); `write_picked` downloads instead, and that save downloads from then on.
 - Apps that show the saved path ("Image saved") show `/tmp/to-device/<id>/<name>`.

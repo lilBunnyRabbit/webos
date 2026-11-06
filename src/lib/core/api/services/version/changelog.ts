@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.2.2",
+    date: "2026-11-06",
+    title: "Saving to your phone",
+    changes: [
+      {
+        kind: FIXED,
+        text: "Save to disk and Save as › This device work on Android phones again: when the phone won't let WebOS write the file you picked, it downloads it instead of showing an error.",
+      },
+    ],
+  },
+  {
     version: "4.2.1",
     date: "2026-11-06",
     title: "Steady typing in Quick Notes",

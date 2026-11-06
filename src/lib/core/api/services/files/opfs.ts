@@ -403,6 +403,21 @@ export async function pick_disk_folder(mode: "read" | "readwrite" = "readwrite")
 }
 
 /**
+ * Writes `file` to a file the Save dialog picked. Mobile Chrome hands out a picked file and then refuses to write it
+ * (`NotAllowedError` from `createWritable`), so a refused write downloads the file instead. Resolves which happened.
+ */
+export async function write_picked(target: FileSystemFileHandle, file: Blob, name: string): Promise<"written" | "downloaded"> {
+  try {
+    await write_file(target, file);
+    return "written";
+  } catch (error) {
+    if (!(error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError"))) throw error;
+    download_blob(file, name);
+    return "downloaded";
+  }
+}
+
+/**
  * Copies a file or folder out of OPFS onto the real disk. A file goes through the native Save dialog, or the browser's
  * downloads where there's none (Firefox, Safari); a folder is copied whole into a folder the user picks (auto-renamed
  * there on clash), so it needs `can_pick_folders`. Resolves the name written, or `null` if cancelled.
@@ -415,8 +430,8 @@ export async function export_to_disk(handle: FileSystemFileHandle | FileSystemDi
     }
     if (handle.kind === "file") {
       const target = await disk().showSaveFilePicker({ suggestedName: handle.name, startIn: "downloads" });
-      await write_file(target, await handle.getFile());
-      return target.name;
+      const file = await handle.getFile();
+      return (await write_picked(target, file, target.name)) === "written" ? target.name : handle.name;
     }
     const parent = await disk().showDirectoryPicker({ mode: "readwrite", startIn: "downloads" });
     return (await copy_directory(handle, parent)).name;
