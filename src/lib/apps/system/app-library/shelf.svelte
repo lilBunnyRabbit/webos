@@ -47,7 +47,7 @@
   >
     {#each apps as manifest (manifest.id)}
       <li
-        class="relative flex w-[min(17rem,80cqi)] shrink-0 snap-start flex-col gap-3 rounded-xl bg-background-light p-3.5 ring-1 ring-foreground/10 transition-shadow duration-150 hover:shadow-raised hover:ring-foreground/20 has-[.card-open:focus-visible]:outline-2 has-[.card-open:focus-visible]:outline-cottontail"
+        class="relative flex w-[min(17rem,80cqi)] shrink-0 snap-start pointer-coarse:snap-always flex-col gap-3 rounded-xl bg-background-light p-3.5 ring-1 ring-foreground/10 transition-shadow duration-150 hover:shadow-raised hover:ring-foreground/20 has-[.card-open:focus-visible]:outline-2 has-[.card-open:focus-visible]:outline-cottontail"
         draggable="true"
         ondragstart={(event) => set_drag_app(event, manifest.id)}
       >

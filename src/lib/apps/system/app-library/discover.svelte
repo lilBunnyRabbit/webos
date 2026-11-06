@@ -51,7 +51,7 @@
     >
       {#each hero as card (card.manifest.id)}
         <li
-          class="relative isolate flex min-h-52 w-[min(36rem,86cqi)] shrink-0 snap-start overflow-hidden rounded-2xl bg-linear-to-br from-background-lighter to-background-light p-5 shadow-raised ring-1 ring-primary/25 transition-shadow duration-150 hover:ring-primary/45 has-[.hero-open:focus-visible]:outline-2 has-[.hero-open:focus-visible]:outline-cottontail @2xl:p-6"
+          class="relative isolate flex min-h-52 w-[min(36rem,86cqi)] shrink-0 snap-start pointer-coarse:snap-always overflow-hidden rounded-2xl bg-linear-to-br from-background-lighter to-background-light p-5 shadow-raised ring-1 ring-primary/25 transition-shadow duration-150 hover:ring-primary/45 has-[.hero-open:focus-visible]:outline-2 has-[.hero-open:focus-visible]:outline-cottontail @2xl:p-6"
         >
           <card.manifest.icon class="pointer-events-none absolute -right-6 -bottom-8 -z-10 size-48 text-primary opacity-10" weight="duotone" aria-hidden="true" />
           <div class="flex min-w-0 flex-1 flex-col gap-2">
