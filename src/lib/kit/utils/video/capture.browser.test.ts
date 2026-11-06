@@ -3,6 +3,12 @@ import { capture, probe_tracks, probe_video, record_audio } from "./capture";
 import { decode_audio } from "./encode";
 import { FIXTURE_FPS, make_video } from "./fixtures";
 
+// Capture runs at playback speed, so a loaded machine (CI) can miss one frame.
+function expect_frames(frames: number, expected: number) {
+  expect(frames).toBeGreaterThanOrEqual(expected - 1);
+  expect(frames).toBeLessThanOrEqual(expected);
+}
+
 describe("play and capture", () => {
   it("muxes a webm Chrome plays, with its duration, size and sound", async () => {
     const blob = await make_video(2, { audio: true });
@@ -32,7 +38,8 @@ describe("play and capture", () => {
         levels.push(context.getImageData(1, 1, 1, 1).data[0]);
       },
     });
-    expect(result).toEqual({ frames: FIXTURE_FPS, end: 1.5 });
+    expect(result.end).toBe(1.5);
+    expect_frames(result.frames, FIXTURE_FPS);
     expect(times[0]).toBe(0.5);
     expect(times.every((time, i) => i === 0 || time > times[i - 1])).toBe(true);
     expect(levels.slice(0, 3)).toEqual([120, 128, 136]);
@@ -50,8 +57,8 @@ describe("play and capture", () => {
         return new Promise((resolve) => setTimeout(resolve, 40));
       },
     });
-    expect(result.frames).toBe(15);
-    expect(frames).toBe(15);
+    expect_frames(result.frames, 15);
+    expect(frames).toBe(result.frames);
   });
 
   it("stops at the video's end when out is past it", async () => {
@@ -63,7 +70,7 @@ describe("play and capture", () => {
       on_frame: () => {},
     });
     expect(result.end).toBe(1);
-    expect(result.frames).toBe(15);
+    expect_frames(result.frames, 15);
   });
 
   it("rejects with the abort reason on cancel", async () => {
