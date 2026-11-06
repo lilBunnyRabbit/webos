@@ -20,4 +20,5 @@ export default {
     problem: "Pixel art tools are either toys or heavy desktop software.",
     solution: "Draw and animate sprites frame by frame, with layers, onion skin and SVG export.",
   },
+  example: "animate a walking pixel sprite",
 } satisfies AppMeta;

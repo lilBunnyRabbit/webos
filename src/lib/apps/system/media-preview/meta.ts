@@ -7,4 +7,5 @@ export default {
     problem: "You just want to look at a picture or play a clip, not open an editor.",
     solution: "Open images, video and audio straight from your files.",
   },
+  example: "play a voice memo from your files",
 } satisfies AppMeta;

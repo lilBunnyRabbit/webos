@@ -7,4 +7,5 @@ export default {
     problem: "Every tea wants its own water temperature and steeping time, and the packet is in the bin.",
     solution: "Pick the tea and a strength, and it rings when the cup is ready, again for every steep.",
   },
+  example: "steep a green tea just right",
 } satisfies AppMeta;

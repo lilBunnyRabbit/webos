@@ -8,5 +8,6 @@ export default {
     problem: "Writing a CV or a letter shouldn't need a paid word processor.",
     solution: "A free page to write on, with the basics done well and a Word file or a PDF at the end.",
   },
+  example: "write a CV and save it for Word",
   authors: [{ name: "LaxDOTexe", github: "LaxDOTexe" }, OWNER],
 } satisfies AppMeta;

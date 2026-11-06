@@ -4,4 +4,5 @@ export default {
   description: "Slide and merge tiles to reach 2048",
   keywords: ["2048", "puzzle", "tiles", "merge", "numbers", "game", "sliding"],
   pitch: { problem: "You want a quick puzzle you can play one-handed.", solution: "Slide and merge tiles to reach 2048." },
+  example: "reach the 2048 tile",
 } satisfies AppMeta;

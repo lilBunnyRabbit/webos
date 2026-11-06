@@ -7,4 +7,5 @@ export default {
     problem: "Turning notes into a clean printable document takes a word processor.",
     solution: "Lay a Markdown file out as pages and save it as a PDF.",
   },
+  example: "turn Markdown notes into a PDF",
 } satisfies AppMeta;

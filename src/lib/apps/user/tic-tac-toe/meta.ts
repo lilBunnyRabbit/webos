@@ -7,4 +7,5 @@ export default {
     problem: "Sometimes you need a quick game to settle something.",
     solution: "Noughts and crosses against a friend or the computer.",
   },
+  example: "settle a bet against a friend",
 } satisfies AppMeta;

@@ -8,5 +8,6 @@ export default {
     problem: "You want to get quicker and surer at typing numbers.",
     solution: "Ring up customers at a shop register, day after day, where every right total keeps your regulars coming back.",
   },
+  example: "ring up a full shopping list",
   authors: [{ name: "LaxDOTexe", github: "LaxDOTexe" }, OWNER],
 } satisfies AppMeta;

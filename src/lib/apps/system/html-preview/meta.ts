@@ -7,4 +7,5 @@ export default {
     problem: "Opening a downloaded HTML file can run scripts you didn't ask for.",
     solution: "Render it in a sandbox, so you see the page without running its code.",
   },
+  example: "look at a saved web page safely",
 } satisfies AppMeta;

@@ -8,4 +8,5 @@ export default {
     problem: "Testing an API usually means installing a heavy desktop tool.",
     solution: "Build and send HTTP requests, read the response and save them as .http files.",
   },
+  example: "send a GET request and read the JSON",
 } satisfies AppMeta;

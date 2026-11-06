@@ -8,5 +8,6 @@ export default {
     problem: "App ideas end up as loose notes, and a picture that explains them sits somewhere else.",
     solution: "A notebook of proposals that ask the right questions, with screenshots and sketches inside the sentences, sent as one file.",
   },
+  example: "pitch an app idea with sketches",
   authors: [{ name: "LaxDOTexe", github: "LaxDOTexe" }, OWNER],
 } satisfies AppMeta;

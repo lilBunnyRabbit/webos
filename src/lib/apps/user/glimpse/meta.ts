@@ -8,5 +8,6 @@ export default {
     problem: "You photograph the locked door to be sure, and the photo sits in your gallery forever.",
     solution: "Snap it here, a few times if you like; the photos erase themselves when their time is up.",
   },
+  example: "photograph the locked door for a day",
   authors: [OWNER],
 } satisfies AppMeta;

@@ -19,4 +19,5 @@ export default {
     problem: "A website needs a dozen icon sizes and the tags to match.",
     solution: "Turn one image into favicons, app icons and a social card, zipped with the head tags.",
   },
+  example: "make favicons for a website",
 } satisfies AppMeta;

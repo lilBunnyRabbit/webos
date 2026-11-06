@@ -22,4 +22,5 @@ export default {
     problem: "You can't tell whether a keyboard key misfires or ghosts.",
     solution: "Test every key with timing, rollover and a heatmap, and inspect USB HID devices.",
   },
+  example: "find a keyboard key that misfires",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "You want a quick daily logic puzzle with no numbers in it.",
     solution: "One rabbit per meadow, row and column, and no two rabbits touching.",
   },
+  example: "place the rabbits in today's meadows",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "A PDF in your files should open without downloading anything.",
     solution: "Read it in the browser's own PDF viewer, right in a window.",
   },
+  example: "read a manual saved in your files",
 } satisfies AppMeta;

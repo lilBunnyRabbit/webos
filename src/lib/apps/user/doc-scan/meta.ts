@@ -8,5 +8,6 @@ export default {
     problem: "A photo of a page comes out skewed, shadowed and full of the table around it.",
     solution: "Find the page's edges, straighten it, clean it up and save the pages as one PDF.",
   },
+  example: "scan a receipt into a PDF",
   authors: [OWNER],
 } satisfies AppMeta;

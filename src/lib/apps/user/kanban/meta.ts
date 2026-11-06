@@ -7,4 +7,5 @@ export default {
     problem: "Errands and projects slip when they only live in your head.",
     solution: "Put them on a board and move each card from later to done.",
   },
+  example: "plan a house move card by card",
 } satisfies AppMeta;

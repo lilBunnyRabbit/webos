@@ -8,5 +8,6 @@ export default {
     problem: "You want a daily puzzle you can finish in a minute, drawn with one finger.",
     solution: "One path through the numbers in order that fills every cell, and a fresh one every day.",
   },
+  example: "draw one path through today's grid",
   authors: [OWNER],
 } satisfies AppMeta;

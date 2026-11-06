@@ -20,4 +20,5 @@ export default {
     problem: "A paper list gets lost, and a shared one is never the same on both phones.",
     solution: "Keep lists that suggest what you buy, read a list from a photo, and pass changes to another phone by scanning its codes, checking each one before it lands.",
   },
+  example: "read a shopping list from a photo",
 } satisfies AppMeta;

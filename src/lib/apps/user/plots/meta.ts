@@ -8,5 +8,6 @@ export default {
     problem: "You want a quick daily logic puzzle you solve by drawing.",
     solution: "Drag rectangles across the garden until every cell sits in a plot whose one clue it fits.",
   },
+  example: "split today's garden into plots",
   authors: [OWNER],
 } satisfies AppMeta;

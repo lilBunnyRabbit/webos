@@ -64,7 +64,7 @@ describe("manifest_data", () => {
   };
 
   test("keeps data, turns lazy parts into flags, provided sheets into their kinds and a daily props key into `daily`", () => {
-    const data = manifest_data(manifest, { description: "Numbers.", keywords: ["puzzle"] }, false);
+    const data = manifest_data(manifest, { description: "Numbers.", keywords: ["puzzle"], example: "solve a quick 6×6 grid" }, false);
     expect(data).toEqual({
       id: "sudoku",
       name: "Sudoku",
@@ -73,6 +73,7 @@ describe("manifest_data", () => {
       associations: [".sudoku"],
       description: "Numbers.",
       keywords: ["puzzle"],
+      example: "solve a quick 6×6 grid",
       defaults: { flags: ["maximized"], constraints: { width: { min: 300 } } },
       daily: true,
       widget: true,

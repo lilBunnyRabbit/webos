@@ -33,4 +33,5 @@ export default {
     problem: "Everyone wants their desktop to look and behave a little differently.",
     solution: "Change the theme, wallpaper, taskbar, default apps and backups in one place.",
   },
+  example: "switch to a dark theme",
 } satisfies AppMeta;

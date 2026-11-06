@@ -7,4 +7,5 @@ export default {
     problem: "It's hard to see what the system is doing behind the windows.",
     solution: "Inspect every service that runs WebOS and its live state.",
   },
+  example: "watch a service's live state",
 } satisfies AppMeta;

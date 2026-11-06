@@ -7,4 +7,5 @@ export default {
     problem: "Cutting a clip or making a GIF usually needs a video editor.",
     solution: "Trim a video, turn part of it into a GIF, or save its sound.",
   },
+  example: "turn a clip into a GIF",
 } satisfies AppMeta;

@@ -23,4 +23,5 @@ export default {
     problem: "A shared link can look broken in Slack or on X, and you only find out once it's posted.",
     solution: "See how it looks in each app and which meta tags to fix.",
   },
+  example: "see how your link looks in Slack",
 } satisfies AppMeta;

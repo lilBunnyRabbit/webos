@@ -7,4 +7,5 @@ export default {
     problem: "You want a short game that rewards a steady hand.",
     solution: "Pick a ship and a planet, then set it down on the pad, gently.",
   },
+  example: "land gently on the pad",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "A diary only works if nobody else can read it and writing a line takes seconds.",
     solution: "Everything is encrypted on your device; unlock with a phrase, a passkey, a hop path or a PIN and write.",
   },
+  example: "write a private journal entry",
 } satisfies AppMeta;

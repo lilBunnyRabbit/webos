@@ -7,4 +7,5 @@ export default {
     problem: "A QR code on screen or in a photo is hard to read without a phone.",
     solution: "Scan QR codes and barcodes from your camera or an image.",
   },
+  example: "read a QR code from a screenshot",
 } satisfies AppMeta;

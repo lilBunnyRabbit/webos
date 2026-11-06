@@ -7,4 +7,5 @@ export default {
     problem: "Music sounds good, but you want to see it too.",
     solution: "Play an audio file and watch it drawn live as bars, a waveform or a circle.",
   },
+  example: "watch a song as a waveform",
 } satisfies AppMeta;

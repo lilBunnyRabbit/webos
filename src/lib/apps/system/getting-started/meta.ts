@@ -7,4 +7,5 @@ export default {
     problem: "A new desktop is full of features you won't find on your own.",
     solution: "A short tour with a Try it button that shows each part in action.",
   },
+  example: "take the tour of a new desktop",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "You want a puzzle that ends in a picture.",
     solution: "Fill the grid from the number clues to reveal it, or draw your own.",
   },
+  example: "draw a picture as a nonogram",
 } satisfies AppMeta;

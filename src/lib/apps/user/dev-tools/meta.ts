@@ -37,4 +37,5 @@ export default {
     problem: "Decoding a JWT or a Base64 string sends you to a random website.",
     solution: "Base64, hashes, UUIDs, regex, JSON, JWTs, timestamps and cron, offline in one place.",
   },
+  example: "decode a JWT",
 } satisfies AppMeta;

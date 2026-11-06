@@ -7,4 +7,5 @@ export default {
     problem: "Sudoku gets familiar, and you want a fresh grid puzzle.",
     solution: "Fill the grid so each row and column holds each digit once and every sign holds.",
   },
+  example: "solve a grid with greater-than signs",
 } satisfies AppMeta;

@@ -21,4 +21,5 @@ export default {
     problem: "SVGs from design tools are bloated and awkward to use in code.",
     solution: "Optimise them, compare before and after, export PNGs and turn them into Svelte components.",
   },
+  example: "turn an SVG into a Svelte component",
 } satisfies AppMeta;

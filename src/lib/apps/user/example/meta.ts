@@ -6,4 +6,5 @@ export default {
     problem: "Writing your first app is easier with a working one to copy.",
     solution: "A small starter that shows saved state, props and a background task.",
   },
+  example: "copy a starter to write your own app",
 } satisfies AppMeta;

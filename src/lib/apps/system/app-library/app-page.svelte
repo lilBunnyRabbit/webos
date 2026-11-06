@@ -211,6 +211,7 @@
         <ArrowRightIcon class="size-3 text-primary" weight="bold" aria-hidden="true" /> What {manifest.name} does
       </h3>
       <p class="text-sm text-pretty">{manifest.description && manifest.description !== story.solution ? manifest.description : story.solution}</p>
+      {#if manifest.example}<p class="text-ui text-pretty text-foreground/65">Try: {manifest.example}</p>{/if}
     </section>
   </div>
 

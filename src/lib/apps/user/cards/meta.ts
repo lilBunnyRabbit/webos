@@ -7,4 +7,5 @@ export default {
     problem: "A wallet full of loyalty cards, and never the right one at the till.",
     solution: "Scan or type each card once, then show its barcode full screen at the checkout.",
   },
+  example: "show a loyalty card at the till",
 } satisfies AppMeta;

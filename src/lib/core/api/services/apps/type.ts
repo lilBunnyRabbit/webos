@@ -284,6 +284,8 @@ export interface AppMeta {
    * it, and falls back to `description` without it.
    */
   pitch?: AppPitch;
+  /** One concrete thing to use the app for, an imperative phrase in lower case with no full stop ("plan a week of meals"): the App Store shows it as "Try: …". */
+  example?: string;
   /** Who made the app, credited in the App Store, the new-app announcement, Settings › About and `app info`. Omitted means the owner. */
   authors?: AppAuthor[];
 }

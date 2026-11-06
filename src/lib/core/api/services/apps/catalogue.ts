@@ -26,6 +26,7 @@ export interface CatalogueApp {
   description?: string;
   keywords?: string[];
   pitch?: { problem: string; solution: string };
+  example?: string;
   authors?: { name: string; github?: string; url?: string }[];
   defaults?: Record<string, unknown>;
   replaces?: { app: string; props?: Record<string, unknown> }[];
@@ -102,6 +103,7 @@ export function manifest_data(manifest: Record<string, unknown>, meta: Record<st
     description: meta.description,
     keywords: meta.keywords,
     pitch: meta.pitch,
+    example: meta.example,
     authors: meta.authors,
     defaults: manifest.defaults,
     replaces: manifest.replaces,

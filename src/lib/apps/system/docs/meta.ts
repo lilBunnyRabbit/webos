@@ -7,4 +7,5 @@ export default {
     problem: "How WebOS works is spread over a hundred and fifty markdown files.",
     solution: "Read them in one place, with the services, decisions, apps and storage drawn as maps.",
   },
+  example: "see how the services fit together",
 } satisfies AppMeta;

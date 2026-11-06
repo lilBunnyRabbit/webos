@@ -7,4 +7,5 @@ export default {
     problem: "Word games need a second player to guess.",
     solution: "Describe a word without its five banned words, and AI on your own device guesses it.",
   },
+  example: "describe a word without the banned ones",
 } satisfies AppMeta;

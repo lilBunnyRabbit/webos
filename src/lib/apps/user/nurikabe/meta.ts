@@ -7,4 +7,5 @@ export default {
     problem: "You want a logic puzzle that isn't about adding numbers up.",
     solution: "Shade the sea so every number becomes an island of exactly that size.",
   },
+  example: "shade the sea around the islands",
 } satisfies AppMeta;

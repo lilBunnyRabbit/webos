@@ -7,4 +7,5 @@ export default {
     problem: "A word search only asks you to spot words in straight lines.",
     solution: "Trace winding words until every letter on the board belongs to one.",
   },
+  example: "trace winding words through letters",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "Alarms, timers and time zones each want their own app.",
     solution: "World clock, alarms, timers and a stopwatch in one window.",
   },
+  example: "set a timer for the laundry",
 } satisfies AppMeta;

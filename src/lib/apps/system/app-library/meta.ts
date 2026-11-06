@@ -8,4 +8,5 @@ export default {
     problem: "With dozens of apps, it's hard to know what's there or what each one is for.",
     solution: "Browse every app by category, read what it solves, and install or open it in one click.",
   },
+  example: "find a game for a coffee break",
 } satisfies AppMeta;

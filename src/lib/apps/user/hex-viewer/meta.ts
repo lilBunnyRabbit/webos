@@ -20,4 +20,5 @@ export default {
     problem: "Some files make no sense until you see their raw bytes.",
     solution: "View any file, however large, as hex and text side by side.",
   },
+  example: "read the header bytes of a file",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "Sites you use every day get lost among browser tabs.",
     solution: "Keep a website on the desktop and open it in its own window.",
   },
+  example: "keep a favourite site in its own window",
 } satisfies AppMeta;

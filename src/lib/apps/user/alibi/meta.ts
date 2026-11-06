@@ -7,4 +7,5 @@ export default {
     problem: "Mystery games run out of cases, and their suspects only answer from a menu.",
     solution: "Ask a suspect anything in your own words and catch the lie; every case is new, and the AI never knows which line is false.",
   },
+  example: "catch a suspect in a lie",
 } satisfies AppMeta;

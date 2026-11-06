@@ -19,4 +19,5 @@ export default {
     problem: "Converting units means searching and trusting a random result.",
     solution: "Convert length, mass, temperature, data size and more.",
   },
+  example: "convert ounces to grams",
 } satisfies AppMeta;

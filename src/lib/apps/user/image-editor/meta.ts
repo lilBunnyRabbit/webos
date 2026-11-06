@@ -23,4 +23,5 @@ export default {
     problem: "Small photo fixes shouldn't need a full editing suite.",
     solution: "Crop, resize, rotate, flip and adjust the colours of an image.",
   },
+  example: "crop and rotate a photo",
 } satisfies AppMeta;

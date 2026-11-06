@@ -8,5 +8,6 @@ export default {
     problem: "You want to know what happened in a room while you were away, without watching hours of video.",
     solution: "It watches the camera and keeps a short clip of every movement, starting a few seconds before it.",
   },
+  example: "see who came into the room",
   authors: [OWNER],
 } satisfies AppMeta;

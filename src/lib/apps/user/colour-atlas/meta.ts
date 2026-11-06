@@ -8,4 +8,5 @@ export default {
     problem: "Colour models are names in a dropdown; few people have ever steered one.",
     solution: "Five rounds, five models, one target each: dial it in, see how close you got, and fill an atlas of all 70.",
   },
+  example: "match a colour in an unfamiliar model",
 } satisfies AppMeta;

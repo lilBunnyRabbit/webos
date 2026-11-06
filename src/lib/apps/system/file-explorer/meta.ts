@@ -7,4 +7,5 @@ export default {
     problem: "Your files need a home you can actually browse.",
     solution: "Open, move, copy, rename and share files and folders, like on any desktop.",
   },
+  example: "zip a folder and share it",
 } satisfies AppMeta;

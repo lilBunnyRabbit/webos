@@ -7,4 +7,5 @@ export default {
     problem: "You want to know if your doodles read as what you meant.",
     solution: "Draw six words, twenty seconds each, while the AI on this device calls out what it sees.",
   },
+  example: "see if the AI can read your doodles",
 } satisfies AppMeta;

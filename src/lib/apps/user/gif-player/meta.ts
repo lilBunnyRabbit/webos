@@ -7,4 +7,5 @@ export default {
     problem: "A GIF loops too fast to see the moment you care about.",
     solution: "Pause it, step through it frame by frame and change the speed.",
   },
+  example: "step through a GIF frame by frame",
 } satisfies AppMeta;

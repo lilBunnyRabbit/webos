@@ -7,4 +7,5 @@ export default {
     problem: "With many games, it's easy to forget what you played and how well.",
     solution: "Every game in one place, with play time, stats and today's daily puzzles.",
   },
+  example: "play today's daily puzzles",
 } satisfies AppMeta;

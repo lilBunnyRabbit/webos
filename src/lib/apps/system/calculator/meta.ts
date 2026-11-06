@@ -7,4 +7,5 @@ export default {
     problem: "You need a quick sum without reaching for your phone.",
     solution: "Type an expression with brackets and percent, and keep a history of results.",
   },
+  example: "add a 15% tip to a bill",
 } satisfies AppMeta;

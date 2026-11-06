@@ -48,5 +48,6 @@
     {#if badge}<span class="shrink-0 self-start">{@render badge()}</span>{/if}
   </div>
   <p class={cn("text-2xs text-pretty text-foreground/80", lines === 3 ? "line-clamp-3" : "line-clamp-2 min-h-[2lh]")}>{app_story(manifest).solution}</p>
+  <p class="-mt-2 min-h-[1lh] truncate text-2xs text-foreground/65" title={manifest.example}>{#if manifest.example}Try: {manifest.example}{/if}</p>
   <StoreButton {manifest} class="relative mt-auto" />
 </li>

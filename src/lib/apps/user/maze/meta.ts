@@ -7,4 +7,5 @@ export default {
     problem: "Maze algorithms are hard to picture from code alone.",
     solution: "Watch mazes being built and solved, then race through them yourself.",
   },
+  example: "race through a maze you saw built",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "You can't tell what a font file looks like from its name.",
     solution: "Preview any TTF, OTF or WOFF font with sample text, every character and its axes.",
   },
+  example: "preview a font at every size",
 } satisfies AppMeta;

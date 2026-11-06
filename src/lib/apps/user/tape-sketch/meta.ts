@@ -21,4 +21,5 @@ export default {
     solution:
       "Tap corners or walk the lengths, type each number on a big numpad, and see right away when the numbers don't add up.",
   },
+  example: "measure a room as you sketch it",
 } satisfies AppMeta;

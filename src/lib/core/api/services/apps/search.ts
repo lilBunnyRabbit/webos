@@ -24,12 +24,12 @@ function by_name(a: AppManifest, b: AppManifest): number {
 const text_of = (manifest: AppListing): SearchText => ({
   name: manifest.name,
   keywords: [manifest.id, ...(manifest.keywords ?? [])],
-  other: [manifest.description ?? "", APP_CATEGORY_LABELS[manifest.category]],
+  other: [manifest.description ?? "", manifest.example ?? "", APP_CATEGORY_LABELS[manifest.category]],
 });
 
 /**
  * Every app sorted by name, or the apps matching `query` best first (`search_ranked`: name, then id and keywords,
- * then description and category, one typo forgiven in long words). Ties sort by name.
+ * then description, example and category, one typo forgiven in long words). Ties sort by name.
  */
 export function search_apps<T extends AppListing>(apps: Iterable<T>, query: string): T[] {
   if (query.trim() === "") return [...apps].sort(by_name);

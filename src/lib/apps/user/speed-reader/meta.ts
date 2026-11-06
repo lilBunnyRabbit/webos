@@ -4,4 +4,5 @@ export default {
   description: "Reads text one word at a time, fast.",
   keywords: ["rsvp", "reading", "read", "wpm", "spritz", "books", "text"],
   pitch: { problem: "Long articles take longer to read than you have.", solution: "Read text one word at a time, at the speed you set." },
+  example: "speed-read a long article",
 } satisfies AppMeta;

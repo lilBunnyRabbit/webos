@@ -29,4 +29,5 @@ export default {
     problem: "Picking an image format means guessing how big and how ugly each one will be.",
     solution: "Encode the same picture four ways and swipe between them, with the bytes and a quality score.",
   },
+  example: "compare a photo as AVIF and WebP",
 } satisfies AppMeta;

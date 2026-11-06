@@ -7,4 +7,5 @@ export default {
     problem: "Building a new screen means guessing which colours and components exist.",
     solution: "See every design token and UI component live, in the current theme.",
   },
+  example: "look up a colour token",
 } satisfies AppMeta;

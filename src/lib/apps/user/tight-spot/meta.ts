@@ -7,4 +7,5 @@ export default {
     problem: "Parking games let the car turn on the spot, so nothing you learn carries over to the real thing.",
     solution: "Vehicles that pivot on their rear axle with a real turning circle, in a yard you drive around to pick a game or try a bus, a van or a trailer.",
   },
+  example: "back a caravan onto a camping pitch",
 } satisfies AppMeta;

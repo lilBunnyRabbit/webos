@@ -7,4 +7,5 @@ export default {
     problem: "Notes and code files need a quick, plain editor.",
     solution: "Edit any text file with highlighting for common formats, and save it back to your files.",
   },
+  example: "fix a typo in a config file",
 } satisfies AppMeta;

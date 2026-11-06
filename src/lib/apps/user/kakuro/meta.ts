@@ -7,4 +7,5 @@ export default {
     problem: "You like number puzzles with a bit more arithmetic.",
     solution: "Fill the grid so every run adds up to its clue, no digit twice.",
   },
+  example: "solve a grid of number sums",
 } satisfies AppMeta;

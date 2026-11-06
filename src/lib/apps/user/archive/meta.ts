@@ -7,4 +7,5 @@ export default {
     problem: "Zip files need a separate program to open or make.",
     solution: "Open, extract and create zip archives right in the browser.",
   },
+  example: "extract one file from a zip",
 } satisfies AppMeta;

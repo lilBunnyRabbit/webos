@@ -23,4 +23,5 @@ export default {
     problem: "Photos and PDFs can quietly carry your location and device.",
     solution: "See what a file says about itself, and strip it from images without re-encoding.",
   },
+  example: "strip the location from a photo",
 } satisfies AppMeta;

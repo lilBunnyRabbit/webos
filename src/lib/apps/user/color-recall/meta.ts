@@ -7,4 +7,5 @@ export default {
     problem: "You think you know your colours, and nothing tells you how close you really are.",
     solution: "Memorise five colours, rebuild each with sliders, and score how close you got.",
   },
+  example: "rebuild five colours from memory",
 } satisfies AppMeta;

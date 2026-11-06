@@ -8,5 +8,6 @@ export default {
     problem: "Falling blocks always fall the same way, so the old moves stop being a puzzle.",
     solution: "A square where every wall is a floor: pieces start in the middle and head for the wall the game picks.",
   },
+  example: "stack blocks on all four walls",
   authors: [{ name: "LaxDOTexe", github: "LaxDOTexe" }, OWNER],
 } satisfies AppMeta;

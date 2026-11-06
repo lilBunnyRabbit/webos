@@ -7,4 +7,5 @@ export default {
     problem: "You're looking at WebOS and wonder who made it.",
     solution: "Meet the maker: experience, selected work, the projects behind it, and how to get in touch.",
   },
+  example: "see who built WebOS",
 } satisfies AppMeta;

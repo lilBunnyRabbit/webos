@@ -7,4 +7,5 @@ export default {
     problem: "A quiet card game makes the best short break.",
     solution: "Klondike: build each suit from ace to king, drawing one card or three.",
   },
+  example: "play Klondike drawing three",
 } satisfies AppMeta;

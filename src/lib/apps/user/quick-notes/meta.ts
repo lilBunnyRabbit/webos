@@ -7,4 +7,5 @@ export default {
     problem: "A thought gets lost while you look for somewhere to write it.",
     solution: "Capture a note or a todo from anywhere and sort it later.",
   },
+  example: "jot down a todo before you forget",
 } satisfies AppMeta;

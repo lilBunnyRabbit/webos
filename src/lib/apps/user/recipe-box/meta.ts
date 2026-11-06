@@ -20,4 +20,5 @@ export default {
     problem: "Recipes are hard to scale and follow while you cook.",
     solution: "Keep them as Cooklang files, scale servings and cook step by step with timers.",
   },
+  example: "scale a recipe for six people",
 } satisfies AppMeta;

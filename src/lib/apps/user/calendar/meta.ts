@@ -7,4 +7,5 @@ export default {
     problem: "Plans, reminders and worked hours end up scattered across apps.",
     solution: "See your events by month, week or agenda, with reminders and due cards in one view.",
   },
+  example: "set a reminder for a dentist visit",
 } satisfies AppMeta;

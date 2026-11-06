@@ -387,7 +387,7 @@ const achievement_members: Members<Achievement, "goal" | "id" | "secret" | "text
 const app_author_members: Members<AppAuthor, "github" | "name" | "url"> = true;
 const app_highlight_members: Members<AppHighlight, "icon" | "text" | "title"> = true;
 const app_pitch_members: Members<AppPitch, "problem" | "solution"> = true;
-const app_meta_members: Members<AppMeta, "authors" | "description" | "keywords" | "pitch"> = true;
+const app_meta_members: Members<AppMeta, "authors" | "description" | "example" | "keywords" | "pitch"> = true;
 const app_replacement_members: Members<AppReplacement, "app" | "props"> = true;
 const app_sheet_props_members: Members<AppSheetProps, "input" | "resolve"> = true;
 const widget_props_members: Members<WidgetProps, "name" | "props" | "size" | "style"> = true;

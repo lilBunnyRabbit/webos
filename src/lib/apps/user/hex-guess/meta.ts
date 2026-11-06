@@ -7,4 +7,5 @@ export default {
     problem: "You write hex codes every day and still can't read one at a glance.",
     solution: "See a colour, guess its hex code, and close in with a higher or lower hint per digit.",
   },
+  example: "name today's colour in hex",
 } satisfies AppMeta;

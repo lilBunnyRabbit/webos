@@ -7,4 +7,5 @@ export default {
     problem: "A favourite photo deserves more than sitting in a folder.",
     solution: "Cut any picture into a jigsaw puzzle and put it back together.",
   },
+  example: "turn a holiday photo into a jigsaw",
 } satisfies AppMeta;

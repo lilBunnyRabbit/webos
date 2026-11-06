@@ -7,4 +7,5 @@ export default {
     problem: "It's hard to remember when you last did something.",
     solution: "Count up from the last time, and see how long each run lasted.",
   },
+  example: "count days since you watered plants",
 } satisfies AppMeta;

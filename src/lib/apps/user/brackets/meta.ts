@@ -18,4 +18,5 @@ export default {
     problem: "Running a game-night tournament on paper gets messy fast.",
     solution: "Make knockout, double elimination, round robin or race-cup brackets and track every result.",
   },
+  example: "run a game-night knockout",
 } satisfies AppMeta;

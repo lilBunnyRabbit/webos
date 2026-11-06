@@ -7,4 +7,5 @@ export default {
     problem: "Moving a file to the phone next to you usually goes through the cloud.",
     solution: "Send it straight between devices, connected by scanning each other's QR code.",
   },
+  example: "send a photo to the phone beside you",
 } satisfies AppMeta;

@@ -7,4 +7,5 @@ export default {
     problem: "Long work sessions blur together and focus fades.",
     solution: "Work in timed sessions with breaks, and see how your week went.",
   },
+  example: "focus for 25 minutes, then rest",
 } satisfies AppMeta;

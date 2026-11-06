@@ -7,4 +7,5 @@ export default {
     problem: "Guild Wars 2 progress hides across characters, vaults and the wiki.",
     solution: "See Wizard's Vault objectives, your wallet, every character's inventory and crafting goals from your API key.",
   },
+  example: "check today's Wizard's Vault objectives",
 } satisfies AppMeta;

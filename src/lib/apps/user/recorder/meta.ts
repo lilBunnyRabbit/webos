@@ -20,4 +20,5 @@ export default {
     problem: "Recording a quick voice note or screen clip needs extra software.",
     solution: "Record your voice, screen or camera, and take photos, straight to your files.",
   },
+  example: "record a quick voice note",
 } satisfies AppMeta;

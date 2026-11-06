@@ -7,4 +7,5 @@ export default {
     problem: "You want a logic puzzle you can finish over a coffee.",
     solution: "Break a secret code of distinct digits, told only how many sit in the right place.",
   },
+  example: "break today's daily code",
 } satisfies AppMeta;

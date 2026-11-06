@@ -7,4 +7,5 @@ export default {
     problem: "Writing Funky Trees in SimplePlanes is fiddly without feedback.",
     solution: "Write them as code, simulate the result and copy the setters into the game.",
   },
+  example: "simulate a Funky Trees expression",
 } satisfies AppMeta;

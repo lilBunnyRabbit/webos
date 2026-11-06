@@ -7,4 +7,5 @@ export default {
     problem: "Sometimes you just want a few minutes of something familiar.",
     solution: "Falling blocks: clear rows before the stack reaches the top.",
   },
+  example: "clear four rows at once",
 } satisfies AppMeta;

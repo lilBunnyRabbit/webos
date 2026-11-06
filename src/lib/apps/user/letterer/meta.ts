@@ -23,4 +23,5 @@ export default {
     problem: "One word puzzle a day isn't enough.",
     solution: "Guess hidden words on up to eight boards at once, against a dodging word or in a survival run.",
   },
+  example: "guess four words at once",
 } satisfies AppMeta;

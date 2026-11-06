@@ -81,4 +81,5 @@ export default {
     problem: "Everyday image chores each send you to a different website.",
     solution: "Remove backgrounds, join, split, compress and compare images, all on your device.",
   },
+  example: "shrink a photo under 1 MB",
 } satisfies AppMeta;

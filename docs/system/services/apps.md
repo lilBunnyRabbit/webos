@@ -214,7 +214,7 @@ A stub is an `AppManifest` built from the entry: `id`, `name`, `version`, `categ
 
 ### App text
 
-An app's display text (`description`, `keywords`, `pitch`, `authors`) is written in its `meta.ts` ([manifest](../apps/manifest.md#meta-metats)); the build copies it into the app's catalogue entry, and the OS reads it from there. No `meta.ts` loads at runtime.
+An app's display text (`description`, `keywords`, `pitch`, `example`, `authors`) is written in its `meta.ts` ([manifest](../apps/manifest.md#meta-metats)); the build copies it into the app's catalogue entry, and the OS reads it from there. No `meta.ts` loads at runtime.
 
 - **`meta(id)`** resolves the entry's text (`{}` for an app without any or an unknown id); an id the device doesn't know fetches the catalogue first.
 - **`listings(filter?)`** is the read side: every `AppListing` (`AppManifest & AppMeta & { daily?, achievement_count? }`), from a `$derived` over the registry and the entries. Text is there as soon as an app is known; it never awaits. `filter.installed` and `filter.all` work as in `list()`; Game Hub, Settings › About › Credits and the Style Guide pass `all: true` instead of calling `catalogue()` themselves. The start menu, the mobile app list, the first-boot intro's suggestions, the App Store and Showcase, Game Hub, Settings › About › Credits and the Style Guide derive their lists from it. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement after `catalogue()`, then reads `listings()` ([version](version.md)).

@@ -7,4 +7,5 @@ export default {
     problem: "Collecting answers usually needs a form service and an account.",
     solution: "Write a form as a Markdown checklist, share it as a link and paste back the answers people send.",
   },
+  example: "collect RSVPs for a party",
 } satisfies AppMeta;

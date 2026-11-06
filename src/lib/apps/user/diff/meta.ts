@@ -7,4 +7,5 @@ export default {
     problem: "Spotting what changed between two versions by eye is error-prone.",
     solution: "Compare two files or pasted texts side by side or inline.",
   },
+  example: "compare two drafts of a letter",
 } satisfies AppMeta;

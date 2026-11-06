@@ -20,4 +20,5 @@ export default {
     problem: "Making a QR code for Wi-Fi or a payment usually means an ad-filled website.",
     solution: "Make QR codes for links, Wi-Fi, contacts and payments, and see how one is built.",
   },
+  example: "share your Wi-Fi with a QR code",
 } satisfies AppMeta;

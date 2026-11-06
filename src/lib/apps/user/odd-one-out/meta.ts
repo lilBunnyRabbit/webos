@@ -7,4 +7,5 @@ export default {
     problem: "You can't tell how fine your eye for colour really is.",
     solution: "Spot the one tile that's a shade off, again and again, as the difference fades.",
   },
+  example: "spot the tile a shade off",
 } satisfies AppMeta;

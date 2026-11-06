@@ -7,4 +7,5 @@ export default {
     problem: "Deciding who goes first or making a password needs a fair coin.",
     solution: "Random numbers, draws, dice, coin flips, list picks and passwords.",
   },
+  example: "flip a coin to decide who goes first",
 } satisfies AppMeta;

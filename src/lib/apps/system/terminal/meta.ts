@@ -7,4 +7,5 @@ export default {
     problem: "Clicking through windows is slow when you know exactly what you want.",
     solution: "Type commands over files, windows and apps, and pipe one result into the next.",
   },
+  example: "open any file by typing its path",
 } satisfies AppMeta;

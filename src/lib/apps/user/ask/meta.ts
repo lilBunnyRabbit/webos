@@ -7,4 +7,5 @@ export default {
     problem: "Finding one answer in a long document takes a lot of reading.",
     solution: "Ask questions about a text file, answered by AI that runs on your own device.",
   },
+  example: "ask a long document a question",
 } satisfies AppMeta;

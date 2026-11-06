@@ -31,4 +31,5 @@ export default {
     problem: "Checking one colour means a picker site, a converter, a contrast checker and a blindness simulator.",
     solution: "One window shares one colour across picking, 70 models, WCAG contrast, colour-blind previews, harmonies and palettes.",
   },
+  example: "check text contrast on a button",
 } satisfies AppMeta;

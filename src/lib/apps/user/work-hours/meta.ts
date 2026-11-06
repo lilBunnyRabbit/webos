@@ -7,4 +7,5 @@ export default {
     problem: "Worked hours tracked on paper rarely add up at the end of the month.",
     solution: "Clock in and out, see hours per day, week and month, and print a time sheet.",
   },
+  example: "print this month's time sheet",
 } satisfies AppMeta;

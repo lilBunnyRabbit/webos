@@ -21,4 +21,5 @@ export default {
     problem: "Something feels slow and you can't tell what's doing it.",
     solution: "See every window, widget, background task and the frame rate live, and close what's heavy.",
   },
+  example: "find the window slowing things down",
 } satisfies AppMeta;

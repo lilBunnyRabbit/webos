@@ -27,4 +27,5 @@ export default {
     problem: "Algorithms in textbooks are frozen pseudocode, so it's hard to see what actually happens at each step.",
     solution: "Run them on your own input and step through every comparison and change, explained in plain words with the pseudocode lit.",
   },
+  example: "watch quicksort sort your own list",
 } satisfies AppMeta;

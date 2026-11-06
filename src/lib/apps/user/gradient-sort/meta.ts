@@ -7,4 +7,5 @@ export default {
     problem: "Colour puzzles are either too easy or a wall of near-identical tiles.",
     solution: "A scrambled gradient with a few tiles locked in place: swap the rest until it flows again.",
   },
+  example: "sort a scrambled gradient",
 } satisfies AppMeta;

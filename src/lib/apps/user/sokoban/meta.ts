@@ -7,4 +7,5 @@ export default {
     problem: "You want a puzzle where one wrong push ruins the plan.",
     solution: "Push every crate onto a goal without boxing yourself in.",
   },
+  example: "push every crate onto a goal",
 } satisfies AppMeta;
