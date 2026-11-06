@@ -1,6 +1,6 @@
 ## Finding an app
 
-- **Discover** shows new and recently updated apps and collections. **All apps** lists everything, with filters, a sort and a grid or list view.
+- **Discover** shows new and recently updated apps and collections. **All apps** lists everything, with filters and a sort. Apps show as cards that say what each one does, or as a compact list: the toggle beside the title switches, there and in See all and search results.
 - Search by name, or describe what you need in a sentence: apps that fit show under **Related**. When the browser's built-in AI is available, it adds its picks under **AI suggests**.
 - Press Enter in the search box to show the first result's page.
 

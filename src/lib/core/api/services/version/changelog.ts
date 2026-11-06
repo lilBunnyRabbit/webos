@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.2.0",
+    date: "2026-11-06",
+    title: "App cards everywhere",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["app-library"],
+        text: "See all, All apps and search in the App Store show cards that say what each app does, with a list view one tap away.",
+      },
+    ],
+  },
+  {
     version: "4.1.1",
     date: "2026-11-06",
     title: "Smoother App Store swipes",

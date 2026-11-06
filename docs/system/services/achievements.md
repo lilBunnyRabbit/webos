@@ -94,7 +94,7 @@ Only ids this change added to the file it read under the lock toast, after the w
 ## UI
 
 - `components/achievements/achievement-list.svelte`: the list both apps use. A two-column grid from `@xl`, one card per entry (`bg-background-light`, `ring-foreground/8`): a trophy on `primary/12` when unlocked with the date, a lock otherwise; locked cards dimmed to `foreground/80`; a `progressbar` with `progress_text` for a locked achievement with a goal.
-- **App Store › app page:** "Achievements · N of M" in place of the old Goals, with the last-used line under it ([system apps](../system-apps.md)). Grid tiles and shelf cards add "· 🏆 N" after the category for apps that declare some.
+- **App Store › app page:** "Achievements · N of M" in place of the old Goals, with the last-used line under it ([system apps](../system-apps.md)). App cards (shelves and grids) add "· 🏆 N" after the category for apps that declare some.
 - **Game Hub › Trophies:** every game with entries, those that declare some first, then by share unlocked; a header with the total, per game its icon, "N of M", a bar and Play.
 
 ## Shell

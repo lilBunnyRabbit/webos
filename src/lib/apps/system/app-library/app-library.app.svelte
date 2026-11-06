@@ -30,6 +30,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
+  import AppList from "./app-list.svelte";
   import AppPage from "./app-page.svelte";
   import { AppSizes } from "./app-sizes.svelte";
   import Browse from "./browse.svelte";
@@ -49,8 +50,8 @@
   } from "./library";
   import LibraryPage from "./library-page.svelte";
   import { APP_LIBRARY_PROPS, place_of, StorePlace } from "./props";
-  import StoreRow from "./store-row.svelte";
   import Updates from "./updates.svelte";
+  import ViewToggle from "./view-toggle.svelte";
   import { waiting_download } from "./waiting";
 
   let { view: initial_view, app: initial_app }: Partial<z.infer<typeof APP_LIBRARY_PROPS>> = $props();
@@ -233,9 +234,10 @@
 </script>
 
 {#snippet back_bar(label: string, onback: () => void)}
-  <div class="mx-auto flex w-full max-w-4xl items-center gap-2 px-4 pt-3 @2xl:px-8">
+  <div class="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 pt-3 @2xl:px-8">
     <IconButton label="Back" class="-ml-1" onclick={onback}><ArrowLeftIcon weight="bold" /></IconButton>
-    <h2 class="truncate text-xl font-semibold">{label}</h2>
+    <h2 class="min-w-0 flex-1 truncate text-xl font-semibold">{label}</h2>
+    <ViewToggle bind:view={view.value} />
   </div>
 {/snippet}
 
@@ -322,8 +324,11 @@
       {#if middle}
         <div class={cn("absolute inset-0 overflow-y-auto overscroll-contain", selected && "hidden")}>
           {#if searching}
-            <div class="mx-auto flex max-w-4xl flex-col gap-4 px-4 pt-5 pb-8 @2xl:px-8">
-              <h2 class="text-xl font-semibold">Results for “{query.trim()}”</h2>
+            <div class="mx-auto flex max-w-6xl flex-col gap-4 px-4 pt-5 pb-8 @2xl:px-8">
+              <div class="flex items-center gap-2">
+                <h2 class="min-w-0 flex-1 text-xl font-semibold">Results for “{query.trim()}”</h2>
+                <ViewToggle bind:view={view.value} />
+              </div>
               {#if results.length === 0 && !sentence.pending}
                 <EmptyState icon={MagnifyingGlassIcon} title="No apps match" description={`Nothing called "${query}".`} class="py-10">
                   {#snippet actions()}<Button size="sm" onclick={() => (query = "")}>Clear search</Button>{/snippet}
@@ -336,19 +341,15 @@
                       {#if section.id === SearchSection.SUGGESTED}<SparkleIcon weight="fill" class="size-3 text-primary" />{/if}{section.label}
                     </h3>
                   {/if}
-                  <ul class="flex flex-col">
-                    {#each section.apps as manifest (manifest.id)}<StoreRow {manifest} onselect={select} />{/each}
-                  </ul>
+                  <AppList apps={section.apps} view={view.value} onselect={select} {fresh} {updated} />
                 </section>
               {/each}
             </div>
           {:else if collection}
             {@render back_bar(collection.label, () => (collection_id.value = null))}
-            <div class="mx-auto flex max-w-4xl flex-col gap-2 px-4 pt-1 pb-8 @2xl:px-8">
+            <div class="mx-auto flex max-w-6xl flex-col gap-3 px-4 pt-1 pb-8 @2xl:px-8">
               {#if collection.description}<p class="text-ui text-foreground/80">{collection.description}</p>{/if}
-              <ul class="flex flex-col">
-                {#each collection.apps as manifest (manifest.id)}<StoreRow {manifest} onselect={select} />{/each}
-              </ul>
+              <AppList apps={collection.apps} view={view.value} onselect={select} {fresh} {updated} />
             </div>
           {/if}
         </div>
