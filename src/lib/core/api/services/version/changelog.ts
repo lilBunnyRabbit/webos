@@ -14,6 +14,10 @@ export const CHANGELOG: Release[] = [
         apps: ["app-library"],
         text: "Swiping through App Store rows on a phone moves one card at a time instead of jumping past several.",
       },
+      {
+        kind: FIXED,
+        text: "On a phone, All apps stays at the bottom of the home screen instead of slipping out of view once recent apps show up.",
+      },
     ],
   },
   {

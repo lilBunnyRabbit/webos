@@ -393,19 +393,23 @@
       {/each}
     </ul>
 
-    <button
-      data-home-row
-      onclick={() => apps.launch("app-library")}
-      class={cn(
-        "mt-1 flex min-h-14 w-full items-center gap-4 rounded-2xl px-2 py-1.5 text-left text-foreground/65 transition-[background-color,opacity] duration-150 active:bg-foreground/8",
-        editing && "opacity-40"
-      )}
-      inert={editing}
-    >
-      <span class="grid size-11 shrink-0 place-items-center"><SquaresFourIcon class="size-6" weight="duotone" /></span>
-      <span data-wallpaper-label class="text-xl tracking-tight">All apps</span>
-    </button>
   </div>
+
+  <!-- Outside the scroller: Recent plus a few pins already fill a small phone, which pushed it below the fold. -->
+  <button
+    onclick={() => apps.launch("app-library")}
+    class={cn(
+      "mr-14 mb-3 ml-4 flex min-h-14 shrink-0 items-center gap-3 rounded-2xl bg-background-lighter/85 px-3 py-2 text-left shadow-raised ring-1 ring-foreground/12 backdrop-blur-md transition-[background-color,opacity] duration-150 active:bg-background-lighter",
+      editing && "pointer-events-none opacity-40"
+    )}
+    inert={editing}
+  >
+    <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary"><SquaresFourIcon class="size-6" weight="duotone" /></span>
+    <span class="flex min-w-0 flex-col">
+      <span class="text-base font-medium">All apps</span>
+      <span class="truncate text-xs text-foreground/65">Find more in the App Store</span>
+    </span>
+  </button>
 
   {#if !editing}
     <LetterIndex onlaunch={(id) => apps.launch(id)} />
