@@ -202,3 +202,4 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `backdrop-filter` | Backdrop blur | No frosted-glass blur behind dialogs, docks and widgets. |  | 76 | 103 | 18 |
 | `badging` | App badge | The missed-alarm count on the installed app's icon. |  | 81 | no | 17 |
 | `gamepad-rumble` | Controller rumble | Drive Hub's controller doesn't buzz on a bump or close to things. | `tight-spot` | 68 | no | 16.4 |
+| `device-pixel-box` | Device-pixel canvas size | A game canvas stays slightly blurry after moving to a screen with a different zoom, until it resizes. | `tight-spot` `lunar-lander` | 84 | 93 | no |

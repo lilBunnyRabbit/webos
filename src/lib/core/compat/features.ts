@@ -649,4 +649,13 @@ export const FEATURES: Feature[] = [
     min: min("68", null, "16.4"),
     probe: () => proto("Gamepad", "vibrationActuator"),
   },
+  {
+    id: "device-pixel-box",
+    name: "Device-pixel canvas size",
+    lost: "A game canvas stays slightly blurry after moving to a screen with a different zoom, until it resizes.",
+    level: Level.COSMETIC,
+    apps: ["tight-spot", "lunar-lander"],
+    min: min("84", "93", null),
+    probe: () => proto("ResizeObserverEntry", "devicePixelContentBoxSize"),
+  },
 ];

@@ -144,7 +144,8 @@
       const dpr = pixels && box.inlineSize ? pixels.inlineSize / box.inlineSize : window.devicePixelRatio;
       size = { width: box.inlineSize, height: box.blockSize, dpr };
     });
-    observer.observe(canvas, { box: "device-pixel-content-box" });
+    if ("devicePixelContentBoxSize" in ResizeObserverEntry.prototype) observer.observe(canvas, { box: "device-pixel-content-box" });
+    else observer.observe(canvas);
     return () => observer.disconnect();
   });
 

@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.0.1",
+    date: "2026-11-06",
+    title: "Drive Hub on iPhone",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["tight-spot", "lunar-lander"],
+        text: "Drive Hub and Lunar Lander open again on iPhone and in Safari instead of crashing.",
+      },
+    ],
+  },
+  {
     version: "4.0.0",
     date: "2026-11-05",
     title: "App data in files",
