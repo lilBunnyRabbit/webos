@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.2.1",
+    date: "2026-11-06",
+    title: "Steady typing in Quick Notes",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["quick-notes"],
+        text: "Quick Notes no longer flickers or moves the cursor while you type, and the sticky note widget doesn't either.",
+      },
+    ],
+  },
+  {
     version: "4.2.0",
     date: "2026-11-06",
     title: "App cards everywhere",
