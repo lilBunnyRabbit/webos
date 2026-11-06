@@ -1,4 +1,5 @@
-import type { Polygon, Pose, Vec } from "./geometry";
+import type { Bay } from "$kit/games/play2d/precision";
+import type { Polygon, Pose, Vec } from "$kit/games/play2d/geometry";
 import type { Vehicle } from "./vehicle";
 
 export const SolidKind = {
@@ -21,12 +22,7 @@ export interface Solid {
   car?: { pose: Pose; length: number; width: number; paint: number; vehicle?: Vehicle };
 }
 
-export interface Bay {
-  shape: Polygon;
-  /** The way the car's nose must point; with `either` the opposite way counts too. */
-  heading: number;
-  either: boolean;
-}
+export type { Bay };
 
 export const MarkKind = { LINE: "line", DASH: "dash", STOP: "stop" } as const;
 export type MarkKind = (typeof MarkKind)[keyof typeof MarkKind];

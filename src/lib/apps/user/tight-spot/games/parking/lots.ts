@@ -1,5 +1,5 @@
 import type { Rng } from "$lib/core/utils/random";
-import { lerp, rect, type Polygon, type Vec } from "../../core/geometry";
+import { lerp, rect, type Polygon, type Vec } from "$kit/games/play2d/geometry";
 import {
   angled,
   between,

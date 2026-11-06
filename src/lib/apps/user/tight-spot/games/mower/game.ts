@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { Vec } from "../../core/geometry";
+import type { Vec } from "$kit/games/play2d/geometry";
 import { collide, obstacles } from "../../core/obstacles";
 import { SolidKind } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import { bodies, create_car, Gear, MOWER, shift, step, Vehicle, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
 import { BED_COST, CELL, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, stripe, trample, type Grid, type Tally } from "./coverage";
 import { deck_centre, deck_of, swept } from "./deck";

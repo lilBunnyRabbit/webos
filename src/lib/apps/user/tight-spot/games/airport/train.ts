@@ -1,4 +1,4 @@
-import { angle_between, centroid, clamp, wrap_angle, type Vec } from "../../core/geometry";
+import { angle_between, centroid, clamp, wrap_angle, type Vec } from "$kit/games/play2d/geometry";
 import { drive, type Move } from "../../core/planner";
 import {
   jackknifed,

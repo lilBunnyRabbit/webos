@@ -1,4 +1,4 @@
-import { angle_between, type Pose } from "../../core/geometry";
+import { angle_between, type Pose } from "$kit/games/play2d/geometry";
 import { arc, body_ends, type Placement } from "../../core/vehicle";
 import { plan, type Move } from "../../core/planner";
 import {
@@ -19,7 +19,7 @@ import {
   type Resting,
 } from "./game";
 import { PALLET, type Slot } from "./warehouse";
-import { MAX_ANGLE } from "../../core/precision";
+import { MAX_ANGLE } from "$kit/games/play2d/precision";
 
 const MARGIN = 0.05;
 const LINE = 0.05;

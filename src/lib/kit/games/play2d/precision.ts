@@ -1,5 +1,11 @@
 import { angle_between, clamp, type Polygon, type Vec } from "./geometry";
-import type { Bay } from "./scene";
+
+export interface Bay {
+  shape: Polygon;
+  /** The way the body's nose must point; with `either` the opposite way counts too. */
+  heading: number;
+  either: boolean;
+}
 
 /** The most a body may be off its bay's axis and still count as straight in it. */
 export const MAX_ANGLE = (5 * Math.PI) / 180;

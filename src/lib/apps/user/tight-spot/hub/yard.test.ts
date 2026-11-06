@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { inside_convex, overlaps } from "../core/collision";
-import { bounds_of } from "../core/geometry";
+import { inside_convex, overlaps } from "$kit/games/play2d/collision";
+import { bounds_of } from "$kit/games/play2d/geometry";
 import { collide, obstacles } from "../core/obstacles";
 import { plan } from "../core/planner";
 import type { World } from "../core/lot";

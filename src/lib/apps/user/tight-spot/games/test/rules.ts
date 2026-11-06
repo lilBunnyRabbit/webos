@@ -1,4 +1,4 @@
-import type { Polygon, Vec } from "../../core/geometry";
+import type { Polygon, Vec } from "$kit/games/play2d/geometry";
 import { Signal } from "../../core/signal";
 import { body_centre, body_ends, corners, type Car, type VehicleSpec } from "../../core/vehicle";
 import { EventKind, limit_at, type Located, type Route, type RouteEvent } from "./route";

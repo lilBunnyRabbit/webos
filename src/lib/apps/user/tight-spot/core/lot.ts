@@ -1,9 +1,9 @@
 import { create_rng, type Rng } from "$lib/core/utils/random";
-import { bounds_of, centroid, rect, type Bounds, type Polygon, type Pose, type Vec } from "./geometry";
+import { bounds_of, centroid, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { garage, under_headroom } from "./garage";
 import { angled, Builder, fit_for, rows, RowsKind, type Layout } from "./lot-layout";
 import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Portal, type Solid, type Surface } from "./scene";
-import { hash } from "./seed";
+import { hash } from "$kit/games/play2d/seed";
 import { HATCHBACK, type VehicleSpec } from "./vehicle";
 
 /** `KERBSIDE` is a road whose east–west arms have parallel bays let into the kerb on both sides; `FLOOR` a garage's floor below its lot. */

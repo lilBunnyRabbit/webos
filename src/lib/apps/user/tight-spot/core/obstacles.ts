@@ -1,5 +1,5 @@
-import { contact_point, overlaps } from "./collision";
-import { bounds_of, bounds_overlap, centroid, type Bounds, type Polygon, type Vec } from "./geometry";
+import { contact_point, overlaps } from "$kit/games/play2d/collision";
+import { bounds_of, bounds_overlap, centroid, type Bounds, type Polygon, type Vec } from "$kit/games/play2d/geometry";
 import { SolidKind, type Solid } from "./scene";
 import { bodies, VEHICLES, type Placement, type VehicleSpec } from "./vehicle";
 

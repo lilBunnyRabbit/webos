@@ -1,22 +1,8 @@
-import type { Insets } from "../../core/camera";
-import {
-  bay_pointer,
-  begin_frame,
-  contact_rings,
-  fill,
-  guides,
-  hitboxes,
-  outlined,
-  pallet,
-  PalletLoad,
-  path,
-  player,
-  solids,
-  union,
-  type Palette,
-  type View,
-} from "../../core/draw";
-import type { Polygon, Pose, Vec } from "../../core/geometry";
+import type { Insets } from "$kit/games/play2d/camera";
+import { begin_frame, fill, path, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { bay_pointer, contact_rings, guides, hitboxes, outlined, pallet, PalletLoad, player, solids, union } from "../../core/draw";
+import type { Polygon, Pose, Vec } from "$kit/games/play2d/geometry";
 import { SolidKind } from "../../core/scene";
 import { Gear, Vehicle } from "../../core/vehicle";
 import { bump_flash, carried_pose, fork_depth, hitbox_shapes, objective, SPEC, Status, type GameState } from "./game";

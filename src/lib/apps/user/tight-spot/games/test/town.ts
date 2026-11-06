@@ -1,4 +1,4 @@
-import { oriented_box, rect, wrap_angle, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { oriented_box, rect, wrap_angle, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { SolidKind, type Bay, type Solid } from "../../core/scene";
 import { Vehicle, VEHICLES } from "../../core/vehicle";
 

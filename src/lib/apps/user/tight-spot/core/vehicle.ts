@@ -1,4 +1,4 @@
-import { clamp, wrap_angle, type Pose, type Vec } from "./geometry";
+import { clamp, wrap_angle, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import type { Signal } from "./signal";
 
 export const Gear = { PARK: "P", REVERSE: "R", NEUTRAL: "N", DRIVE: "D" } as const;

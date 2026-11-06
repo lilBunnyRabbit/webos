@@ -1,5 +1,5 @@
 import { CHUNK, chunk_at, ChunkKind, open_world, type Chunk, type World } from "../../core/lot";
-import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { bounds_of, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import type { Bay } from "../../core/scene";
 import { pose_from_centre, VAN, VEHICLES, type Vehicle } from "../../core/vehicle";
 

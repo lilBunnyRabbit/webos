@@ -1,4 +1,4 @@
-import type { Vec } from "../../core/geometry";
+import type { Vec } from "$kit/games/play2d/geometry";
 import { collide, obstacles } from "../../core/obstacles";
 import { body_centre, create_car, Gear, shift, step, type Car, type Input } from "../../core/vehicle";
 import { record_frame, type Ghost } from "./ghost";

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { overlaps } from "../../core/collision";
+import { overlaps } from "$kit/games/play2d/collision";
 import { collide, obstacles } from "../../core/obstacles";
 import { create_car, folds, Gear, NO_INPUT, to_world, type Car, type VehicleSpec } from "../../core/vehicle";
 import { aircraft_parts, NOSE_GEAR, nose_gear, pose_from_nose_gear } from "./aircraft";

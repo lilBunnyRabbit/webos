@@ -1,19 +1,9 @@
-import type { Insets } from "../../core/camera";
-import {
-  bay_pointer,
-  begin_frame,
-  contact_rings,
-  fill,
-  guides,
-  hitboxes,
-  outlined,
-  path,
-  player,
-  type Palette,
-  type View,
-} from "../../core/draw";
+import type { Insets } from "$kit/games/play2d/camera";
+import { begin_frame, fill, path, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { bay_pointer, contact_rings, guides, hitboxes, outlined, player } from "../../core/draw";
 import { flashes } from "../../core/draw-vehicles";
-import { oriented_box, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { oriented_box, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { Gear, to_world, Vehicle, type VehicleSpec } from "../../core/vehicle";
 import { AircraftPart, aircraft_parts, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, SHAPES, TAIL } from "./aircraft";
 import { KitKind, tunnel, type Apron, type Kit } from "./apron";

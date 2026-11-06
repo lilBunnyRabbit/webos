@@ -5,7 +5,7 @@ import { build_lot } from "./lots";
 
 export * from "./kinds";
 export * from "../../core/lot";
-export { hash } from "../../core/seed";
+export { hash } from "$kit/games/play2d/seed";
 
 const MID = CHUNK / 2;
 

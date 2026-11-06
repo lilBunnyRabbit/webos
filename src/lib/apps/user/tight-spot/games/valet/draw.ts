@@ -1,24 +1,9 @@
-import type { Insets } from "../../core/camera";
+import type { Insets } from "$kit/games/play2d/camera";
 import { vehicle_solids } from "../../core/obstacles";
-import {
-  bay_outline,
-  bay_pointer,
-  beams,
-  begin_frame,
-  contact_rings,
-  fill,
-  floor_labels,
-  ground,
-  guides,
-  headroom,
-  hitboxes,
-  player,
-  sensor_arcs,
-  solids,
-  type Palette,
-  type View,
-} from "../../core/draw";
-import { bounds_of, centroid, type Vec } from "../../core/geometry";
+import { begin_frame, fill, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { bay_outline, bay_pointer, beams, contact_rings, floor_labels, ground, guides, headroom, hitboxes, player, sensor_arcs, solids } from "../../core/draw";
+import { bounds_of, centroid, type Vec } from "$kit/games/play2d/geometry";
 import type { End } from "../../core/sensors";
 import { bodies, body_centre, Gear, Vehicle, VEHICLES } from "../../core/vehicle";
 import { countdown, dented, JobKind, spec_of, Status, type GameState } from "./game";

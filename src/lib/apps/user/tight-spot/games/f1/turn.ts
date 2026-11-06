@@ -1,4 +1,4 @@
-import type { Vec } from "../../core/geometry";
+import type { Vec } from "$kit/games/play2d/geometry";
 
 // Slow enough that a flick of the wheel doesn't swing the board (the owner disliked a twitchy view), quick enough that
 // the car still points up out of a hairpin.

@@ -1,7 +1,9 @@
-import { bounds_of, type Bounds, type Vec } from "../core/geometry";
+import { bounds_of, type Bounds, type Vec } from "$kit/games/play2d/geometry";
 import { vehicle_solids } from "../core/obstacles";
-import type { Insets } from "../core/camera";
-import { beams, begin_frame, contact_rings, floor_labels, ground, guides, headroom, hitboxes, path, player, sensor_arcs, solids, type Palette, type View } from "../core/draw";
+import type { Insets } from "$kit/games/play2d/camera";
+import { begin_frame, path, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { beams, contact_rings, floor_labels, ground, guides, headroom, hitboxes, player, sensor_arcs, solids } from "../core/draw";
 import { CHUNK } from "../core/lot";
 import type { End } from "../core/sensors";
 import { bodies, Gear, type Car, type Vehicle, type VehicleSpec } from "../core/vehicle";

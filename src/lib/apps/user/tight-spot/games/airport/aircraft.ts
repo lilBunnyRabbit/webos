@@ -1,4 +1,4 @@
-import { centroid, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { centroid, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { PUSHBACK, to_world } from "../../core/vehicle";
 
 export const AIRLINER = PUSHBACK.hitches[0];

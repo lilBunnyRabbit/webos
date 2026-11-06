@@ -1,4 +1,4 @@
-import { clamp, wrap_angle, type Vec } from "../../core/geometry";
+import { clamp, wrap_angle, type Vec } from "$kit/games/play2d/geometry";
 import { collide, obstacles } from "../../core/obstacles";
 import { drive, type Move } from "../../core/planner";
 import { folds, max_steer, type Placement } from "../../core/vehicle";

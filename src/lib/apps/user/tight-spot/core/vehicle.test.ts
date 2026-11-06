@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { angle_between } from "./geometry";
+import { angle_between } from "$kit/games/play2d/geometry";
 import {
   axles,
   bodies,

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import type { Pose } from "../../core/geometry";
+import type { Pose } from "$kit/games/play2d/geometry";
 import { body_ends, Gear, type Placement } from "../../core/vehicle";
 import {
   advance,

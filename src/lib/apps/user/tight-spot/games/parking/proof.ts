@@ -1,4 +1,4 @@
-import { angle_between, centroid, type Pose } from "../../core/geometry";
+import { angle_between, centroid, type Pose } from "$kit/games/play2d/geometry";
 import { chunk_at, route, type World } from "../../core/lot";
 import { collide, obstacles, type Obstacles } from "../../core/obstacles";
 import { drive, inflate, plan, type Move, type PlanOptions } from "../../core/planner";

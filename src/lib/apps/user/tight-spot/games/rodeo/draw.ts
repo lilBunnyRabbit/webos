@@ -1,7 +1,9 @@
-import type { Insets } from "../../core/camera";
-import { bay_arrow, bay_pointer, beams, begin_frame, contact_rings, fill, guides, hitboxes, outlined, path, player, sensor_arcs, type Palette, type View } from "../../core/draw";
+import type { Insets } from "$kit/games/play2d/camera";
+import { begin_frame, fill, path, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { bay_arrow, bay_pointer, beams, contact_rings, guides, hitboxes, outlined, player, sensor_arcs } from "../../core/draw";
 import { SolidKind } from "../../core/scene";
-import type { Pose, Vec } from "../../core/geometry";
+import type { Pose, Vec } from "$kit/games/play2d/geometry";
 import type { End } from "../../core/sensors";
 import { bodies, Gear } from "../../core/vehicle";
 import { BOX_HEADING, StepKind, type Gate } from "./course";

@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { inside_convex, overlaps } from "../../core/collision";
-import { bounds_of, bounds_overlap, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { inside_convex, overlaps } from "$kit/games/play2d/collision";
+import { bounds_of, bounds_overlap, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { STANDING } from "../../core/keys";
 import { collide, obstacles, type Obstacles } from "../../core/obstacles";
 import { SolidKind } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import {
   bodies,
   create_car,

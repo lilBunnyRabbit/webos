@@ -1,4 +1,4 @@
-import { bounds_of, bounds_overlap, type Pose, type Vec } from "./geometry";
+import { bounds_of, bounds_overlap, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import type { Obstacles } from "./obstacles";
 import {
   bodies,

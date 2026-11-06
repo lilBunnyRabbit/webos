@@ -3,7 +3,7 @@ import { collide, obstacles } from "../../core/obstacles";
 import { drive, plan, type Move } from "../../core/planner";
 import { SolidKind, type Solid } from "../../core/scene";
 import { body_centre, headings, hitch_angles, jackknifed, nose, pose_from_centre, rig_ends, type Placement, type Vehicle, type VehicleSpec } from "../../core/vehicle";
-import { angle_between, type Vec } from "../../core/geometry";
+import { angle_between, type Vec } from "$kit/games/play2d/geometry";
 import { rig_width, StepKind, type Step } from "./course";
 import { cone_shape, course_round, create_game, in_box, spec_of, step_done, touched, type GameState } from "./game";
 

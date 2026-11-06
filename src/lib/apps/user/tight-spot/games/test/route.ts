@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { angle_between, type Pose, type Vec } from "../../core/geometry";
+import { angle_between, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { Signal } from "../../core/signal";
 import { body_ends, type VehicleSpec } from "../../core/vehicle";
 import { ControlKind, LaneKind, LOT_ROAD, node_arms, NodeKind, SignKind, Turn, type Control, type Lane, type Town } from "./town";

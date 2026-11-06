@@ -1,4 +1,4 @@
-import { centroid } from "../../core/geometry";
+import { centroid } from "$kit/games/play2d/geometry";
 import { collide, type Obstacles } from "../../core/obstacles";
 import { inflate } from "../../core/planner";
 import { HATCHBACK, pose_from_centre, type Placement, type VehicleSpec } from "../../core/vehicle";

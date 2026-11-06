@@ -1,7 +1,7 @@
 import { create_rng } from "$lib/core/utils/random";
-import { bounds_of, lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { bounds_of, lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { SolidKind, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import { body_ends, DriveKind, FRAME_RAMP, max_steer, pose_from_centre, rig_length, type VehicleSpec } from "../../core/vehicle";
 
 const WALL = 0.4;

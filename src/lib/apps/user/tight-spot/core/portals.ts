@@ -1,5 +1,5 @@
-import { inside_convex } from "./collision";
-import type { Pose, Vec } from "./geometry";
+import { inside_convex } from "$kit/games/play2d/collision";
+import type { Pose, Vec } from "$kit/games/play2d/geometry";
 import type { Portal } from "./scene";
 import type { Car, Placement } from "./vehicle";
 

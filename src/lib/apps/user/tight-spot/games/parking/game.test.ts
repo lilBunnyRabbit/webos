@@ -31,10 +31,10 @@ import {
 } from "./game";
 import { obstacles } from "../../core/obstacles";
 import { parked_poses } from "./poses";
-import { bounds_of } from "../../core/geometry";
+import { bounds_of } from "$kit/games/play2d/geometry";
 import { beep_period, End, sensor, sensor_frame, SENSOR_RANGE } from "../../core/sensors";
 import { corners, create_car, Gear, NO_INPUT, pose_from_centre, Vehicle, VEHICLES, type Placement } from "../../core/vehicle";
-import { centroid } from "../../core/geometry";
+import { centroid } from "$kit/games/play2d/geometry";
 import { ChunkKind, hash, SCENARIOS, Scenario, SolidKind } from "./world";
 
 const DT = 1 / 120;

@@ -1,5 +1,5 @@
-import { inside_convex } from "./collision";
-import type { Polygon, Vec } from "./geometry";
+import { inside_convex } from "$kit/games/play2d/collision";
+import type { Polygon, Vec } from "$kit/games/play2d/geometry";
 import { axles, DriveKind, front_frame, to_world, trailer_wheels, type Placement, type VehicleSpec } from "./vehicle";
 
 /** Front pair, rear pair, then each trailer's pair down the chain; a frame steer's front pair turns with its front frame. */

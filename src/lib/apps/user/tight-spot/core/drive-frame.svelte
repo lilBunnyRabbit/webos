@@ -5,13 +5,13 @@
   import { StatusBar, Toolbar } from "$lib/core/components/ui";
   import { ArrowFatLeft as ArrowFatLeftIcon, ArrowFatRight as ArrowFatRightIcon, CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
-  import { clamp_zoom } from "./camera";
-  import { read_palette, type Palette } from "./draw";
+  import { clamp_zoom } from "$kit/games/play2d/camera";
+  import { read_palette, type Palette } from "$kit/games/play2d/palette";
   import { BUTTON_KEYS, first_pad, key_event, PadButton, pressed, read_pad } from "./gamepad";
   import type { DriveInput, Hold } from "./drive-input.svelte";
   import { SteeringMode, WheelMode, type DriveSettings } from "./settings.svelte";
   import { Signal } from "./signal";
-  import SteeringWheel from "./steering-wheel.svelte";
+  import { SteeringWheel } from "$kit/components/play2d";
 
   interface Box {
     width: number;

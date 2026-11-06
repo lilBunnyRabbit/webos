@@ -1,4 +1,4 @@
-import { bounds_of, rect, type Polygon, type Pose, type Vec } from "../../../core/geometry";
+import { bounds_of, rect, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { ChunkKind, type World } from "../../../core/lot";
 import { SolidKind, type Bay, type Solid } from "../../../core/scene";
 import { pose_from_centre, Vehicle, VEHICLES, type VehicleSpec } from "../../../core/vehicle";

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { rect } from "../../core/geometry";
+import { rect } from "$kit/games/play2d/geometry";
 import { BED_COST, CHUNK, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, REPASS, stripe, trample, type Tally } from "./coverage";
 import { deck_corners, DECKS, swept } from "./deck";
 import { Vehicle } from "../../core/vehicle";

@@ -1,7 +1,9 @@
-import type { Insets } from "../../core/camera";
+import type { Insets } from "$kit/games/play2d/camera";
 import { vehicle_solids } from "../../core/obstacles";
-import { bay_outline, bay_pointer, begin_frame, contact_rings, hitboxes, player, solids, union, type Palette, type View } from "../../core/draw";
-import type { Polygon, Vec } from "../../core/geometry";
+import { begin_frame, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { bay_outline, bay_pointer, contact_rings, hitboxes, player, solids, union } from "../../core/draw";
+import type { Polygon, Vec } from "$kit/games/play2d/geometry";
 import type { Signal } from "../../core/signal";
 import { bodies, Gear, Vehicle } from "../../core/vehicle";
 import { SPEC, Status, type GameState } from "./game";

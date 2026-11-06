@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { wrap_angle, type Pose } from "../../core/geometry";
+import { wrap_angle, type Pose } from "$kit/games/play2d/geometry";
 
 export const GHOST_HZ = 10;
 const FRAME_MS = 1000 / GHOST_HZ;

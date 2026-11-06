@@ -4,7 +4,7 @@ import { collide, obstacles } from "../../core/obstacles";
 import { drive, plan, type Move } from "../../core/planner";
 import { parked_poses } from "./poses";
 import { plan_across } from "./proof";
-import { centroid, type Pose } from "../../core/geometry";
+import { centroid, type Pose } from "$kit/games/play2d/geometry";
 import { jackknifed, Vehicle, VEHICLES, type Placement, type VehicleSpec } from "../../core/vehicle";
 import { ChunkKind, CHUNK, SIDES, SurfaceKind, type Bay, type Side, type World } from "./world";
 

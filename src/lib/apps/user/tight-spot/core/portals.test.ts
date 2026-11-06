@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { rect } from "./geometry";
+import { rect } from "$kit/games/play2d/geometry";
 import { obstacles } from "./obstacles";
 import { drive, plan } from "./planner";
 import { carry, pass_portals } from "./portals";

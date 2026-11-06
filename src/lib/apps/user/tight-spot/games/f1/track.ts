@@ -1,4 +1,4 @@
-import type { Bounds, Pose, Vec } from "../../core/geometry";
+import type { Bounds, Pose, Vec } from "$kit/games/play2d/geometry";
 import { SolidKind, type Solid } from "../../core/scene";
 
 export const DS = 1;

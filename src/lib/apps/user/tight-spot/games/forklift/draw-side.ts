@@ -1,5 +1,6 @@
-import { clamp } from "../../core/geometry";
-import { contact_rings, type Palette } from "../../core/draw";
+import { clamp } from "$kit/games/play2d/geometry";
+import { type Palette } from "$kit/games/play2d/palette";
+import { contact_rings } from "../../core/draw";
 import { bump_flash, SideKind, type GameState, type SideView } from "./game";
 import { CLEAN, Fit, ideal_lift, judge, MAST, MISS, POCKET, reach } from "./rack";
 import { TIER_HEIGHTS, type Slot } from "./warehouse";

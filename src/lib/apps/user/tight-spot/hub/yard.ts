@@ -1,5 +1,5 @@
-import { inside_convex } from "../core/collision";
-import { bounds_of, oriented_box, rect, type Bounds, type Polygon, type Pose, type Vec } from "../core/geometry";
+import { inside_convex } from "$kit/games/play2d/collision";
+import { bounds_of, oriented_box, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { under_headroom } from "../core/garage";
 import { CHUNK } from "../core/lot";
 import { collide, obstacles, type Obstacles, type Scene } from "../core/obstacles";

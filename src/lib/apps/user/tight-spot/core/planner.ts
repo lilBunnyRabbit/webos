@@ -1,4 +1,4 @@
-import { angle_between, type Polygon } from "./geometry";
+import { angle_between, type Polygon } from "$kit/games/play2d/geometry";
 import { collide, type Obstacles } from "./obstacles";
 import { carry, portal_at, through } from "./portals";
 import type { Portal } from "./scene";

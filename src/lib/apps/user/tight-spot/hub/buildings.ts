@@ -1,5 +1,6 @@
-import { outlined, solids, type Palette } from "../core/draw";
-import type { Polygon, Vec } from "../core/geometry";
+import { type Palette } from "$kit/games/play2d/palette";
+import { outlined, solids } from "../core/draw";
+import type { Polygon, Vec } from "$kit/games/play2d/geometry";
 import { SolidKind } from "../core/scene";
 import { Building } from "../games/define";
 import { blueprint, box, DOOR_HALF, RAMP_BAR, RAMP_END, RAMP_FUNNEL, RAMP_HALF, RECESS, to_town, type Blueprint } from "./blueprints";

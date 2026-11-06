@@ -1,5 +1,5 @@
-import { inside_convex } from "../../core/collision";
-import { angle_between, bounds_of, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { inside_convex } from "$kit/games/play2d/collision";
+import { angle_between, bounds_of, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { swept, type Deck } from "./deck";
 import type { Garden } from "./garden";
 

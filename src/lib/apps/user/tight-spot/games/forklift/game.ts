@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { inside_convex, overlaps } from "../../core/collision";
-import { angle_between, clamp, oriented_box, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { inside_convex, overlaps } from "$kit/games/play2d/collision";
+import { angle_between, clamp, oriented_box, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { STANDING } from "../../core/keys";
 import { collide_shape, obstacles, type Obstacles } from "../../core/obstacles";
 import { inflate } from "../../core/planner";
-import { fit, MAX_ANGLE, PERFECT, type Precision } from "../../core/precision";
+import { fit, MAX_ANGLE, PERFECT, type Precision } from "$kit/games/play2d/precision";
 import { SolidKind } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import {
   body_ends,
   bodies,

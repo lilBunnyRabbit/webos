@@ -1,7 +1,7 @@
-import type { Palette } from "./draw";
-import { tread } from "./draw-math";
+import type { Palette } from "$kit/games/play2d/palette";
+import { tread } from "$kit/games/play2d/draw-math";
 import { beacon, blur_of, flashes, lamp, pill, tyre, tyre_out, type Lamps } from "./draw-vehicles";
-import type { Pose, Vec } from "./geometry";
+import type { Pose, Vec } from "$kit/games/play2d/geometry";
 import {
   axles,
   DriveKind,

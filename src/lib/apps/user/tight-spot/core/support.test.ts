@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { rect } from "./geometry";
+import { rect } from "$kit/games/play2d/geometry";
 import { support, tyres } from "./support";
 import { create_car, Gear, VEHICLES } from "./vehicle";
 

@@ -1,7 +1,7 @@
 import { create_rng, shuffle, type Rng } from "$lib/core/utils/random";
-import { bounds_of, lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { bounds_of, lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { SolidKind, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import { body_ends, Vehicle, VEHICLES } from "../../core/vehicle";
 
 export const CARGO = [Vehicle.CITY, Vehicle.HATCH, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.BOX_TRUCK, Vehicle.BUS, Vehicle.MOTORCYCLE] as const;

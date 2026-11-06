@@ -1,5 +1,5 @@
 import type { Rng } from "$lib/core/utils/random";
-import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "./geometry";
+import { lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { MarkKind, SolidKind, SurfaceKind, type Bay, type Mark, type Solid, type Surface } from "./scene";
 import { BOX_TRUCK, BUS, CARAVAN_TRAILER, HATCHBACK, rig_ends, rig_length, Vehicle, type VehicleSpec } from "./vehicle";
 

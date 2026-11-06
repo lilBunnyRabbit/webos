@@ -13,23 +13,24 @@
   import { Button, Segmented, Select } from "$lib/core/components/ui";
   import type { Snippet } from "svelte";
   import { untrack } from "svelte";
-  import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, view_stretch, type Camera, type Insets } from "../core/camera";
-  import { veil, type Palette } from "../core/draw";
+  import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, view_stretch, type Camera, type Insets } from "$kit/games/play2d/camera";
+  import { type Palette } from "$kit/games/play2d/palette";
+  import { veil } from "../core/draw";
   import DriveFrame from "../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../core/drive-input.svelte";
   import GearStrip from "../core/gear-strip.svelte";
-  import { clamp, type Vec } from "../core/geometry";
-  import KeyHint from "../core/key-hint.svelte";
+  import { clamp, type Vec } from "$kit/games/play2d/geometry";
+  import { KeyHint } from "$kit/components/play2d";
   import CrabToggle from "../core/crab-toggle.svelte";
   import { CRAB_KEY, drive_note, DRIVE_KEYS, GEAR_KEYS, is_field, key_direction, STANDING, steer_hints, zoom_step } from "../core/keys";
-  import { frame_loop } from "../core/loop";
-  import RoundCard from "../core/round-card.svelte";
+  import { frame_loop } from "$kit/games/play2d/loop";
+  import { RoundCard } from "$kit/components/play2d";
   import { End, sensor } from "../core/sensors";
   import type { Prefs } from "../core/prefs";
   import SettingsPanel from "../core/settings-panel.svelte";
   import type { DriveSettings } from "../core/settings.svelte";
   import { Sounds } from "../core/sound";
-  import SpeedChip from "../core/speed-chip.svelte";
+  import { SpeedChip } from "$kit/components/play2d";
   import {
     body_centre,
     can_crab,

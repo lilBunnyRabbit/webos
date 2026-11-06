@@ -1,4 +1,4 @@
-import { angle_between } from "../../core/geometry";
+import { angle_between } from "$kit/games/play2d/geometry";
 import { collide, obstacles, type Obstacles } from "../../core/obstacles";
 import { inflate, plan, type Move } from "../../core/planner";
 import { arc, body_centre, VEHICLES, type Placement, type VehicleSpec } from "../../core/vehicle";

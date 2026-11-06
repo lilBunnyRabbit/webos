@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { inside_convex } from "../../core/collision";
-import type { Vec } from "../../core/geometry";
+import { inside_convex } from "$kit/games/play2d/collision";
+import type { Vec } from "$kit/games/play2d/geometry";
 import { collide, obstacles } from "../../core/obstacles";
-import { fit, MAX_ANGLE } from "../../core/precision";
+import { fit, MAX_ANGLE } from "$kit/games/play2d/precision";
 import { Signal } from "../../core/signal";
-import { angle_between } from "../../core/geometry";
+import { angle_between } from "$kit/games/play2d/geometry";
 import { bodies, body_centre, create_car, Gear, HATCHBACK, headings, shift, step, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
 import { limit_at, locate, route_of, type Located, type Route, type RouteId } from "./route";
 import { FaultKind, FRESH_WATCH, judge, passes, Severity, signalled, tally, type Fault, type Tally, type Watch } from "./rules";

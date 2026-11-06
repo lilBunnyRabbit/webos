@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { overlaps } from "../../core/collision";
+import { overlaps } from "$kit/games/play2d/collision";
 import { SCENARIO_INFO } from "./game";
 import { collide, obstacles } from "../../core/obstacles";
-import { centroid } from "../../core/geometry";
+import { centroid } from "$kit/games/play2d/geometry";
 import { BUS, corners, create_car, Gear, VEHICLES, type VehicleSpec } from "../../core/vehicle";
 import type { Scenario } from "./world";
 

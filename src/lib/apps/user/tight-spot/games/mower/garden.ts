@@ -1,8 +1,8 @@
 import { create_rng, type Rng } from "$lib/core/utils/random";
-import { overlaps } from "../../core/collision";
-import { bounds_of, lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { overlaps } from "$kit/games/play2d/collision";
+import { bounds_of, lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { SolidKind, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 
 const HEDGE = 0.7;
 const NORTH = -Math.PI / 2;

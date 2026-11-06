@@ -1,6 +1,6 @@
-import type { Paint, Palette } from "./draw";
-import { tread } from "./draw-math";
-import { centroid, wrap_angle, type Polygon, type Pose, type Vec } from "./geometry";
+import type { Paint, Palette } from "$kit/games/play2d/palette";
+import { tread } from "$kit/games/play2d/draw-math";
+import { centroid, wrap_angle, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import type { Solid } from "./scene";
 import { Signal } from "./signal";
 import {

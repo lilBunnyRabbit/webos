@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { inside_convex, overlaps } from "../../core/collision";
+import { inside_convex, overlaps } from "$kit/games/play2d/collision";
 import { collide, obstacles } from "../../core/obstacles";
 import { create_car, FORKLIFT, Gear } from "../../core/vehicle";
 import { build_floor, layout, pallet_shape, slot_key, SlotKind, upper_share } from "./warehouse";

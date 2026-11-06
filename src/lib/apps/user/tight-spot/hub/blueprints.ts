@@ -1,4 +1,4 @@
-import type { Polygon, Vec } from "../core/geometry";
+import type { Polygon, Vec } from "$kit/games/play2d/geometry";
 import { SolidKind } from "../core/scene";
 import { Building } from "../games/define";
 

@@ -1,7 +1,9 @@
-import type { Insets } from "../../core/camera";
+import type { Insets } from "$kit/games/play2d/camera";
 import { vehicle_solids } from "../../core/obstacles";
-import { begin_frame, contact_rings, fill, guides, hitboxes, outlined, path, player, sensor_arcs, solids, type Palette, type View } from "../../core/draw";
-import { rect, type Vec } from "../../core/geometry";
+import { begin_frame, fill, path, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { contact_rings, guides, hitboxes, outlined, player, sensor_arcs, solids } from "../../core/draw";
+import { rect, type Vec } from "$kit/games/play2d/geometry";
 import { SolidKind, type Solid } from "../../core/scene";
 import type { End } from "../../core/sensors";
 import { bodies, Gear, VEHICLES } from "../../core/vehicle";

@@ -1,4 +1,4 @@
-import { angle_between, clamp, type Vec } from "../../core/geometry";
+import { angle_between, clamp, type Vec } from "$kit/games/play2d/geometry";
 import type { Placement } from "../../core/vehicle";
 import {
   along,

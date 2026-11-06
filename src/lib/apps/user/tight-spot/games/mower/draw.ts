@@ -1,9 +1,11 @@
 import { resolve_token } from "$lib/core/utils";
-import type { Insets } from "../../core/camera";
-import { bay_pointer, begin_frame, contact_rings, fill, guides, hitboxes, path, player, solids, union, type Palette, type View } from "../../core/draw";
-import type { Polygon, Vec } from "../../core/geometry";
+import type { Insets } from "$kit/games/play2d/camera";
+import { begin_frame, fill, path, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { bay_pointer, contact_rings, guides, hitboxes, player, solids, union } from "../../core/draw";
+import type { Polygon, Vec } from "$kit/games/play2d/geometry";
 import { SolidKind } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import { bodies, Gear } from "../../core/vehicle";
 import { CELL, Cut, type Grid } from "./coverage";
 import { bump_flash, SPEC, Status, VEHICLE, type GameState } from "./game";

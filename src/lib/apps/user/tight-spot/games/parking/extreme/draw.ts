@@ -1,5 +1,7 @@
-import { fill, outlined, path, union, type Palette } from "../../../core/draw";
-import { bounds_of, type Polygon, type Vec } from "../../../core/geometry";
+import { fill, path } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { outlined, union } from "../../../core/draw";
+import { bounds_of, type Polygon, type Vec } from "$kit/games/play2d/geometry";
 import { GroundKind, HazardKind, layout_of, type Course, type Piece } from "./courses";
 
 const RAISED: ReadonlySet<GroundKind> = new Set([GroundKind.PLANK, GroundKind.RAMP, GroundKind.DECK, GroundKind.BRIDGE, GroundKind.QUAY]);

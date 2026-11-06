@@ -1,8 +1,8 @@
 import { create_rng, pick, random_int, type Rng } from "$lib/core/utils/random";
-import { lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import type { Scene } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import { aircraft_parts, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, TAIL } from "./aircraft";
 
 export const Face = { WEST: "west", EAST: "east" } as const;

@@ -1,8 +1,8 @@
 import { create_rng, random_int, shuffle, type Rng } from "$lib/core/utils/random";
-import { bounds_of, lerp, oriented_box, rect, type Bounds, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { bounds_of, lerp, oriented_box, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import type { Scene } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 
 /** A 1200 × 1000 pallet: `length` runs the way the forks go in. */
 export const PALLET = { length: 1.2, width: 1.0 } as const;

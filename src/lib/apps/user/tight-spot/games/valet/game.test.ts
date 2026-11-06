@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { centroid, type Pose, type Vec } from "../../core/geometry";
-import { overlaps } from "../../core/collision";
+import { centroid, type Pose, type Vec } from "$kit/games/play2d/geometry";
+import { overlaps } from "$kit/games/play2d/collision";
 import { collide, obstacles } from "../../core/obstacles";
 import type { Bay } from "../../core/scene";
 import { bodies, create_car, Gear, pose_from_centre, Vehicle, VEHICLES, type Input } from "../../core/vehicle";

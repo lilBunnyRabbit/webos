@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { angle_between, type Polygon, type Vec } from "../../core/geometry";
+import { angle_between, type Polygon, type Vec } from "$kit/games/play2d/geometry";
 import { collide, obstacles, type Scene } from "../../core/obstacles";
-import { MAX_ANGLE } from "../../core/precision";
+import { MAX_ANGLE } from "$kit/games/play2d/precision";
 import { SolidKind, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import {
   bodies,
   body_centre,

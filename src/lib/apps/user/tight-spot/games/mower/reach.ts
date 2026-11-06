@@ -1,5 +1,5 @@
-import { overlaps } from "../../core/collision";
-import { bounds_of, bounds_overlap, type Pose } from "../../core/geometry";
+import { overlaps } from "$kit/games/play2d/collision";
+import { bounds_of, bounds_overlap, type Pose } from "$kit/games/play2d/geometry";
 import { collide, obstacles } from "../../core/obstacles";
 import { drive, inflate, type Move } from "../../core/planner";
 import { bodies, DriveKind, type VehicleSpec } from "../../core/vehicle";

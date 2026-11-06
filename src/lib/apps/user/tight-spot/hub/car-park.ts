@@ -1,5 +1,5 @@
 import type { Rng } from "$lib/core/utils/random";
-import { bounds_of, rect, type Bounds, type Polygon, type Pose } from "../core/geometry";
+import { bounds_of, rect, type Bounds, type Polygon, type Pose } from "$kit/games/play2d/geometry";
 import { garage } from "../core/garage";
 import { chunks, CHUNK, ChunkKind, Side, type Chunk, type Plan } from "../core/lot";
 import { EDGE, fit_for, SIZE, type Layout } from "../core/lot-layout";

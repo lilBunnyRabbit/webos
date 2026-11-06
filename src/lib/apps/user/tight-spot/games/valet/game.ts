@@ -1,13 +1,13 @@
 import { z } from "zod";
 import { create_rng } from "$lib/core/utils/random";
-import { inside_convex, overlaps } from "../../core/collision";
-import { angle_between, clamp, lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "../../core/geometry";
+import { inside_convex, overlaps } from "$kit/games/play2d/collision";
+import { angle_between, clamp, lerp, oriented_box, rect, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { walk_length, type World } from "../../core/lot";
 import { collide, obstacles, type Scene } from "../../core/obstacles";
 import { pass_portals } from "../../core/portals";
-import { fit, MAX_ANGLE } from "../../core/precision";
+import { fit, MAX_ANGLE } from "$kit/games/play2d/precision";
 import { SolidKind, type Bay, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import {
   bodies,
   body_centre,

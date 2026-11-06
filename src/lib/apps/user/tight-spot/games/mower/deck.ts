@@ -1,4 +1,4 @@
-import type { Polygon, Pose, Vec } from "../../core/geometry";
+import type { Polygon, Pose, Vec } from "$kit/games/play2d/geometry";
 import { to_world, Vehicle } from "../../core/vehicle";
 
 export interface Deck {

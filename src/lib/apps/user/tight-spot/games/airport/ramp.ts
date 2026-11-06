@@ -1,5 +1,5 @@
 import { create_rng, pick } from "$lib/core/utils/random";
-import { overlaps } from "../../core/collision";
+import { overlaps } from "$kit/games/play2d/collision";
 import {
   bounds_of,
   bounds_overlap,
@@ -9,10 +9,10 @@ import {
   type Polygon,
   type Pose,
   type Vec,
-} from "../../core/geometry";
+} from "$kit/games/play2d/geometry";
 import { obstacles } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
-import { hash } from "../../core/seed";
+import { hash } from "$kit/games/play2d/seed";
 import { bodies, create_car, Gear, rig_ends, to_world } from "../../core/vehicle";
 import { aircraft_parts, grow, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, SPAN, TAIL } from "./aircraft";
 import {

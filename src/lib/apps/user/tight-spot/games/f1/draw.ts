@@ -1,5 +1,7 @@
-import { begin_frame, contact_rings, hitboxes, player, union, type Palette, type View } from "../../core/draw";
-import type { Pose, Vec } from "../../core/geometry";
+import { begin_frame, type View } from "$kit/games/play2d/canvas";
+import { type Palette } from "$kit/games/play2d/palette";
+import { contact_rings, hitboxes, player, union } from "../../core/draw";
+import type { Pose, Vec } from "$kit/games/play2d/geometry";
 import { bodies, body_centre, create_car, Gear, Vehicle } from "../../core/vehicle";
 import { Status, type GameState } from "./game";
 import { SPEC } from "./spec";

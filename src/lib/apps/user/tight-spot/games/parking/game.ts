@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { inside_convex } from "../../core/collision";
-import { angle_between, type Vec } from "../../core/geometry";
-import { fit, MAX_ANGLE, type Precision } from "../../core/precision";
+import { inside_convex } from "$kit/games/play2d/collision";
+import { angle_between, type Vec } from "$kit/games/play2d/geometry";
+import { fit, MAX_ANGLE, type Precision } from "$kit/games/play2d/precision";
 import { collide, obstacles } from "../../core/obstacles";
 import { pass_portals } from "../../core/portals";
 import { support, tyres } from "../../core/support";
@@ -436,7 +436,7 @@ export function record_best(bests: Bests, round: Round, result: Result): Recorde
   return { bests: next, improved, first: old === undefined };
 }
 
-export { PERFECT, type Precision } from "../../core/precision";
+export { PERFECT, type Precision } from "$kit/games/play2d/precision";
 
 /** How well a parked rig sits in its bay: every corner of the car and its trailers' boxes, the worst of their headings. */
 export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES.hatch): Precision {
