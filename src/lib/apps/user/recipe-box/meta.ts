@@ -1,8 +1,9 @@
 import type { AppMeta } from "$lib/core/api";
+import { OWNER } from "$lib/core/api/services/apps/authors";
 
 export default {
   description:
-    "Recipes as Cooklang .cook files: scale servings, switch metric and imperial, cook step by step with timers.",
+    "Paste a recipe from a website or fill in a simple form, keep recipes on shelves by tag, scale servings and cook step by step with timers.",
   keywords: [
     "recipe",
     "cooking",
@@ -15,10 +16,14 @@ export default {
     "meal",
     "timer",
     "baking",
+    "paste",
+    "website",
+    "favourites",
   ],
   pitch: {
-    problem: "Recipes are hard to scale and follow while you cook.",
-    solution: "Keep them as Cooklang files, scale servings and cook step by step with timers.",
+    problem: "Recipes you like are scattered across websites and hard to follow while you cook.",
+    solution: "Paste them in, keep them on shelves by tag, scale servings and cook step by step with timers.",
   },
-  example: "scale a recipe for six people",
+  example: "paste a recipe from a website",
+  authors: [{ name: "Steph" }, OWNER],
 } satisfies AppMeta;

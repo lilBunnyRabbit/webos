@@ -1,7 +1,7 @@
 import kernel, { type FilesService } from "$lib/core/api";
 import { PATHS } from "$lib/core/api/services/files/hierarchy";
 import { file_extension, join_path, split_path } from "$lib/core/api/services/files/path";
-import { parse_cook, recipe_servings, recipe_tags, recipe_title, steps } from "./cooklang";
+import { is_favorite, parse_cook, recipe_servings, recipe_tags, recipe_title, steps } from "./cooklang";
 
 export const DEFAULT_FOLDER = `${PATHS.documents}/Recipes`;
 
@@ -23,6 +23,7 @@ export interface RecipeEntry {
   tags: string[];
   servings: number | null;
   ingredients: string[];
+  favorite: boolean;
   modified: number;
 }
 
@@ -35,6 +36,7 @@ export function summarize(path: string, name: string, text: string, modified: nu
     tags: recipe_tags(recipe),
     servings: recipe_servings(recipe),
     ingredients: [...new Set(ingredients.map((item) => item.toLowerCase()))],
+    favorite: is_favorite(recipe),
     modified,
   };
 }
@@ -67,20 +69,21 @@ export function all_tags(entries: RecipeEntry[]): string[] {
   return [...new Set(entries.flatMap((entry) => entry.tags))].sort((a, b) => a.localeCompare(b));
 }
 
-export function recipe_template(title: string): string {
+export const Shelf = { FAVORITES: "favorites", TAG: "tag", UNTAGGED: "untagged" } as const;
+export type Shelf = (typeof Shelf)[keyof typeof Shelf];
+
+export interface RecipeShelf {
+  kind: Shelf;
+  label: string;
+  entries: RecipeEntry[];
+}
+
+export function shelves(entries: RecipeEntry[]): RecipeShelf[] {
+  const favorites = entries.filter((entry) => entry.favorite);
+  const untagged = entries.filter((entry) => entry.tags.length === 0);
   return [
-    "---",
-    `title: ${title}`,
-    "servings: 2",
-    "tags: []",
-    "---",
-    "",
-    "-- @ingredient{quantity%unit}, #cookware{} and ~timer{quantity%unit} mark things inside a step.",
-    "-- A blank line starts the next step. Lines starting with > are notes.",
-    "",
-    "Bring @water{1%l} to a boil in a #pot{} and add @salt{=1%tsp}.",
-    "",
-    "Cook @pasta{200%g} for ~{9%minutes}, then drain.",
-    "",
-  ].join("\n");
+    ...(favorites.length > 0 ? [{ kind: Shelf.FAVORITES, label: "Favourites", entries: favorites }] : []),
+    ...all_tags(entries).map((tag) => ({ kind: Shelf.TAG, label: tag, entries: entries.filter((entry) => entry.tags.includes(tag)) })),
+    ...(untagged.length > 0 ? [{ kind: Shelf.UNTAGGED, label: "Untagged", entries: untagged }] : []),
+  ];
 }

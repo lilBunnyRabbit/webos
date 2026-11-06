@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { ShortcutCategory, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { ShortcutCategory, type DialogsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
   import { CodeView } from "$kit/components/code";
   import { base_name, parent_path, tilde_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, Toolbar } from "$lib/core/components/ui";
@@ -8,6 +8,7 @@
   import { pick_device_files } from "$lib/core/utils/device-file";
   import {
     ArrowLeft as ArrowLeftIcon,
+    ClipboardText as ClipboardTextIcon,
     Devices as DevicesIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
@@ -19,9 +20,13 @@
   import { empty_storage, storage_schema } from "./storage";
   import { APP_ID, COOK_FILES } from "./constants";
   import CookMode from "./cook-mode.svelte";
-  import { parse_cook, recipe_servings, recipe_tags, recipe_title } from "./cooklang";
-  import { ensure_folder, recipe_template } from "./library";
+  import { is_favorite, parse_cook, recipe_servings, recipe_tags, recipe_title } from "./cooklang";
+  import { all_tags, ensure_folder, list_recipes } from "./library";
   import LibraryView from "./library-view.svelte";
+  import { parse_pasted, pasted_form } from "./paste";
+  import PasteDialog from "./paste-dialog.svelte";
+  import { empty_form, form_from_cook, form_issues, form_to_cook, with_favorite, type FormIssue, type RecipeForm } from "./recipe-form";
+  import RecipeFormView from "./recipe-form.svelte";
   import RecipeView from "./recipe-view.svelte";
   import ScaleControls from "./scale-controls.svelte";
   import TableView from "./table-view.svelte";
@@ -33,13 +38,23 @@
   const { window_id, window: win, storage } = get_app_context();
   const files = $derived(kernel.service<FilesService>("files"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
 
   const View = { LIBRARY: "library", RECIPE: "recipe", TABLE: "table", COOK: "cook", EDIT: "edit" } as const;
   type View = (typeof View)[keyof typeof View];
   type RecipeView = Exclude<View, typeof View.LIBRARY>;
-  const EditPanel = { SOURCE: "source", PREVIEW: "preview" } as const;
+  const Editor = { FORM: "form", SOURCE: "source" } as const;
+  type Editor = (typeof Editor)[keyof typeof Editor];
+  const EditPanel = { EDITOR: "editor", PREVIEW: "preview" } as const;
   type EditPanel = (typeof EditPanel)[keyof typeof EditPanel];
+  type NarrowPanel = Editor | typeof EditPanel.PREVIEW;
+
+  const EDITORS: { value: Editor; label: string }[] = [
+    { value: Editor.FORM, label: "Form" },
+    { value: Editor.SOURCE, label: "Source" },
+  ];
+  const NARROW_PANELS: { value: NarrowPanel; label: string }[] = [...EDITORS, { value: EditPanel.PREVIEW, label: "Preview" }];
 
   const VIEWS: { value: RecipeView; label: string }[] = [
     { value: View.RECIPE, label: "Recipe" },
@@ -57,13 +72,17 @@
   let loading = $state(false);
   let load_error = $state<string | null>(null);
   let amount = $state(1);
-  let edit_panel = $state<EditPanel>(EditPanel.SOURCE);
+  let editor = $state<Editor>(Editor.FORM);
+  let edit_panel = $state<EditPanel>(EditPanel.EDITOR);
+  let form = $state<RecipeForm>(empty_form());
+  let issues = $state<FormIssue[]>([]);
+  let known_tags = $state<string[]>([]);
   let cook_index = $state(0);
   let cook = $state<{ go(delta: number): void } | null>(null);
 
   const recipe = $derived(parse_cook(text));
   const name = $derived(path ? base_name(path) : "");
-  const title = $derived(recipe_title(recipe, name));
+  const title = $derived(recipe_title(recipe, name) || "New recipe");
   const tags = $derived(recipe_tags(recipe));
   const base = $derived(recipe_servings(recipe));
   const factor = $derived(amount / (base ?? 1));
@@ -73,6 +92,34 @@
     () => (path ? { title, path } : null),
     () => win.is_visible
   );
+
+  function refresh_tags() {
+    void list_recipes(prefs.value.folder).then(
+      (entries) => (known_tags = all_tags(entries)),
+      () => {}
+    );
+  }
+
+  function enter_form() {
+    form = form_from_cook(text);
+    issues = form_issues(text);
+    refresh_tags();
+  }
+
+  function form_changed() {
+    text = form_to_cook(form);
+  }
+
+  function set_view(next: View) {
+    if (next === View.EDIT && view !== View.EDIT && editor === Editor.FORM) enter_form();
+    view = next;
+  }
+
+  function set_editor(next: Editor) {
+    if (next === Editor.FORM && editor !== Editor.FORM) enter_form();
+    editor = next;
+    edit_panel = EditPanel.EDITOR;
+  }
 
   async function load(target: string, next: View = View.RECIPE) {
     loading = true;
@@ -87,6 +134,7 @@
       path = target;
       amount = recipe_servings(parse_cook(content)) ?? 1;
       cook_index = 0;
+      if (view === View.EDIT && editor === Editor.FORM) enter_form();
     } catch (reason) {
       load_error = error_message(reason);
     } finally {
@@ -131,19 +179,29 @@
 
   async function new_recipe() {
     if (!(await discard_ok())) return;
-    const chosen = await win.prompt("New recipe", {
-      placeholder: "Tomato soup",
-      confirm_label: "Create",
-      validate: (value) => (value.trim() === "" ? "Give the recipe a name." : /[/\\]/.test(value) ? "A name can't contain / or \\." : null),
-    });
-    if (chosen === null) return;
-    try {
-      const handle = await files.create_file(await folder_handle(), `${chosen.trim()}.cook`, { content: recipe_template(chosen.trim()) });
-      edit_panel = EditPanel.SOURCE;
-      await load(`${prefs.value.folder}/${handle.name}`, View.EDIT);
-    } catch (reason) {
-      report_error(APP_ID, "Couldn't create the recipe", reason);
-    }
+    start_draft(empty_form(), false);
+  }
+
+  async function paste_recipe() {
+    if (!(await discard_ok())) return;
+    const pasted = await dialogs.show(PasteDialog, {}, { window: window_id });
+    if (pasted === null) return;
+    start_draft(pasted_form(parse_pasted(pasted)), true);
+  }
+
+  function start_draft(next: RecipeForm, changed: boolean) {
+    path = null;
+    load_error = null;
+    saved_text = "";
+    form = next;
+    issues = [];
+    text = changed ? form_to_cook(next) : "";
+    amount = recipe_servings(parse_cook(text)) ?? 1;
+    cook_index = 0;
+    editor = Editor.FORM;
+    edit_panel = EditPanel.EDITOR;
+    view = View.EDIT;
+    refresh_tags();
   }
 
   async function import_device() {
@@ -166,13 +224,22 @@
     if (chosen) prefs.value.folder = chosen;
   }
 
+  async function write(target: string, content: string) {
+    const directory = await files.get_directory(parent_path(target));
+    if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
+    await files.create_file(directory, base_name(target), { content, overwrite: true });
+  }
+
   async function save(): Promise<boolean> {
-    if (!path) return false;
     try {
-      const directory = await files.get_directory(parent_path(path));
-      if (!directory) throw new Error(`Folder not found: ${parent_path(path)}`);
       const content = text;
-      await files.create_file(directory, base_name(path), { content, overwrite: true });
+      if (path) {
+        await write(path, content);
+      } else {
+        const file_name = `${(recipe_title(recipe, "").trim() || "Recipe").replace(/[/\\]/g, "-")}.cook`;
+        const handle = await files.create_file(await folder_handle(), file_name, { content });
+        path = `${prefs.value.folder}/${handle.name}`;
+      }
       saved_text = content;
       return true;
     } catch (reason) {
@@ -181,12 +248,36 @@
     }
   }
 
+  async function set_favorite(on: boolean) {
+    try {
+      if (path) {
+        const next = with_favorite(saved_text, on);
+        await write(path, next);
+        saved_text = next;
+      }
+      text = with_favorite(text, on);
+    } catch (reason) {
+      report_error(APP_ID, "Couldn't change favourites", reason);
+    }
+  }
+
+  async function favorite_path(target: string, on: boolean) {
+    if (target === path) return set_favorite(on);
+    try {
+      const file = await files.get_file(target);
+      if (!file) throw new Error(`File not found: ${target}`);
+      await write(target, with_favorite(await file.text(), on));
+    } catch (reason) {
+      report_error(APP_ID, "Couldn't change favourites", reason);
+    }
+  }
+
   $effect(() => win.set_title(view === View.LIBRARY ? null : title));
   $effect(() => win.set_dirty(dirty, { save }));
   $effect(() =>
     win.on_back(() => {
       if (view === View.LIBRARY) return false;
-      if (view === View.EDIT && edit_panel === EditPanel.PREVIEW) edit_panel = EditPanel.SOURCE;
+      if (view === View.EDIT && edit_panel === EditPanel.PREVIEW) edit_panel = EditPanel.EDITOR;
       else if (view === View.RECIPE) void to_library();
       else view = View.RECIPE;
       return true;
@@ -218,12 +309,13 @@
         <IconButton size="sm" label="Open…" onclick={open}><FolderOpenIcon /></IconButton>
         <IconButton size="sm" label="Import from device…" onclick={import_device}><DevicesIcon /></IconButton>
         <IconButton size="sm" label="Change recipes folder…" onclick={change_folder}><FolderSimpleIcon /></IconButton>
+        <Button size="sm" onclick={paste_recipe} title="Paste a recipe"><ClipboardTextIcon /><span class="@2xl:hidden">Paste</span><span class="hidden @2xl:inline">Paste a recipe</span></Button>
         <Button size="sm" variant="primary" onclick={new_recipe}><PlusIcon />New</Button>
       {:else}
         <IconButton size="sm" label="All recipes" onclick={to_library}><ArrowLeftIcon /></IconButton>
         <span class="min-w-0 flex-1 truncate text-ui font-medium" title={path ?? undefined}>{title}{dirty ? " •" : ""}</span>
-        <Segmented size="sm" label="View" options={VIEWS} bind:value={() => view as RecipeView, (next) => (view = next)} class="hidden @xl:inline-flex" />
-        <Select size="sm" aria-label="View" class="w-auto @xl:hidden" options={VIEWS} bind:value={() => view as RecipeView, (next) => (view = next)} />
+        <Segmented size="sm" label="View" options={VIEWS} bind:value={() => view as RecipeView, set_view} class="hidden @xl:inline-flex" />
+        <Select size="sm" aria-label="View" class="w-auto @xl:hidden" options={VIEWS} bind:value={() => view as RecipeView, set_view} />
         {#if view === View.EDIT || dirty}
           <IconButton size="sm" label="Save" disabled={!dirty} onclick={save}><FloppyDiskIcon /></IconButton>
         {/if}
@@ -231,7 +323,7 @@
     </Toolbar>
 
     {#if view === View.LIBRARY}
-      <LibraryView folder={prefs.value.folder} onopen={open_path} onnew={new_recipe} />
+      <LibraryView folder={prefs.value.folder} onopen={open_path} onnew={new_recipe} onpaste={paste_recipe} onfavorite={favorite_path} />
     {:else if loading}
       <div class="grid flex-1 place-items-center"><Spinner label="Opening" /></div>
     {:else if load_error}
@@ -243,7 +335,7 @@
       </EmptyState>
     {:else if view === View.RECIPE}
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} {controls} />
+        <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} {controls} favorite={is_favorite(recipe)} onfavorite={set_favorite} />
       </div>
     {:else if view === View.TABLE}
       <div class="min-h-0 flex-1 overflow-y-auto">
@@ -256,19 +348,25 @@
       </div>
     {:else}
       <div class="flex min-h-0 flex-1 flex-col">
-        <Segmented
-          size="sm"
-          label="Edit panel"
-          options={[
-            { value: EditPanel.SOURCE, label: "Source" },
-            { value: EditPanel.PREVIEW, label: "Preview" },
-          ]}
-          bind:value={edit_panel}
-          class="mx-3 mt-3 shrink-0 *:flex-1 @4xl:hidden"
-        />
+        <div class="mx-3 mt-3 shrink-0">
+          <Segmented
+            size="sm"
+            label="Edit panel"
+            options={NARROW_PANELS}
+            bind:value={() => (edit_panel === EditPanel.PREVIEW ? EditPanel.PREVIEW : editor), (next) => (next === EditPanel.PREVIEW ? (edit_panel = next) : set_editor(next))}
+            class="flex *:flex-1 @4xl:hidden"
+          />
+          <Segmented size="sm" label="Editor" options={EDITORS} bind:value={() => editor, set_editor} class="hidden @4xl:inline-flex" />
+        </div>
         <div class="grid min-h-0 flex-1 @4xl:grid-cols-2">
-          <div class={cn("min-h-0 flex-col p-3 @4xl:flex @4xl:border-r @4xl:border-foreground/8", edit_panel === EditPanel.SOURCE ? "flex" : "hidden")}>
-            <CodeView value={text} label="Recipe source" onchange={(value) => (text = value)} class="min-h-0 flex-1" />
+          <div class={cn("min-h-0 flex-col @4xl:flex @4xl:border-r @4xl:border-foreground/8", edit_panel === EditPanel.EDITOR ? "flex" : "hidden")}>
+            {#if editor === Editor.FORM}
+              <RecipeFormView bind:form {known_tags} {issues} onchange={form_changed} onsource={() => set_editor(Editor.SOURCE)} />
+            {:else}
+              <div class="flex min-h-0 flex-1 flex-col p-3">
+                <CodeView value={text} label="Recipe source" onchange={(value) => (text = value)} class="min-h-0 flex-1" />
+              </div>
+            {/if}
           </div>
           <div class={cn("min-h-0 overflow-y-auto @4xl:block", edit_panel === EditPanel.PREVIEW ? "block" : "hidden")} aria-label="Preview">
             <RecipeView {recipe} {title} {tags} {factor} system={prefs.value.units} />

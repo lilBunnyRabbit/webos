@@ -268,3 +268,14 @@ export function recipe_tags(recipe: Recipe): string[] {
   const list = Array.isArray(value) ? value : (value ?? "").split(",");
   return [...new Set(list.map((tag) => tag.trim().replace(/^#/, "")).filter((tag) => tag !== ""))];
 }
+
+export function is_favorite(recipe: Recipe): boolean {
+  const value = recipe.metadata.favorite ?? recipe.metadata.favourite;
+  return typeof value === "string" && /^(true|yes|1)$/i.test(value);
+}
+
+export function source_url(recipe: Recipe): URL | null {
+  const value = recipe.metadata.source;
+  if (typeof value !== "string" || !/^https?:\/\//i.test(value)) return null;
+  return URL.canParse(value) ? new URL(value) : null;
+}

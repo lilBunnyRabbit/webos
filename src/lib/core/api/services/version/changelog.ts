@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.5.0",
+    date: "2026-11-06",
+    title: "Easier Recipe Box",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["recipe-box"],
+        text: "Recipe Box turns a recipe you copy from a website into one of your own: paste it, check it, save it.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["recipe-box"],
+        text: "Recipes are written in a simple form with ingredients and steps, and the library sorts them onto shelves by tag, with your favourites first.",
+      },
+    ],
+  },
+  {
     version: "4.4.0",
     date: "2026-11-06",
     title: "Something to try in every app",

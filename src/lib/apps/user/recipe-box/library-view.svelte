@@ -1,18 +1,28 @@
 <script lang="ts">
   import kernel, { type FilesService } from "$lib/core/api";
   import { tilde_path } from "$lib/core/api/services/files/path";
-  import { Badge, Button, EmptyState, Input, Spinner } from "$lib/core/components/ui";
+  import { Badge, Button, EmptyState, IconButton, Input, Spinner } from "$lib/core/components/ui";
   import { cn, error_message } from "$lib/core/utils";
-  import { BookOpen as BookOpenIcon, MagnifyingGlass as MagnifyingGlassIcon, Plus as PlusIcon, WarningCircle as WarningCircleIcon } from "phosphor-svelte";
-  import { all_tags, ensure_folder, list_recipes, recipe_matches, type RecipeEntry } from "./library";
+  import {
+    BookOpen as BookOpenIcon,
+    ClipboardText as ClipboardTextIcon,
+    Heart as HeartIcon,
+    MagnifyingGlass as MagnifyingGlassIcon,
+    Plus as PlusIcon,
+    Tag as TagIcon,
+    WarningCircle as WarningCircleIcon,
+  } from "phosphor-svelte";
+  import { all_tags, ensure_folder, list_recipes, recipe_matches, Shelf, shelves, type RecipeEntry } from "./library";
 
   interface Props {
     folder: string;
     onopen: (path: string) => void;
     onnew: () => void;
+    onpaste: () => void;
+    onfavorite: (path: string, on: boolean) => void;
   }
 
-  const { folder, onopen, onnew }: Props = $props();
+  const { folder, onopen, onnew, onpaste, onfavorite }: Props = $props();
 
   const files = $derived(kernel.service<FilesService>("files"));
 
@@ -24,6 +34,7 @@
 
   const tags = $derived(all_tags(entries));
   const shown = $derived(entries.filter((entry) => recipe_matches(entry, query, tag)));
+  const rows = $derived(tag === null ? shelves(shown) : []);
 
   $effect(() => {
     const target = folder;
@@ -48,6 +59,44 @@
   });
 </script>
 
+{#snippet card(entry: RecipeEntry)}
+  <div class="relative h-full">
+    <button
+      type="button"
+      class={cn(
+        "flex h-full w-full flex-col gap-1.5 rounded-lg bg-background-light p-3 pr-11 text-left ring-1 ring-foreground/8 transition-colors duration-150",
+        "hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none"
+      )}
+      onclick={() => onopen(entry.path)}
+    >
+      <span class="text-sm font-medium">{entry.title}</span>
+      <span class="line-clamp-2 text-2xs text-foreground/65">
+        {entry.ingredients.length} {entry.ingredients.length === 1 ? "ingredient" : "ingredients"}{entry.servings ? ` · serves ${entry.servings}` : ""}{entry.ingredients.length > 0 ? ` · ${entry.ingredients.slice(0, 6).join(", ")}` : ""}
+      </span>
+      {#if entry.tags.length > 0}
+        <span class="flex flex-wrap gap-1">{#each entry.tags as name (name)}<Badge>{name}</Badge>{/each}</span>
+      {/if}
+    </button>
+    <IconButton
+      size="sm"
+      class="absolute top-1.5 right-1.5"
+      label={entry.favorite ? `Remove ${entry.title} from favourites` : `Add ${entry.title} to favourites`}
+      pressed={entry.favorite}
+      onclick={() => onfavorite(entry.path, !entry.favorite)}
+    >
+      <HeartIcon weight={entry.favorite ? "fill" : "regular"} />
+    </IconButton>
+  </div>
+{/snippet}
+
+{#snippet grid(list: RecipeEntry[])}
+  <ul class="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto p-3 @2xl:grid-cols-2 @5xl:grid-cols-3" aria-label="Recipes">
+    {#each list as entry (entry.path)}
+      <li>{@render card(entry)}</li>
+    {/each}
+  </ul>
+{/snippet}
+
 <div class="flex min-h-0 flex-1 flex-col">
   <div class="flex flex-col gap-2 border-b border-foreground/8 p-3">
     <Input size="sm" type="search" placeholder="Search titles, tags, ingredients" aria-label="Search recipes" bind:value={query}>
@@ -67,33 +116,32 @@
   {:else if error}
     <EmptyState icon={WarningCircleIcon} tone="error" title="Couldn't read the recipes folder" description={error} />
   {:else if entries.length === 0}
-    <EmptyState icon={BookOpenIcon} title="No recipes yet" description={`Recipes are .cook files in ${tilde_path(folder)}.`}>
-      {#snippet actions()}<Button size="sm" variant="primary" onclick={onnew}><PlusIcon />New recipe</Button>{/snippet}
+    <EmptyState icon={BookOpenIcon} title="No recipes yet" description={`Paste one from a website, or write your own. They're saved in ${tilde_path(folder)}.`}>
+      {#snippet actions()}
+        <Button size="sm" variant="primary" onclick={onpaste}><ClipboardTextIcon />Paste a recipe</Button>
+        <Button size="sm" onclick={onnew}><PlusIcon />New recipe</Button>
+      {/snippet}
     </EmptyState>
   {:else if shown.length === 0}
     <EmptyState icon={MagnifyingGlassIcon} title="No matches" description="Try another word, or clear the tag." />
+  {:else if rows.length <= 1}
+    {@render grid(shown)}
   {:else}
-    <ul class="grid min-h-0 flex-1 auto-rows-min gap-2 overflow-y-auto p-3 @2xl:grid-cols-2 @5xl:grid-cols-3" aria-label="Recipes">
-      {#each shown as entry (entry.path)}
-        <li>
-          <button
-            type="button"
-            class={cn(
-              "flex w-full flex-col gap-1.5 rounded-lg bg-background-light p-3 text-left ring-1 ring-foreground/8 transition-colors duration-150",
-              "hover:bg-foreground/6 focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none"
-            )}
-            onclick={() => onopen(entry.path)}
-          >
-            <span class="text-sm font-medium">{entry.title}</span>
-            <span class="line-clamp-2 text-2xs text-foreground/65">
-              {entry.ingredients.length} {entry.ingredients.length === 1 ? "ingredient" : "ingredients"}{entry.servings ? ` · serves ${entry.servings}` : ""}{entry.ingredients.length > 0 ? ` · ${entry.ingredients.slice(0, 6).join(", ")}` : ""}
-            </span>
-            {#if entry.tags.length > 0}
-              <span class="flex flex-wrap gap-1">{#each entry.tags as name (name)}<Badge>{name}</Badge>{/each}</span>
-            {/if}
-          </button>
-        </li>
+    <div class="min-h-0 flex-1 overflow-y-auto py-3">
+      {#each rows as shelf (`${shelf.kind}:${shelf.label}`)}
+        <section class="mb-4 flex flex-col gap-2 last:mb-0" aria-label={shelf.label}>
+          <h2 class="flex items-center gap-1.5 px-3 text-ui font-medium">
+            {#if shelf.kind === Shelf.FAVORITES}<HeartIcon class="size-3.5 text-primary" weight="fill" />{:else if shelf.kind === Shelf.TAG}<TagIcon class="size-3.5 text-foreground/65" weight="duotone" />{/if}
+            {shelf.label}
+            <span class="font-mono text-2xs font-normal text-foreground/65 tabular-nums">{shelf.entries.length}</span>
+          </h2>
+          <ul class="flex snap-x snap-mandatory scroll-px-3 gap-2 overflow-x-auto px-3 pb-1">
+            {#each shelf.entries as entry (entry.path)}
+              <li class="w-60 max-w-[80cqw] shrink-0 snap-start">{@render card(entry)}</li>
+            {/each}
+          </ul>
+        </section>
       {/each}
-    </ul>
+    </div>
   {/if}
 </div>

@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { Badge } from "$lib/core/components/ui";
+  import { Badge, IconButton } from "$lib/core/components/ui";
+  import { ArrowSquareOut as ArrowSquareOutIcon, Heart as HeartIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
   import { cn } from "$lib/core/utils";
   import { format_amount, format_amounts, ingredient_list } from "./amounts";
   import type { UnitSystem } from "./constants";
-  import { meta_text, type Cookware, type Recipe } from "./cooklang";
+  import { meta_text, source_url, type Cookware, type Recipe } from "./cooklang";
   import StepText from "./step-text.svelte";
 
   interface Props {
@@ -14,10 +15,12 @@
     factor: number;
     system: UnitSystem;
     controls?: Snippet;
+    favorite?: boolean;
+    onfavorite?: (on: boolean) => void;
     class?: string;
   }
 
-  const { recipe, title, tags, factor, system, controls, class: class_name }: Props = $props();
+  const { recipe, title, tags, factor, system, controls, favorite = false, onfavorite, class: class_name }: Props = $props();
 
   const uid = $props.id();
   const ingredients = $derived(ingredient_list(recipe, factor, system));
@@ -29,12 +32,13 @@
           for (const item of block.items) if (item.kind === "cookware" && !seen.has(item.name.toLowerCase())) seen.set(item.name.toLowerCase(), item);
     return [...seen.values()];
   });
+  const link = $derived(source_url(recipe));
   const details = $derived(
     [
       ["Time", meta_text(recipe, "time", "duration", "total time")],
       ["Prep", meta_text(recipe, "prep time", "prep")],
       ["Cook", meta_text(recipe, "cook time")],
-      ["Source", meta_text(recipe, "source", "author")],
+      ["Source", link ? meta_text(recipe, "author") : meta_text(recipe, "source", "author")],
     ].filter((entry): entry is [string, string] => entry[1] !== null)
   );
   const description = $derived(meta_text(recipe, "description", "introduction"));
@@ -42,7 +46,19 @@
 
 <div class="@container"><article class={cn("mx-auto flex w-full max-w-5xl flex-col gap-5 p-4 @lg:p-6", class_name)}>
   <header class="flex flex-col gap-2">
-    <h1 class="text-xl font-semibold text-balance">{title}</h1>
+    <div class="flex items-start gap-2">
+      <h1 class="min-w-0 flex-1 text-xl font-semibold text-balance">{title}</h1>
+      {#if onfavorite}
+        <IconButton label={favorite ? "Remove from favourites" : "Add to favourites"} pressed={favorite} onclick={() => onfavorite(!favorite)}>
+          <HeartIcon weight={favorite ? "fill" : "regular"} />
+        </IconButton>
+      {/if}
+    </div>
+    {#if link}
+      <a href={link.href} target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 self-start text-ui text-primary hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-cottontail focus-visible:outline-none">
+        From {link.hostname.replace(/^www\./, "")}<ArrowSquareOutIcon class="size-3.5" />
+      </a>
+    {/if}
     {#if description}<p class="text-sm text-foreground/80">{description}</p>{/if}
     {#if details.length > 0}
       <dl class="flex flex-wrap gap-x-4 gap-y-1 text-ui">
@@ -62,7 +78,7 @@
       <section aria-labelledby={`${uid}-ingredients`} class="flex flex-col gap-1.5">
         <h2 id={`${uid}-ingredients`} class="text-2xs font-medium tracking-wide text-foreground/65 uppercase">Ingredients</h2>
         {#if ingredients.length === 0}
-          <p class="text-ui text-foreground/65">Mark ingredients in the steps with @name&#123;amount%unit&#125;.</p>
+          <p class="text-ui text-foreground/65">No ingredients yet. Add them in Edit.</p>
         {:else}
           <ul class="flex flex-col">
             {#each ingredients as entry (`${entry.name}|${entry.optional}`)}
@@ -109,7 +125,7 @@
           </ol>
         </section>
       {:else}
-        <p class="text-ui text-foreground/65">No steps yet. Each paragraph of the file is one step.</p>
+        <p class="text-ui text-foreground/65">No steps yet. Add them in Edit.</p>
       {/each}
     </div>
   </div>
