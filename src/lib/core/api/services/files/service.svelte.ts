@@ -12,11 +12,18 @@ import { MountState } from "./type";
 import { untrack } from "svelte";
 import { createSubscriber, SvelteMap } from "svelte/reactivity";
 import * as opfs from "./opfs";
-import { ensure_hierarchy, mount_point_of, PATHS } from "./hierarchy";
+import { ensure_hierarchy, mount_point_of, PATHS, TO_DEVICE_PATH } from "./hierarchy";
 import * as mounts_store from "./mounts-store";
 import { join_path, split_path } from "./path";
+import { download_blob } from "$lib/core/utils/download";
 import { files_shell } from "./shell";
 import type { SizeCache } from "./size-tree";
+
+interface DeviceSave {
+  name: string;
+  /** The native Save dialog's file; `null` downloads instead. */
+  target: FileSystemFileHandle | null;
+}
 
 export class FilesService implements IFilesService {
   name = "FilesService";
@@ -35,6 +42,9 @@ export class FilesService implements IFilesService {
   // Lazy: the boot bundle is at its budget. Reads without subscribing, so a walk started in an effect doesn't track every
   // folder it passes; making the cell lets clear(), which bumps only existing cells, invalidate the listing.
   private sizes: Promise<SizeCache> | null = null;
+
+  // Folder in /tmp/to-device → where its file goes. Memory only: /tmp is emptied at boot, so a stale folder can't outlive it.
+  private device_saves = new Map<string, DeviceSave>();
 
   mounts = $state.raw<Mount[]>([]);
   readonly can_mount = opfs.can_pick_folders;
@@ -137,12 +147,42 @@ export class FilesService implements IFilesService {
    */
   async changed(directory: FileSystemDirectoryHandle): Promise<void> {
     const segments = await this.path_of(directory);
-    if (segments !== null) this.bump(join_path(segments));
+    if (segments !== null) await this.folder_changed(join_path(segments));
   }
 
   private async changed_file(file: FileSystemFileHandle): Promise<void> {
     const segments = await this.path_of(file);
-    if (segments !== null) this.bump(join_path(segments.slice(0, -1)));
+    if (segments !== null) await this.folder_changed(join_path(segments.slice(0, -1)));
+  }
+
+  private async folder_changed(path: string): Promise<void> {
+    this.bump(path);
+    const save = this.device_saves.get(path);
+    if (save) await this.deliver(path, save);
+  }
+
+  async save_to_device(name: string): Promise<string | null> {
+    let target: FileSystemFileHandle | null = null;
+    if (opfs.can_pick_save) {
+      target = await opfs.pick_save_file(name);
+      if (!target) return null;
+    }
+    const tmp = await this.get_directory(PATHS.tmp);
+    if (!tmp) throw new DOMException(`${PATHS.tmp} doesn't exist`, "NotFoundError");
+    const id = crypto.randomUUID().slice(0, 8);
+    await opfs.get_directory_handle(await opfs.get_directory_handle(tmp, "to-device", { create: true }), id, { create: true });
+    const folder = join_path([...split_path(TO_DEVICE_PATH), id]);
+    const file_name = target?.name ?? name;
+    this.device_saves.set(folder, { name: file_name, target });
+    return join_path([...split_path(folder), file_name]);
+  }
+
+  /** Writes reach the picked file each time; a download fires only for content, since an app may create the file empty first. */
+  private async deliver(folder: string, save: DeviceSave): Promise<void> {
+    const file = await this.get_file(join_path([...split_path(folder), save.name]));
+    if (!file) return;
+    if (save.target) await opfs.write_file(save.target, file);
+    else if (file.size > 0) download_blob(file, save.name);
   }
 
   private cell(path: string): Revision {

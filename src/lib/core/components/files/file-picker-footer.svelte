@@ -42,6 +42,15 @@
     }
   }
 
+  async function to_device() {
+    try {
+      const path = await files.save_to_device(invalid ? (picker.name ?? "Untitled") : trimmed);
+      if (path) picker.onchoose([path]);
+    } catch (error) {
+      report_file_error("Couldn't save to this device", error);
+    }
+  }
+
   async function from_disk() {
     const path = await mount_folder();
     if (path) onnavigatepath(split_path(path));
@@ -64,7 +73,9 @@
 </script>
 
 {#snippet sources()}
-  {#if picker.kind === "file"}
+  {#if picker.kind === "save"}
+    <Button variant="quiet" size="sm" onclick={to_device}><DevicesIcon weight="bold" /> This device…</Button>
+  {:else if picker.kind === "file"}
     <Button variant="quiet" size="sm" onclick={from_device}><DevicesIcon weight="bold" /> This device…</Button>
     <Button variant="quiet" size="sm" onclick={from_clipboard}><ClipboardTextIcon weight="bold" /> Paste…</Button>
   {/if}
@@ -81,7 +92,7 @@
       if (save_path) picker.onchoose([save_path]);
     }}
   >
-    {#if files.can_mount}<div class="flex w-full flex-wrap items-center gap-1">{@render sources()}</div>{/if}
+    <div class="flex w-full flex-wrap items-center gap-1">{@render sources()}</div>
     <Input bind:value={name} aria-label="File name" placeholder="File name" class="min-w-48 flex-1" autofocus />
     {#if system}
       <span class="shrink-0 text-2xs text-error">{handler.path === PATHS.mnt ? "Open a mounted folder first" : "System folders are read-only"}</span>

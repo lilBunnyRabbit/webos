@@ -379,7 +379,18 @@ const is_abort = (error: unknown) => error instanceof DOMException && error.name
 /** Android and iOS browsers have no folder picker, so mounting is hidden there (ADR-044). */
 export const can_pick_folders = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
-const can_pick_save = typeof window !== "undefined" && "showSaveFilePicker" in window;
+/** The native Save dialog exists (Chromium desktop); elsewhere a save to the device becomes a download. */
+export const can_pick_save = typeof window !== "undefined" && "showSaveFilePicker" in window;
+
+/** The native Save dialog, opened in Downloads. Must run inside a user gesture. Resolves `null` on cancel. */
+export async function pick_save_file(name: string): Promise<FileSystemFileHandle | null> {
+  try {
+    return await disk().showSaveFilePicker({ suggestedName: name, startIn: "downloads" });
+  } catch (error) {
+    if (is_abort(error)) return null;
+    throw error;
+  }
+}
 
 /** The browser's folder chooser. Must run inside a user gesture. Resolves `null` on cancel. */
 export async function pick_disk_folder(mode: "read" | "readwrite" = "readwrite"): Promise<FileSystemDirectoryHandle | null> {

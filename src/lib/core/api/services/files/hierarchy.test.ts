@@ -9,6 +9,12 @@ describe("is_system_path", () => {
     expect(is_system_path("/etcetera")).toBe(false);
     expect(is_system_path("/home/etc")).toBe(false);
   });
+
+  test("a file staged for the device stays writable, its folders don't", () => {
+    expect(is_system_path("/tmp/to-device/ab12cd34/photo.png")).toBe(false);
+    expect(is_system_path("/tmp/to-device/ab12cd34")).toBe(true);
+    expect(is_system_path("/tmp/to-device/ab12cd34/x/photo.png")).toBe(true);
+  });
 });
 
 describe("is_locked_path", () => {

@@ -27,7 +27,16 @@ const ROOT_DIRECTORIES = ["home", "etc", "var", "tmp", "mnt"];
 const MARKER = "hierarchy.json";
 const HIERARCHY_VERSION = 1;
 
+/** Where the save picker's "This device…" stages files on their way to the disk (`FilesService.save_to_device`). */
+export const TO_DEVICE_PATH = `${PATHS.tmp}/to-device`;
+
+/** A staged file in `TO_DEVICE_PATH/<id>/`: every save to it goes on to the device, so apps keep it writable. */
+export function is_device_save_path(path: string): boolean {
+  return path.startsWith(`${TO_DEVICE_PATH}/`) && split_path(path).length === 4;
+}
+
 export function is_system_path(path: string): boolean {
+  if (is_device_save_path(path)) return false;
   return SYSTEM_DIRECTORIES.some((dir) => path === dir || path.startsWith(`${dir}/`));
 }
 

@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.1.0",
+    date: "2026-11-06",
+    title: "Save straight to your device",
+    changes: [
+      {
+        kind: NEW,
+        text: "Save as has a This device… button in every app: pick any folder on your computer, Downloads included, or download the file on phones and in Safari or Firefox. Saving again updates the same file.",
+      },
+    ],
+  },
+  {
     version: "4.0.2",
     date: "2026-11-06",
     title: "Bigger drawing box on phones",

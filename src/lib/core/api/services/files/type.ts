@@ -109,6 +109,12 @@ export interface FilesService extends IService {
   copy_paths(paths: string[], target: string, on_conflict?: ConflictHandler): Promise<string[]>;
   /** Copies the file or folder at `path` onto the real disk (native Save dialog / folder picker). The written name, or `null` if cancelled. */
   export_to_disk(path: string): Promise<string | null>;
+  /**
+   * The save picker's "This device…": the native Save dialog where there is one, then a fresh folder in `/tmp/to-device`.
+   * Resolves the path the app writes to, `null` if cancelled. Every write to that file through FilesService goes on to
+   * the picked file on the disk, or downloads it where there's no Save dialog. Must run from a click or keypress.
+   */
+  save_to_device(name: string): Promise<string | null>;
   /** Mounted real folders, reactive. Each one's listing is read fresh: edits made outside the browser bump no revision. */
   readonly mounts: readonly Mount[];
   /** `showDirectoryPicker` exists; Android has none, so Mount and "Folder on disk…" are hidden there. */

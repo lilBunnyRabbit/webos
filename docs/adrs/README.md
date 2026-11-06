@@ -128,6 +128,7 @@ What are the implications of this decision?
 | [092](./092-skip-pauses.md) | Skip pauses in Video Tools | 2026-11-04 | Implemented |
 | [093](./093-glimpse.md) | Glimpse, throwaway photos | 2026-11-05 | Implemented |
 | [094](./094-app-storage-opfs.md) | App storage off localStorage (4.0) | 2026-11-05 | Implemented |
+| [095](./095-save-to-device.md) | Save to this device from the save picker | 2026-11-06 | Implemented |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
