@@ -215,12 +215,19 @@
     </section>
   </div>
 
-  {#if manifest.preview}
+  {#snippet frame(src?: string)}
     <div class="aspect-[8/5] w-full overflow-hidden rounded-xl bg-background-darker ring-1 ring-foreground/8">
-      {#await manifest.preview() then image}
-        <img src={image.default} alt="{manifest.name} in use" width="1200" height="750" decoding="async" class="size-full object-cover object-top" />
-      {/await}
+      {#if src}<img {src} alt="{manifest.name} in use" width="1200" height="750" decoding="async" class="size-full object-cover object-top" />{/if}
     </div>
+  {/snippet}
+  {#if manifest.preview}
+    {#await manifest.preview()}
+      {@render frame()}
+    {:then image}
+      {@render frame(image.default)}
+    {:catch}
+      <!-- Offline and not installed: the preview chunk isn't cached, so no empty frame. -->
+    {/await}
   {/if}
 
   {#await manifest.highlights?.() then module}
