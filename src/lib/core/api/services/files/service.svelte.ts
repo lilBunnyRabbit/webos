@@ -23,6 +23,10 @@ interface DeviceSave {
   name: string;
   /** The native Save dialog's file; `null` downloads instead. */
   target: FileSystemFileHandle | null;
+  /** The file that goes to `target`: `name`, else the first one written (apps add extensions to the picked name). */
+  primary: string | null;
+  /** Name → `lastModified:size` last delivered, so a write to one file doesn't send its unchanged siblings again. */
+  sent: Map<string, string>;
 }
 
 export class FilesService implements IFilesService {
@@ -173,16 +177,30 @@ export class FilesService implements IFilesService {
     await opfs.get_directory_handle(await opfs.get_directory_handle(tmp, "to-device", { create: true }), id, { create: true });
     const folder = join_path([...split_path(TO_DEVICE_PATH), id]);
     const file_name = target?.name ?? name;
-    this.device_saves.set(folder, { name: file_name, target });
+    this.device_saves.set(folder, { name: file_name, target, primary: null, sent: new Map() });
     return join_path([...split_path(folder), file_name]);
   }
 
-  /** Writes reach the picked file each time; a download fires only for content, since an app may create the file empty first. */
+  /**
+   * Sends every changed file in a staging folder: the primary one to the Save dialog's file, the rest (a sprite sheet's
+   * JSON) as downloads. Empty files wait, since an app may create the file first and write it after.
+   */
   private async deliver(folder: string, save: DeviceSave): Promise<void> {
-    const file = await this.get_file(join_path([...split_path(folder), save.name]));
-    if (!file) return;
-    if (save.target) await opfs.write_file(save.target, file);
-    else if (file.size > 0) download_blob(file, save.name);
+    const directory = await this.get_directory(folder);
+    if (!directory) return;
+    const files: File[] = [];
+    for (const item of await opfs.list_directory(directory)) {
+      if (item.kind === "file") files.push(await (item.handle as FileSystemFileHandle).getFile());
+    }
+    const written = files.filter((file) => file.size > 0);
+    save.primary ??= (written.find((file) => file.name === save.name) ?? written[0])?.name ?? null;
+    for (const file of written) {
+      const stamp = `${file.lastModified}:${file.size}`;
+      if (save.sent.get(file.name) === stamp) continue;
+      save.sent.set(file.name, stamp);
+      if (save.target && file.name === save.primary) await opfs.write_file(save.target, file);
+      else download_blob(file, file.name);
+    }
   }
 
   private cell(path: string): Revision {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { DialogProps } from "$lib/core/api";
-  import { PATHS } from "$lib/core/api/services/files/hierarchy";
+  import { PATHS, TO_DEVICE_PATH } from "$lib/core/api/services/files/hierarchy";
   import { get_app_context } from "$lib/core/contexts/app";
   import FileExplorer from "./file-explorer.svelte";
   import { pasted_paths } from "./picker";
@@ -50,6 +50,9 @@
   }
 
   const TITLES = { file: "Open a file", directory: "Choose a folder", save: "Save as" };
+
+  // Apps start Save as next to the last save; after a save to the device that's a read-only staging folder.
+  const start = $derived(start_path === TO_DEVICE_PATH || start_path.startsWith(`${TO_DEVICE_PATH}/`) ? PATHS.home : start_path);
 </script>
 
 <div {@attach sheet_paste(window_id, on_paste)} class="flex h-[min(30rem,calc(100cqh-2rem))] w-[min(46rem,calc(100cqw-2rem))] flex-col overflow-hidden rounded-2xl bg-background shadow-popover">
@@ -58,6 +61,6 @@
     {#if accept?.length}<span class="truncate font-mono text-2xs text-foreground/80">{accept.join(" ")}</span>{/if}
   </div>
   <div class="min-h-0 flex-1 @container">
-    <FileExplorer path={start_path} picker={{ kind, accept, name, multiple, onchoose: (paths) => resolve(paths), oncancel: () => resolve(null) }} />
+    <FileExplorer path={start} picker={{ kind, accept, name, multiple, onchoose: (paths) => resolve(paths), oncancel: () => resolve(null) }} />
   </div>
 </div>

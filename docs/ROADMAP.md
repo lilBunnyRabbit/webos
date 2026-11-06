@@ -85,6 +85,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] App data (ADR-035, 2026-10-14): `storage.file()` JSON cells in `/var/lib/apps/{id}/`, replacing the parked AppDataHandle
 - [x] `WindowHandle.is_visible`, `notify({ system })`, `print_html`, game kit (`$lib/core/games`, now `$kit/games`: Stopwatch, play time, daily seeds) (ADR-035)
 - [x] App storage in OPFS, WebOS 4.0.0 ([ADR-094](adrs/094-app-storage-opfs.md), [brainstorm](brainstorm/2026-11-05_app-storage-opfs.md)): every app's localStorage keys copied into `/var/lib/apps/{id}/storage.json` at boot, `storage.get`/`set`/`persisted`/`remove` and the deprecated manifest fields removed
+- [x] Save to this device, WebOS 4.1.0 ([ADR-095](adrs/095-save-to-device.md), [brainstorm](brainstorm/2026-11-06_save-to-device.md)): "This device…" in the save picker, native Save dialog or a download, every app with Save as
 - [x] WindowHandle: `set_title` + `set_dirty` close guard (ADR-029, 2026-10-12); `set_icon` not built
 - [x] WindowHandle: overlays (`pick_file`, `pick_directory`, `pick_save`, `confirm`, `prompt`; ADR-025)
 - [ ] WindowHandle: status bar (parked: the kit `StatusBar` covers apps)
