@@ -92,6 +92,9 @@
   const stall = $derived(stall_warning(plane, c));
   const turning = $derived(turn_left(plane, controls.facing) !== 0);
   const profile_width = $derived(Math.min(PROFILE_WIDTH, board_size.width * 0.42));
+  const profile_shown = $derived(board_size.width >= 300);
+  // A tall board has sky to spare: the plane comes in closer, the ground sits lower than the middle but off the bottom edge, and the hint goes under the profile.
+  const tall = $derived(board_size.height > board_size.width * 1.3);
   const to_runway = $derived(runway_distance(plane.x, facing(plane)));
 
   /** Metres to the near end of the runway the way the nose points; null over it or with it behind. */
@@ -169,12 +172,12 @@
   function target_camera(): Camera {
     const insets = control_insets();
     const agl = wheel_height(plane, c);
-    const span = Math.min(420, 34 + 1.2 * Math.min(agl, 80) + 0.35 * Math.max(0, agl - 80));
+    const span = Math.min(420, (tall ? 26 : 34) + 1.2 * Math.min(agl, 80) + 0.35 * Math.max(0, agl - 80));
     const scale = Math.max(1, Math.min(board_size.width, board_size.height)) / (span / zoom);
     const high = (board_size.height - insets.top - insets.bottom) / scale;
     const reach = span / 3;
     const ahead = Math.max(-reach, Math.min(reach, plane.vx * LOOK_AHEAD));
-    const focus = { x: plane.x + ahead, y: -Math.max(plane.h, 0.32 * high) };
+    const focus = { x: plane.x + ahead, y: -Math.max(plane.h, (tall ? 0.14 : 0.32) * high) };
     return frame(BOUNDS, focus, board_size.width, board_size.height, zoom, insets, span);
   }
 
@@ -200,7 +203,7 @@
       insets: control_insets(),
       puffs,
       hangar_label: "Hangar",
-      profile: board_size.width >= 300,
+      profile: profile_shown,
     });
   }
 
@@ -377,7 +380,7 @@
 {/snippet}
 
 {#snippet overlay()}
-  <div bind:clientHeight={hud_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right="{board_size.width >= 300 ? profile_width + 16 : 8}px">
+  <div bind:clientHeight={hud_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right="{profile_shown ? profile_width + 16 : 8}px">
     <div class="flex max-w-full flex-wrap items-center gap-1.5">
       <IconButton
         size="sm"
@@ -425,9 +428,17 @@
   </div>
 
   {#if !settings.seen_hint && flying && !in_hangar_now}
-    <p class="pointer-events-none absolute inset-x-2 bottom-2 mx-auto max-w-84 rounded-md bg-background/85 px-2 py-1 text-center text-ui text-foreground/80 backdrop-blur-[2px]">
-      <span class="pointer-fine:hidden">Push the throttle up and roll down the runway. It lifts off by itself near 45 kn; the pad on the right raises the nose.</span>
-      <span class="hidden pointer-fine:inline">Shift opens the throttle a notch. Roll down the runway: it lifts off by itself near 45 kn. W and S pitch, A and D turn round.</span>
+    <p
+      class="pointer-events-none absolute left-2 mx-auto max-w-84 rounded-md bg-background/85 px-2 py-1 text-center text-ui text-foreground/80 backdrop-blur-[2px]"
+      style:top="{hud_height + 16 + (profile_shown && tall ? profile_width * 0.36 + 8 : 0)}px"
+      style:right="{profile_shown && !tall ? profile_width + 16 : 8}px"
+    >
+      <span class="pointer-fine:hidden">
+        Push the throttle up and roll down the runway. It lifts off by itself near 45 kn; drag the pad on the right {settings.pitch === PitchMode.PILOT ? "down" : "up"} to raise the nose.
+      </span>
+      <span class="hidden pointer-fine:inline">
+        Shift opens the throttle a notch. Roll down the runway: it lifts off by itself near 45 kn. {settings.pitch === PitchMode.PILOT ? "S" : "W"} raises the nose, A and D turn round.
+      </span>
     </p>
   {/if}
 

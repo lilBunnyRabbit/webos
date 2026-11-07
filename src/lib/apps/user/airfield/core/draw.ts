@@ -83,7 +83,7 @@ function sky_and_ground(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
   ctx.fillStyle = palette.grass;
   ctx.fillRect(box.x0, 0, box.x1 - box.x0, Math.max(0, box.y1));
   ctx.fillStyle = scenery.earth;
-  ctx.fillRect(box.x0, 1.4, box.x1 - box.x0, Math.max(0, box.y1 - 1.4));
+  ctx.fillRect(box.x0, 1.2, box.x1 - box.x0, Math.max(0, box.y1 - 1.2));
 }
 
 /**
@@ -120,6 +120,7 @@ function clouds(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
   const cell = 420;
   const from = Math.floor(box.x0 / cell) - 1;
   const to = Math.ceil(box.x1 / cell) + 1;
+  ctx.beginPath();
   for (let i = from; i <= to; i++) {
     for (let layer = 0; layer < 2; layer++) {
       const h = hash(7 + layer, i);
@@ -128,12 +129,19 @@ function clouds(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
       const y = -(220 + layer * 420 + ((h >> 10) % 260));
       const w = 50 + ((h >> 6) % 90);
       if (y - w > box.y1 || y + w < box.y0) continue;
+      const base = y + w * 0.1;
       for (let k = 0; k < 4; k++) {
         const kh = hash(h, k);
-        ellipse(ctx, x + (k - 1.5) * w * 0.35, y + ((kh % 100) / 100 - 0.5) * w * 0.15, w * (0.3 + (kh % 37) / 120), w * (0.16 + (kh % 23) / 200), f.scenery.cloud);
+        const r = w * (0.2 + (kh % 37) / 260) * (k === 1 || k === 2 ? 1.35 : 1);
+        const cx = x + (k - 1.5) * w * 0.32;
+        ctx.moveTo(cx + r, base);
+        ctx.arc(cx, base, r, 0, Math.PI, true);
+        ctx.closePath();
       }
     }
   }
+  ctx.fillStyle = f.scenery.cloud;
+  ctx.fill();
 }
 
 function runway(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
@@ -143,7 +151,7 @@ function runway(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
     ctx.fillStyle = scenery.runway;
     ctx.fillRect(x0, 0, x1 - x0, depth);
   };
-  band(field.apron.x0, field.apron.x1, 0.9);
+  band(field.apron.x0, field.apron.x1, 1.2);
   band(field.runway.x0, field.runway.x1, 1.2);
   ctx.fillStyle = palette.paint;
   const r = field.runway;
@@ -170,13 +178,45 @@ function runway(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
 }
 
 function trees(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
-  const { palette } = f;
+  const { palette, view } = f;
+  const edge = Math.max(0.06, hair(view, 1.25));
+  ctx.lineJoin = "round";
   for (const tree of f.field.trees) {
     if (tree.x + tree.r < box.x0 || tree.x - tree.r > box.x1) continue;
-    ctx.fillStyle = palette.wood;
-    ctx.fillRect(tree.x - 0.25, -tree.height * 0.55, 0.5, tree.height * 0.55);
-    ellipse(ctx, tree.x, -tree.height + tree.r * 0.9, tree.r, tree.r * 1.15, palette.hedge_edge);
-    ellipse(ctx, tree.x - tree.r * 0.35, -tree.height + tree.r * 1.2, tree.r * 0.6, tree.r * 0.6, palette.hedge_leaf);
+    const { x, height } = tree;
+    const r = Math.min(tree.r, height * 0.32);
+    const trunk = Math.max(0.4, height * 0.07);
+    ctx.beginPath();
+    ctx.roundRect(x - trunk / 2, -height * 0.5, trunk, height * 0.5, trunk * 0.3);
+    solid(ctx, palette.wood, edge, palette.edge);
+    ctx.beginPath();
+    if (hash(5, Math.round(x)) % 3 === 0) {
+      for (let k = 0; k < 3; k++) {
+        const top = -height + k * height * 0.22;
+        const half = r * (0.6 + k * 0.22);
+        ctx.moveTo(x, top);
+        ctx.lineTo(x + half, top + height * 0.36);
+        ctx.lineTo(x - half, top + height * 0.36);
+        ctx.closePath();
+      }
+    } else {
+      for (const [dx, dy, k] of [
+        [0, 1, 1],
+        [-0.62, 1.62, 0.74],
+        [0.6, 1.5, 0.8],
+      ]) {
+        ctx.moveTo(x + dx * r + k * r, -height + dy * r);
+        ctx.arc(x + dx * r, -height + dy * r, k * r, 0, Math.PI * 2);
+      }
+    }
+    solid(ctx, palette.hedge_edge, edge, palette.edge);
+    ctx.save();
+    ctx.clip();
+    ctx.beginPath();
+    ctx.ellipse(x + r * 0.5, -height + r * 2.2, r * 1.3, r * 1.1, 0, 0, Math.PI * 2);
+    ctx.fillStyle = palette.shadow;
+    ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -184,60 +224,100 @@ function hangar(ctx: CanvasRenderingContext2D, f: Frame) {
   const { field, palette, view } = f;
   const { x0, x1, height } = field.hangar;
   const w = x1 - x0;
+  const edge = Math.max(0.06, hair(view, 1.25));
+  const door = height * 0.64;
+  ctx.beginPath();
+  ctx.rect(x0 - 7, -height * 0.42, 7.4, height * 0.42);
+  solid(ctx, palette.pillar, edge, palette.edge);
+  ctx.beginPath();
+  ctx.roundRect(x0 - 5.6, -height * 0.3, 2.4, height * 0.14, 0.2);
+  ctx.roundRect(x0 - 2.6, -height * 0.3, 1.6, height * 0.3, 0.2);
+  ctx.fillStyle = palette.garage;
+  ctx.fill();
   ctx.beginPath();
   ctx.moveTo(x0, 0);
   ctx.lineTo(x0, -height * 0.7);
   ctx.quadraticCurveTo(x0 + w / 2, -height * 1.25, x1, -height * 0.7);
   ctx.lineTo(x1, 0);
   ctx.closePath();
-  ctx.fillStyle = palette.wall;
-  ctx.fill();
-  ctx.strokeStyle = palette.wall_edge;
-  ctx.lineWidth = hair(view, 1.5);
-  ctx.stroke();
-  ctx.fillStyle = palette.garage;
-  ctx.fillRect(x0 + 1.5, -height * 0.62, w - 3, height * 0.62);
-  ctx.strokeStyle = palette.kerb;
-  ctx.lineWidth = hair(view);
-  for (let x = x0 + 1.5 + 3.5; x < x1 - 1.5; x += 3.5) {
-    ctx.beginPath();
-    ctx.moveTo(x, -height * 0.62);
+  solid(ctx, palette.steel, edge, palette.edge);
+  ctx.save();
+  ctx.clip();
+  ctx.strokeStyle = palette.edge;
+  ctx.globalAlpha = 0.35;
+  ctx.lineWidth = Math.max(0.05, hair(view, 1));
+  ctx.beginPath();
+  for (let x = x0 + 1.2; x < x1; x += 1.2) {
+    ctx.moveTo(x, -height * 1.1);
     ctx.lineTo(x, 0);
-    ctx.stroke();
   }
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  ctx.beginPath();
+  ctx.rect(x0 + 1.5, -door, w - 3, door);
+  solid(ctx, palette.garage, edge, palette.edge);
+  ctx.strokeStyle = palette.kerb;
+  ctx.lineWidth = Math.max(0.05, hair(view, 1));
+  ctx.beginPath();
+  for (let x = x0 + 1.5 + 3.5; x < x1 - 1.5; x += 3.5) {
+    ctx.moveTo(x, -door);
+    ctx.lineTo(x, 0);
+  }
+  ctx.stroke();
   if (view.scale > 3) {
     ctx.font = `600 ${Math.max(1.1, 12 / view.scale)}px ${f.font}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = palette.paint;
-    ctx.fillText(f.hangar_label, x0 + w / 2, -height * 0.82);
+    ctx.fillStyle = palette.ink;
+    ctx.fillText(f.hangar_label, x0 + w / 2, -height * 0.83);
   }
 }
 
 function windsock(ctx: CanvasRenderingContext2D, f: Frame) {
   const { palette, view } = f;
   const x = f.field.windsock;
-  ctx.strokeStyle = palette.steel;
-  ctx.lineWidth = Math.max(0.12, hair(view, 1.5));
+  const edge = Math.max(0.04, hair(view, 1.25));
   ctx.beginPath();
-  ctx.moveTo(x, 0);
-  ctx.lineTo(x, -6);
-  ctx.stroke();
+  ctx.roundRect(x - 0.09, -6.2, 0.18, 6.2, 0.09);
+  solid(ctx, palette.steel, edge, palette.edge);
   const sway = Math.sin(f.time * 0.8) * 0.15;
+  const dx = 0.45 + sway;
+  const length = Math.hypot(dx, 1);
+  const along = { x: dx / length, y: 1 / length };
+  const across = { x: along.y, y: -along.x };
+  const at = (t: number, side: number) => {
+    const r = 0.34 - t * 0.07;
+    return { x: x + 0.1 + along.x * t * 0.62 + across.x * r * side, y: -5.9 + along.y * t * 0.62 + across.y * r * side };
+  };
   for (let k = 0; k < 4; k++) {
+    const corners = [at(k, -1), at(k + 1, -1), at(k + 1, 1), at(k, 1)];
     ctx.beginPath();
-    const a = 0.6 + k * 0.45;
-    const b = a + 0.45;
-    ctx.moveTo(x + sway * a, -6 + a * 0.95);
-    ctx.lineTo(x + sway * b, -6 + b * 0.95);
-    ctx.lineWidth = 0.55 - k * 0.08;
-    ctx.strokeStyle = k % 2 ? palette.paint : palette.warning;
-    ctx.stroke();
+    corners.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+    ctx.closePath();
+    ctx.fillStyle = k % 2 ? palette.glow : palette.warning;
+    ctx.fill();
   }
+  ctx.beginPath();
+  for (const p of [at(0, -1), at(4, -1), at(4, 1), at(0, 1)]) ctx.lineTo(p.x, p.y);
+  ctx.closePath();
+  ctx.lineJoin = "round";
+  ctx.lineWidth = edge;
+  ctx.strokeStyle = palette.edge;
+  ctx.stroke();
+}
+
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Station extends BodyPoint {
+  w?: number;
 }
 
 /** A body point on screen in world units: foreshortened by the heading, so the plane turns away and back through a turn. */
-function project(plane: Plane, p: BodyPoint, lateral = 0): { x: number; y: number } {
+function project(plane: Plane, p: BodyPoint, lateral = 0): Point {
   const cos = Math.cos(plane.pitch);
   const sin = Math.sin(plane.pitch);
   const s = p.x * cos - p.z * sin;
@@ -248,19 +328,66 @@ function project(plane: Plane, p: BodyPoint, lateral = 0): { x: number; y: numbe
   };
 }
 
-function shape(ctx: CanvasRenderingContext2D, plane: Plane, points: readonly BodyPoint[]) {
-  ctx.beginPath();
+function rounded(points: readonly Station[], rounds = 2): Station[] {
+  let at: Station[] = [...points];
+  for (let r = 0; r < rounds; r++) {
+    const next: Station[] = [];
+    at.forEach((p, i) => {
+      const q = at[(i + 1) % at.length];
+      const mix = (t: number): Station => ({ x: p.x + (q.x - p.x) * t, z: p.z + (q.z - p.z) * t, w: (p.w ?? 1) + ((q.w ?? 1) - (p.w ?? 1)) * t });
+      next.push(mix(0.25), mix(0.75));
+    });
+    at = next;
+  }
+  return at;
+}
+
+function disc(centre: BodyPoint, r: number, n = 16): BodyPoint[] {
+  return Array.from({ length: n }, (_, i) => ({ x: centre.x + r * Math.cos((i / n) * Math.PI * 2), z: centre.z + r * Math.sin((i / n) * Math.PI * 2) }));
+}
+
+function subpath(ctx: CanvasRenderingContext2D, points: readonly Point[]) {
+  let area = 0;
   points.forEach((p, i) => {
-    const at = project(plane, p);
-    if (i === 0) ctx.moveTo(at.x, at.y);
-    else ctx.lineTo(at.x, at.y);
+    const q = points[(i + 1) % points.length];
+    area += p.x * q.y - q.x * p.y;
   });
+  const order = area < 0 ? [...points].reverse() : points;
+  order.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.closePath();
 }
 
-function line(ctx: CanvasRenderingContext2D, plane: Plane, a: BodyPoint, b: BodyPoint, width: number, colour: string) {
-  const p = project(plane, a);
-  const q = project(plane, b);
+/**
+ * An outline swept across from `from` to `to` metres of lateral offset, added to the current path: the outline at both
+ * ends and the band between each pair of edges, all wound one way so a nonzero fill paints their union. Side on, the two
+ * ends land on each other; turned or banked, the wing shows its planform and the fuselage its width.
+ */
+function swept(ctx: CanvasRenderingContext2D, plane: Plane, outline: readonly Station[], from: number, to = from) {
+  const a = outline.map((p) => project(plane, p, from * (p.w ?? 1)));
+  subpath(ctx, a);
+  if (from === to) return;
+  const b = outline.map((p) => project(plane, p, to * (p.w ?? 1)));
+  if (Math.max(...a.map((p, i) => Math.hypot(p.x - b[i].x, p.y - b[i].y))) < 0.01) return;
+  subpath(ctx, b);
+  a.forEach((p, i) => {
+    const j = (i + 1) % a.length;
+    subpath(ctx, [p, a[j], b[j], b[i]]);
+  });
+}
+
+/** Fills the current path with an outline round its outside only, so overlapping swept parts read as one body. */
+function solid(ctx: CanvasRenderingContext2D, colour: string, edge: number, edge_colour: string) {
+  ctx.lineJoin = "round";
+  ctx.lineWidth = edge * 2;
+  ctx.strokeStyle = edge_colour;
+  ctx.stroke();
+  ctx.fillStyle = colour;
+  ctx.fill();
+}
+
+function rod(ctx: CanvasRenderingContext2D, plane: Plane, a: BodyPoint, a_side: number, b: BodyPoint, b_side: number, width: number, colour: string) {
+  const p = project(plane, a, a_side);
+  const q = project(plane, b, b_side);
   ctx.beginPath();
   ctx.moveTo(p.x, p.y);
   ctx.lineTo(q.x, q.y);
@@ -274,107 +401,218 @@ function hinged(from: BodyPoint, length: number, angle: number): BodyPoint {
   return { x: from.x - length * Math.cos(angle), z: from.z - length * Math.sin(angle) };
 }
 
-const FUSELAGE: BodyPoint[] = [
-  { x: 2.0, z: 0.15 },
-  { x: 1.95, z: 0.55 },
-  { x: 1.2, z: 0.95 },
-  { x: 0.5, z: 1.2 },
-  { x: -0.9, z: 1.12 },
-  { x: -4.3, z: 0.55 },
-  { x: -4.75, z: 0.42 },
-  { x: -4.7, z: 0.05 },
-  { x: -1.0, z: -0.35 },
-  { x: 0.9, z: -0.45 },
-  { x: 1.9, z: -0.25 },
+const FUSELAGE = rounded([
+  { x: 2.0, z: 0.5, w: 0.36 },
+  { x: 1.55, z: 0.68, w: 0.4 },
+  { x: 1.12, z: 0.74, w: 0.42 },
+  { x: 0.55, z: 1.34, w: 0.4 },
+  { x: -0.7, z: 1.34, w: 0.38 },
+  { x: -1.5, z: 0.98, w: 0.32 },
+  { x: -4.4, z: 0.52, w: 0.1 },
+  { x: -4.85, z: 0.46, w: 0.06 },
+  { x: -4.88, z: 0.12, w: 0.06 },
+  { x: -3.5, z: -0.04, w: 0.14 },
+  { x: -1.0, z: -0.32, w: 0.34 },
+  { x: 0.6, z: -0.44, w: 0.4 },
+  { x: 1.65, z: -0.34, w: 0.38 },
+  { x: 2.02, z: -0.14, w: 0.34 },
+]);
+const FIN = rounded(
+  [
+    { x: -3.6, z: 0.66 },
+    { x: -4.3, z: 1.32 },
+    { x: -4.55, z: 1.58 },
+    { x: -4.82, z: 1.58 },
+    { x: -4.98, z: 1.3 },
+    { x: -4.9, z: 0.4 },
+  ],
+  1
+);
+const WINDOWS: BodyPoint[] = [
+  { x: 1.08, z: 0.8 },
+  { x: 0.55, z: 1.13 },
+  { x: -0.55, z: 1.13 },
+  { x: -0.55, z: 0.6 },
+  { x: 0.9, z: 0.6 },
 ];
-const WINDOW: BodyPoint[] = [
-  { x: 1.12, z: 0.88 },
-  { x: 0.5, z: 1.08 },
-  { x: 0.45, z: 0.55 },
-  { x: 1.05, z: 0.5 },
+const COWL: Station[] = [
+  { x: 1.3, z: -1 },
+  { x: 2.4, z: -1 },
+  { x: 2.4, z: 1 },
+  { x: 1.3, z: 1 },
 ];
-const FIN: BodyPoint[] = [
-  { x: -3.85, z: 0.6 },
-  { x: -4.45, z: 1.5 },
-  { x: -4.9, z: 1.5 },
-  { x: -4.8, z: 0.42 },
+const STRIPE: Station[] = [
+  { x: 1.3, z: 0.4 },
+  { x: -1.5, z: 0.4 },
+  { x: -4.9, z: 0.34 },
+  { x: -4.9, z: 0.24 },
+  { x: -1.5, z: 0.26 },
+  { x: 1.3, z: 0.26 },
 ];
+const BELLY: Station[] = [
+  { x: 2.4, z: -0.12 },
+  { x: -5, z: 0.06 },
+  { x: -5, z: -1 },
+  { x: 2.4, z: -1 },
+];
+const SPINNER = rounded(
+  [
+    { x: 1.98, z: 0.42 },
+    { x: 2.36, z: 0.15 },
+    { x: 1.98, z: -0.12 },
+  ],
+  1
+);
+const WING = rounded(
+  [
+    { x: 0.82, z: 1.3 },
+    { x: 0.55, z: 1.46 },
+    { x: 0.05, z: 1.5 },
+    { x: -0.44, z: 1.42 },
+    { x: -0.44, z: 1.27 },
+    { x: 0.55, z: 1.24 },
+  ],
+  1
+);
+const TAILPLANE: BodyPoint[] = [
+  { x: -3.7, z: 0.48 },
+  { x: -3.9, z: 0.55 },
+  { x: -4.42, z: 0.54 },
+  { x: -4.42, z: 0.42 },
+  { x: -3.9, z: 0.41 },
+];
+const FLAP_HINGE: BodyPoint = { x: -0.44, z: 1.345 };
+const ELEVATOR_HINGE: BodyPoint = { x: -4.42, z: 0.48 };
+const MAIN_AXLE: BodyPoint = { x: 0.35, z: -0.7 };
+const TYRE = disc(MAIN_AXLE, 0.3);
+const HUB = disc(MAIN_AXLE, 0.12, 10);
+const TAIL_TYRE = disc({ x: -4.6, z: -0.1 }, 0.1, 10);
+const PROP_HUB: BodyPoint = { x: 2.12, z: 0.15 };
+const TRACK = 0.9;
+const TYRE_HALF = 0.12;
+const FLAP_SPAN = [0.45, 2.9];
+const STRUT_FOOT: BodyPoint = { x: 0.2, z: -0.2 };
 
 function draw_plane(ctx: CanvasRenderingContext2D, f: Frame) {
   const { plane, palette, view } = f;
   const paint = palette.player;
-  const edge = hair(view, 1);
-  const thick = Math.max(0.09, hair(view, 1.6));
-  const side = Math.abs(Math.cos(plane.yaw));
+  const edge = Math.max(0.035, hair(view, 1.25));
   const span = f.c.spec.span / 2;
-  const wing_far = Math.sin(plane.yaw) * Math.cos(plane.bank) >= 0 ? -1 : 1;
-  const wing_bar = (sign: number) => {
-    if (Math.abs(Math.sin(plane.yaw)) < 0.05 && Math.abs(Math.sin(plane.bank)) < 0.05) return;
-    const root = project(plane, { x: -0.05, z: 1.25 });
-    const tip = project(plane, { x: -0.05, z: 1.25 }, sign * span);
-    ctx.beginPath();
-    ctx.moveTo(root.x, root.y);
-    ctx.lineTo(tip.x, tip.y);
-    ctx.lineWidth = Math.max(0.18, 0.2 + 1.4 * (1 - side) * 0.3);
-    ctx.lineCap = "round";
-    ctx.strokeStyle = paint.roof;
-    ctx.stroke();
+  const near = Math.sin(plane.yaw) * Math.cos(plane.bank) >= 0 ? 1 : -1;
+  // Drawn longer than the real 0.42 m chord when zoomed out and dark once lowered (the body is the accent colour), so the setting reads at circuit height.
+  const flap_length = Math.max(0.42, hair(view, 7));
+  const flap_tip = hinged(FLAP_HINGE, flap_length, (Math.PI / 180) * 40 * plane.flaps);
+  const flap_down = plane.flaps > 0.02;
+  const elevator_tip = hinged(ELEVATOR_HINGE, 0.48, -plane.elevator * 0.45);
+  const rod_width = Math.max(0.07, hair(view, 1.5));
+
+  const half = (sign: number) => {
+    const first = sign !== near;
+    const tailplane = () => {
+      ctx.beginPath();
+      swept(ctx, plane, TAILPLANE, 0, sign * 1.6);
+      solid(ctx, paint.body, edge, palette.edge);
+      ctx.beginPath();
+      swept(ctx, plane, [{ x: -4.42, z: 0.53 }, elevator_tip, { x: -4.42, z: 0.43 }], sign * 0.05, sign * 1.6);
+      solid(ctx, paint.roof, edge, palette.edge);
+    };
+    const gear = () => {
+      rod(ctx, plane, { x: 0.8, z: -0.38 }, sign * 0.3, MAIN_AXLE, sign * TRACK, rod_width, palette.ink);
+      rod(ctx, plane, { x: -0.1, z: -0.34 }, sign * 0.3, MAIN_AXLE, sign * TRACK, rod_width, palette.ink);
+      ctx.beginPath();
+      swept(ctx, plane, TYRE, sign * (TRACK - TYRE_HALF), sign * (TRACK + TYRE_HALF));
+      solid(ctx, palette.ink, edge, palette.edge);
+      if (!first) {
+        ctx.beginPath();
+        swept(ctx, plane, HUB, sign * (TRACK + TYRE_HALF));
+        ctx.fillStyle = palette.steel;
+        ctx.fill();
+      }
+    };
+    const wing = () => {
+      for (const x of [0.5, -0.15]) rod(ctx, plane, STRUT_FOOT, sign * 0.38, { x, z: 1.25 }, sign * 2.9, rod_width, paint.roof);
+      ctx.beginPath();
+      swept(ctx, plane, WING, sign * 0.3, sign * span);
+      solid(ctx, paint.body, edge, palette.edge);
+      ctx.beginPath();
+      swept(ctx, plane, [{ x: -0.44, z: 1.41 }, flap_tip, { x: -0.44, z: 1.28 }], sign * FLAP_SPAN[0], sign * FLAP_SPAN[1]);
+      solid(ctx, flap_down ? palette.ink : paint.body, edge, palette.edge);
+    };
+    if (first) {
+      wing();
+      gear();
+      tailplane();
+    } else {
+      tailplane();
+      gear();
+      wing();
+    }
   };
-  wing_bar(wing_far);
-  line(ctx, plane, { x: -3.8, z: 0.45 }, { x: -4.45, z: 0.45 }, thick, paint.roof);
-  line(ctx, plane, { x: -4.45, z: 0.45 }, hinged({ x: -4.45, z: 0.45 }, 0.45, -plane.elevator * 0.45), thick, paint.roof);
-  line(ctx, plane, { x: 0.4, z: -0.35 }, { x: 0.35, z: -0.7 }, thick, palette.ink);
-  line(ctx, plane, { x: -4.35, z: 0.1 }, { x: -4.6, z: -0.1 }, thick * 0.8, palette.ink);
-  shape(ctx, plane, FUSELAGE);
-  ctx.fillStyle = paint.body;
-  ctx.fill();
-  ctx.lineWidth = edge;
-  ctx.strokeStyle = palette.edge;
-  ctx.stroke();
-  shape(ctx, plane, WINDOW);
-  ctx.fillStyle = paint.glass;
-  ctx.fill();
-  shape(ctx, plane, FIN);
-  ctx.fillStyle = paint.body;
-  ctx.fill();
-  ctx.stroke();
-  line(ctx, plane, { x: 0.1, z: -0.32 }, { x: -0.35, z: 1.2 }, thick * 0.6, palette.edge);
-  const flap = (Math.PI / 180) * 40 * plane.flaps;
+
+  half(-near);
+  rod(ctx, plane, { x: -4.25, z: 0.08 }, 0, { x: -4.6, z: -0.1 }, 0, rod_width, palette.ink);
   ctx.beginPath();
-  const le = project(plane, { x: 0.75, z: 1.25 });
-  const top = project(plane, { x: 0.3, z: 1.42 });
-  const hinge = project(plane, { x: -0.45, z: 1.3 });
-  const under = project(plane, { x: 0.3, z: 1.2 });
-  ctx.moveTo(le.x, le.y);
-  ctx.quadraticCurveTo(top.x, top.y, hinge.x, hinge.y);
-  ctx.lineTo(under.x, under.y);
-  ctx.closePath();
+  swept(ctx, plane, TAIL_TYRE, -0.05, 0.05);
+  solid(ctx, palette.ink, edge, palette.edge);
+
+  ctx.beginPath();
+  swept(ctx, plane, FUSELAGE, -1, 1);
+  swept(ctx, plane, FIN, -0.05, 0.05);
+  solid(ctx, paint.body, edge, palette.edge);
+  ctx.save();
+  ctx.clip();
+  ctx.beginPath();
+  swept(ctx, plane, BELLY, -0.45, 0.45);
+  ctx.fillStyle = palette.shadow;
+  ctx.fill();
+  ctx.beginPath();
+  swept(ctx, plane, STRIPE, -0.45, 0.45);
+  swept(ctx, plane, COWL, -0.45, 0.45);
   ctx.fillStyle = paint.roof;
   ctx.fill();
-  // Drawn longer than the real 0.42 m chord when zoomed out and dark once lowered (the body is the accent colour), so the setting reads at circuit height.
-  const flap_length = Math.max(0.42, hair(view, 6));
-  line(ctx, plane, { x: -0.45, z: 1.26 }, hinged({ x: -0.45, z: 1.26 }, flap_length, flap), thick * 1.5, plane.flaps > 0.02 ? palette.ink : paint.roof);
-  const wheel = project(plane, { x: 0.35, z: -0.7 });
-  ellipse(ctx, wheel.x, wheel.y, 0.3 * Math.max(side, 0.35), 0.3, palette.ink);
-  ellipse(ctx, wheel.x, wheel.y, 0.11 * Math.max(side, 0.35), 0.11, palette.steel);
-  const tail = project(plane, { x: -4.6, z: -0.1 });
-  ellipse(ctx, tail.x, tail.y, 0.1 * Math.max(side, 0.35), 0.1, palette.ink);
-  const hub = project(plane, { x: 2.08, z: 0.15 });
-  const spin = plane.spool > 0.02;
-  if (spin) {
-    const tip = project(plane, { x: 2.1, z: 1.05 });
-    const low = project(plane, { x: 2.1, z: -0.75 });
+  ctx.restore();
+  ctx.beginPath();
+  swept(ctx, plane, WINDOWS, near * 0.41);
+  ctx.fillStyle = paint.glass;
+  ctx.fill();
+  rod(ctx, plane, { x: 0.02, z: 1.13 }, near * 0.41, { x: 0.02, z: 0.6 }, near * 0.41, Math.max(0.05, hair(view, 1)), paint.body);
+
+  half(near);
+
+  ctx.beginPath();
+  swept(ctx, plane, SPINNER, -0.16, 0.16);
+  solid(ctx, paint.roof, edge, palette.edge);
+  const hub = project(plane, PROP_HUB);
+  const r = f.c.spec.prop_radius;
+  const up = project(plane, { x: PROP_HUB.x, z: PROP_HUB.z + r });
+  const across = project(plane, PROP_HUB, r);
+  const u = { x: up.x - hub.x, y: up.y - hub.y };
+  const v = { x: across.x - hub.x, y: across.y - hub.y };
+  ctx.lineCap = "round";
+  if (plane.spool > 0.02) {
     ctx.beginPath();
-    ctx.moveTo(tip.x, tip.y);
-    ctx.lineTo(low.x, low.y);
-    ctx.lineWidth = 0.14 + 0.5 * (1 - side);
+    for (let i = 0; i <= 24; i++) {
+      const t = (i / 24) * Math.PI * 2;
+      const x = hub.x + u.x * Math.cos(t) + v.x * Math.sin(t);
+      const y = hub.y + u.y * Math.cos(t) + v.y * Math.sin(t);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.globalAlpha = 0.25 + plane.spool * 0.25;
+    ctx.fillStyle = palette.cars[3].glass;
+    ctx.fill();
+    ctx.lineWidth = Math.max(0.1, hair(view, 2.5));
     ctx.strokeStyle = palette.cars[3].glass;
-    ctx.globalAlpha = 0.35 + plane.spool * 0.3;
     ctx.stroke();
     ctx.globalAlpha = 1;
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(hub.x + u.x, hub.y + u.y);
+    ctx.lineTo(hub.x - u.x, hub.y - u.y);
+    ctx.lineWidth = Math.max(0.12, hair(view, 2.5));
+    ctx.strokeStyle = palette.ink;
+    ctx.stroke();
   }
-  ellipse(ctx, hub.x, hub.y, 0.16 * Math.max(side, 0.4), 0.16, palette.ink);
-  wing_bar(-wing_far);
 }
 
 function shadow(ctx: CanvasRenderingContext2D, f: Frame) {
