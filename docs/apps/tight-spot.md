@@ -1004,7 +1004,7 @@ Every leg ends halfway through the stretch where the chain is inside, so a repla
 - `/var/lib/apps/tight-spot/mower.json` (the app data folder, ADR-035): `{ best, levels }`, best `{ stars, ms, coverage, overlap }` per `level:N`, `daily:YYYY-MM-DD` and `lawns`, and stars per finished level.
 - `mower.mode`, `.level`: last choices.
 - `/var/lib/apps/tight-spot/airport.json` (the app data folder, ADR-035): `{ best, levels }`, the best `{ stars, ms }` per `{job}:level:N`, `{job}:random` and `daily:YYYY-MM-DD` (more stars, then quicker), and `levels[job]`, stars per finished level of that job (the next one after the highest is open).
-- `airport.job`, `.mode` (`random` or `levels`), `.level.{job}`: last choices.
+- `airport.job`, `.mode` (`random` or `levels`), `.level.{job}`: last choices; a job's saved level is clamped to its open levels once `airport.json` is read, so the picker never offers a locked one.
 - `/var/lib/apps/tight-spot/rodeo.json`: Rodeo's `{ bests, levels }`. `bests` is `{ [key]: { ms, cones, stars?, vehicle? } }`, keyed `vehicle:course`, `level:N` and `daily:YYYY-MM-DD`; `ms` includes the penalties; a level's and a daily's best carry the `vehicle`, which their key doesn't name, and a level's its `stars` (more stars, then quicker). `levels` is stars per finished level; the next one after the highest is open. A save from before the levels has no `levels` and reads as none.
 - `rodeo.mode` (`courses` or `levels`), `.vehicle`, `.course`, `.level`: Rodeo's last choices.
 - `/var/lib/apps/tight-spot/valet.json`: Valet Rush's `{ best, levels }`, `{ score, ms, handed, dents, stars? }` per `shifts`, `level:N` and `daily:YYYY-MM-DD`, and stars per finished level.

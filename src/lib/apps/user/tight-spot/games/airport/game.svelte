@@ -133,7 +133,6 @@
   const levels = $derived(job_levels(save.value, game.round.job));
   const hint = $derived(stop_hint(game));
   const earned = $derived(stars(game, par?.ms ?? null));
-  const level_count = $derived(LEVEL_COUNTS[job]);
   const max_level = $derived(unlocked(job_levels(save.value, job), job));
   const level_best = $derived(game.round.level !== undefined ? (levels[game.round.level] ?? 0) : 0);
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNTS[game.round.job]);
@@ -214,6 +213,16 @@
   });
 
   $effect(() => () => par_job?.cancel());
+
+  // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
+  $effect(() => {
+    if (!save.ready || level <= max_level) return;
+    untrack(() => {
+      level = max_level;
+      prefs.value[`airport.level.${job}`] = level;
+      if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
+    });
+  });
 
   $effect(() => {
     if (!blocked) return;
@@ -438,7 +447,7 @@
       mode = Mode.RANDOM;
     } else {
       mode = Mode.LEVELS;
-      level = Math.max(1, Math.min(level_count, Number(next)));
+      level = Math.max(1, Math.min(max_level, Number(next)));
       prefs.value[`airport.level.${job}`] = level;
     }
     prefs.value["airport.mode"] = mode;
@@ -561,7 +570,7 @@
     class={classes}
     label="Round"
     before={RANDOM_OPTION}
-    open={Math.max(max_level, mode === Mode.LEVELS ? level : 1)}
+    open={max_level}
     stars={(at) => job_levels(save.value, job)[at] ?? 0}
     value={mode === Mode.LEVELS ? String(level) : RANDOM}
     name={(at) => level_name(at, job)}

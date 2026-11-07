@@ -45,6 +45,11 @@ export const CHANGELOG: Release[] = [
         text: "Drive Hub Airport's Ramp lead achievement counts the levels of all four jobs, not only the pushbacks.",
       },
       {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Drive Hub Airport's level picker no longer offers locked levels after a saved level outran your progress.",
+      },
+      {
         kind: IMPROVED,
         apps: ["lunar-lander"],
         text: "Lunar Lander is rebuilt (experimental): fly a lander, twin pods or a heavy shuttle at real scale on the Moon, Mars and Earth with a throttle lever, through 15 missions with craters, caves and cargo, a random mission and a daily, or freely around the base.",
