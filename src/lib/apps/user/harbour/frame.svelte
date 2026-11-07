@@ -2,7 +2,8 @@
   import kernel, { type SettingsService } from "$lib/core/api";
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
-  import { StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
+  import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
   import { SteeringWheel } from "$kit/components/play2d";
   import { clamp_zoom } from "$kit/games/play2d/camera";
   import { read_palette, type Palette } from "$kit/games/play2d/palette";
@@ -20,6 +21,8 @@
     label: string;
     helm: Helm;
     throttle: ThrottleMode;
+    /** The boat has bow and stern thrusters: touch shows their pad. */
+    thrusters: boolean;
     /** Held sideways the touch controls float over the board; hidden while a card is up so it stays in sight. */
     controls_idle: boolean;
     /** A touch control was used: may start the round; `false` ignores it. */
@@ -44,6 +47,7 @@
     label,
     helm,
     throttle,
+    thrusters,
     controls_idle,
     engage,
     onkeydown,
@@ -144,6 +148,18 @@
     onlever?.(notch);
   }
 
+  function push(event: PointerEvent, end: "bow" | "stern", side: number) {
+    if (!engage()) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    if (end === "bow") helm.held_bow = side;
+    else helm.held_stern = side;
+  }
+
+  function stop_push(end: "bow" | "stern") {
+    if (end === "bow") helm.held_bow = 0;
+    else helm.held_stern = 0;
+  }
+
   function let_go() {
     helm.held_lever = null;
     onlever?.(NEUTRAL);
@@ -180,6 +196,20 @@
       <div bind:clientWidth={wheel_box.width} bind:clientHeight={wheel_box.height} class={cn("hb-wheel hidden touch-none place-items-center select-none pointer-coarse:grid", controls_idle && "hb-idle")}>
         <SteeringWheel class="hb-wheel-size hb-face" value={helm.wheel} onchange={set_wheel} oncentre={() => set_wheel(0)} />
       </div>
+      {#if thrusters}
+        <div class={cn("hb-pad hidden touch-none grid-cols-[auto_auto_auto] items-center gap-1 select-none pointer-coarse:grid", controls_idle && "hb-idle")}>
+          {#each [["bow", "Bow"], ["stern", "Stern"]] as const as [end, name] (end)}
+            {@const value = end === "bow" ? helm.held_bow : helm.held_stern}
+            <IconButton class="hb-face size-11 rounded-xl" variant="secondary" pressed={value < 0} label="{name} thruster to port" onpointerdown={(event) => push(event, end, -1)} onlostpointercapture={() => stop_push(end)} oncontextmenu={(event) => event.preventDefault()}>
+              <CaretLeftIcon weight="bold" />
+            </IconButton>
+            <span class="hb-face rounded-md px-1 text-center text-2xs font-medium text-foreground/80">{name}</span>
+            <IconButton class="hb-face size-11 rounded-xl" variant="secondary" pressed={value > 0} label="{name} thruster to starboard" onpointerdown={(event) => push(event, end, 1)} onlostpointercapture={() => stop_push(end)} oncontextmenu={(event) => event.preventDefault()}>
+              <CaretRightIcon weight="bold" />
+            </IconButton>
+          {/each}
+        </div>
+      {/if}
       <div bind:clientWidth={lever_box.width} bind:clientHeight={lever_box.height} class={cn("hb-lever-box hidden touch-none items-end justify-end select-none pointer-coarse:flex", controls_idle && "hb-idle")}>
         <Lever class="hb-lever-size hb-face rounded-xl p-1.5" notch={helm.shown} onchange={set_lever} springs={throttle === ThrottleMode.HOLD} onletgo={let_go} />
       </div>
@@ -206,6 +236,12 @@
     grid-area: lever;
   }
 
+  .hb-pad {
+    grid-area: pad;
+    align-self: end;
+    justify-self: center;
+  }
+
   .hb-wheel :global(.hb-wheel-size) {
     width: min(10rem, 40cqw);
   }
@@ -223,7 +259,7 @@
       padding: 0.5rem;
       grid-template:
         "board board board" minmax(0, 1fr)
-        "wheel . lever" auto / auto minmax(0, 1fr) auto;
+        "wheel pad lever" auto / auto minmax(0, 1fr) auto;
     }
 
     /* Must match OVERLAY_ASPECT: held sideways the board takes the whole stage and the controls float over its sides. */
@@ -249,6 +285,19 @@
 
       .hb-wheel {
         left: 0.75rem;
+      }
+
+      .hb-pad {
+        position: absolute;
+        z-index: 1;
+        bottom: 0.75rem;
+        left: 50%;
+        translate: -50% 0;
+      }
+
+      .hb-pad :global(.hb-face) {
+        background: color-mix(in oklch, var(--background) 55%, transparent);
+        backdrop-filter: blur(2px);
       }
 
       .hb-lever-box {

@@ -11,13 +11,13 @@
   import { report_error } from "$kit/utils/report-error";
   import { Anchor as AnchorIcon, ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import { body_velocity, speed, to_world } from "./core/boat";
-  import { boat_coefficients, BoatId, SPECS } from "./core/boats";
+  import { body_velocity, speed, steer_angle, to_world } from "./core/boat";
+  import { boat_coefficients, BoatId, next_boat, SPECS } from "./core/boats";
   import { work_out_chart, type ChartJob } from "./core/chart-job";
   import { Grade } from "./core/contact";
   import { draw_frame, WAKE_LIFE, type WakePoint } from "./core/draw";
-  import { AHEAD_KEYS, ASTERN_KEYS, Helm, PORT_KEYS, STARBOARD_KEYS } from "./core/helm.svelte";
-  import { build_hub, crossed, in_shed, past_gate, type Gate } from "./core/hub";
+  import { AHEAD_KEYS, ASTERN_KEYS, Helm, PORT_KEYS, STARBOARD_KEYS, THRUSTER_KEYS } from "./core/helm.svelte";
+  import { build_hub, crossed, hub_scale, in_shed, past_gate, type Gate } from "./core/hub";
   import { DETENT_NAMES, NEUTRAL, ThrottleMode } from "./core/lever";
   import { LEVELS } from "./core/levels";
   import { better, DEFAULT_PROGRESS, DEFAULT_SETTINGS, levels_done, PROGRESS_FILE, progress_schema, SETTINGS_FILE, settings_schema } from "./core/progress";
@@ -34,7 +34,6 @@
   const play = track_play(app_id, () => win.is_visible);
   const settings_file = storage.file(SETTINGS_FILE, DEFAULT_SETTINGS, settings_schema);
   const progress = storage.file(PROGRESS_FILE, DEFAULT_PROGRESS, progress_schema);
-  const hub = build_hub();
   const KNOT = 1.943844;
   const LOOK_AHEAD = 1.5;
 
@@ -56,8 +55,9 @@
   const sounds = new Sounds(() => settings_file.value.sound);
 
   let boat_id = $state<BoatId>(BoatId.RIB);
+  const hub = $derived(build_hub(hub_scale(SPECS[boat_id].length)));
   let round = $state.raw<Round | null>(null);
-  let game = $state.raw<GameState>(hub_game(hub.scene.start));
+  let game = $state.raw<GameState>(untrack(() => hub_game(hub.scene.start)));
   let card = $state.raw<Pending | null>(null);
   let opening_daily = $state<string | null>(untrack(() => daily_prop ?? null));
   let outcome = $state.raw<{ result: Result; improved: boolean; first: boolean } | null>(null);
@@ -97,7 +97,9 @@
   const par = $derived(round?.chart.par ?? null);
   const best = $derived(round ? progress.value.bests[round_key(round.ref)] : undefined);
   const lever_name = $derived(DETENT_NAMES[helm.shown]);
-  const wheel_degrees = $derived(Math.round(helm.wheel * spec.lock));
+  const wheel_degrees = $derived(Math.round((steer_angle(helm.wheel, c) * 180) / Math.PI));
+  const rudder_degrees = $derived(Math.round((steer_angle(game.boat.rudder, c) * 180) / Math.PI));
+  const thrusters_on = $derived(spec.thrusters ? { bow: helm.bow, stern: helm.stern } : null);
   const hold_share = $derived(game.status === Status.SAILING ? Math.min(1, game.held / DOCK_HOLD) : 0);
   const touches_text = $derived(touch_summary(game));
 
@@ -138,6 +140,7 @@
     if (!settings_file.ready || ready) return;
     untrack(() => {
       boat_id = settings_file.value.boat;
+      game = hub_game(hub.scene.start);
       ready = true;
       if (opening_daily) open_daily(opening_daily);
     });
@@ -207,7 +210,7 @@
   function target_camera(): Camera {
     const insets = control_insets();
     const { bounds } = game.scene;
-    const span = view_span(spec.length);
+    const span = Math.max(view_span(spec.length), spec.length * 2.4);
     if (game.status === Status.READY && game.scene.berth) {
       const area = bounds_of([...game.scene.berth.bay.shape, game.scene.start]);
       const pad = spec.length * 1.2;
@@ -248,7 +251,7 @@
       lines,
       squash: game.squash,
       touch: game.last_touch ? { touch: game.last_touch, age: touch_age } : null,
-      hub: in_hub ? { hub, stars: stars_for, shed_label: `Boat shed · swap to the ${boat_id === BoatId.RIB ? "yacht" : "RIB"}` } : undefined,
+      hub: in_hub ? { hub, stars: stars_for, shed_label: `Boat shed · swap to the ${SPECS[next_boat(boat_id)].name}` } : undefined,
     });
   }
 
@@ -274,7 +277,7 @@
     const span = steps * dt;
     touch_age += span;
     lay_wake(next, span);
-    sounds.drone(next.boat.power, next.boat.gear);
+    sounds.drone(next.boat.power, next.boat.gear, Math.max(0.6, Math.sqrt(10 / spec.length)));
     if (next === game) return;
     const before = game;
     game = next;
@@ -302,7 +305,7 @@
       pending_gate = null;
     } else if (pending_gate) {
       const middle = { x: (pending_gate.port.x + pending_gate.starboard.x) / 2, y: pending_gate.port.y };
-      if (Math.hypot(next.boat.x - middle.x, next.boat.y - middle.y) > 40) pending_gate = null;
+      if (Math.hypot(next.boat.x - middle.x, next.boat.y - middle.y) > 40 * hub.scale) pending_gate = null;
     }
     const inside = in_shed(hub, next.boat);
     if (inside && !in_shed_now) swap_boat();
@@ -312,17 +315,19 @@
   let pending_gate: Gate | null = null;
 
   function swap_boat() {
-    boat_id = boat_id === BoatId.RIB ? BoatId.YACHT : BoatId.RIB;
+    boat_id = next_boat(boat_id);
     settings_file.value.boat = boat_id;
     helm.reset();
     wake = [];
+    camera = null;
+    pending_gate = null;
     game = hub_game(hub.shed.exit);
     in_shed_now = true;
     sounds.swap();
     achievements.achieve("harbour-swap");
     swapped = SPECS[boat_id].name;
     clearTimeout(swap_timer);
-    swap_timer = window.setTimeout(() => (swapped = null), 2600);
+    swap_timer = window.setTimeout(() => (swapped = null), SPECS[boat_id].thrusters ? 5000 : 2600);
   }
 
   function open_card(gate: Gate) {
@@ -532,14 +537,15 @@
     const ahead = AHEAD_KEYS.has(code);
     const astern = ASTERN_KEYS.has(code);
     const turning = PORT_KEYS.has(code) || STARBOARD_KEYS.has(code);
-    if (ahead || astern || turning || code === "Space" || code === "KeyC") {
+    const thruster = THRUSTER_KEYS.has(code) && !!spec.thrusters;
+    if (ahead || astern || turning || thruster || code === "Space" || code === "KeyC") {
       event.preventDefault();
       if (!engage()) return;
     }
     if (ahead || astern) {
       if (throttle === ThrottleMode.HOLD) helm.keys.add(code);
       else if (!event.repeat) helm.step_notch(ahead ? 1 : -1);
-    } else if (turning) helm.keys.add(code);
+    } else if (turning || thruster) helm.keys.add(code);
     else if (code === "Space") helm.neutral();
     else if (code === "KeyC") helm.set_wheel(0);
   }
@@ -598,6 +604,17 @@
         </div>
         <SpeedChip speed={speed(game.boat)} unit="kn" />
       </div>
+      <div class="flex max-w-full flex-wrap items-center gap-1.5" aria-hidden="true">
+        <div class="flex items-center gap-1 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]">
+          <span class="hb-rudder" style:--rudder="{rudder_degrees * 1.6}deg"></span>
+          {Math.abs(rudder_degrees)}°{rudder_degrees > 0 ? " stbd" : rudder_degrees < 0 ? " port" : ""}
+        </div>
+        {#if thrusters_on && (thrusters_on.bow || thrusters_on.stern)}
+          <div class="rounded-md bg-background/85 px-1.5 py-0.5 text-ui font-medium text-primary backdrop-blur-[2px]">
+            {#if thrusters_on.bow}Bow {thrusters_on.bow < 0 ? "◀" : "▶"}{/if}{#if thrusters_on.bow && thrusters_on.stern}&ensp;{/if}{#if thrusters_on.stern}Stern {thrusters_on.stern < 0 ? "◀" : "▶"}{/if}
+          </div>
+        {/if}
+      </div>
       {#if round && game.status !== Status.READY}
         <div class="flex max-w-full flex-wrap items-center gap-1.5">
           <div class="rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">
@@ -607,7 +624,9 @@
         </div>
       {/if}
       {#if swapped}
-        <p class="rounded-md bg-background/85 px-2 py-1 text-ui font-medium backdrop-blur-[2px]" role="status">Now sailing the {swapped}</p>
+        <p class="rounded-md bg-background/85 px-2 py-1 text-ui font-medium backdrop-blur-[2px]" role="status">
+          Now sailing the {swapped}{#if spec.thrusters}<span class="pointer-fine:hidden">. Hold the pad's arrows for the thrusters.</span><span class="hidden pointer-fine:inline">. Q E bow and Z X stern thrusters, held.</span>{/if}
+        </p>
       {/if}
     </div>
     {#if hold_share > 0}
@@ -672,7 +691,7 @@
         <Button variant="primary" onclick={cast_off}>Cast off</Button>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="W" text="ahead" /><KeyHint key_name="S" text="astern" /><KeyHint key_name="A D" text="wheel" /><KeyHint key_name="Space" text="neutral" /><KeyHint key_name="Esc" text="pause" />
+        <KeyHint key_name="W" text="ahead" /><KeyHint key_name="S" text="astern" /><KeyHint key_name="A D" text="wheel" />{#if spec.thrusters}<KeyHint key_name="Q E" text="bow" /><KeyHint key_name="Z X" text="stern" />{/if}<KeyHint key_name="Space" text="neutral" /><KeyHint key_name="Esc" text="pause" />
       </p>
       <p class="basis-full text-2xs text-foreground/65">
         {throttle === ThrottleMode.LEVER ? "The lever stays where you leave it: W and S move it a notch." : "Hold W or S for half ahead or astern."} Stop inside the berth, square to it, for a second and the crew put the lines on.
@@ -732,7 +751,7 @@
   <span class="tabular-nums">{Math.abs(knots).toFixed(1)} kn</span>
   <span class="tabular-nums pointer-coarse:hidden">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 1 ? " stbd" : wheel_degrees < -1 ? " port" : ""}</span>
   {#if round}<span class="tabular-nums">{time}</span>{/if}
-  <span class="hidden @5xl:inline">W S lever · A D wheel · Space neutral · C centres · + − zoom</span>
+  <span class="hidden @5xl:inline">W S lever · A D wheel{spec.thrusters ? " · Q E bow · Z X stern" : ""} · Space neutral · C centres · + − zoom</span>
 {/snippet}
 
 {#if !ready}
@@ -742,6 +761,7 @@
     label="Harbour. W and S work the lever, A and D the wheel, Space neutral, Escape pauses, Enter starts."
     {helm}
     {throttle}
+    thrusters={!!spec.thrusters}
     controls_idle={!!card || (!in_hub && game.status !== Status.SAILING && game.status !== Status.LINES)}
     {engage}
     onkeydown={on_keydown}
@@ -763,6 +783,16 @@
 <style>
   :global(.hb-pop) {
     animation: var(--animate-pop-in) 520ms both;
+  }
+
+  .hb-rudder {
+    width: 0.2rem;
+    height: 0.8rem;
+    border-radius: 999px;
+    background: currentColor;
+    transform: rotate(var(--rudder));
+    transform-origin: 50% 0;
+    transition: transform 120ms linear;
   }
 
   .hb-hold {

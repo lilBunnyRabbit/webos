@@ -35,10 +35,14 @@ export interface BoatSpec {
   gear_time: number;
   /** Seconds from full lock to full lock. */
   rudder_time: number;
-  /** The rudder's full lock, degrees; an outboard turns as far as its `kick` needs, up to this. */
+  /** The rudder's or the outboard leg's full lock, degrees. */
   lock: number;
   /** Added mass, as shares of `mass`: forward, sideways, and of the turning inertia. */
   added: { surge: number; sway: number; yaw: number };
+  /** Bow and stern thrusters: steady turn at rest with both pushing opposite ways, and their spool-up time constant. */
+  thrusters?: { turn: number; lag: number };
+  /** Drawn as a coaster: square stern, hatches, the bridge aft. */
+  cargo?: boolean;
 }
 
 export interface Coefficients {
@@ -50,13 +54,13 @@ export interface Coefficients {
   xuu: number;
   yv: number;
   yvv: number;
-  /** Yaw damping on top of what the keel gives. */
+  /** Yaw damping on top of what the keel gives; for an outboard, solved for its `kick`. */
   nr: number;
   /** Keel points fore and aft of the middle, metres. */
   keel: readonly [number, number];
   thrust_ahead: number;
   thrust_astern: number;
-  /** Radians: the rudder's lock, or for an outboard how far its thrust turns. */
+  /** Radians: the rudder's lock, or how far an outboard's thrust turns. */
   lock: number;
   /** Rudder (or the outboard leg) side force per (m/s)² at full lock, and where it acts. */
   rudder: number;
@@ -66,6 +70,9 @@ export interface Coefficients {
   wash: number;
   /** Prop walk as a share of the thrust astern. */
   walk: number;
+  /** Each thruster's full side force, newtons (0 without), and where they sit fore and aft of the middle. */
+  thruster: number;
+  thruster_x: number;
 }
 
 export interface Input {
@@ -73,6 +80,9 @@ export interface Input {
   lever: number;
   /** −1 full port to 1 full starboard. */
   wheel: number;
+  /** Thrusters, −1 pushing that end to port to 1 to starboard; boats without them ignore it. */
+  bow?: number;
+  stern?: number;
 }
 
 export interface Boat {
@@ -92,6 +102,9 @@ export interface Boat {
   shifting: number;
   /** −1 to 1, the rudder's actual angle as a share of lock. */
   rudder: number;
+  /** −1 to 1, the thrusters' spooled-up push. */
+  bow: number;
+  stern: number;
 }
 
 /** A push on the hull from outside (a fender, a wall), world frame. */
@@ -112,10 +125,14 @@ const ASTERN_RUDDER = 0.5;
 const WALK_FADE = 1.2;
 const WALK_AHEAD = 0.03;
 const KEEL_AT = 0.3;
+const KEEL_LEAD = 0.15;
 const QUADRATIC_MIN = 0.05;
+const STEER_LINEAR = 0.35;
+const THRUSTER_FULL = 1;
+const THRUSTER_GONE = 2.6;
 
 export function create_boat(pose: Pose): Boat {
-  return { x: pose.x, y: pose.y, heading: pose.heading, vx: 0, vy: 0, r: 0, gear: 0, power: 0, shifting: 0, rudder: 0 };
+  return { x: pose.x, y: pose.y, heading: pose.heading, vx: 0, vy: 0, r: 0, gear: 0, power: 0, shifting: 0, rudder: 0, bow: 0, stern: 0 };
 }
 
 export function speed(boat: Boat): number {
@@ -141,11 +158,24 @@ export function point_velocity(boat: Boat, at: Vec): Vec {
 }
 
 /** The hull outline in the body frame (x forward, y to starboard), convex so SAT can test it. */
-export type HullSize = Pick<BoatSpec, "length" | "beam" | "drive">;
+export type HullSize = Pick<BoatSpec, "length" | "beam" | "drive" | "cargo">;
 
 export function hull_shape(spec: HullSize): Vec[] {
   const l = spec.length / 2;
   const b = spec.beam / 2;
+  if (spec.cargo) {
+    return [
+      { x: l, y: 0 },
+      { x: l * 0.86, y: b * 0.8 },
+      { x: l * 0.66, y: b },
+      { x: -l * 0.92, y: b },
+      { x: -l, y: b * 0.86 },
+      { x: -l, y: -b * 0.86 },
+      { x: -l * 0.92, y: -b },
+      { x: l * 0.66, y: -b },
+      { x: l * 0.86, y: -b * 0.8 },
+    ];
+  }
   if (spec.drive === Drive.OUTBOARD) {
     return [
       { x: l, y: 0 },
@@ -174,6 +204,15 @@ export function hull(boat: Pose, spec: HullSize): Polygon {
   return hull_shape(spec).map((p) => to_world(boat, p));
 }
 
+function clamp_unit(value: number): number {
+  return Math.max(-1, Math.min(1, value));
+}
+
+/** A tunnel thruster's grip: full up to about 2 kn, gone by 5 kn as the flow past the hull sweeps its jet away. */
+export function thruster_fade(u: number): number {
+  return Math.max(0, Math.min(1, 1 - (Math.abs(u) - THRUSTER_FULL) / (THRUSTER_GONE - THRUSTER_FULL)));
+}
+
 function approach(value: number, target: number, step: number): number {
   return value < target ? Math.min(target, value + step) : Math.max(target, value - step);
 }
@@ -194,6 +233,15 @@ function drive_train(boat: Boat, lever: number, c: Coefficients, dt: number): Pi
   return { gear, power, shifting };
 }
 
+/**
+ * The rudder's or the leg's angle, radians, for a wheel share: progressive, so the first turns of the wheel bend the
+ * course gently and the last ones bring the full lock in. Quadratic cross-flow damping would otherwise make a tenth of
+ * the wheel turn nearly a sixth as tight as full lock.
+ */
+export function steer_angle(rudder: number, c: Pick<Coefficients, "lock">): number {
+  return rudder * (STEER_LINEAR + (1 - STEER_LINEAR) * Math.abs(rudder)) * c.lock;
+}
+
 /** One step of semi-implicit Euler: forces in the body frame on the water-relative velocity, velocity first, then pose. */
 export function step_boat(boat: Boat, input: Input, c: Coefficients, dt: number, push: Push = NO_PUSH): Boat {
   const { spec } = c;
@@ -202,14 +250,16 @@ export function step_boat(boat: Boat, input: Input, c: Coefficients, dt: number,
   const { u, v } = body_velocity(boat);
   const r = boat.r;
   const thrust = train.gear * train.power * (train.gear > 0 ? c.thrust_ahead : c.thrust_astern);
-  const lock = rudder * c.lock;
+  const lock = steer_angle(rudder, c);
 
   let fx = -(c.xu * u + c.xuu * u * Math.abs(u));
   let fy = 0;
   let n = -c.nr * r;
+  // The water grips the leading end harder, so the pivot point moves forward going ahead and aft going astern.
+  const lead = KEEL_LEAD * Math.tanh(u / 0.3);
   for (const x of c.keel) {
     const vi = v + r * x;
-    const yi = -0.5 * (c.yv * vi + c.yvv * vi * Math.abs(vi));
+    const yi = -(0.5 + Math.sign(x) * lead) * (c.yv * vi + c.yvv * vi * Math.abs(vi));
     fy += yi;
     n += yi * x;
   }
@@ -234,6 +284,17 @@ export function step_boat(boat: Boat, input: Input, c: Coefficients, dt: number,
     n += walk * c.prop_x;
   }
 
+  let bow = 0;
+  let stern = 0;
+  if (c.thruster > 0) {
+    const spool = 1 - Math.exp(-dt / spec.thrusters!.lag);
+    bow = boat.bow + (clamp_unit(input.bow ?? 0) - boat.bow) * spool;
+    stern = boat.stern + (clamp_unit(input.stern ?? 0) - boat.stern) * spool;
+    const fade = thruster_fade(u);
+    fy += (bow + stern) * c.thruster * fade;
+    n += (bow - stern) * c.thruster * fade * c.thruster_x;
+  }
+
   const cos = Math.cos(boat.heading);
   const sin = Math.sin(boat.heading);
   fx += push.fx * cos + push.fy * sin;
@@ -245,7 +306,7 @@ export function step_boat(boat: Boat, input: Input, c: Coefficients, dt: number,
   let vy = boat.vy + (ax * sin + ay * cos) * dt;
   let turn = r + (n / c.iz) * dt;
   // Linear drag alone leaves a boat creeping for a minute, and "stopped" never comes: below a walking pace it settles fast.
-  if (train.power < 0.01 && Math.hypot(vx, vy) < SETTLE_SPEED) {
+  if (train.power < 0.01 && Math.abs(bow) + Math.abs(stern) < 0.01 && Math.hypot(vx, vy) < SETTLE_SPEED) {
     const settle = Math.exp(-SETTLE_RATE * dt);
     vx *= settle;
     vy *= settle;
@@ -264,6 +325,8 @@ export function step_boat(boat: Boat, input: Input, c: Coefficients, dt: number,
     vy,
     r: turn,
     rudder,
+    bow,
+    stern,
     ...train,
   };
 }
@@ -291,6 +354,8 @@ function base(spec: BoatSpec): Coefficients {
     prop_x: -0.45 * spec.length,
     wash: 0,
     walk: 0,
+    thruster: 0,
+    thruster_x: 0.45 * spec.length,
   };
 }
 
@@ -338,8 +403,14 @@ export function measure_walk(c: Coefficients): number {
 }
 
 export function measure_top(c: Coefficients, lever: number): number {
-  const end = run(c, { ...AT_REST, gear: Math.sign(lever), power: 1 }, 90, { lever, wheel: 0 });
+  const end = run(c, { ...AT_REST, gear: Math.sign(lever), power: 1 }, 400, { lever, wheel: 0 });
   return Math.abs(body_velocity(end).u);
+}
+
+/** Steady turn, degrees a second, at rest with the bow thruster full to starboard and the stern one full to port. */
+export function measure_thrusters(c: Coefficients): number {
+  const end = run(c, { ...AT_REST, bow: 1, stern: -1 }, 40, { lever: 0, wheel: 0, bow: 1, stern: -1 });
+  return (end.r * 180) / Math.PI;
 }
 
 export function measure_carry(c: Coefficients): number {
@@ -360,17 +431,18 @@ export function coefficients(spec: BoatSpec): Coefficients {
   c.yv = spec.grip * c.xu;
   c.yvv = spec.grip * c.xuu;
   c.nr = 0.02 * c.yv * spec.length ** 2;
-  const most = c.lock;
   c.rudder = solve((k) => measure_turn({ ...c, rudder: k }), spec.turn_rate, 0, c.yv * 20);
   if (spec.drive === Drive.OUTBOARD) {
-    // The leg steers as a rudder and turns the thrust by the same angle, so the two are solved in turn until they settle.
+    // The leg swings to its full lock, so the kick comes from yaw damping; the leg's own grip (the turn) is solved with it until the two settle.
+    const keel = c.nr;
     for (let i = 0; i < 3; i++) {
-      c.lock = solve((lock) => measure_kick({ ...c, lock }), spec.kick, (5 * Math.PI) / 180, most, 30);
+      c.nr = solve((nr) => -measure_kick({ ...c, nr }), -spec.kick, 0, keel * 20, 30);
       c.rudder = solve((k) => measure_turn({ ...c, rudder: k }), spec.turn_rate, 0, c.yv * 20);
     }
   } else {
     c.walk = spec.walk > 0 ? solve((k) => measure_walk({ ...c, walk: k }), spec.walk, 0, 1) : 0;
     c.wash = solve((w) => measure_kick({ ...c, wash: w }), spec.kick, 0, 400);
   }
+  if (spec.thrusters) c.thruster = solve((k) => measure_thrusters({ ...c, thruster: k }), spec.thrusters.turn, 0, spec.mass * 2);
   return c;
 }

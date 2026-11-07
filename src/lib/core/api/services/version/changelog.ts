@@ -13,7 +13,7 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["harbour"],
-        text: "Harbour is a boat docking game (experimental): sail a RIB or a yacht around a small harbour and bring it gently alongside or into a box berth, with momentum, prop walk and fenders to kiss.",
+        text: "Harbour is a boat docking game (experimental): sail a RIB, a yacht or a cargo coaster with bow and stern thrusters around a harbour and bring it gently alongside or into a box berth, with momentum, prop walk and fenders to kiss.",
       },
       {
         kind: NEW,

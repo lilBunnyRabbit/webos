@@ -13,7 +13,7 @@ export interface Solid {
   /** Fenders take a touch softly; a quay wall or someone's boat is judged at half the speeds. */
   fendered: boolean;
   /** A moored boat's pose and size, for drawing it. */
-  boat?: { pose: Pose; length: number; beam: number; paint: number; drive: Drive };
+  boat?: { pose: Pose; length: number; beam: number; paint: number; drive: Drive; cargo?: boolean };
   /** A buoy's side of a gate: port is red, starboard green. */
   side?: "port" | "starboard";
 }
@@ -57,15 +57,15 @@ export class SceneBuilder {
 
   moored(pose: Pose, spec: HullSize, paint: number): Solid {
     const shape = hull(pose, spec);
-    return this.add(SolidKind.MOORED, shape, false, { boat: { pose, length: spec.length, beam: spec.beam, paint, drive: spec.drive } });
+    return this.add(SolidKind.MOORED, shape, false, { boat: { pose, length: spec.length, beam: spec.beam, paint, drive: spec.drive, cargo: spec.cargo } });
   }
 
   pile(x: number, y: number, size = 0.4): Solid {
     return this.add(SolidKind.PILE, oriented_box(x, y, Math.PI / 4, size, size), false);
   }
 
-  buoy(x: number, y: number, side: "port" | "starboard"): Solid {
-    const shape = Array.from({ length: 8 }, (_, i) => ({ x: x + Math.cos((i * Math.PI) / 4) * 0.45, y: y + Math.sin((i * Math.PI) / 4) * 0.45 }));
+  buoy(x: number, y: number, side: "port" | "starboard", size = 0.45): Solid {
+    const shape = Array.from({ length: 8 }, (_, i) => ({ x: x + Math.cos((i * Math.PI) / 4) * size, y: y + Math.sin((i * Math.PI) / 4) * size }));
     return this.add(SolidKind.BUOY, shape, true, { side });
   }
 }

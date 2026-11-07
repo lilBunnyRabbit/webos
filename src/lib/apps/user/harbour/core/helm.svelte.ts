@@ -2,11 +2,14 @@ import { SvelteSet } from "svelte/reactivity";
 import type { Input } from "./boat";
 import { clamp_notch, DETENTS, HOLD_POWER, NEUTRAL, notch_at, ThrottleMode } from "./lever";
 
-const WHEEL_RATE = 1.25;
+const WHEEL_RATE = 0.7;
 export const AHEAD_KEYS = new Set(["KeyW", "ArrowUp"]);
 export const ASTERN_KEYS = new Set(["KeyS", "ArrowDown"]);
 export const PORT_KEYS = new Set(["KeyA", "ArrowLeft"]);
 export const STARBOARD_KEYS = new Set(["KeyD", "ArrowRight"]);
+const BOW_KEYS = { port: new Set(["KeyQ"]), starboard: new Set(["KeyE"]) };
+const STERN_KEYS = { port: new Set(["KeyZ"]), starboard: new Set(["KeyX"]) };
+export const THRUSTER_KEYS = new Set([...BOW_KEYS.port, ...BOW_KEYS.starboard, ...STERN_KEYS.port, ...STERN_KEYS.starboard]);
 
 /** The helm of one window: the lever's notch, the wheel that stays where it's left, and the keys held. */
 export class Helm {
@@ -14,6 +17,9 @@ export class Helm {
   wheel = $state(0);
   /** Touch in hold mode: the lever's position while a finger holds it. */
   held_lever = $state<number | null>(null);
+  /** Touch: the thruster buttons held, −1 port to 1 starboard. */
+  held_bow = $state(0);
+  held_stern = $state(0);
   readonly keys = new SvelteSet<string>();
 
   constructor(private readonly mode: () => ThrottleMode) {}
@@ -57,13 +63,29 @@ export class Helm {
     if (port !== starboard) this.set_wheel(this.wheel + (starboard ? 1 : -1) * WHEEL_RATE * dt);
   }
 
+  get bow(): number {
+    return this.held_bow || this.pair(BOW_KEYS);
+  }
+
+  get stern(): number {
+    return this.held_stern || this.pair(STERN_KEYS);
+  }
+
+  private pair(keys: { port: Set<string>; starboard: Set<string> }): number {
+    const port = [...keys.port].some((k) => this.keys.has(k));
+    const starboard = [...keys.starboard].some((k) => this.keys.has(k));
+    return port === starboard ? 0 : starboard ? 1 : -1;
+  }
+
   read(): Input {
-    return { lever: this.lever, wheel: this.wheel };
+    return { lever: this.lever, wheel: this.wheel, bow: this.bow, stern: this.stern };
   }
 
   release() {
     this.keys.clear();
     this.held_lever = null;
+    this.held_bow = 0;
+    this.held_stern = 0;
   }
 
   reset() {

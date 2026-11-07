@@ -3,7 +3,7 @@ import type { Insets } from "$kit/games/play2d/camera";
 import { bounds_of, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import type { Paint, Palette } from "$kit/games/play2d/palette";
 import { hash } from "$kit/games/play2d/seed";
-import { Drive, hull_shape, to_world, type Boat, type Coefficients, type HullSize } from "./boat";
+import { body_velocity, Drive, hull_shape, speed, steer_angle, to_world, type Boat, type Coefficients, type HullSize } from "./boat";
 import { Grade, type Touch } from "./contact";
 import type { Gate, Hub } from "./hub";
 import { BerthKind, SolidKind, type Berth, type Scene, type Solid } from "./world";
@@ -143,17 +143,18 @@ function buoy(ctx: CanvasRenderingContext2D, solid: Solid, f: Frame) {
   const box = bounds_of(solid.shape);
   const x = (box.x0 + box.x1) / 2;
   const y = (box.y0 + box.y1) / 2;
+  const k = (box.x1 - box.x0) / 0.9;
   const bob = Math.sin(f.time * 1.6 + x) * 0.04;
   ctx.beginPath();
-  ctx.arc(x, y, 0.75 + bob, 0, Math.PI * 2);
+  ctx.arc(x, y, (0.75 + bob) * k, 0, Math.PI * 2);
   ctx.fillStyle = f.palette.glow;
   ctx.globalAlpha = 0.18;
   ctx.fill();
   ctx.globalAlpha = 1;
   const colour = solid.side === "port" ? f.palette.error : f.palette.success;
   ctx.beginPath();
-  if (solid.side === "port") ctx.rect(x - 0.4, y - 0.4, 0.8, 0.8);
-  else ctx.arc(x, y, 0.45, 0, Math.PI * 2);
+  if (solid.side === "port") ctx.rect(x - 0.4 * k, y - 0.4 * k, 0.8 * k, 0.8 * k);
+  else ctx.arc(x, y, 0.45 * k, 0, Math.PI * 2);
   ctx.fillStyle = colour;
   ctx.fill();
   ctx.strokeStyle = f.palette.ink;
@@ -171,36 +172,104 @@ function scaled(points: readonly Vec[], sx: number, sy: number, dx = 0): Vec[] {
   return points.map((p) => ({ x: p.x * sx + dx, y: p.y * sy }));
 }
 
+/** A coaster from above: the rudder, the hull, hatches down the hold, the thruster tunnels, the bridge and funnel aft. */
+function coaster_body(ctx: CanvasRenderingContext2D, shape: readonly Vec[], L: number, B: number, paint: Paint, f: Frame, angle: number, lean: number) {
+  const { palette, view } = f;
+  const line = Math.max(0.05, hair(view, 1.2));
+  ctx.save();
+  ctx.translate(-L / 2 + 0.4, 0);
+  ctx.rotate(-angle);
+  ctx.beginPath();
+  ctx.roundRect(-2.4, -0.3, 2.6, 0.6, 0.3);
+  ctx.fillStyle = palette.ink;
+  ctx.fill();
+  ctx.restore();
+  shape_path(ctx, shape);
+  ctx.fillStyle = paint.body;
+  ctx.fill();
+  ctx.strokeStyle = palette.edge;
+  ctx.lineWidth = line;
+  ctx.stroke();
+  ctx.translate(0, lean);
+  shape_path(ctx, scaled(shape, 0.95, 0.84, -0.01 * L));
+  ctx.fillStyle = palette.shadow;
+  ctx.globalAlpha = 0.45;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = palette.ink;
+  ctx.globalAlpha = 0.35;
+  ctx.lineWidth = Math.max(0.12, hair(view, 2));
+  for (const x of [0.45, -0.45]) {
+    ctx.beginPath();
+    ctx.moveTo(x * L, -0.42 * B);
+    ctx.lineTo(x * L, 0.42 * B);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  const hatches = 3;
+  const from = 0.3;
+  const to = -0.2;
+  const step = (from - to) / hatches;
+  for (let i = 0; i < hatches; i++) {
+    const x0 = (from - i * step - step * 0.9) * L;
+    ctx.beginPath();
+    ctx.roundRect(x0, -0.34 * B, step * 0.84 * L, 0.68 * B, 0.3);
+    ctx.fillStyle = paint.roof;
+    ctx.fill();
+    ctx.strokeStyle = palette.edge;
+    ctx.lineWidth = line;
+    ctx.stroke();
+    ctx.strokeStyle = palette.ink;
+    ctx.globalAlpha = 0.25;
+    ctx.beginPath();
+    for (let k = 1; k < 4; k++) (ctx.moveTo(x0 + (step * 0.84 * L * k) / 4, -0.34 * B), ctx.lineTo(x0 + (step * 0.84 * L * k) / 4, 0.34 * B));
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.beginPath();
+  ctx.roundRect(-0.4 * L, -0.42 * B, 0.14 * L, 0.84 * B, 0.4);
+  ctx.fillStyle = paint.body;
+  ctx.fill();
+  ctx.strokeStyle = palette.edge;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.roundRect(-0.275 * L, -0.38 * B, 0.012 * L, 0.76 * B, 0.1);
+  ctx.fillStyle = paint.glass;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(-0.37 * L, -0.12 * B, 0.05 * L, 0.24 * B, 0.3);
+  ctx.fillStyle = palette.ink;
+  ctx.fill();
+}
+
 /** A boat from above in its own frame (x forward, y to starboard): hull, deck and the details its drive has. */
-function boat_body(ctx: CanvasRenderingContext2D, pose: Pose, size: HullSize, paint: Paint, f: Frame, rudder = 0, lock = 0.6, squash = 0) {
+function boat_body(ctx: CanvasRenderingContext2D, pose: Pose, size: HullSize, paint: Paint, f: Frame, angle = 0, squash = 0, heel = 0) {
   const { palette, view } = f;
   const L = size.length;
   const B = size.beam;
   const shape = hull_shape(size);
+  const scale = Math.max(1, B / 3.3);
   ctx.save();
   ctx.translate(pose.x, pose.y);
   ctx.rotate(pose.heading);
-  shape_path(ctx, scaled(shape, 1.02, 1.04, -0.12));
+  // Heel is drawn, not simulated: the shadow slides out of the turn and the deck leans into it.
+  const shadow = { x: 0.15 * scale, y: 0.22 * scale - heel * 0.14 * B };
+  shape_path(ctx, scaled(shape, 1.02, 1.04, -0.12 * scale));
   ctx.fillStyle = palette.shadow;
-  ctx.translate(0.15, 0.22);
+  ctx.translate(shadow.x, shadow.y);
   ctx.fill();
-  ctx.translate(-0.15, -0.22);
+  ctx.translate(-shadow.x, -shadow.y);
   const line = Math.max(0.03, hair(view, 1.2));
-  if (size.drive === Drive.OUTBOARD) {
-    ctx.save();
-    ctx.translate(-L / 2, 0);
-    ctx.rotate(-rudder * lock);
-    ctx.beginPath();
-    ctx.roundRect(-0.5, -0.2, 0.55, 0.4, 0.12);
-    ctx.fillStyle = palette.ink;
-    ctx.fill();
-    ctx.restore();
+  const lean = heel * 0.05 * B;
+  if (size.cargo) coaster_body(ctx, shape, L, B, paint, f, angle, lean);
+  else if (size.drive === Drive.OUTBOARD) {
     shape_path(ctx, shape);
     ctx.fillStyle = paint.body;
     ctx.fill();
     ctx.strokeStyle = palette.edge;
     ctx.lineWidth = line;
     ctx.stroke();
+    ctx.translate(0, lean);
     shape_path(ctx, scaled(shape, 0.78, 0.6, -0.05 * L));
     ctx.fillStyle = paint.glass;
     ctx.globalAlpha = 0.55;
@@ -216,15 +285,39 @@ function boat_body(ctx: CanvasRenderingContext2D, pose: Pose, size: HullSize, pa
     ctx.roundRect(0.02 * L, -0.15 * B, 0.03 * L, 0.3 * B, 0.03);
     ctx.fillStyle = paint.glass;
     ctx.fill();
+    ctx.translate(0, -lean);
+    ctx.save();
+    ctx.translate(-L / 2 + 0.15, 0);
+    ctx.rotate(-angle);
+    ctx.strokeStyle = palette.ink;
+    ctx.lineCap = "round";
+    ctx.lineWidth = Math.max(0.1, hair(view, 2.5));
+    ctx.beginPath();
+    ctx.moveTo(-0.3, 0);
+    ctx.lineTo(-0.95, 0);
+    ctx.stroke();
+    ctx.lineWidth = Math.max(0.05, hair(view, 1.5));
+    ctx.beginPath();
+    ctx.moveTo(-0.95, -0.24);
+    ctx.lineTo(-0.95, 0.24);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(-0.55, -0.24, 0.62, 0.48, 0.16);
+    ctx.fillStyle = palette.ink;
+    ctx.fill();
+    ctx.strokeStyle = palette.edge;
+    ctx.lineWidth = line;
+    ctx.stroke();
+    ctx.restore();
   } else {
     ctx.save();
     ctx.translate(-L / 2 + 0.05, 0);
-    ctx.rotate(-rudder * lock);
+    ctx.rotate(-angle);
     ctx.strokeStyle = palette.ink;
-    ctx.lineWidth = Math.max(0.08, hair(view, 2));
+    ctx.lineWidth = Math.max(0.1, hair(view, 2.5));
     ctx.beginPath();
     ctx.moveTo(0, 0);
-    ctx.lineTo(-0.55, 0);
+    ctx.lineTo(-0.7, 0);
     ctx.stroke();
     ctx.restore();
     shape_path(ctx, shape);
@@ -233,6 +326,7 @@ function boat_body(ctx: CanvasRenderingContext2D, pose: Pose, size: HullSize, pa
     ctx.strokeStyle = palette.edge;
     ctx.lineWidth = line;
     ctx.stroke();
+    ctx.translate(0, lean);
     shape_path(ctx, scaled(shape, 0.88, 0.8, -0.02 * L));
     ctx.fillStyle = paint.roof;
     ctx.fill();
@@ -269,9 +363,9 @@ function boat_body(ctx: CanvasRenderingContext2D, pose: Pose, size: HullSize, pa
     for (const x of fenders) {
       for (const side of [-1, 1]) {
         const at = shape.reduce((best, p) => (Math.abs(p.x / L - x) < Math.abs(best.x / L - x) && Math.sign(p.y) === side ? p : best), { x: 0, y: (side * B) / 2 });
-        const y = side * (Math.abs(at.y) + 0.06 - s * 0.06);
+        const y = side * (Math.abs(at.y) + 0.06 * scale - s * 0.06 * scale);
         ctx.beginPath();
-        ctx.ellipse(x * L, y, 0.26 + s * 0.08, 0.12 * (1 - s * 0.6), 0, 0, Math.PI * 2);
+        ctx.ellipse(x * L, y, (0.26 + s * 0.08) * scale, 0.12 * scale * (1 - s * 0.6), 0, 0, Math.PI * 2);
         ctx.fillStyle = palette.glow;
         ctx.fill();
         ctx.strokeStyle = palette.edge;
@@ -285,12 +379,14 @@ function boat_body(ctx: CanvasRenderingContext2D, pose: Pose, size: HullSize, pa
 
 function moored(ctx: CanvasRenderingContext2D, solid: Solid, f: Frame) {
   const boat = solid.boat!;
-  boat_body(ctx, boat.pose, boat, f.palette.cars[boat.paint % f.palette.cars.length], f, 0, 0.6, -1);
+  boat_body(ctx, boat.pose, boat, f.palette.cars[boat.paint % f.palette.cars.length], f, 0, -1);
 }
 
 function wake(ctx: CanvasRenderingContext2D, f: Frame) {
-  const { wake: points, palette, view } = f;
+  const { wake: points, palette, view, c } = f;
   if (points.length < 2) return;
+  const scale = Math.max(1, c.spec.beam / 3.3);
+  const full = c.spec.top_speed * 0.45;
   ctx.strokeStyle = palette.glow;
   ctx.lineCap = "round";
   for (const side of [-1, 1]) {
@@ -298,11 +394,11 @@ function wake(ctx: CanvasRenderingContext2D, f: Frame) {
       const a = points[i - 1];
       const b = points[i];
       const fade = 1 - b.age / WAKE_LIFE;
-      const strength = Math.min(1, b.speed / 1.2);
+      const strength = Math.min(1, b.speed / full);
       if (fade <= 0 || strength < 0.04) continue;
-      const spread = (p: WakePoint) => 0.5 + p.age * (0.35 + p.speed * 0.4);
+      const spread = (p: WakePoint) => (0.5 + p.age * (0.35 + p.speed * 0.4)) * scale;
       ctx.globalAlpha = 0.38 * fade * strength;
-      ctx.lineWidth = Math.max(0.06, hair(view, 2)) * (1 + b.age * 0.6);
+      ctx.lineWidth = Math.max(0.06 * scale, hair(view, 2)) * (1 + b.age * 0.6);
       ctx.beginPath();
       ctx.moveTo(a.x + a.ax * side * spread(a), a.y + a.ay * side * spread(a));
       ctx.lineTo(b.x + b.ax * side * spread(b), b.y + b.ay * side * spread(b));
@@ -317,12 +413,18 @@ function wash(ctx: CanvasRenderingContext2D, f: Frame) {
   const power = boat.power * boat.gear;
   if (Math.abs(power) < 0.05) return;
   const L = c.spec.length;
+  const scale = Math.max(1, c.spec.beam / 3.3);
   ctx.save();
   ctx.translate(boat.x, boat.y);
   ctx.rotate(boat.heading);
+  if (c.spec.drive === Drive.OUTBOARD) {
+    ctx.translate(-L / 2 + 0.15, 0);
+    ctx.rotate(-steer_angle(boat.rudder, c));
+    ctx.translate(L / 2 - 0.15, 0);
+  }
   ctx.strokeStyle = palette.glow;
   ctx.lineCap = "round";
-  ctx.lineWidth = Math.max(0.05, hair(view, 1.6));
+  ctx.lineWidth = Math.max(0.05 * scale, hair(view, 1.6));
   const streaks = 6;
   for (let i = 0; i < streaks; i++) {
     const phase = (time * 2.4 + i / streaks) % 1;
@@ -330,20 +432,84 @@ function wash(ctx: CanvasRenderingContext2D, f: Frame) {
     ctx.globalAlpha = 0.5 * Math.abs(power) * (1 - phase);
     ctx.beginPath();
     if (power > 0) {
-      const x = -L / 2 - 0.3 - phase * (1 + power * 3);
+      const x = -L / 2 - 0.3 * scale - phase * (1 + power * 3) * scale;
       ctx.moveTo(x, y * (1 + phase));
-      ctx.lineTo(x - 0.5, y * (1 + phase * 1.4));
+      ctx.lineTo(x - 0.5 * scale, y * (1 + phase * 1.4));
     } else {
-      const x = -L / 2 + 0.2 + phase * (0.5 - power * 2.5);
-      const edge = (c.spec.beam / 2 + 0.2 + phase * 0.3) * (i % 2 ? 1 : -1);
+      const x = -L / 2 + 0.2 * scale + phase * (0.5 - power * 2.5) * scale;
+      const edge = (c.spec.beam / 2 + (0.2 + phase * 0.3) * scale) * (i % 2 ? 1 : -1);
       ctx.moveTo(x, edge);
-      ctx.lineTo(x + 0.45, edge);
+      ctx.lineTo(x + 0.45 * scale, edge);
     }
     ctx.stroke();
   }
   ctx.restore();
   ctx.globalAlpha = 1;
 }
+
+function bow_wave(ctx: CanvasRenderingContext2D, f: Frame) {
+  const { boat, c, palette, view, time } = f;
+  const u = body_velocity(boat).u;
+  const share = Math.min(1, Math.max(0, u) / (c.spec.top_speed * 0.8));
+  if (share < 0.08) return;
+  const L = c.spec.length;
+  const B = c.spec.beam;
+  ctx.save();
+  ctx.translate(boat.x, boat.y);
+  ctx.rotate(boat.heading);
+  ctx.strokeStyle = palette.glow;
+  ctx.lineCap = "round";
+  const pulse = 0.85 + 0.15 * Math.sin(time * 5);
+  for (const side of [-1, 1]) {
+    for (const [k, alpha] of [[1, 0.55], [1.5, 0.3]] as const) {
+      ctx.globalAlpha = alpha * share * pulse;
+      ctx.lineWidth = Math.max(0.05 * Math.max(1, B / 3.3), hair(view, 1.8));
+      ctx.beginPath();
+      ctx.moveTo(L / 2 + 0.05, 0);
+      ctx.quadraticCurveTo(L * 0.42, side * B * 0.62 * k, L * (0.42 - 0.22 * share * k), side * B * (0.55 + 0.45 * share) * k);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function thruster_wash(ctx: CanvasRenderingContext2D, f: Frame) {
+  const { boat, c, palette, view, time } = f;
+  if (!c.thruster) return;
+  const L = c.spec.length;
+  const B = c.spec.beam;
+  ctx.save();
+  ctx.translate(boat.x, boat.y);
+  ctx.rotate(boat.heading);
+  ctx.strokeStyle = palette.glow;
+  ctx.lineCap = "round";
+  const k = Math.max(1, B / 3.3);
+  ctx.lineWidth = Math.max(0.25 * k, hair(view, 2.5));
+  for (const [x, push] of [[0.45 * L, boat.bow], [-0.45 * L, boat.stern]] as const) {
+    if (Math.abs(push) < 0.05) continue;
+    const out = -Math.sign(push);
+    for (let i = 0; i < 5; i++) {
+      const phase = (time * 1.8 + i / 5) % 1;
+      const reach = B / 2 + 0.4 * k + phase * (1.5 + Math.abs(push) * 5) * k;
+      const wobble = ((i * 7) % 5) / 4 - 0.5;
+      ctx.globalAlpha = 0.6 * Math.abs(push) * (1 - phase);
+      ctx.beginPath();
+      ctx.moveTo(x + wobble * (0.6 + phase * 2) * k, out * reach);
+      ctx.lineTo(x + wobble * (0.6 + phase * 2.4) * k, out * (reach + 1.2 * k));
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+/** How far the drawing leans into the turn, −1 to 1, from the sideways acceleration. */
+function heel(boat: Boat): number {
+  const turning = body_velocity(boat).u * boat.r;
+  return speed(boat) < 0.1 ? 0 : Math.max(-1, Math.min(1, turning / 0.5));
+}
+
 
 function berth_mark(ctx: CanvasRenderingContext2D, berth: Berth, f: Frame) {
   const { palette, view, time } = f;
@@ -591,7 +757,9 @@ export function draw_frame(ctx: CanvasRenderingContext2D, f: Frame) {
     else if (solid.kind === SolidKind.BUOY) buoy(ctx, solid, f);
   }
   wash(ctx, f);
-  boat_body(ctx, boat, c.spec, palette.player, f, boat.rudder, c.lock, f.squash);
+  thruster_wash(ctx, f);
+  bow_wave(ctx, f);
+  boat_body(ctx, boat, c.spec, palette.player, f, steer_angle(boat.rudder, c), f.squash, heel(boat));
   if (scene.berth) mooring_lines(ctx, scene.berth, f);
   rings(ctx, f);
   if (f.hub) shed(ctx, f.hub.hub, f);

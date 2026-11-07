@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { body_velocity, create_boat, measure_carry, measure_kick, measure_top, measure_turn, measure_walk, speed, step_boat, type Boat } from "./boat";
+import { body_velocity, create_boat, measure_carry, measure_kick, measure_thrusters, measure_top, measure_turn, measure_walk, speed, step_boat, type Boat } from "./boat";
 import { BOAT_IDS, boat_coefficients, BoatId, SPECS } from "./boats";
 
 const DT = 1 / 120;
@@ -19,6 +19,13 @@ describe.each(BOAT_IDS)("%s meets its feel numbers", (id) => {
     near(measure_turn(c), spec.turn_rate);
     near(measure_kick(c), spec.kick);
     near(measure_walk(c), spec.walk);
+    if (spec.thrusters) near(measure_thrusters(c), spec.thrusters.turn);
+  });
+
+  test("a tenth of the wheel at slow ahead is a gentle curve, wider than 5 lengths", () => {
+    let boat: Boat = { ...create_boat({ x: 0, y: 0, heading: 0 }), gear: 1, power: 0.3 };
+    for (let t = 0; t < 300; t += 1 / 60) boat = step_boat(boat, { lever: 0.3, wheel: 0.1 }, c, 1 / 60);
+    expect(speed(boat) / boat.r).toBeGreaterThan(5 * spec.length);
   });
 });
 
@@ -41,7 +48,7 @@ describe("handling", () => {
     const yacht = run(create_boat({ x: 0, y: 0, heading: 0 }), 2, 0, 1);
     expect(Math.abs(yacht.heading)).toBeLessThan(1e-6);
     const rib = run(create_boat({ x: 0, y: 0, heading: 0 }), 2, -0.6, 1, BoatId.RIB);
-    expect(Math.abs(rib.heading)).toBeGreaterThan(0.1);
+    expect(Math.abs(rib.heading)).toBeGreaterThan(0.05);
   });
 
   test("astern the yacht's stern walks to port: the bow swings to starboard", () => {

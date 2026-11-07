@@ -37,8 +37,8 @@ export class Sounds {
     oscillator.stop(at + length + 0.02);
   }
 
-  /** Called every frame with the engine's power (0 to 1) and gear; idles quietly in neutral. */
-  drone(power: number, gear: number) {
+  /** Called every frame with the engine's power (0 to 1) and gear; idles quietly in neutral. `pitch` lowers a bigger engine. */
+  drone(power: number, gear: number, pitch = 1) {
     const audio = this.engine ? this.context : this.audio();
     if (!audio) return;
     if (!this.engine) {
@@ -59,7 +59,7 @@ export class Sounds {
       this.engine = { low, high, gain, filter };
     }
     const now = audio.currentTime;
-    const rpm = 38 + power * 46;
+    const rpm = (38 + power * 46) * pitch;
     this.engine.low.frequency.setTargetAtTime(rpm, now, 0.15);
     this.engine.high.frequency.setTargetAtTime(rpm * 2.02, now, 0.15);
     this.engine.filter.frequency.setTargetAtTime(260 + power * 520, now, 0.2);

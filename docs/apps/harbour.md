@@ -2,7 +2,7 @@
 
 ADR: [096](../adrs/096-harbour.md) · Decided: [brainstorm](../brainstorm/2026-11-06_harbour.md) · Code: `src/lib/apps/user/harbour/`
 
-A top-down boat docking sim. A hub harbour you sail around with the real physics, gates that open levels, a boat shed that swaps the RIB and the yacht. Built on the play2d kit (`$kit/games/play2d`, `$kit/components/play2d`) that came out of Drive Hub; the boat model, contacts, judging and proof are the app's own. Released as experimental (`experimental: true` in `meta.ts`, [ADR-097](../adrs/097-experimental-apps.md)) while the handling is tuned; graduating deletes that line.
+A top-down boat docking sim. A hub harbour you sail around with the real physics, gates that open levels, a boat shed that cycles the RIB, the yacht and the cargo coaster. Built on the play2d kit (`$kit/games/play2d`, `$kit/components/play2d`) that came out of Drive Hub; the boat model, contacts, judging and proof are the app's own. Released as experimental (`experimental: true` in `meta.ts`, [ADR-097](../adrs/097-experimental-apps.md)) while the handling is tuned; graduating deletes that line.
 
 ## Where things are
 
@@ -24,8 +24,10 @@ Each step (`step_boat`, semi-implicit Euler at the frame loop's ≤ 1/120 s step
 2. Velocity into the body frame: surge `u`, sway `v` (to starboard). Calm water, so this is also the water-relative velocity; current and wind will enter here.
 3. Forces in the body frame:
    - surge drag `−(Xu·u + Xuu·u|u|)`;
-   - a two-point keel at ±0.3 L: each point's sway `v + r·x` gives `−½(Yv·vᵢ + Yvv·vᵢ|vᵢ|)`, summed into sway force and yaw moment, so yaw damping and the pivot point come out of the same two terms; plus a small extra `−Nr·r`;
-   - thrust `gear · power · (ahead or astern thrust)`. A shaft boat pushes along the keel; an outboard turns the thrust by the rudder angle at `x = −0.45 L`, so it steers ahead, astern and from rest;
+   - a two-point keel at ±0.3 L: each point's sway `v + r·x` gives `−wᵢ(Yv·vᵢ + Yvv·vᵢ|vᵢ|)`, summed into sway force and yaw moment, so yaw damping and the pivot point come out of the same two terms; plus a small extra `−Nr·r`. The weights are ½ ± 0.15·tanh(u / 0.3), the leading point heavier: the pivot point moves forward going ahead and aft going astern, the turn builds over a second or two and carries on once the wheel comes back;
+   - the steering angle `δ = lock · x(0.35 + 0.65|x|)` for a rudder share `x` (`steer_angle`): progressive, since quadratic cross-flow damping alone made a tenth of the wheel turn a sixth as tight as full lock;
+   - thrust `gear · power · (ahead or astern thrust)`. A shaft boat pushes along the keel; an outboard turns the thrust by `δ` at `x = −0.45 L`, so it steers ahead, astern and from rest;
+   - thrusters (the coaster): each spools toward its input with the spec's `lag` and pushes `thruster · fade(u)` sideways at ±0.45 L; `fade` is 1 up to 1 m/s and 0 from 2.6 m/s. The boat doesn't settle to a stop while one runs;
    - the rudder (or the outboard leg) at `−0.45 L`: side force `−C_r · sin δ · q` with `q = u|u|` (halved astern, so it's weak and reversed) plus the prop wash `wash · thrust share` going ahead; a quarter of that as drag by `sin² δ`, against the flow over the rudder (so it brakes astern too);
    - prop walk: astern `−walk · |T|` sideways at the prop (ahead 3 % of that the other way), fading out by 1.2 m/s: the stern walks to port;
    - an outside push (contacts) rotated into the body frame.
@@ -42,21 +44,25 @@ Each step (`step_boat`, semi-implicit Euler at the frame loop's ≤ 1/120 s step
 | `astern_speed` | astern thrust | drag at that speed |
 | `grip` | `Yv`, `Yvv` | `grip × Xu`, `grip × Xuu` |
 | `turn_rate` | `C_r` | steady yaw at 1 m/s held, full rudder, no thrust (`measure_turn`) |
-| `kick` | `wash` (shaft) or the outboard's lock | yaw rate after 1 s of full ahead from rest, full rudder (`measure_kick`); for the outboard the lock and `C_r` are solved in turn three times, since the leg is both |
+| `kick` | `wash` (shaft) or the outboard's `Nr` | yaw rate after 1 s of full ahead from rest, full rudder (`measure_kick`); the outboard swings to its full lock, so its `Nr` and `C_r` are solved in turn three times |
+| `thrusters.turn` | thruster force | steady yaw at rest, bow full to starboard and stern full to port (`measure_thrusters`) |
 | `walk` | prop walk share | stern's sideways drift in 3 s of full astern from rest (`measure_walk`), solved before `wash` because prop walk ahead adds a little yaw |
 
-`boat.test.ts` re-measures every feel number on both derived boats within 4 %, plus the gearbox pause, the yacht's dead rudder at rest, the walk direction and the dead stop.
+`boat.test.ts` re-measures every feel number on the three derived boats within 4 %, checks that a tenth of the wheel at slow ahead turns wider than 5 L, plus the gearbox pause, the yacht's dead rudder at rest, the walk direction and the dead stop.
 
-| | RIB | Yacht |
-|---|---|---|
-| L × B, mass | 4.5 × 2.0 m, 700 kg | 10 × 3.3 m, 5,500 kg |
-| Drive | outboard (vectored, solved lock ≈ 18°) | shaft, spade rudder 35° |
-| Top / astern | 3.0 / 1.8 m/s, 1.2 kN | 2.5 / 1.6 m/s, 2.0 kN |
-| Carry, grip | 6 m, 4 | 18 m, 20 |
-| Turn, kick, walk | 14 °/s, 32 °/s, 0 | 12 °/s, 7 °/s, 0.25 m |
-| Lags | engine 0.3 s, gear 0.4 s, rudder 1.2 s | 0.5 s, 0.6 s, 2 s |
+| | RIB | Yacht | Coaster |
+|---|---|---|---|
+| L × B, mass | 4.5 × 2.0 m, 700 kg | 10 × 3.3 m, 5,500 kg | 45 × 8.5 m, 800 t |
+| Drive | outboard, vectored, 35° | shaft, spade rudder 35° | shaft, rudder 35°, bow and stern thrusters |
+| Top / astern | 3.0 / 1.8 m/s, 1.2 kN | 2.5 / 1.6 m/s, 2.0 kN | 4.0 / 2.4 m/s, 60 kN |
+| Carry, grip | 6 m, 12 | 18 m, 40 | 120 m, 150 |
+| Turn, kick, walk | 7 °/s, 22 °/s, 0 | 1.8 °/s, 8 °/s, 0.25 m | 0.35 °/s, 0.8 °/s, 0.15 m |
+| Lags | engine 0.3 s, gear 0.4 s, rudder 2.4 s | 0.5 s, 0.6 s, 3 s | 2.5 s, 3 s, 12 s |
+| Thrusters | | | 1.2 °/s at rest (≈ 89 kN each), spool 1.5 s |
 
-Deriving the RIB takes about 110 ms in Node, the yacht about 25 ms; each is derived once per window and once per chart worker.
+What that gives (steady radius in lengths, slow / full ahead): full lock 1.2 / 1.0 (RIB), 1.0 / 0.9 (yacht), 1.3 / 0.9 (coaster); a tenth of the wheel 12 / 8, 15 / 10, 27 / 14. Full astern from full ahead stops the RIB in 0.9 L, the yacht in 1.1 L and the coaster in 2.9 L (79 s).
+
+Deriving a boat takes 25–150 ms in Node; each is derived once per window and once per chart worker.
 
 ## Contacts
 
@@ -79,31 +85,32 @@ Held for 1 s (`DOCK_HOLD`), the lines go on for 1.2 s and the round is done. Sta
 
 ## Levels and the hub
 
-Two builders scale with the boat: `alongside_level` (a long pontoon along the top of a basin, optional moored neighbours a gap apart) and `box_level` (fingers off a main pontoon, neighbours in the slots, optional boats across the fairway). Lengths are in boat lengths, floored for the short RIB (`max(L, 6)` for gaps, `max(L, 6.5)` for fairways), since the RIB turns wider for its length than the yacht. Moored boats are ~5 % bigger or smaller than yours. The 8 levels: Visitors' pontoon, Box berth, Come about, Between neighbours, Off the fairway, Short gap, Narrow fairway, Last space. `random_scene(spec, seed, attempt)` picks the kind and its numbers from `hash(seed, attempt)`.
+Two builders scale with the boat: `alongside_level` (a long pontoon along the top of a basin, optional moored neighbours a gap apart) and `box_level` (fingers off a main pontoon, neighbours in the slots, optional boats across the fairway). Gaps and fairways are given in units of `max(L, 1.2 × R)`, R the boat's steady turn at slow ahead with full wheel (`turn_radius`, thrusters helping for the coaster): the RIB and the yacht turn wider than a length, so their units grow. Start distances and the basin's depth use a unit of `min(L, 20 m)`, so a coaster isn't sent half a kilometre; along an alongside pontoon the start stays in lengths, so the coaster runs straight in. A box slot's clearance grows with a beam over 3.3 m. Moored boats are ~5 % bigger or smaller than yours. The 8 levels: Visitors' pontoon, Box berth, Come about, Between neighbours, Off the fairway, Short gap, Narrow fairway, Last space. `random_scene(spec, seed, attempt)` picks the kind and its numbers from `hash(seed, attempt)`.
 
-The hub (`build_hub`) is a 150 × 100 m basin with quays, two decorative pontoons, piles, gates 1–8 in two rows and Random and Daily on the right, and the shed top left. Crossing a gate's line arms it; dropping under 0.3 m/s within 40 m opens its card and charts the round in the worker. Sailing into the shed swaps the boat and puts the new one at the shed's mouth; leaving the shed re-arms it. Coming back from a round puts you 9 m past that gate, heading away.
+The hub (`build_hub(scale)`, `hub_scale(L) = max(1, L / 10)`) is a 150 × 100 m basin for the RIB and the yacht, everything grown 4.5× for the coaster (quays, pontoons, moored boats, buoys, gates, the shed, the 40 m card radius and the 9 m return) with quays, two decorative pontoons, piles, gates 1–8 in two rows and Random and Daily on the right, and the shed top left. Crossing a gate's line arms it; dropping under 0.3 m/s within 40 m opens its card and charts the round in the worker. Sailing into the shed swaps the boat and puts the new one at the shed's mouth; leaving the shed re-arms it. Coming back from a round puts you 9 m past that gate, heading away.
 
 ## Proof
 
 `prove(scene, c)`, used by the tests on every fixed level for both boats and by `chart()` at run time for random and daily seeds:
 
 1. **Room**: the hull's box grown by 0.15 m of fenders fits where it would lie docked.
-2. **Path**: hybrid A* (`planner.ts`) over forward arcs (five steer shares) no tighter than 1.4 × the boat's steady radius at slow ahead with full wheel (RIB ≈ 5.6 m, yacht ≈ 7.2 m), the hull's box grown by a margin, to an approach pose: 2 L straight out of a box berth; for alongside, both directions at 35°, 45° and 25°, keeping only approaches whose straight leg clears everything but the berth's own pontoon.
-3. **Autopilot** (`sail`): the real `advance`, pure pursuit on the path plus the last leg (look-ahead 0.5–1.4 L), the lever only on its seven detents, re-chosen every 0.25 s from a stopping-distance speed profile (≤ 0.4 × top speed, ≤ 0.25 + 0.03 × grip m/s inside 2.5 L of the berth). Stopped near the end at an angle, it kicks slow ahead against full rudder to swing the stern in. 240 s limit; a hard touch fails.
+2. **Path**: hybrid A* (`planner.ts`) over forward arcs (five steer shares) no tighter than 1.15 × the steady radius (RIB ≈ 6.2 m, yacht ≈ 12 m, coaster ≈ 19 m with thrusters), the hull's box grown by `max(0.3, 0.15 B, 0.05 L)`, arriving within `max(1.2, 0.15 R)` m and 12° of an approach pose, with 40,000 × max(1, L / 10) expansions: 1.5 L straight out of a box berth; for alongside, both directions at 35°, 45° and 25°, keeping only approaches whose straight leg clears everything but the berth's own pontoon. A boat with thrusters approaches alongside parallel instead, a beam and 8 m off, 1.4 L before abeam of its berth.
+3. **Autopilot** (`sail`): the real `advance`, pure pursuit on the path plus the last leg (look-ahead 0.5–1.4 L), the lever only on its seven detents, re-chosen every 0.25 s from a stopping-distance speed profile (≤ 0.4 × top speed, at most 1.1 m/s; braking at `min(0.03, ½ astern thrust / mass)`; inside 2.5 L of the berth ≤ `min(0.85, 0.2 + 0.065 L)` m/s, 0.5 with thrusters). Stopped near the end at an angle, a boat without thrusters kicks slow ahead against full rudder to swing the stern in. A boat with thrusters turns with them (bow with the wheel, stern against it), holds the berth's axis on them for the last 2 L, and alongside stops abeam and crabs in: both thrusters push it sideways at up to 0.4 m/s, easing to a kiss, while differential thrust holds the heading and the lever holds its place along the berth. 240 s × max(1, L / 10) limit; a hard touch fails.
 
-The first option that docks proves the level; its time is the par: `ceil(1.4 t + 8)` seconds. A seed tries up to 16 layouts. Measured in Node: fixed levels prove in 25–350 ms each, autopilot times about 50–85 s (RIB) and 58–121 s (yacht).
+The first option that docks proves the level; its time is the par: `ceil(1.4 t + 8)` seconds. A seed tries up to 16 layouts. Measured in Node: fixed levels prove in 25–500 ms each, autopilot times about 44–89 s (RIB), 58–127 s (yacht) and 227–458 s (coaster); the daily stays RIB or yacht, picked by the seed.
 
 Like the forklift's par, charting runs in a worker (`chart-job.ts`) while the start card shows; Start waits for it.
 
 ## Controls
 
 - Lever (default): W/↑ and S/↓ a notch, Space neutral; the notch stays. Hold (setting): W or S held gives half ahead or astern. Touch: the vertical `Lever` (pointer capture, `lostpointercapture` ends the drag; in Hold it springs back to neutral).
-- Wheel: A/D or ←/→ at 1.25 a second, it stays; C centres. Touch: the kit's `SteeringWheel`.
+- Wheel: A/D or ←/→ at 0.7 a second, it stays; C centres. Touch: the kit's `SteeringWheel`. The rudder follows at its own rate (`rudder_time`); a HUD chip shows its actual angle.
+- Thrusters (boats that have them): Q/E push the bow to port or starboard, Z/X the stern, while held. Touch: a pad of four hold buttons between the wheel and the lever (pointer capture, `lostpointercapture` lets go); a HUD chip shows which are pushing.
 - In a round, the first helm input casts off. Esc pauses, Enter starts or goes on, R retries.
 
 ## Drawing
 
-All on theme tokens through `read_palette`: water `water` with drifting ripples (`glow`), quays `pavement`, pontoons `wood` with planks and an `ink` edge, moored boats in `cars` paints, yours in `player`, fenders `glow` squashed by the contact depth, a V wake from a ring buffer of stern points, prop wash behind the stern going ahead and along the hull going astern, the rudder or the outboard drawn at its angle, the berth dashed in `target` (`parked` once the lines are on), lines in `paint`, red and green gate buoys (`error`, `success`) with a dashed `guide` line and a board with the stars. Camera: the kit's `frame` with `view_span(length)`, looking 1.5 s ahead along the velocity; the start card fits the start and the berth.
+All on theme tokens through `read_palette`: water `water` with drifting ripples (`glow`), quays `pavement`, pontoons `wood` with planks and an `ink` edge, moored boats in `cars` paints, yours in `player`, fenders `glow` squashed by the contact depth, a V wake from a ring buffer of stern points, prop wash behind the stern going ahead and along the hull going astern, the rudder drawn at its angle and the outboard on the transom with its wash turning with the leg, a bow wave that opens with speed, a slight heel into the turn (shadow out, deck in; drawn only), the coaster with hatches, bridge, funnel and thruster jets on the side away from the push, the berth dashed in `target` (`parked` once the lines are on), lines in `paint`, red and green gate buoys (`error`, `success`) with a dashed `guide` line and a board with the stars. Camera: the kit's `frame` with `max(view_span(length), 2.4 L)`, looking 1.5 s ahead along the velocity; the start card fits the start and the berth.
 
 ## Persistence
 
@@ -111,7 +118,7 @@ All on theme tokens through `read_palette`: water `water` with drifting ripples 
 
 ## Limits
 
-- No wind, current, gusts, bow thruster, twin cruiser, stern-to, buoys or lines as tethers yet (ADR-096 P2, P3).
-- The autopilot is slower than a good helm, so par is lenient; it can also fail where a person would succeed, which is why the level builders floor their numbers for the RIB.
+- No wind, current, gusts, twin cruiser, stern-to, buoys or lines as tethers yet (ADR-096 P2, P3). The coaster is not in the daily.
+- The autopilot is slower than a good helm, so par is lenient; it can also fail where a person would succeed, which is why the levels size their gaps and fairways from the turning circle. The coaster's pars run 5–11 minutes: it is slow to start, slow to stop and crabs the last stretch.
 - The browser's frame loop splits frames into equal steps, so a run isn't bit-identical to the Node proof.
 - No gamepad.

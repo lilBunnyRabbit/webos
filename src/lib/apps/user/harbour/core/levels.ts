@@ -3,6 +3,8 @@ import { hash } from "$kit/games/play2d/seed";
 import type { Bounds, Pose } from "$kit/games/play2d/geometry";
 import { Drive, type BoatSpec } from "./boat";
 import { alongside, box, SceneBuilder, type Berth, type Scene } from "./world";
+import { turn_radius } from "./autopilot";
+import { spec_coefficients } from "./boats";
 
 /** Clearance each side of a box berth, past the beam: fenders and a hand's width. */
 export const BOX_ROOM = 0.35;
@@ -10,10 +12,21 @@ const FINGER = 0.9;
 const MAIN = 2.2;
 const QUAY = 6;
 const PAINTS = 5;
+const GAP_TURN = 1.2;
+const FAIRWAY_TURN = 1.2;
+
+/** Start distances and basin depth in this unit: a boat length, but no more than 20 m, so a coaster isn't sent half a kilometre. */
+function stride(length: number): number {
+  return Math.min(length, 20);
+}
+
+function turn_of(spec: BoatSpec): number {
+  return turn_radius(spec_coefficients(spec));
+}
 
 /** What a neighbour in the marina looks like: about the player's size, so a level reads the same for both boats. */
 function neighbour(spec: BoatSpec, scale: number) {
-  return { length: spec.length * scale, beam: spec.beam * scale, drive: spec.drive === Drive.OUTBOARD ? Drive.OUTBOARD : Drive.SHAFT };
+  return { length: spec.length * scale, beam: spec.beam * scale, drive: spec.drive === Drive.OUTBOARD ? Drive.OUTBOARD : Drive.SHAFT, cargo: spec.cargo };
 }
 
 interface Layout {
@@ -48,21 +61,22 @@ interface AlongsideOptions {
 function alongside_level(spec: BoatSpec, o: AlongsideOptions): Scene {
   const L = spec.length;
   const width = Math.max(14 * L, 60);
-  const depth = Math.max(o.depth * L, 30);
+  const unit = stride(L);
+  const depth = Math.max(o.depth * unit, 30, 4 * L);
   const water = { x0: -width / 2, y0: -MAIN - 2, x1: width / 2, y1: depth };
   const build = new SceneBuilder();
   build.pontoon(-width * 0.42, -MAIN, width * 0.42, 0);
   const berth_length = L * 0.75;
   const berth = alongside({ x: -berth_length / 2, y: 0 }, { x: berth_length / 2, y: 0 }, { x: 0, y: 1 }, spec.beam);
   if (o.gap > 0) {
-    const half = (o.gap * Math.max(L, 6)) / 2;
+    const half = (o.gap * Math.max(L, GAP_TURN * turn_of(spec))) / 2;
     const n = neighbour(spec, 1.05);
     const lie = n.beam / 2 + 0.1;
     build.moored({ x: -half - n.length / 2, y: lie, heading: 0 }, n, o.paint % PAINTS);
     build.moored({ x: half + n.length / 2, y: lie, heading: Math.PI }, n, (o.paint + 1) % PAINTS);
     build.moored({ x: -half - n.length * 1.6, y: lie, heading: Math.PI }, neighbour(spec, 0.85), (o.paint + 2) % PAINTS);
   }
-  return finish({ water, build, berth, start: { x: o.along * L, y: o.out * L, heading: o.heading } });
+  return finish({ water, build, berth, start: { x: o.along * L, y: o.out * unit, heading: o.heading } });
 }
 
 interface BoxOptions {
@@ -82,12 +96,12 @@ interface BoxOptions {
 /** A row of box berths off a main pontoon at the top, opening south onto a fairway. */
 function box_level(spec: BoatSpec, o: BoxOptions): Scene {
   const L = spec.length;
-  const slot = spec.beam + BOX_ROOM * 2;
+  const slot = spec.beam + BOX_ROOM * 2 * Math.max(1, spec.beam / 3.3);
   const depth = L + 0.5;
   const pitch = slot + FINGER;
   const build = new SceneBuilder();
   const count = 6;
-  const fairway = o.fairway * Math.max(L, 6.5);
+  const fairway = o.fairway * Math.max(L, FAIRWAY_TURN * turn_of(spec));
   const width = Math.max(14 * L, 60);
   const water = { x0: -width / 2, y0: -MAIN - 2, x1: width / 2, y1: depth + fairway + (o.straight ? Math.max(6 * L, 25) : 3) };
   build.pontoon(-width * 0.45, -MAIN, width * 0.45, 0);
@@ -115,8 +129,8 @@ function box_level(spec: BoatSpec, o: BoxOptions): Scene {
     if (o.straight) water.y1 = y;
   }
   const start = o.straight
-    ? { x: o.along * L, y: depth + Math.max(3.5 * L, 18), heading: o.heading }
-    : { x: -o.along * L, y: depth + fairway / 2, heading: o.heading };
+    ? { x: o.along * L, y: depth + Math.max(3.5 * stride(L), 18, 1.5 * L), heading: o.heading }
+    : { x: -o.along * stride(L), y: depth + fairway / 2, heading: o.heading };
   if (o.straight && o.across) start.y = depth + fairway * 0.8;
   return finish({ water, build, berth, start });
 }
@@ -163,7 +177,7 @@ export const LEVELS: readonly Level[] = [
   {
     id: 6,
     name: "Short gap",
-    brief: "A tight gap on a busy pontoon. Come in at an angle and let the stern follow.",
+    brief: "A tight gap on a busy pontoon. Come in at an angle and let the stern follow, or stop outside the gap and slide in on the thrusters.",
     build: (spec) => alongside_level(spec, { gap: 1.5, out: 3.5, along: -3.5, heading: -0.15, depth: 7, paint: 1 }),
   },
   {
