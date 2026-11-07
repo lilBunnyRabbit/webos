@@ -7,6 +7,7 @@ import { inflate } from "../../core/planner";
 import { fit, MAX_ANGLE, PERFECT, type Precision } from "$kit/games/play2d/precision";
 import { SolidKind } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
+import { better, keep_best, keep_precision, levels_schema, unlocked as open_levels, type LevelStars } from "../../core/track";
 import {
   body_ends,
   bodies,
@@ -605,11 +606,7 @@ export type Result = z.infer<typeof result_schema>;
 export const bests_schema = z.record(z.string(), result_schema);
 export type Bests = z.infer<typeof bests_schema>;
 
-/** More stars, then quicker. */
-export function better(a: Result | undefined, b: Result): boolean {
-  if (!a) return true;
-  return b.stars !== a.stars ? b.stars > a.stars : b.ms < a.ms;
-}
+export { better, levels_schema, type LevelStars };
 
 export function round_key(round: Round): string {
   if (round.daily) return `daily:${round.daily}`;
@@ -625,16 +622,9 @@ export interface Recorded {
 
 /** The order is stars, then time; precision only ever rises, whichever run set it. */
 export function record_best(bests: Bests, round: Round, result: Result): Recorded {
-  const key = round_key(round);
-  const old = bests[key];
-  const improved = better(old, result);
-  const run = improved ? { stars: result.stars, ms: result.ms } : { stars: old!.stars, ms: old!.ms };
-  const top = Math.max(old?.precision ?? -1, result.precision ?? -1);
-  return { bests: { ...bests, [key]: top >= 0 ? { ...run, precision: top } : run }, improved, first: old === undefined };
+  return keep_best(bests, round_key(round), result, better, keep_precision);
 }
 
-export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
-export type LevelStars = z.infer<typeof levels_schema>;
 export const data_schema = z.object({ bests: bests_schema, levels: levels_schema });
 export type ForkliftData = z.infer<typeof data_schema>;
 export const EMPTY_DATA: ForkliftData = { bests: {}, levels: {} };
@@ -655,12 +645,7 @@ export function level_round(level: number): Round {
 }
 
 export function unlocked(levels: LevelStars): number {
-  let highest = 1;
-  for (const key of Object.keys(levels)) {
-    const level = Number(key);
-    if (Number.isInteger(level) && level >= 1) highest = Math.max(highest, level + 1);
-  }
-  return Math.min(LEVEL_COUNT, highest);
+  return open_levels(levels, LEVEL_COUNT);
 }
 
 export function job_round(size: number, seed: number): Round {

@@ -5,6 +5,7 @@ import { fit, MAX_ANGLE, type Precision } from "$kit/games/play2d/precision";
 import { collide, obstacles } from "../../core/obstacles";
 import { pass_portals } from "../../core/portals";
 import { support, tyres } from "../../core/support";
+import { keep_best, keep_precision, levels_schema, unlocked as open_levels, type LevelStars } from "../../core/track";
 import {
   bodies,
   create_car,
@@ -428,12 +429,7 @@ export interface Recorded {
 
 /** Order stays moves, then time; precision only ever rises, whichever run set it. */
 export function record_best(bests: Bests, round: Round, result: Result): Recorded {
-  const old = best_of(bests, round);
-  const improved = better(old, result);
-  const run = improved ? { moves: result.moves, ms: result.ms } : { moves: old!.moves, ms: old!.ms };
-  const top = Math.max(old?.precision ?? -1, result.precision ?? -1);
-  const next: Bests = { ...bests, [round_key(round)]: top >= 0 ? { ...run, precision: top } : run };
-  return { bests: next, improved, first: old === undefined };
+  return keep_best(bests, round_key(round), result, better, keep_precision);
 }
 
 export { PERFECT, type Precision } from "$kit/games/play2d/precision";
@@ -443,8 +439,7 @@ export function precision(car: Placement, bay: Bay, spec: VehicleSpec = VEHICLES
   return fit(bodies(car, spec).flat(), headings(car, spec), bay);
 }
 
-export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
-export type LevelStars = z.infer<typeof levels_schema>;
+export { levels_schema, type LevelStars };
 export const data_schema = z.object({
   bests: bests_schema,
   levels: levels_schema,
@@ -534,12 +529,7 @@ export function level_round(level: number): Round {
 }
 
 export function unlocked(levels: LevelStars): number {
-  let highest = 1;
-  for (const key of Object.keys(levels)) {
-    const level = Number(key);
-    if (Number.isInteger(level) && level >= 1) highest = Math.max(highest, level + 1);
-  }
-  return Math.min(LEVEL_COUNT, highest);
+  return open_levels(levels, LEVEL_COUNT);
 }
 
 export function scenario_round(pick: ScenarioPick, seed: number, daily?: string, vehicle: VehiclePick = ANY): Round {

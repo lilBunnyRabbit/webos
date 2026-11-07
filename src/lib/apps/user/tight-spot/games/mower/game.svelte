@@ -18,6 +18,8 @@
   import { frame_loop } from "$kit/games/play2d/loop";
   import { RoundCard } from "$kit/components/play2d";
   import SettingsPanel from "../../core/settings-panel.svelte";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done } from "../../core/track";
   import { Sounds } from "../../core/sound";
   import { SpeedChip } from "$kit/components/play2d";
   import { body_centre, Gear, max_steer, without_creep } from "../../core/vehicle";
@@ -133,12 +135,6 @@
   const earned = $derived(stars(game, measured?.par_ms ?? null));
   const max_level = $derived(unlocked(saved.value.levels));
   const level_best = $derived(game.round.level !== undefined ? (saved.value.levels[game.round.level] ?? 0) : 0);
-  const level_options = $derived(
-    Array.from({ length: max_level }, (_, i) => {
-      const got = saved.value.levels[i + 1] ?? 0;
-      return { value: String(i + 1), label: `Level ${i + 1}${got ? ` ${"★".repeat(got)}` : ""}` };
-    })
-  );
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNT);
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
@@ -333,7 +329,7 @@
     if (overlap(state.tally) < 0.1) achievements.achieve("mower-tidy");
     if (score === 3) achievements.achieve("mower-by-the-book");
     if (state.tally.mown >= state.tally.coverable && state.tally.trampled === 0) achievements.achieve("mower-every-blade");
-    if (state.round.level !== undefined) achievements.progress("mower-levels", Object.keys(outcome.saved.levels).length);
+    if (state.round.level !== undefined) achievements.progress("mower-levels", levels_done(outcome.saved.levels));
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, 3 - result.stars, DAILY_MODE);
       achievements.achieve("mower-daily");
@@ -537,7 +533,7 @@
   {#if daily}
     <span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>
   {:else if mode === Mode.LEVELS}
-    <Select class="w-[7.5rem] min-w-0 @md:w-36" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+    <TrackPicker class="w-[7.5rem] min-w-0 @md:w-36" open={max_level} stars={(at) => saved.value.levels[at] ?? 0} value={String(level)} onpick={set_level} />
   {/if}
   <div class="flex-1"></div>
   {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}

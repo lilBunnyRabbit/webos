@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { angle_between, type Polygon, type Vec } from "$kit/games/play2d/geometry";
 import { STANDING } from "../../core/keys";
+import { better, keep_best, levels_schema, unlocked as open_levels, with_stars } from "../../core/track";
 import { collide, collide_shape, obstacles, vehicle_solids, type Obstacles, type Scene } from "../../core/obstacles";
 import type { Solid } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
@@ -368,15 +369,12 @@ export type Result = z.infer<typeof result_schema>;
 
 export const save_schema = z.object({
   best: z.record(z.string(), result_schema),
-  levels: z.record(z.string(), z.record(z.string(), z.number().int().min(1).max(3))),
+  levels: z.record(z.string(), levels_schema),
 });
 export type Save = z.infer<typeof save_schema>;
 export const EMPTY_SAVE: Save = { best: {}, levels: {} };
 
-export function better(a: Result | undefined, b: Result): boolean {
-  if (!a) return true;
-  return b.stars !== a.stars ? b.stars > a.stars : b.ms < a.ms;
-}
+export { better };
 
 export function round_key(round: Round): string {
   if (round.daily) return `daily:${round.daily}`;
@@ -391,19 +389,9 @@ export interface Recorded {
 }
 
 export function record(save: Save, round: Round, result: Result): Recorded {
-  const key = round_key(round);
-  const old = save.best[key];
-  const improved = better(old, result);
-  const best = improved ? { ...save.best, [key]: result } : save.best;
-  let levels = save.levels;
-  if (round.level !== undefined) {
-    const mine = save.levels[round.job] ?? {};
-    levels = {
-      ...save.levels,
-      [round.job]: { ...mine, [round.level]: Math.max(mine[round.level] ?? 0, result.stars) },
-    };
-  }
-  return { save: { best, levels }, improved, first: old === undefined };
+  const kept = keep_best(save.best, round_key(round), result, better);
+  const levels = round.level === undefined ? save.levels : { ...save.levels, [round.job]: with_stars(save.levels[round.job] ?? {}, round.level, result.stars) };
+  return { save: { best: kept.bests, levels }, improved: kept.improved, first: kept.first };
 }
 
 export const LEVEL_COUNTS: Record<Job, number> = { pushback: 12, baggage: 8, tow: 8, turnaround: 8 };
@@ -421,12 +409,7 @@ export function job_levels(save: Save, job: Job): Record<string, number> {
 }
 
 export function unlocked(levels: Record<string, number>, job: Job = Job.PUSHBACK): number {
-  let highest = 1;
-  for (const key of Object.keys(levels)) {
-    const level = Number(key);
-    if (Number.isInteger(level) && level >= 1) highest = Math.max(highest, level + 1);
-  }
-  return Math.min(LEVEL_COUNTS[job], highest);
+  return open_levels(levels, LEVEL_COUNTS[job]);
 }
 
 export function random_round(seed: number, job: Job = Job.PUSHBACK): Round {

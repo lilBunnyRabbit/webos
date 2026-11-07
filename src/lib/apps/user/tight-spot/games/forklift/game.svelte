@@ -28,6 +28,8 @@
   import { frame_loop } from "$kit/games/play2d/loop";
   import { RoundCard } from "$kit/components/play2d";
   import SettingsPanel from "../../core/settings-panel.svelte";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done } from "../../core/track";
   import { Sounds } from "../../core/sound";
   import { SpeedChip } from "$kit/components/play2d";
   import { body_centre, Gear, max_steer, without_creep } from "../../core/vehicle";
@@ -159,13 +161,6 @@
   const perfect = $derived(precision_percent !== null && precision_percent >= PERFECT);
   const max_level = $derived(unlocked(data.value.levels));
   const level_best = $derived(game.round.level !== undefined ? (data.value.levels[game.round.level] ?? 0) : 0);
-  const level_options = $derived(
-    Array.from({ length: max_level }, (_, i) => {
-      const round = level_round(i + 1);
-      const got = data.value.levels[i + 1] ?? 0;
-      return { value: String(i + 1), label: `${i + 1} · ${round.size} ${round.size === 1 ? "pallet" : "pallets"}${got ? ` ${"★".repeat(got)}` : ""}` };
-    })
-  );
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNT);
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
@@ -431,7 +426,7 @@
     if (state.round.level !== undefined) {
       const at = state.round.level;
       data.value.levels[at] = Math.max(data.value.levels[at] ?? 0, score);
-      achievements.progress("forklift-levels", Object.keys(data.value.levels).length);
+      achievements.progress("forklift-levels", levels_done(data.value.levels));
     }
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, 3 - score, DAILY_MODE);
@@ -554,6 +549,11 @@
     size = Math.max(1, Math.min(4, Number(next)));
     prefs.value["forklift.size"] = size;
     load(make_round());
+  }
+
+  function level_name(at: number): string {
+    const { size } = level_round(at);
+    return `${at} · ${size} ${size === 1 ? "pallet" : "pallets"}`;
   }
 
   function set_level(next: string) {
@@ -690,7 +690,14 @@
   {:else if mode === Mode.JOBS}
     {@render size_picker("hidden w-[6.75rem] min-w-0 @md/ts-app:inline-flex")}
   {:else}
-    <Select class="w-[7.5rem] min-w-0 @md:w-36" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+    <TrackPicker
+      class="w-[7.5rem] min-w-0 @md:w-36"
+      open={max_level}
+      stars={(at) => data.value.levels[at] ?? 0}
+      name={level_name}
+      value={String(level)}
+      onpick={set_level}
+    />
   {/if}
   <div class="flex-1"></div>
   {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}

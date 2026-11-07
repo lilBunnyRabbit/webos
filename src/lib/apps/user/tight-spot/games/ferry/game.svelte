@@ -24,6 +24,8 @@
   import { frame_loop } from "$kit/games/play2d/loop";
   import { RoundCard } from "$kit/components/play2d";
   import SettingsPanel from "../../core/settings-panel.svelte";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done } from "../../core/track";
   import { obstacles } from "../../core/obstacles";
   import { End, sensor } from "../../core/sensors";
   import { Sounds } from "../../core/sound";
@@ -140,12 +142,6 @@
   const hint = $derived(game.status === Status.DRIVING && game.car.gear === Gear.PARK && game.last_drive !== null ? fault_text(verdict_of(game)) : null);
   const max_level = $derived(unlocked(data.value.levels));
   const level_best = $derived(game.round.level !== undefined ? (data.value.levels[game.round.level] ?? 0) : 0);
-  const level_options = $derived(
-    Array.from({ length: max_level }, (_, i) => {
-      const got = data.value.levels[i + 1] ?? 0;
-      return { value: String(i + 1), label: `Level ${i + 1}${got ? ` ${"★".repeat(got)}` : ""}` };
-    })
-  );
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNT);
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
@@ -364,7 +360,7 @@
     if (count >= 4 && Math.abs(balance(state.deck, state.stowed)) <= 0.02) achievements.achieve("ferry-even-keel");
     if (count >= 6 && score === 3) achievements.achieve("ferry-full-deck");
     if (count >= 5 && score === 3 && state.undos === 0) achievements.achieve("ferry-no-undo");
-    if (state.round.level !== undefined) achievements.progress("ferry-levels", Object.keys(done.data.levels).length);
+    if (state.round.level !== undefined) achievements.progress("ferry-levels", levels_done(done.data.levels));
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, 3 - score, DAILY_MODE);
       achievements.achieve("ferry-daily");
@@ -605,7 +601,7 @@
   {#if daily}
     <span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>
   {:else if mode === Mode.LEVELS}
-    <Select class="w-[7.5rem] min-w-0 @md:w-36" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+    <TrackPicker class="w-[7.5rem] min-w-0 @md:w-36" open={max_level} stars={(at) => data.value.levels[at] ?? 0} value={String(level)} onpick={set_level} />
   {/if}
   <div class="flex-1"></div>
   {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}

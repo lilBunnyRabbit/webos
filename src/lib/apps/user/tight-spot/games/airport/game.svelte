@@ -20,6 +20,8 @@
   import { frame_loop } from "$kit/games/play2d/loop";
   import { RoundCard } from "$kit/components/play2d";
   import SettingsPanel from "../../core/settings-panel.svelte";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done } from "../../core/track";
   import { Sounds } from "../../core/sound";
   import { SpeedChip } from "$kit/components/play2d";
   import { bodies, Gear, max_steer, trailer_pose, without_creep } from "../../core/vehicle";
@@ -69,6 +71,7 @@
   const DONE_TITLES: Record<Job, string> = { pushback: "Push complete", baggage: "Bags delivered", tow: "On the gate", turnaround: "Turnaround complete" };
   const JOB_OPTIONS = (Object.keys(JOB_NAMES) as Job[]).map((value) => ({ value, label: JOB_NAMES[value] }));
   const RANDOM = "random";
+  const RANDOM_OPTION = [{ value: RANDOM, label: "Random" }];
   // Wide enough for both wingtips with room to see what they pass, whichever way the aircraft points.
   const VIEW_SPAN = SPAN + 18;
   // The train is short, but it weaves between wingtips: enough to see the next gap.
@@ -135,13 +138,6 @@
   const level_count = $derived(LEVEL_COUNTS[job]);
   const max_level = $derived(unlocked(job_levels(save.value, job), job));
   const level_best = $derived(game.round.level !== undefined ? (levels[game.round.level] ?? 0) : 0);
-  const round_options = $derived([
-    { value: RANDOM, label: "Random" },
-    ...Array.from({ length: Math.max(max_level, mode === Mode.LEVELS ? level : 1) }, (_, i) => {
-      const got = job_levels(save.value, job)[i + 1] ?? 0;
-      return { value: String(i + 1), label: `Level ${i + 1}${got ? ` ${"★".repeat(got)}` : ""}` };
-    }),
-  ]);
   const has_next_level = $derived(game.round.level !== undefined && game.round.level < LEVEL_COUNTS[game.round.job]);
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
@@ -348,7 +344,7 @@
     if (done_job === Job.TOW) achievements.achieve("airport-tow");
     if (done_job === Job.TURNAROUND) achievements.achieve("airport-turnaround");
     if (score === 3) achievements.achieve("airport-by-the-book");
-    if (done_job === Job.PUSHBACK && state.round.level !== undefined) achievements.progress("airport-levels", Object.keys(job_levels(done.save, done_job)).length);
+    if (done_job === Job.PUSHBACK && state.round.level !== undefined) achievements.progress("airport-levels", levels_done(job_levels(done.save, done_job)));
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, 3 - score, DAILY_MODE);
       achievements.achieve("airport-daily");
@@ -553,7 +549,15 @@
 {/snippet}
 
 {#snippet round_picker(classes: string)}
-  <Select class={classes} size="sm" aria-label="Round" options={round_options} bind:value={() => (mode === Mode.LEVELS ? String(level) : RANDOM), set_round} />
+  <TrackPicker
+    class={classes}
+    label="Round"
+    before={RANDOM_OPTION}
+    open={Math.max(max_level, mode === Mode.LEVELS ? level : 1)}
+    stars={(at) => job_levels(save.value, job)[at] ?? 0}
+    value={mode === Mode.LEVELS ? String(level) : RANDOM}
+    onpick={set_round}
+  />
 {/snippet}
 
 {#snippet toolbar()}

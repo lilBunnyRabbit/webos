@@ -23,6 +23,7 @@
   import { RoundCard } from "$kit/components/play2d";
   import { End, sensor } from "../../core/sensors";
   import SettingsPanel from "../../core/settings-panel.svelte";
+  import TrackPicker from "../../core/track-picker.svelte";
   import { Sounds } from "../../core/sound";
   import { SpeedChip } from "$kit/components/play2d";
   import { bodies, body_centre, can_crab, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, without_creep } from "../../core/vehicle";
@@ -155,20 +156,7 @@
         : 0
   );
   const open_courses = $derived(courses_open(course_stars));
-  const course_options = $derived(
-    COURSES.slice(0, open_courses).map((each, i) => {
-      const got = course_stars[each.id] ?? 0;
-      return { value: each.id, label: `${i + 1} · ${each.name}${got ? ` ${"★".repeat(got)}` : ""}` };
-    })
-  );
   const max_level = $derived(unlocked(data.value.levels));
-  const level_options = $derived(
-    Array.from({ length: max_level }, (_, i) => {
-      const round = level_round(i + 1);
-      const got = data.value.levels[i + 1] ?? 0;
-      return { value: String(i + 1), label: `${i + 1} · ${SCENARIO_INFO[round.scenario!].name}${round.vehicle === Vehicle.HATCH ? "" : ` · ${VEHICLE_NAMES[round.vehicle]}`}${got ? ` ${"★".repeat(got)}` : ""}` };
-    })
-  );
   const has_next_level = $derived(
     game.round.course !== undefined
       ? course_index(game.round.course) < COURSES.length - 1
@@ -524,6 +512,11 @@
     load(make_round());
   }
 
+  function level_name(at: number): string {
+    const round = level_round(at);
+    return `${at} · ${SCENARIO_INFO[round.scenario!].name}${round.vehicle === Vehicle.HATCH ? "" : ` · ${VEHICLE_NAMES[round.vehicle]}`}`;
+  }
+
   function set_level(next: string) {
     level = Math.max(1, Math.min(max_level, Number(next)));
     prefs.value["parking.level"] = level;
@@ -660,9 +653,25 @@
   {#if mode === Mode.SCENARIO && !daily}
     {@render kind_picker("hidden w-32 min-w-0 @md/ts-app:inline-flex")}
   {:else if mode === Mode.LEVELS}
-    <Select class="w-[7.5rem] min-w-0 @md:w-40" size="sm" aria-label="Level" options={level_options} bind:value={() => String(level), set_level} />
+    <TrackPicker
+      class="w-[7.5rem] min-w-0 @md:w-40"
+      open={max_level}
+      stars={(at) => data.value.levels[at] ?? 0}
+      name={level_name}
+      value={String(level)}
+      onpick={set_level}
+    />
   {:else if mode === Mode.EXTREME}
-    <Select class="w-[7.5rem] min-w-0 @md:w-44" size="sm" aria-label="Course" options={course_options} bind:value={() => course, set_course} />
+    <TrackPicker
+      class="w-[7.5rem] min-w-0 @md:w-44"
+      label="Course"
+      open={open_courses}
+      stars={(at) => course_stars[COURSES[at - 1].id] ?? 0}
+      name={(at) => `${at} · ${COURSES[at - 1].name}`}
+      id={(at) => COURSES[at - 1].id}
+      value={course}
+      onpick={set_course}
+    />
   {/if}
   {#if choosing_vehicle}{@render vehicle_picker("hidden w-36 min-w-0 @2xl/ts-app:inline-flex")}{/if}
   {#if daily}<span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>{/if}

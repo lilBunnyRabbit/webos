@@ -3,6 +3,7 @@ import { ChunkKind, type World } from "../../../core/lot";
 import { SolidKind, type Bay, type Solid } from "../../../core/scene";
 import { pose_from_centre, Vehicle, VEHICLES, type VehicleSpec } from "../../../core/vehicle";
 import { ground_under } from "../../../core/support";
+import { open_through } from "../../../core/track";
 
 export const GroundKind = {
   PAD: "pad",
@@ -382,11 +383,7 @@ export function course_index(id: string): number {
 }
 
 export function courses_open(stars: Readonly<Record<string, number>>): number {
-  let open = 1;
-  COURSES.forEach((course, i) => {
-    if (stars[course.id]) open = Math.max(open, i + 2);
-  });
-  return Math.min(COURSES.length, open);
+  return open_through(COURSES.flatMap((course, i) => (stars[course.id] ? [i + 1] : [])), COURSES.length);
 }
 
 const layouts = new Map<string, Layout>();

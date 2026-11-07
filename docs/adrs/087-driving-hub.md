@@ -119,3 +119,17 @@ Decided in the wave-3 brainstorm ("The hub becomes a small town"), superseding t
 - One large app; folders keep games apart.
 - The id `tight-spot` stays even for games that aren't parking.
 - Each game still owns its levels, judging, cards and achievements; shared progress (achievements, the daily) needs per-game ids inside the app.
+
+## Revision 2026-11-07: shared level track, progress on doors, Yard Shunter
+From the progression session ([brainstorm](../brainstorm/2026-11-07_drive-hub-progression.md)):
+- **Track module.** `core/track.ts` holds:
+  - the level list and the stars;
+  - the "next opens when the one before is done" rule;
+  - the record and bests;
+  - a level picker with stars;
+  - the "every level" achievement feed.
+
+  It replaces the copies in Airport, Ferry, Forklift, Mow Day and Parking. Each game still owns its levels and judging.
+- **Progress on the town.** `GameDefinition` gains an optional progress summary (stars earned out of the total, read from the game's save). The building's lit doorway sign shows it, and a licence card in the yard's toolbar lists every game. Nothing is gated.
+- **Ladders.** Rodeo, Hot Lap, Driving Test and Valet Rush get level tracks. Ferry, Mow Day and Airport get levels that introduce new things, not only size.
+- **Yard Shunter** (`shunter`): a new game. A terminal tractor couples to a trailer's kingpin by reversing onto it, within a few cm and square, then tows it to a dock or a row and drops it. Coupling becomes a core hitch-chain operation any rig can use.

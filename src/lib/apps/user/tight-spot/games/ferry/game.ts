@@ -4,6 +4,7 @@ import { collide, obstacles, type Scene } from "../../core/obstacles";
 import { MAX_ANGLE } from "$kit/games/play2d/precision";
 import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
+import { better, keep_best, levels_schema, unlocked as open_levels, with_stars, type LevelStars } from "../../core/track";
 import {
   bodies,
   body_centre,
@@ -316,19 +317,13 @@ export const result_schema = z.object({
   ms: z.number().nonnegative(),
 });
 export type Result = z.infer<typeof result_schema>;
-export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
-export type LevelStars = z.infer<typeof levels_schema>;
+export { better, levels_schema, type LevelStars };
 export const data_schema = z.object({
   bests: z.record(z.string(), result_schema),
   levels: levels_schema,
 });
 export type FerryData = z.infer<typeof data_schema>;
 export const EMPTY_DATA: FerryData = { bests: {}, levels: {} };
-
-export function better(a: Result | undefined, b: Result): boolean {
-  if (!a) return true;
-  return b.stars !== a.stars ? b.stars > a.stars : b.ms < a.ms;
-}
 
 export function round_key(round: Round): string {
   if (round.daily) return `daily:${round.daily}`;
@@ -343,12 +338,9 @@ export interface Recorded {
 }
 
 export function record(data: FerryData, round: Round, result: Result): Recorded {
-  const key = round_key(round);
-  const old = data.bests[key];
-  const improved = better(old, result);
-  const bests = improved ? { ...data.bests, [key]: result } : data.bests;
-  const levels = round.level === undefined ? data.levels : { ...data.levels, [round.level]: Math.max(data.levels[round.level] ?? 0, result.stars) };
-  return { data: { bests, levels }, improved, first: old === undefined };
+  const kept = keep_best(data.bests, round_key(round), result, better);
+  const levels = round.level === undefined ? data.levels : with_stars(data.levels, round.level, result.stars);
+  return { data: { bests: kept.bests, levels }, improved: kept.improved, first: kept.first };
 }
 
 export const MIN_COUNT = 3;
@@ -368,12 +360,7 @@ export function level_round(level: number): Round {
 }
 
 export function unlocked(levels: LevelStars): number {
-  let highest = 1;
-  for (const key of Object.keys(levels)) {
-    const level = Number(key);
-    if (Number.isInteger(level) && level >= 1) highest = Math.max(highest, level + 1);
-  }
-  return Math.min(LEVEL_COUNT, highest);
+  return open_levels(levels, LEVEL_COUNT);
 }
 
 export function sailing_round(seed: number): Round {

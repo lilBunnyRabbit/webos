@@ -3,6 +3,7 @@ import type { Vec } from "$kit/games/play2d/geometry";
 import { collide, obstacles } from "../../core/obstacles";
 import { SolidKind } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
+import { better, keep_best, levels_schema, unlocked as open_levels, with_stars, type LevelStars } from "../../core/track";
 import { bodies, create_car, Gear, MOWER, shift, step, Vehicle, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
 import { BED_COST, CELL, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, stripe, trample, type Grid, type Tally } from "./coverage";
 import { deck_centre, deck_of, swept } from "./deck";
@@ -246,8 +247,7 @@ export const result_schema = z.object({
 });
 export type Result = z.infer<typeof result_schema>;
 
-export const levels_schema = z.record(z.string(), z.number().int().min(1).max(3));
-export type LevelStars = z.infer<typeof levels_schema>;
+export { better, levels_schema, type LevelStars };
 
 export const saved_schema = z.object({
   best: z.record(z.string(), result_schema),
@@ -255,11 +255,6 @@ export const saved_schema = z.object({
 });
 export type Saved = z.infer<typeof saved_schema>;
 export const EMPTY: Saved = { best: {}, levels: {} };
-
-export function better(a: Result | undefined, b: Result): boolean {
-  if (!a) return true;
-  return b.stars !== a.stars ? b.stars > a.stars : b.ms < a.ms;
-}
 
 export function round_key(round: Round): string {
   if (round.daily) return `daily:${round.daily}`;
@@ -275,18 +270,13 @@ export interface Recorded {
 
 /** Stars, then time; the best coverage and least overlap are kept whichever run set them. */
 export function record(saved: Saved, round: Round, result: Result): Recorded {
-  const key = round_key(round);
-  const old = saved.best[key];
-  const improved = better(old, result);
-  const run = improved ? result : old!;
-  const best = {
+  const kept = keep_best(saved.best, round_key(round), result, better, (run, old) => ({
     ...run,
     coverage: Math.max(old?.coverage ?? 0, result.coverage),
     overlap: Math.min(old?.overlap ?? 100, result.overlap),
-  };
-  const levels =
-    round.level !== undefined ? { ...saved.levels, [round.level]: Math.max(saved.levels[round.level] ?? 0, result.stars) } : saved.levels;
-  return { saved: { best: { ...saved.best, [key]: best }, levels }, improved, first: old === undefined };
+  }));
+  const levels = round.level !== undefined ? with_stars(saved.levels, round.level, result.stars) : saved.levels;
+  return { saved: { best: kept.bests, levels }, improved: kept.improved, first: kept.first };
 }
 
 export const LEVEL_COUNT = 12;
@@ -297,12 +287,7 @@ export function level_round(level: number): Round {
 }
 
 export function unlocked(levels: LevelStars): number {
-  let highest = 1;
-  for (const key of Object.keys(levels)) {
-    const level = Number(key);
-    if (Number.isInteger(level) && level >= 1) highest = Math.max(highest, level + 1);
-  }
-  return Math.min(LEVEL_COUNT, highest);
+  return open_levels(levels, LEVEL_COUNT);
 }
 
 export function lawn_round(seed: number): Round {

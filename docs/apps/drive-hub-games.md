@@ -51,6 +51,7 @@ The shell lazy-loads the component the first time it's entered, shows the game's
 | Sound | `new Sounds(() => settings)`: call it unguarded, it checks Sound and Rumble itself; `sensor`, `crash`, `parked(record)`, `shift`, `reverse_beeper(on)` and `indicator(on)` (call every frame), `fork(up)`, `quiet`, `close` |
 | Proofs and par | `plan(from, to, near, options)` hybrid A* with `arrive`, `blocked`, `steering`, `crabbing`, `switch_cost`, `directions`, `max_expansions`; `drive(pose, move, spec)` with `Move` `{ steer, distance, crab? }`; `inflate` |
 | Scoring | `fit(points, headings, bay)` precision (`$kit/games/play2d/precision.ts`), `MAX_ANGLE`, `PERFECT` |
+| Levels | `core/track.ts`: `levels_schema`, `unlocked(levels, count)`, `with_stars`, `levels_done` (the "every level" achievement's progress), `better` (stars, then time), `keep_best` and `keep_precision`, `track_progress`; `core/track-picker.svelte` for the toolbar's level select with stars. Use them, don't copy them: the stars, the unlock rule and the bests read the same in every game |
 | Seeds | `hash(seed, …values)` (`$kit/games/play2d/seed.ts`), `create_rng`, `daily_seed(day, key)` |
 
 ## Drive kinds
@@ -76,7 +77,7 @@ The shell lazy-loads the component the first time it's entered, shows the game's
 
 - **The world**: a pure builder from a seed and a difficulty (`build_warehouse`, `build_floor`), sized so the planner can prove it; solids for what never moves, its own list for what does.
 - **The round**: `GameState` and a status machine (ready, driving, paused, an end); `advance(state, input, dt, spec)` that steps the vehicle and applies its contact rules; its own actions (`use_fork`) and the hint for why one is off.
-- **Judging and scoring**: stars, par, precision, bests, levels, random rounds, the daily.
+- **Judging and scoring**: stars, par, precision, random rounds, the daily; its levels (`level_round`) and the round keys of its bests. The bookkeeping of a level track (stars per level, what's open, the best per key, the picker) is `core/track.ts`.
 - **Cards, HUD text, keys** beyond the shared ones, and its touch control over the pedals.
 - **Achievements** with ids prefixed by the game (`forklift-…`), progress through `achievements.progress`.
 - **Storage keys** `{id}.*` in `storage.json`, each with a zod schema and a `.catch` default.
