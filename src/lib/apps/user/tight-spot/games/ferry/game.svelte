@@ -14,7 +14,7 @@
   } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
-  import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "$kit/games/play2d/camera";
+  import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "$kit/games/play2d/camera";
   import type { Palette } from "$kit/games/play2d/palette";
   import DriveFrame from "../../core/drive-frame.svelte";
   import { DriveInput, type Hold } from "../../core/drive-input.svelte";
@@ -49,6 +49,7 @@
     fault_text,
     is_bus,
     LEVEL_COUNT,
+    level_news,
     level_round,
     Mode,
     mode_schema,
@@ -114,6 +115,7 @@
   let hud_height = $state(0);
 
   let camera: Camera | null = null;
+  let cut_at = -Infinity;
   let par_job: ParJob | null = null;
   let par_round: Round | null = null;
   // Par jobs of earlier rounds kept running for their pending sailings.
@@ -134,6 +136,7 @@
   const can_undo = $derived(driving && game.history.length > 0);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(data.value.bests[round_key(game.round)]);
+  const news = $derived(level_news(game.round));
   const line = $derived(queue_line(game));
   const earned = $derived(stars(game, par?.ms ?? null));
   const trim = $derived(game.status === Status.DONE ? balance(game.deck, game.stowed) : balance_with(game));
@@ -302,6 +305,7 @@
       time: performance.now() / 1000,
       insets: control_insets(),
       font: getComputedStyle(canvas).fontFamily,
+      veil: fade((performance.now() - cut_at) / 1000),
     });
   }
 
@@ -318,6 +322,10 @@
     if (next.status === Status.DRIVING) sounds.sensor(next.car.gear === Gear.DRIVE ? readings.front : next.car.gear === Gear.REVERSE ? readings.rear : null);
     sounds.reverse_beeper(next.status === Status.DRIVING && next.car.speed < -0.02 && !!current.reverse_beeper);
     if (next === game) return;
+    if (next.passes !== game.passes) {
+      camera = null;
+      cut_at = performance.now();
+    }
     const before = game.status;
     game = next;
     if (before === Status.DRIVING && next.status === Status.CRASHED) crashed();
@@ -699,6 +707,7 @@
           {round_title(game.round)}
           {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
+        {#if news}<p class="text-ui font-medium text-primary">New: {news}</p>{/if}
         <p class="text-ui text-foreground/80">Drive each one aboard and park it in any lane, 0.3–1 m behind the one ahead. Keep her level. Touching anything ends the sailing.</p>
         <ol class="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-2xs text-foreground/80 tabular-nums">
           {#each game.deck.queue as vehicle, i (i)}

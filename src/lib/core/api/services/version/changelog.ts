@@ -30,6 +30,11 @@ export const CHANGELOG: Release[] = [
         text: "Drive Hub Hot Lap has nine new circuits after the first three, each opening at two stars on the one before, and a random circuit to race any time.",
       },
       {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub Ferry Loader has nine new levels that bring in trucks with semi-trailers, caravans, a linkspan set at an angle by the tide, and an upper car deck up an internal ramp.",
+      },
+      {
         kind: FIXED,
         apps: ["tight-spot"],
         text: "Drive Hub Airport's Ramp lead achievement counts the levels of all four jobs, not only the pushbacks.",

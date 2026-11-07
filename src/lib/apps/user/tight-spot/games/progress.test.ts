@@ -47,9 +47,9 @@ describe("progress", () => {
   });
 
   test("stars come from the save as it is on disk, and a bad one counts as none", () => {
-    expect(ferry.read({ bests: {}, levels: { 1: 3, 2: 2 } })).toEqual({ stars: 5, total: 36 });
-    expect(ferry.read(null)).toEqual({ stars: 0, total: 36 });
-    expect(ferry.read({ levels: { 1: 9 } })).toEqual({ stars: 0, total: 36 });
+    expect(ferry.read({ bests: {}, levels: { 1: 3, 2: 2 } })).toEqual({ stars: 5, total: 63 });
+    expect(ferry.read(null)).toEqual({ stars: 0, total: 63 });
+    expect(ferry.read({ levels: { 1: 9 } })).toEqual({ stars: 0, total: 63 });
     expect(airport.read({ best: {}, levels: { pushback: { 1: 3 }, tow: { 2: 1 } } })).toEqual({ stars: 4, total: 108 });
     expect(parking.read({ bests: {}, levels: { 1: 2 }, kinds: [], extreme: { planks: 3 } })).toEqual({ stars: 5, total: (PARKING_COUNT + COURSES.length) * 3 });
     const pass = { passed: true, serious: 0, dangerous: 0, ms: 1000 };

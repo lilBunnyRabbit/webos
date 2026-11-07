@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { collide, obstacles } from "../../core/obstacles";
-import { body_ends, create_car, Gear, Vehicle, VEHICLES, type Placement } from "../../core/vehicle";
-import { build_deck, lane_centre, spawn_pose, type Cargo, type Deck } from "./deck";
+import { body_ends, create_car, Gear, rig_ends, Vehicle, VEHICLES, type Placement } from "../../core/vehicle";
+import { build_deck, fits_upper, lane_centre, on_upper, spawn_pose, type Cargo, type Deck } from "./deck";
 import {
   advance,
   balance,
@@ -20,6 +20,7 @@ import {
   stars,
   Status,
   undo,
+  scene_of,
   unlocked,
   type GameState,
 } from "./game";
@@ -51,7 +52,7 @@ describe("the deck", () => {
       for (const [i, slot] of deck.plan.entries()) {
         const spec = VEHICLES[deck.queue[i]];
         expect(collide(slot.pose, obstacles({ solids: deck.solids }), spec)).toBeNull();
-        expect(slot.pose.x + body_ends(spec).rear).toBeGreaterThan(1);
+        expect(slot.pose.x + rig_ends(spec).rear).toBeGreaterThan(1);
       }
     }
   });
@@ -140,6 +141,39 @@ describe("stowing", () => {
     const next = advance(moving, { steer: 0, throttle: 1, brake: 0 }, 0.1);
     expect(next.status).toBe(Status.CRASHED);
     expect(next.hit?.what).toBe("the ship's side");
+  });
+});
+
+describe("the upper deck", () => {
+  const game = create_game(level_round(18));
+  const { deck } = game;
+  const upper = deck.upper!;
+
+  function up_the_ramp(index: number, x: number): GameState {
+    const vehicle = deck.queue[index];
+    const spec = VEHICLES[vehicle];
+    let state: GameState = {
+      ...set_status(game, Status.DRIVING),
+      current: index,
+      scene: scene_of(deck, [], vehicle),
+      car: { ...create_car({ x, y: upper.lane, heading: 0 }, Gear.DRIVE, spec), speed: 1.5 },
+    };
+    for (let i = 0; i < 600 && state.status === Status.DRIVING && state.passes === 0; i++) state = advance(state, { steer: 0, throttle: 0.4, brake: 0 }, 1 / 60);
+    return state;
+  }
+
+  test("a car drives up the internal ramp and comes out on the upper deck", () => {
+    const state = up_the_ramp(deck.queue.findIndex(fits_upper), upper.foot + 1);
+    expect(state.status).toBe(Status.DRIVING);
+    expect(state.passes).toBe(1);
+    expect(on_upper(deck, state.car.y)).toBe(true);
+  });
+
+  test("anything taller meets the height bar", () => {
+    const index = deck.queue.findIndex((vehicle) => !fits_upper(vehicle));
+    const state = up_the_ramp(index, upper.foot - 1 - rig_ends(VEHICLES[deck.queue[index]]).front);
+    expect(state.status).toBe(Status.CRASHED);
+    expect(state.hit?.what).toBe("the height bar");
   });
 });
 

@@ -1,7 +1,7 @@
 import { collide, obstacles } from "../../core/obstacles";
 import { drive } from "../../core/planner";
 import { VEHICLES, type Placement } from "../../core/vehicle";
-import { spawn_pose, type Deck } from "./deck";
+import { solids_for, spawn_pose, type Deck } from "./deck";
 import { balance, balanced, judge, stowed_solids, type Stowed } from "./game";
 import { plan_sailing, type SailingPlan } from "./plan";
 
@@ -24,12 +24,12 @@ export function prove(deck: Deck): Proof {
   for (let i = 0; i < deck.queue.length; i++) {
     const vehicle = deck.queue[i];
     const spec = VEHICLES[vehicle];
-    const near = obstacles({ solids: [...deck.solids, ...stowed.flatMap((each) => each.solids)] });
+    const near = obstacles({ solids: [...solids_for(deck, vehicle), ...stowed.flatMap((each) => each.solids)] });
     let at: Placement = spawn_pose(deck, vehicle);
     for (const move of found.legs[i].moves) {
       const pieces = Math.max(1, Math.round(Math.abs(move.distance) / PIECE));
       for (let k = 0; k < pieces; k++) {
-        at = drive(at, { ...move, distance: move.distance / pieces }, spec);
+        at = drive(at, { ...move, distance: move.distance / pieces }, spec, deck.portals);
         if (collide(at, near, spec)) return { plan: found, fault: `${vehicle} ${i + 1}: touched on the way` };
       }
     }

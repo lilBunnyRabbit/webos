@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { angle_between, type Polygon, type Vec } from "$kit/games/play2d/geometry";
 import { collide, obstacles, type Scene } from "../../core/obstacles";
+import { pass_portals } from "../../core/portals";
 import { MAX_ANGLE } from "$kit/games/play2d/precision";
 import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
@@ -21,7 +22,20 @@ import {
   type Placement,
   type VehicleSpec,
 } from "../../core/vehicle";
-import { BALANCE_LIMIT, build_deck, HULL, lane_centre, moment, spawn_pose, type Cargo, type Deck } from "./deck";
+import {
+  across,
+  BALANCE_LIMIT,
+  build_deck,
+  HULL,
+  lane_centre,
+  moment,
+  on_upper,
+  solids_for,
+  spawn_pose,
+  type Cargo,
+  type Deck,
+  type Kit,
+} from "./deck";
 
 export { BALANCE_LIMIT };
 
@@ -49,6 +63,7 @@ export interface Round {
   count: number;
   level?: number;
   daily?: string;
+  kit?: Kit;
 }
 
 export interface Stowed {
@@ -87,10 +102,12 @@ export interface GameState {
   undos: number;
   contact: Vec | null;
   hit: Hit | null;
+  /** Trips up or down the internal ramp: the camera cuts on each. */
+  passes: number;
 }
 
 export function deck_for(round: Round): Deck {
-  return build_deck(round.seed, round.difficulty, round.count);
+  return build_deck(round.seed, round.difficulty, round.count, round.kit);
 }
 
 export function spec_of(state: Pick<GameState, "deck" | "current">): VehicleSpec {
@@ -106,8 +123,8 @@ function spawn(deck: Deck, current: number): Car {
   return create_car(spawn_pose(deck, vehicle), Gear.PARK, VEHICLES[vehicle]);
 }
 
-function scene_of(deck: Deck, stowed: readonly Stowed[]): Scene {
-  return { solids: [...deck.solids, ...stowed.flatMap((each) => each.solids)] };
+export function scene_of(deck: Deck, stowed: readonly Stowed[], vehicle: Cargo): Scene {
+  return { solids: [...solids_for(deck, vehicle), ...stowed.flatMap((each) => each.solids)] };
 }
 
 export function create_game(round: Round): GameState {
@@ -118,7 +135,8 @@ export function create_game(round: Round): GameState {
     car: spawn(deck, 0),
     current: 0,
     stowed: [],
-    scene: scene_of(deck, []),
+    scene: scene_of(deck, [], deck.queue[0]),
+    passes: 0,
     history: [],
     status: Status.READY,
     last_drive: null,
@@ -175,7 +193,9 @@ export function judge(deck: Deck, stowed: readonly Stowed[], car: Placement, spe
   const shapes = bodies(car, spec);
   const points = shapes.flat();
   const centre = body_centre(car, spec);
-  const lane = Math.max(0, Math.min(deck.lanes - 1, Math.floor(centre.y / deck.lane_width)));
+  const up = on_upper(deck, centre.y);
+  const first = up ? deck.lanes : 0;
+  const lane = first + Math.max(0, Math.min(deck.lanes - 1, Math.floor(across(deck, centre.y) / deck.lane_width)));
   const offset = centre.y - lane_centre(deck, lane);
   const angle = Math.max(...headings(car, spec).map((heading) => angle_between(heading, 0)));
   const front = Math.max(...xs(shapes));
@@ -191,9 +211,11 @@ export function judge(deck: Deck, stowed: readonly Stowed[], car: Placement, spe
   }
   const gap = ahead_x - front;
   const verdict = { lane, offset, gap, ahead, angle };
-  if (points.some((p) => p.x < 0 || p.x > deck.length || p.y < 0 || p.y > deck.width)) return { ...verdict, fault: Fault.OFF_DECK };
+  const stern = up ? deck.upper!.start : 0;
+  const shift = up ? deck.upper!.offset : 0;
+  if (points.some((p) => p.x < stern || p.x > deck.length || p.y - shift < 0 || p.y - shift > deck.width)) return { ...verdict, fault: Fault.OFF_DECK };
   if (angle > MAX_ANGLE) return { ...verdict, fault: Fault.CROOKED };
-  const y0 = lane * deck.lane_width;
+  const y0 = shift + (lane - first) * deck.lane_width;
   const y1 = y0 + deck.lane_width;
   if (points.some((p) => p.y < y0 || p.y > y1)) return { ...verdict, fault: Fault.ACROSS };
   if (Math.abs(offset) > CENTRED) return { ...verdict, fault: Fault.OFF_CENTRE };
@@ -227,7 +249,7 @@ export function fault_text(verdict: Verdict): string | null {
 
 export function balance(deck: Deck, stowed: readonly Pick<Stowed, "vehicle" | "car">[]): number {
   return moment(
-    stowed.map((each) => ({ vehicle: each.vehicle, y: body_centre(each.car, VEHICLES[each.vehicle]).y })),
+    stowed.map((each) => ({ vehicle: each.vehicle, y: across(deck, body_centre(each.car, VEHICLES[each.vehicle]).y) })),
     deck.width
   );
 }
@@ -246,15 +268,19 @@ export function balanced(value: number): boolean {
 /** `spec` is the vehicle's, passed in so the Creep setting can swap in its variant without creep. */
 export function advance(state: GameState, input: Input, dt: number, spec: VehicleSpec = spec_of(state)): GameState {
   if (state.status !== Status.DRIVING) return state;
-  const car = step(state.car, input, dt, spec);
+  const moved = step(state.car, input, dt, spec);
+  const car = pass_portals(moved, state.deck.portals);
+  const passes = car === moved ? state.passes : state.passes + 1;
   const ms = state.ms + dt * 1000;
   const hit = collide(car, obstacles(state.scene), spec);
-  if (!hit) return { ...state, car, ms };
-  return { ...state, car: { ...car, speed: 0 }, ms, status: Status.CRASHED, contact: hit.at, hit: { kind: hit.solid.kind, what: hit_name(hit.solid) } };
+  if (!hit) return { ...state, car, ms, passes };
+  const what = hit_name(state.deck, hit.solid);
+  return { ...state, car: { ...car, speed: 0 }, ms, passes, status: Status.CRASHED, contact: hit.at, hit: { kind: hit.solid.kind, what } };
 }
 
-function hit_name(solid: Solid): string {
+function hit_name(deck: Deck, solid: Solid): string {
   if (solid.kind === SolidKind.WATER) return "the water";
+  if (solid.shape === deck.upper?.bar) return "the height bar";
   if (solid.kind === SolidKind.CAR) return solid.car?.vehicle ? `the ${VEHICLE_NAMES[solid.car.vehicle].toLowerCase()}` : "a vehicle";
   const x = Math.min(...solid.shape.map((p) => p.x));
   return x >= -HULL - 1e-6 ? "the ship's side" : "the quay fence";
@@ -276,7 +302,8 @@ export function stow(state: GameState): GameState {
   const verdict = verdict_of(state);
   if (verdict.fault) return state;
   const vehicle = vehicle_of(state);
-  const placed: Placement = { x: state.car.x, y: state.car.y, heading: state.car.heading, steer: state.car.steer };
+  const { x, y, heading, steer, trailers } = state.car;
+  const placed: Placement = trailers ? { x, y, heading, steer, trailers } : { x, y, heading, steer };
   const stowed = [...state.stowed, { vehicle, car: placed, lane: verdict.lane, gap: verdict.gap, solids: stowed_solids(vehicle, placed, state.current) }];
   const snapshot: Snapshot = { car: spawn(state.deck, state.current), current: state.current, stowed: state.stowed, scene: state.scene };
   const current = state.current + 1;
@@ -284,7 +311,7 @@ export function stow(state: GameState): GameState {
   return {
     ...state,
     stowed,
-    scene: scene_of(state.deck, stowed),
+    scene: scene_of(state.deck, stowed, state.deck.queue[Math.min(current, state.deck.queue.length - 1)]),
     history: [...state.history, snapshot],
     current,
     car: done ? { ...state.car, gear: Gear.PARK, speed: 0 } : spawn(state.deck, current),
@@ -317,7 +344,6 @@ export const result_schema = z.object({
   ms: z.number().nonnegative(),
 });
 export type Result = z.infer<typeof result_schema>;
-export { better, levels_schema, type LevelStars };
 export const data_schema = z.object({
   bests: z.record(z.string(), result_schema),
   levels: levels_schema,
@@ -346,17 +372,48 @@ export function record(data: FerryData, round: Round, result: Result): Recorded 
 export const MIN_COUNT = 3;
 export const MAX_COUNT = 6;
 const PER_COUNT = 3;
-export const LEVEL_COUNT = (MAX_COUNT - MIN_COUNT + 1) * PER_COUNT;
+const FIRST_LEVELS = (MAX_COUNT - MIN_COUNT + 1) * PER_COUNT;
+
+interface Rung {
+  count: number;
+  difficulty: number;
+  kit: Kit;
+  news?: string;
+}
+
+const { SEMI, CARAVAN } = Vehicle;
+
+// Appended after the first twelve, which stay as they were, so stars saved by level number stay on their level.
+const LADDER: readonly Rung[] = [
+  { count: 3, difficulty: 0.25, kit: { must: [SEMI] }, news: "A truck and semi-trailer: 17 m and 18 t. Line it up long before the ramp." },
+  { count: 4, difficulty: 0.35, kit: { must: [CARAVAN, CARAVAN] }, news: "Caravans: the trailer cuts inside the car on every turn." },
+  { count: 5, difficulty: 0.5, kit: { must: [SEMI, CARAVAN] } },
+  { count: 4, difficulty: 0.3, kit: { tide: 1 }, news: "High water: the linkspan sits at an angle to the quay. Come off it straight." },
+  { count: 5, difficulty: 0.55, kit: { tide: -1, must: [CARAVAN] } },
+  { count: 4, difficulty: 0.3, kit: { upper: 2 }, news: "An upper car deck, up the ramp on the starboard side. Cars and vans only: anything taller hits the height bar." },
+  { count: 5, difficulty: 0.5, kit: { upper: 3, must: [SEMI] } },
+  { count: 5, difficulty: 0.6, kit: { upper: 2, tide: 0.8, must: [CARAVAN] } },
+  { count: 6, difficulty: 0.8, kit: { upper: 3, tide: -1, must: [SEMI] } },
+];
+
+export const LEVEL_COUNT = FIRST_LEVELS + LADDER.length;
 
 export function level_round(level: number): Round {
   const index = Math.max(0, Math.min(LEVEL_COUNT - 1, level - 1));
+  const seed = hash(0xfe22, index);
+  const rung = LADDER[index - FIRST_LEVELS];
+  if (rung) return { mode: Mode.LEVELS, level: index + 1, count: rung.count, difficulty: rung.difficulty, seed, kit: rung.kit };
   return {
     mode: Mode.LEVELS,
     level: index + 1,
     count: MIN_COUNT + Math.floor(index / PER_COUNT),
-    difficulty: index / (LEVEL_COUNT - 1),
-    seed: hash(0xfe22, index),
+    difficulty: index / (FIRST_LEVELS - 1),
+    seed,
   };
+}
+
+export function level_news(round: Round): string | null {
+  return round.level === undefined ? null : (LADDER[round.level - 1 - FIRST_LEVELS]?.news ?? null);
 }
 
 export function unlocked(levels: LevelStars): number {
