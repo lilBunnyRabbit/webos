@@ -7,7 +7,7 @@ export const CHANGELOG: Release[] = [
   {
     version: "4.10.0",
     date: "2026-11-07",
-    title: "Drive Hub progress",
+    title: "Drive Hub progress and Lunar Lander rebuilt",
     changes: [
       {
         kind: NEW,
@@ -23,6 +23,11 @@ export const CHANGELOG: Release[] = [
         kind: FIXED,
         apps: ["tight-spot"],
         text: "Drive Hub Airport's Ramp lead achievement counts the levels of all four jobs, not only the pushbacks.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["lunar-lander"],
+        text: "Lunar Lander is rebuilt (experimental): fly a lander, twin pods or a heavy shuttle at real scale on the Moon, Mars and Earth with a throttle lever, through 15 missions with craters, caves and cargo, a random mission and a daily, or freely around the base.",
       },
     ],
   },

@@ -85,7 +85,7 @@ Deorbit-and-descent missions come later, not in v1.
 
 ## Action items
 - [x] `refactor:` play2d kit rounds, chart worker and job, progress, sound base; Harbour and Airfield rewired.
-- [ ] Lander model and ship specs, base hub, campaign, autopilot proof, random, daily, docs page.
+- [x] Lander model and ship specs, base hub, campaign, autopilot proof, random, daily, docs page.
 - [ ] Owner flies it and reports the feel.
 
 ## Next session topics

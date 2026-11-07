@@ -1,27 +1,26 @@
-## The goal
+## The base
 
-Set the ship down with both feet on the flat pad. Touch down too fast, sliding sideways, tilted, off the pad, or with the hull, and it crashes. Every engine burns fuel, and an empty tank leaves you falling.
+You start on the pad in front of the **hangar**. Standing on it opens the picker: the ship (the lander at first; missions unlock the others) and the body to fly on, the Moon, Mars or Earth. **Lift off** puts the card away.
+
+Along the base stand the mission **pads**, numbered 1 to 15, then **Random** and **Daily** (the same for everyone; it picks the ship and the body). Land and settle on one to open its card. The campaign is in order: a mission opens once the one before it is done.
+
+The strip top right shows the whole area: the ground, the pads (the next one marked) and you.
 
 ## Flying
 
-Each ship flies differently, and the line above **Launch** says how:
+- **Lever**: **W** (or **↑**, **Shift**) up a notch, **S** (or **↓**, **Ctrl**) down: Off, Low, Sink, **Hover**, Rise, Full. Hover holds you still at the ship's weight right now, so it moves up when you pick up cargo. The engine takes a moment to answer, the shuttle's most.
+- **Space** burns at full while held.
+- **A** and **D** (or **←** **→**) turn. The lander and the shuttle turn on thrusters and stop turning when you let go. The **twin pods** have no thrusters: A and D push one pod harder than the other, so they only turn under power.
+- To move sideways, lean: the engine pushes the way the top leans. Lean back to stop.
+- On a touch screen: the lever on the left, the turn buttons on the right, **Burn** between them. Pinch to zoom.
+- **Esc** pauses, **R** puts you back in the hangar (in a mission: restarts), the scroll wheel or **+** **−** zoom.
 
-- **Lander:** ↑ fires the main engine, ← and → the side thrusters that turn it.
-- **Twin pods:** ← and → fire the left or right engine, which tips the ship the other way; ↑ fires both.
-- **Shuttle:** ← and → fire the tail or nose engine, ↑ both, and Space the rear engines that push it forward.
+## Landing
 
-**Keyboard:** the arrows or W, A, D, and Space. Pressing one launches. P or Escape pauses, R restarts, Enter flies again once you're down.
-
-**Touch:** hold the left, middle or right third of the screen, or the engine buttons under it.
-
-## Reading the gauges
-
-The bar at the bottom shows fuel, altitude, vertical and horizontal speed and tilt. Speed and tilt turn to the warning colour when a landing wouldn't survive them, and the fuel bar does when it runs low.
-
-## Scoring
-
-A landing scores for being soft, level and close to the pad's centre, plus what fuel is left. Each ship, planet and setting keeps its own best score.
+- Come down slowly and level onto a pad. Touchdowns: under 0.5 m/s a **kiss**, under 1.2 **firm**, then **heavy**; past the ship's limit the legs break. Sliding sideways or leaning too far at touchdown tips it over. Rock, and the hull touching the ground, are a crash.
+- A mission is done once you have **settled** on its pad (with cargo, on each pad in turn: stay settled while it loads).
+- Stars: **done**, **gentle** (one kiss on each pad, no bounce) and **under par** (the time an autopilot flies it in, with room to spare).
 
 ## Settings
 
-The planet button picks the gravity, from Zero-G to Earth. **Air** adds drag, **Wind** pushes the ship sideways (it needs air), and **Infinite fuel** takes fuel out of the score.
+Free flight at the base: **Air** (the body's own air: none on the Moon), **Wind** (gusts, which need air) and **Infinite fuel**. Missions bring their own air and wind.

@@ -1,6 +1,6 @@
 # ADR-099: Lunar Lander rework and the play2d rounds kit
 **Date:** 2026-11-07
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 Lunar Lander is an arcade toy (400×250 units, on/off thrusters, one pad, a points score). Harbour (ADR-096) and Airfield (ADR-098) set the house pattern for sims: a feel spec solved into coefficients, graded contacts, a hub with a picker, an autopilot proof setting par, random rounds and a Game Hub daily. The owner wants the lander brought to that pattern ([brainstorm](../brainstorm/2026-11-07_lunar-lander-rework.md)). Harbour and Airfield each carry near-copies of the round pieces; the lander would be their third user.
@@ -59,3 +59,15 @@ Anything app-specific stays in the apps.
 - Proof is fragile to retunes, so margins start wide (the Harbour and Airfield lesson).
 - New page `docs/apps/lunar-lander.md` and its CLAUDE.md row. The `persistence.md` row for the lander is updated.
 - Deorbit and descent missions wait for a later session.
+
+## Revision 2026-11-07 (build)
+Decided within scope while building; none changes a shape outside the app and the kit pieces this ADR named.
+- **Kit shape.** `$kit/games/play2d/rounds` holds the shared `RoundRef` (kind, level, seed, day) that each game extends with its vehicle, `chart(ref, prove)` (16 attempts; `prove` returns the autopilot's time or null), `par_of`, `daily_pick` and `round_key(ref, vehicle, level_key)`, so Harbour's `level-{n}-{boat}` and Airfield's `level-{plane}-{n}` keys stay as saved. A worker can't import a game's code from the kit, so each game keeps a one-line `chart.worker.ts` (`serve_chart(chart)`) and passes it to `work_out_chart(worker, ref, failure)`. The sound base is a class, `GameSounds`, that `Sounds` extends; Harbour's Perfect is merged on top of the kit's `better`.
+- **Engines per body.** "Hover throttle per body" is met by rating the engine for each body (`thrust = m g / hover`), so Hover sits mid-lever everywhere. The tank is in seconds of hover for the empty ship; fuel mass is not modelled, cargo mass is.
+- **Turning.** A and D command a spin rate (rate command): hands off in the air the RCS holds the rate at zero, within its real torque. On its legs a hands-off ship lets the hold go (it rocked against the springs). The pods do the same through the split, so they hold or turn only under power.
+- **The shuttle** keeps its weight and slowness (12 t, 0.8 s spool, 14 °/s in 2.6 s, long legs, deep tank) on a main engine pair and RCS; the old nose-and-tail split and rear engines are gone.
+- **Lever.** Off, Low, Sink, Hover, Rise, Full round the throttle that hovers the ship as loaded now, so the notches move with cargo; Space is a full burn.
+- **Unlocks and achievements.** A ship unlocks for the base once a mission flown in it is done. The six achievement ids count settled landings on any pad (base or mission): Touchdown, Heavy landing (Earth), Crosswind (3 m/s or more), Fleet pilot (`ships_landed` in `progress.json`), Frequent flyer (`landings`), Feather (under 0.25 m/s, under 1°, within 1 m of the pad's centre).
+- **Daily** ranks by time (`DailyRank.TIME`), as decided; Harbour and Airfield rank on stars lost.
+- **The base** is bounded (walls at both ends), not wrapping.
+- **Known limit.** Mars air at its real density barely moves a ship, so Mars gusts are a mild hazard; Earth's wind is the one felt.
