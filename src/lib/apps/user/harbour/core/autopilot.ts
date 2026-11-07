@@ -12,8 +12,11 @@ const LEVER_EVERY = 0.25;
 const SLOW = DETENTS[4];
 const FENDERS = 0.15;
 const ANGLES = [35, 45, 25].map((degrees) => (degrees * Math.PI) / 180);
-/** The planner's turns are this much wider than the boat's steady turn, for pure pursuit's lag. */
-const RADIUS_ROOM = 1.15;
+/**
+ * The planner's turns are this much wider than the boat's steady turn, for pure pursuit's lag. A wider plan is tried when
+ * the autopilot can't hold a tighter one: a gliding boat coasting in neutral turns wider than it does under slow ahead.
+ */
+const RADIUS_ROOMS = [1.15, 1.3, 1.5];
 /** A box berth's straight run in, in lengths from where the hull comes to rest. */
 const BOX_LEAD = 1.5;
 const SQUARE = (1.5 * Math.PI) / 180;
@@ -113,10 +116,6 @@ export function turn_radius(c: Coefficients): number {
     radii.set(c, radius);
   }
   return radius;
-}
-
-export function plan_radius(c: Coefficients): number {
-  return turn_radius(c) * RADIUS_ROOM;
 }
 
 interface Track {
@@ -273,19 +272,24 @@ export function prove(scene: Scene, c: Coefficients): Proof {
   const water = scene.bounds;
   const free = targets(berth, c).some((target) => clear_at(target.room, scene.solids, water, { length, beam, margin: FENDERS }));
   if (!free) return { ok: false, reason: "no room in the berth for the hull and its fenders" };
-  const radius = plan_radius(c);
   let last: Proof = { ok: false, reason: "no path in" };
-  const options = targets(berth, c).filter((target) => run_clear(target, scene, c)).map((target) => {
-    const path = plan(scene.start, target.approach, scene.solids, water, { radius, length, beam, margin: Math.max(0.3, beam * 0.15, length * 0.05), reach: Math.max(1.2, radius * 0.15), tolerance: (12 * Math.PI) / 180, max_expansions: Math.round(40000 * Math.max(1, length / 10)) });
-    return { target, path };
-  });
-  options.sort((x, y) => (x.path?.length ?? Infinity) - (y.path?.length ?? Infinity));
-  for (const { target, path } of options) {
-    if (!path) continue;
-    const line = [...path.map((p) => ({ x: p.x, y: p.y })), ...target.run];
-    const state = sail(scene, c, line, target.room.heading, target.crab ?? null);
-    if (state.status === Status.DONE) return { ok: true, time: state.time, path };
-    last = { ok: false, reason: state.status === Status.CRASHED ? `hard touch at ${state.crash?.speed.toFixed(2)} m/s` : `not docked after ${Math.round(state.time)} s`, path };
+  const kept = targets(berth, c).filter((target) => run_clear(target, scene, c));
+  for (const room of RADIUS_ROOMS) {
+    const radius = turn_radius(c) * room;
+    // Half the planner's step, so a straight line onto the approach can't fall between two steps.
+    const reach = Math.max(1.2, radius * 0.175);
+    const options = kept.map((target) => {
+      const path = plan(scene.start, target.approach, scene.solids, water, { radius, length, beam, margin: Math.max(0.3, beam * 0.15, length * 0.05), reach, tolerance: (12 * Math.PI) / 180, max_expansions: Math.round(40000 * Math.max(1, length / 10)) });
+      return { target, path };
+    });
+    options.sort((x, y) => (x.path?.length ?? Infinity) - (y.path?.length ?? Infinity));
+    for (const { target, path } of options) {
+      if (!path) continue;
+      const line = [...path.map((p) => ({ x: p.x, y: p.y })), ...target.run];
+      const state = sail(scene, c, line, target.room.heading, target.crab ?? null);
+      if (state.status === Status.DONE) return { ok: true, time: state.time, path };
+      last = { ok: false, reason: state.status === Status.CRASHED ? `hard touch at ${state.crash?.speed.toFixed(2)} m/s` : `not docked after ${Math.round(state.time)} s`, path };
+    }
   }
   return last;
 }

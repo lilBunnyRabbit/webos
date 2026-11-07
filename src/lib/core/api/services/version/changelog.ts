@@ -19,6 +19,11 @@ export const CHANGELOG: Release[] = [
         apps: ["harbour"],
         text: "The yacht and the coaster now turn when you go astern with the wheel over, and the coaster's thrusters swing it round faster.",
       },
+      {
+        kind: FIXED,
+        apps: ["harbour"],
+        text: "Every Harbour level has a par time again now that the boats glide further.",
+      },
     ],
   },
   {
