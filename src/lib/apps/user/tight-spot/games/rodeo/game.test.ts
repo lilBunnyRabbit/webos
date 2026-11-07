@@ -182,10 +182,28 @@ describe("levels", () => {
     });
   });
 
+  // Pinned from the course builder before the levels, so a past course's bests still mean the same course.
   test("the free courses keep their layout", () => {
-    const round = course_round(Vehicle.HATCH, 3);
-    expect(build_course(7, VEHICLES.hatch).bay).toBeNull();
-    expect(create_game(round).course).toEqual(build_course(round.seed, VEHICLES.hatch));
+    const { course } = create_game(course_round(Vehicle.HATCH, 3));
+    const r = (n: number) => Math.round(n * 1000) / 1000;
+    expect(course.bay).toBeNull();
+    expect([r(course.bounds.x1), r(course.bounds.y1), course.steps.length]).toEqual([77.301, 26.551, 9]);
+    expect(course.steps.filter((step) => step.gate).map((step) => [r(step.gate!.a.x), r(step.gate!.a.y)])).toEqual([
+      [17.606, 4.398],
+      [30.883, 6.739],
+      [42.181, 5.535],
+      [55.308, 20.321],
+      [43.272, 20.321],
+      [31.235, 20.321],
+      [19.199, 20.321],
+      [8.537, 19.256],
+    ]);
+    expect(course.box.map((p) => [r(p.x), r(p.y)])).toEqual([
+      [2.4, 19.001],
+      [7.353, 19.001],
+      [7.353, 21.64],
+      [2.4, 21.64],
+    ]);
   });
 
   test("the bay counts turned round with the whole rig inside", () => {

@@ -164,10 +164,13 @@ export const PAR_SETUP = 8;
 
 /** The planner's time for the course, 1.4 times over plus 8 s, up to the next 5 s. */
 export function par_of(found: CoursePlan, state: GameState): Par {
+  const spec = spec_of(state.round);
   const moves = found.legs.flat();
-  const distance = moves.reduce((sum, move) => sum + Math.abs(move.distance), 0);
+  const ahead = moves.reduce((sum, move) => sum + Math.max(0, move.distance), 0);
+  const back = moves.reduce((sum, move) => sum + Math.max(0, -move.distance), 0);
   let reversals = 0;
   for (let i = 1; i < moves.length; i++) if (Math.sign(moves[i].distance) !== Math.sign(moves[i - 1].distance)) reversals++;
-  const planned = distance / (spec_of(state.round).max_forward * PAR_PACE) + reversals * PAR_TURN;
+  // Backing up is timed at the reverse top speed, about a third of forward on most vehicles.
+  const planned = ahead / (spec.max_forward * PAR_PACE) + back / (spec.max_reverse * PAR_PACE) + reversals * PAR_TURN;
   return { ms: Math.ceil((planned * PAR_SLACK + PAR_SETUP) / 5) * 5000 };
 }

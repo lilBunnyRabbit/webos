@@ -116,6 +116,8 @@
   let camera: Camera | null = null;
   let readings: Record<End, number | null> = { front: null, rear: null };
   let par_job: ParJob | null = null;
+  let par_round: Round | null = null;
+  let orphan: ParJob | null = null;
   // A level finished before its par was known: the par, when it lands, may still earn it the time star.
   let awaiting: { state: GameState; stars: number } | null = null;
   const sounds = new Sounds(() => settings);
@@ -174,31 +176,40 @@
   $effect(() => {
     const current = round;
     untrack(() => {
-      par_job?.cancel();
+      // A finished run still waiting on its par keeps that job going, so leaving the round doesn't lose its time star.
+      if (par_job && awaiting?.state.round === par_round) {
+        orphan?.cancel();
+        orphan = par_job;
+      } else par_job?.cancel();
       par_job = null;
+      par_round = null;
       par = null;
       par_failed = false;
       if (current.level === undefined) return;
       const job = work_out_par(current);
       par_job = job;
+      par_round = current;
       job.result.then(
         (found) => {
+          settle(current, found);
           if (par_job !== job) return;
           par = found;
           par_failed = found === null;
-          settle(current, found);
         },
         (reason: unknown) => {
+          if (awaiting?.state.round === current) awaiting = null;
           if (par_job !== job) return;
           par_failed = true;
-          awaiting = null;
           report_error(app_id, "Couldn't work out the par", reason);
         }
       );
     });
   });
 
-  $effect(() => () => par_job?.cancel());
+  $effect(() => () => {
+    par_job?.cancel();
+    orphan?.cancel();
+  });
 
   function today(): string {
     const now = new Date();
@@ -354,7 +365,11 @@
     const done = record(state, score);
     new_best = done.improved;
     first_run = done.first;
-    awaiting = state.round.level !== undefined && !par && !par_failed && score < 3 ? { state, stars: score } : null;
+    // Another finish before the par lands keeps whichever run is the better one to time.
+    if (state.round.level !== undefined && !par && !par_failed && score < 3) {
+      const kept = awaiting?.state.round === state.round ? awaiting : null;
+      if (!kept || score > kept.stars || (score === kept.stars && total_ms(state) < total_ms(kept.state))) awaiting = { state, stars: score };
+    }
     sounds.parked(new_best && !first_run);
     if (experimental(state.round.vehicle)) return;
     achievements.achieve("rodeo-first");

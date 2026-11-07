@@ -20,11 +20,11 @@ import {
   type GameState,
   type LapResult,
 } from "./game";
-import { generate_track } from "./generate";
+import { generate_track, GENERATOR_VERSION } from "./generate";
 import { ghost_pose, quantise, record_frame } from "./ghost";
 import { A_LAT, SPEC } from "./spec";
 import { HALF_WIDTH, locate } from "./track";
-import { CLASSIC_IDS, TRACK_IDS, TrackId } from "./tracks";
+import { CLASSIC_IDS, ghost_file_name, TRACK_IDS, TrackId } from "./tracks";
 
 const DT = 1 / 120;
 
@@ -176,5 +176,10 @@ describe("the ladder", () => {
     const done = drive_session(create_game(random_round(seed)));
     expect(done.laps.every((lap) => lap.clean)).toBe(true);
     expect(best_lap(done.laps)).not.toBeNull();
+  });
+
+  it("keeps the hand-laid tracks' ghost files and versions the seeded ones'", () => {
+    expect(ghost_file_name(TrackId.MEADOW)).toBe("ghost-v2-meadow.json");
+    expect(ghost_file_name(TrackId.QUARRY)).toBe(`ghost-v2-quarry-g${GENERATOR_VERSION}.json`);
   });
 });

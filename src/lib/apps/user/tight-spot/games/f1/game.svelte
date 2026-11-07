@@ -53,7 +53,7 @@
   } from "./game";
   import { ghost_pose, ghost_schema, type Ghost } from "./ghost";
   import { SPEC } from "./spec";
-  import { CLASSIC_IDS, RANDOM, track_id_schema, track_level, track_name, track_of, TRACK_IDS, TrackId } from "./tracks";
+  import { CLASSIC_IDS, ghost_file_name, RANDOM, track_id_schema, track_level, track_name, track_of, TRACK_IDS, TrackId } from "./tracks";
   import { ease_turn, heading_up, unturn } from "./turn";
   import { z } from "zod";
 
@@ -140,7 +140,7 @@
       ghost_file = null;
       return;
     }
-    const file = json_file<Ghost | null>(app_data_path(app_id, `f1/ghost-v2-${key}.json`), null, ghost_schema.nullable());
+    const file = json_file<Ghost | null>(app_data_path(app_id, `f1/${ghost_file_name(key)}`), null, ghost_schema.nullable());
     ghost_file = file;
     return () => file.release();
   });
@@ -164,7 +164,7 @@
         const at = track_level(id);
         if (data.value.levels[at]) continue;
         void files
-          .get_file(app_data_path(app_id, `f1/ghost-v2-${id}.json`))
+          .get_file(app_data_path(app_id, `f1/${ghost_file_name(id)}`))
           .then(async (file) => {
             const ghost = file ? ghost_schema.safeParse(JSON.parse(await file.text())) : null;
             if (!ghost?.success) return;
@@ -335,7 +335,8 @@
         play.daily(state.round.daily, Math.round(lap.ms), undefined, DAILY_MODE);
         achievements.achieve("f1-daily");
       }
-      if (id !== RANDOM) {
+      // A daily on a track the ladder hasn't opened keeps its daily result only, so it can't skip the ladder.
+      if (id !== RANDOM && track_level(id) <= tracks_open(data.value.levels)) {
         data.value.levels = with_stars(data.value.levels, track_level(id), stars);
         achievements.progress("f1-levels", levels_done(data.value.levels));
         achievements.progress("f1-tracks", CLASSIC_IDS.filter((each) => data.value.levels[track_level(each)]).length);

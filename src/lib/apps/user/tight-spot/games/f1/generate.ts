@@ -3,6 +3,8 @@ import { lerp } from "$kit/games/play2d/geometry";
 import { hash } from "$kit/games/play2d/seed";
 import { GRID, HALF_WIDTH, KERB, RUNOFF, trace, type Piece, type TrackDef } from "./track";
 
+/** Raised whenever a change moves the circuits a seed lays, so saved ghosts of the old ones are left behind. */
+export const GENERATOR_VERSION = 1;
 const ATTEMPTS = 400;
 const MIN_STRAIGHT = 40;
 const MIN_LINE_STRAIGHT = 160;

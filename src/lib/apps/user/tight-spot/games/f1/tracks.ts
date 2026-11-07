@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { generate_track } from "./generate";
+import { generate_track, GENERATOR_VERSION } from "./generate";
 import { build_track, type Piece, type Track, type TrackDef } from "./track";
 
 /** In ladder order: the three laid by hand, then the seeded ones, their corners tougher as they go. */
@@ -144,4 +144,9 @@ export function track_name(id: TrackId): string {
 
 export function track_level(id: TrackId): number {
   return TRACK_IDS.indexOf(id) + 1;
+}
+
+/** In the app's `f1/` folder; a seeded track's names the generator version, so a regenerated circuit never races an old ghost. */
+export function ghost_file_name(id: TrackId): string {
+  return CLASSIC_IDS.includes(id) ? `ghost-v2-${id}.json` : `ghost-v2-${id}-g${GENERATOR_VERSION}.json`;
 }
