@@ -1,13 +1,8 @@
 import { SvelteSet } from "svelte/reactivity";
 import { clamp_notch } from "$kit/games/play2d/lever";
-import { elevator_for, air_of, wash_now, type Coefficients, type Input, type Plane } from "./plane";
+import { COCKPITS, type Cockpit, type Detent } from "./cockpit";
+import { elevator_for, air_of, wash_now, type Coefficients, type Env, type Input, type Plane } from "./plane";
 import { expo, key_step } from "./stick";
-
-export const THROTTLE = [0, 0.25, 0.5, 0.75, 1] as const;
-export const THROTTLE_NAMES = ["Idle", "Quarter", "Half", "Cruise", "Full"] as const;
-export const THROTTLE_LABELS = ["Idle", "¼", "½", "¾", "Full"] as const;
-export const FLAPS = [0, 0.5, 1] as const;
-export const FLAP_NAMES = ["Up", "Half", "Full"] as const;
 
 export const PitchMode = { GAME: "game", PILOT: "pilot" } as const;
 export type PitchMode = (typeof PitchMode)[keyof typeof PitchMode];
@@ -23,6 +18,7 @@ export const BRAKE_KEYS = new Set(["KeyB"]);
 const BRAKE_RATE = 1.2;
 
 export class Controls {
+  cockpit = $state.raw<Cockpit>(COCKPITS.trainer);
   notch = $state(0);
   trim = $state(0);
   flap_notch = $state(0);
@@ -35,35 +31,50 @@ export class Controls {
   brake = $state(0);
   readonly keys = new SvelteSet<string>();
 
-  constructor(private readonly mode: () => PitchMode) {}
+  constructor(
+    private readonly mode: () => PitchMode,
+    cockpit: Cockpit
+  ) {
+    this.cockpit = cockpit;
+    this.notch = cockpit.idle;
+  }
 
-  get throttle(): number {
-    return THROTTLE[this.notch];
+  get detent(): Detent {
+    return this.cockpit.detents[this.notch];
   }
 
   get flaps(): number {
-    return FLAPS[this.flap_notch];
+    return this.cockpit.flaps[this.flap_notch];
+  }
+
+  get flap_name(): string {
+    return this.cockpit.flap_names[this.flap_notch];
   }
 
   get stick(): number {
     return expo(this.held_stick ?? this.key_stick);
   }
 
+  fit(cockpit: Cockpit, facing = 1) {
+    this.cockpit = cockpit;
+    this.reset(facing);
+  }
+
   step_notch(by: number) {
-    this.notch = clamp_notch(this.notch + by, THROTTLE.length);
+    this.notch = clamp_notch(this.notch + by, this.cockpit.detents.length);
   }
 
   set_notch(notch: number) {
-    this.notch = clamp_notch(notch, THROTTLE.length);
+    this.notch = clamp_notch(notch, this.cockpit.detents.length);
   }
 
   step_flaps(by: number) {
-    this.flap_notch = clamp_notch(this.flap_notch + by, FLAPS.length);
+    this.flap_notch = clamp_notch(this.flap_notch + by, this.cockpit.flaps.length);
   }
 
   /** Trim so the plane holds the angle of attack it has now, hands off. */
-  trim_now(plane: Plane, c: Coefficients) {
-    this.trim = Math.max(-1, Math.min(1, elevator_for(air_of(plane, c).alpha, plane.flaps, c, wash_now(plane, c))));
+  trim_now(plane: Plane, c: Coefficients, env?: Env) {
+    this.trim = Math.max(-1, Math.min(1, elevator_for(air_of(plane, c, env).alpha, plane.flaps, c, wash_now(plane, c, env))));
   }
 
   private pressed(set: Set<string>): boolean {
@@ -83,7 +94,8 @@ export class Controls {
   }
 
   read(): Input {
-    return { throttle: this.throttle, stick: this.stick, trim: this.trim, flaps: this.flaps, brake: this.brake, facing: this.facing };
+    const detent = this.detent;
+    return { throttle: detent.throttle, stick: this.stick, trim: this.trim, flaps: this.flaps, brake: this.brake, facing: this.facing, spoilers: detent.spoilers, reverse: detent.reverse };
   }
 
   release() {
@@ -96,7 +108,7 @@ export class Controls {
 
   reset(facing = 1) {
     this.release();
-    this.notch = 0;
+    this.notch = this.cockpit.idle;
     this.trim = 0;
     this.flap_notch = 0;
     this.facing = facing;

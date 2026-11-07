@@ -9,24 +9,17 @@
   import type { Palette } from "$kit/games/play2d/palette";
   import { AirplaneTilt as AirplaneIcon, ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
-  import {
-    BRAKE_KEYS,
-    Controls,
-    DOWN_KEYS,
-    FLAP_NAMES,
-    LEFT_KEYS,
-    PitchMode,
-    RIGHT_KEYS,
-    THROTTLE_DOWN_KEYS,
-    THROTTLE_NAMES,
-    THROTTLE_UP_KEYS,
-    UP_KEYS,
-  } from "./core/controls.svelte";
+  import { random_seed } from "$lib/core/utils/random";
+  import { ART } from "./core/art";
+  import { COCKPITS } from "./core/cockpit";
+  import { BRAKE_KEYS, Controls, DOWN_KEYS, LEFT_KEYS, PitchMode, RIGHT_KEYS, THROTTLE_DOWN_KEYS, THROTTLE_UP_KEYS, UP_KEYS } from "./core/controls.svelte";
   import { draw_frame, PUFF_LIFE, type Puff, type Scenery } from "./core/draw";
-  import { build_field, in_hangar, runway_ahead, surface_roll } from "./core/field";
+  import { build_field, home_x, in_hangar, runway_ahead, surface_roll, WRAP } from "./core/field";
   import { advance, CrashKind, create_flight, Grade, Status, stall_warning, wheel_height, type Flight, type Touchdown } from "./core/flight";
-  import { air_of, CALM, create_plane, facing, G, separation, turn_left, type Env } from "./core/plane";
+  import { air_of, create_plane, Engine, facing, G, GearLayout, ground_speed, separation, turn_left, type Env, type Plane } from "./core/plane";
   import { PLANE_IDS, plane_coefficients, PlaneId, SPECS } from "./core/planes";
+  import { air_at, gentle_weather } from "./core/weather";
+  import { winch_pull } from "./core/winch";
   import { DEFAULT_SETTINGS, SETTINGS_FILE, settings_schema } from "./core/settings";
   import { Sounds } from "./core/sound";
   import AirfieldFrame from "./frame.svelte";
@@ -52,26 +45,46 @@
   const MIDDLE_ROW = 64;
   const BLURBS: Record<PlaneId, string> = {
     [PlaneId.TRAINER]: "Taildragger trainer. Stalls near 35 kn, floats, forgiving.",
+    [PlaneId.STOL]: "Bush plane, big flaps and tyres. Flies at 25 kn, stops in 40 m.",
+    [PlaneId.AIRLINER]: "70 t twin jet. Slow to spool and to pitch; spoilers, reverse.",
+    [PlaneId.GLIDER]: "No engine, 35 to 1. Winch launch, find the thermals.",
+  };
+  const SWAP_NOTES: Record<PlaneId, string> = {
+    [PlaneId.TRAINER]: "",
+    [PlaneId.STOL]: "Four flap notches: Full flaps and it hangs in the air near 25 kn.",
+    [PlaneId.AIRLINER]: "Below Idle the lever opens the spoilers, then reverse on the ground. The engines take seconds to answer.",
+    [PlaneId.GLIDER]: "No engine: the lever works the airbrakes. Line up on the runway and launch on the winch.",
   };
   const CRASH_TITLES: Record<CrashKind, string> = {
     [CrashKind.HARD]: "Landed too hard",
     [CrashKind.NOSE_OVER]: "Nosed over",
+    [CrashKind.POD]: "Engine pod struck",
     [CrashKind.GROUND]: "Hit the ground",
+    [CrashKind.OBSTACLE]: "Hit an obstacle",
+    [CrashKind.WATER]: "In the water",
+    [CrashKind.STALL]: "Stalled too low",
   };
+  /** The winch drum stands beside the runway, a cable length from its threshold. */
+  const DRUM = 1350;
   const GRADE_NAMES: Record<Grade, string> = { [Grade.KISS]: "Kiss", [Grade.FIRM]: "Firm", [Grade.HEAVY]: "Heavy", [Grade.HARD]: "Hard" };
 
   const settings = $derived(settings_file.value);
-  const controls = new Controls(() => settings_file.value.pitch);
+  const controls = new Controls(() => settings_file.value.pitch, COCKPITS[PlaneId.TRAINER]);
   const sounds = new Sounds(() => settings_file.value.sound);
   const field = build_field();
+  const weather = gentle_weather(random_seed(), WRAP, field.runway);
 
   let plane_id = $state<PlaneId>(PlaneId.TRAINER);
   const c = $derived(plane_coefficients(plane_id));
   const spec = $derived(SPECS[plane_id]);
+  const cockpit = $derived(COCKPITS[plane_id]);
   let flight = $state.raw<Flight>(untrack(() => create_flight(create_plane(plane_coefficients(PlaneId.TRAINER), field.start))));
   let ready = $state(false);
   let in_hangar_now = $state(false);
   let shown_touchdown = $state.raw<Touchdown | null>(null);
+  /** Where the winch drum is while it pulls, metres along the world; null with the cable off. */
+  let winch_drum = $state<number | null>(null);
+  let swapped = $state<PlaneId | null>(null);
 
   let board_size = $state({ width: 0, height: 0, dpr: 1 });
   let palette = $state.raw<Palette | null>(null);
@@ -90,22 +103,27 @@
   let jolt = 0;
   let puffs: Puff[] = [];
   let touchdown_timer = 0;
+  let swap_timer = 0;
 
   const plane = $derived(flight.plane);
   const blocked = $derived(!win.is_visible || !win.is_focused);
   const flying = $derived(flight.status === Status.FLYING);
   const crashed = $derived(flight.status === Status.CRASHED);
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
-  const air = $derived(air_of(plane, c));
-  const altitude = $derived(wheel_height(plane, c));
-  const stall = $derived(stall_warning(plane, c));
+  const env = $derived(env_for(plane, flight.time));
+  const air = $derived(air_of(plane, c, env));
+  const altitude = $derived(wheel_height(plane, c, env));
+  const stall = $derived(stall_warning(plane, c, env));
+  const wind_along = $derived(env.wind * facing(plane));
+  const drum_near = $derived(DRUM + WRAP * Math.round((plane.x - DRUM) / WRAP));
+  const can_winch = $derived(spec.engine === Engine.NONE && on_ground_of(plane) && Math.abs(ground_speed(plane)) < 1 && facing(plane) > 0 && drum_near - plane.x > 400);
   const turning = $derived(turn_left(plane, controls.facing) !== 0);
   const profile_width = $derived(Math.min(PROFILE_WIDTH, board_size.width * 0.42));
   const profile_shown = $derived(board_size.width >= 300);
   // A tall board has sky to spare: the plane comes in closer, the ground sits lower than the middle but off the bottom edge, and the hint goes under the profile.
   const tall = $derived(board_size.height > board_size.width * 1.3);
   const to_runway = $derived(runway_ahead(field, plane.x, facing(plane)));
-  const on_ground = $derived(plane.main_on || plane.tail_on);
+  const on_ground = $derived(on_ground_of(plane));
 
   $effect(() => {
     if (!settings_file.ready || ready) return;
@@ -119,6 +137,7 @@
   $effect(() => () => {
     sounds.close();
     clearTimeout(touchdown_timer);
+    clearTimeout(swap_timer);
   });
 
   $effect(() => {
@@ -150,7 +169,7 @@
   });
 
   $effect(() => {
-    void [flight, palette, scenery, board_size, zoom, card_size.width, card_size.height, side_card, left_box.width, right_box.width, hud_height, in_hangar_now];
+    void [flight, palette, scenery, board_size, zoom, card_size.width, card_size.height, side_card, left_box.width, right_box.width, hud_height, in_hangar_now, plane_id];
     if (flying && !blocked) return;
     untrack(() => render(0));
   });
@@ -182,7 +201,9 @@
     const insets = control_insets();
     const agl = wheel_height(plane, c);
     const side = Math.max(1, Math.min(board_size.width, board_size.height));
-    const span = Math.min(420, (tall ? 26 : 34) + 1.2 * Math.min(agl, 80) + 0.35 * Math.max(0, agl - 80), (side * spec.length) / plane_pixels(side, agl));
+    // A bigger plane gets a wider view at every height, so the airliner sits in frame like the trainer does.
+    const k = Math.max(1, spec.length / 12);
+    const span = Math.min(420 * k, (tall ? 26 : 34) * k + 1.2 * Math.min(agl, 80 * k) + 0.35 * Math.max(0, agl - 80 * k), (side * spec.length) / plane_pixels(side, agl));
     const scale = side / (span / zoom);
     const high = (board_size.height - insets.top - insets.bottom) / scale;
     const reach = span / 3;
@@ -200,7 +221,7 @@
     const target = target_camera();
     camera = dt > 0 ? ease(camera, target, dt, EASE_X, EASE_Y) : target;
     jolt *= Math.exp(-dt / JOLT_DECAY);
-    const buffet = flight.status === Status.FLYING ? separation(air_of(plane, c).alpha, c) * 1.6 : 0;
+    const buffet = flight.status === Status.FLYING ? separation(air_of(plane, c, env).alpha, c) * 1.6 : 0;
     const time = performance.now() / 1000;
     const shake_px = jolt + buffet;
     const shake = {
@@ -222,11 +243,32 @@
       puffs,
       hangar_label: "Hangar",
       profile: profile_shown,
+      art: ART[plane_id],
+      env,
+      weather,
+      wrap: WRAP,
+      sock_wind: air_at(weather, field.windsock, 6, flight.time, WRAP).wind,
+      winch: spec.engine === Engine.NONE ? { drum: winch_drum ?? drum_near, on: winch_drum !== null } : null,
+      profile_size: { reach: 2700, top: 300 * Math.max(1, spec.cruise / 60) },
+      ground_at: () => 0,
     });
   }
 
-  function env_at(x: number): Env {
-    return { ...CALM, roll: surface_roll(field, x) };
+  function on_ground_of(p: Plane): boolean {
+    return p.main_on || p.aux_on;
+  }
+
+  function env_for(p: Plane, time: number): Env {
+    const at = air_at(weather, p.x, Math.max(0, p.h), time, WRAP);
+    return { wind: at.wind, updraft: at.updraft, roll: surface_roll(field, p.x) };
+  }
+
+  function toggle_winch() {
+    if (winch_drum !== null) winch_drum = null;
+    else if (can_winch) {
+      winch_drum = drum_near;
+      controls.set_notch(controls.cockpit.idle);
+    }
   }
 
   function run(steps: number, dt: number) {
@@ -234,19 +276,27 @@
     for (let i = 0; i < steps && next.status === Status.FLYING; i++) {
       controls.step(dt);
       const before = next.plane.vy;
-      next = advance(next, controls.read(), c, dt, env_at(next.plane.x));
-      if (next.plane.main_on || next.plane.tail_on) jolt = Math.max(jolt, Math.min(12, JOLT_PX * Math.max(0, (next.plane.vy - before) / dt / G - 0.3)));
+      let at = env_for(next.plane, next.time);
+      if (winch_drum !== null) {
+        const pull = winch_pull(next.plane, c, winch_drum, 0, at);
+        if (pull) at = { ...at, pull };
+        else winch_drum = null;
+      }
+      next = advance(next, controls.read(), c, dt, at);
+      if (on_ground_of(next.plane)) jolt = Math.max(jolt, Math.min(12, JOLT_PX * Math.max(0, (next.plane.vy - before) / dt / G - 0.3)));
     }
     const span = steps * dt;
     for (const puff of puffs) puff.age += span;
     puffs = puffs.filter((puff) => puff.age < PUFF_LIFE);
-    const air_now = air_of(next.plane, c);
-    sounds.drone(next.plane.spool, air_now.speed / spec.cruise, stall_warning(next.plane, c), next.plane.main_on || next.plane.tail_on ? 0 : separation(air_now.alpha, c), air_now.speed);
+    const env_now = env_for(next.plane, next.time);
+    const air_now = air_of(next.plane, c, env_now);
+    sounds.drone(spec.engine, next.plane.spool, air_now.speed / spec.cruise, stall_warning(next.plane, c, env_now), on_ground_of(next.plane) ? 0 : separation(air_now.alpha, c), air_now.speed);
     if (next === flight) return;
     const before = flight;
     flight = next;
     if (next.touchdown && next.touchdown !== before.touchdown) touched(next.touchdown);
     if (next.status === Status.CRASHED) {
+      winch_drum = null;
       controls.release();
       sounds.quiet();
       sounds.crash();
@@ -264,14 +314,20 @@
     touchdown_timer = window.setTimeout(() => (shown_touchdown = null), 5000);
   }
 
+  /** A glider can't taxi: it goes back into the hangar, where the picker is, and the winch pulls it out from there. */
+  function apron_x(): number {
+    return spec.engine === Engine.NONE ? (field.hangar.x0 + field.hangar.x1) / 2 : field.start;
+  }
+
   function to_apron() {
     controls.reset(1);
     sounds.quiet();
     puffs = [];
     camera = null;
     shown_touchdown = null;
-    flight = create_flight(create_plane(c, field.start, 1));
-    in_hangar_now = false;
+    winch_drum = null;
+    flight = create_flight(create_plane(c, apron_x(), 1));
+    in_hangar_now = in_hangar(field, flight.plane);
     focus_board();
   }
 
@@ -281,8 +337,13 @@
     plane_id = id;
     settings_file.value.plane = id;
     const x = flight.plane.x;
-    controls.reset(1);
+    controls.fit(COCKPITS[id], 1);
+    winch_drum = null;
+    camera = null;
     flight = create_flight(create_plane(c, x, 1));
+    swapped = id;
+    clearTimeout(swap_timer);
+    swap_timer = window.setTimeout(() => (swapped = null), 6000);
   }
 
   function resume() {
@@ -308,7 +369,7 @@
   }
 
   function trim() {
-    controls.trim_now(flight.plane, c);
+    controls.trim_now(flight.plane, c, env);
   }
 
   function set_sound(on: boolean) {
@@ -379,6 +440,9 @@
     } else if (code === "KeyT" && !event.repeat) {
       event.preventDefault();
       trim();
+    } else if (code === "KeyL" && !event.repeat && spec.engine === Engine.NONE) {
+      event.preventDefault();
+      toggle_winch();
     }
   }
 </script>
@@ -413,21 +477,34 @@
       >
         {#if flying}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
       </IconButton>
-      <div class={cn("rounded-md bg-background/85 px-1.5 py-0.5 text-ui font-medium backdrop-blur-[2px]", controls.notch > 0 ? "text-primary" : "text-foreground/80")} aria-hidden="true">
-        {THROTTLE_NAMES[controls.notch]}
+      <div
+        class={cn(
+          "rounded-md bg-background/85 px-1.5 py-0.5 text-ui font-medium backdrop-blur-[2px]",
+          controls.notch > cockpit.idle ? "text-primary" : controls.notch < cockpit.idle ? "text-warning" : "text-foreground/80"
+        )}
+        aria-hidden="true"
+      >
+        {controls.detent.name}
       </div>
       <SpeedChip speed={air.speed} unit="kn" />
       {@render chip(`${Math.round(altitude)} m`)}
       {@render chip(`${plane.vy >= 0 ? "▲" : "▼"} ${Math.abs(plane.vy).toFixed(1)} m/s`, plane.vy < -3 && altitude < 30 ? "text-warning" : "text-foreground/80")}
     </div>
     <div class="flex max-w-full flex-wrap items-center gap-1.5" aria-hidden="true">
-      <div class={cn("flex items-center gap-1.5 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", controls.flap_notch > 0 ? "text-primary" : "text-foreground/80")}>
-        <span>Flaps {FLAP_NAMES[controls.flap_notch]}</span>
-        <span class="relative h-3 w-2.5 overflow-hidden rounded-xs bg-foreground/15">
-          <span class="absolute inset-x-0 top-0 bg-primary" style:height="{plane.flaps * 100}%"></span>
-          <span class="absolute inset-x-0 top-1/2 h-px bg-background/70"></span>
-        </span>
-      </div>
+      {#if cockpit.flaps.length > 1}
+        <div class={cn("flex items-center gap-1.5 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", controls.flap_notch > 0 ? "text-primary" : "text-foreground/80")}>
+          <span>Flaps {controls.flap_name}</span>
+          <span class="relative h-3 w-2.5 overflow-hidden rounded-xs bg-foreground/15">
+            <span class="absolute inset-x-0 top-0 bg-primary" style:height="{plane.flaps * 100}%"></span>
+            <span class="absolute inset-x-0 top-1/2 h-px bg-background/70"></span>
+          </span>
+        </div>
+      {/if}
+      {#if plane.spoilers > 0.03}{@render chip(`${spec.engine === Engine.NONE ? "Airbrakes" : "Spoilers"} ${Math.round(plane.spoilers * 100)}%`, "text-warning")}{/if}
+      {#if plane.reverser > 0.03}{@render chip(`Reverse ${Math.round(plane.reverser * 100)}%`, "text-warning")}{/if}
+      {#if flight.autobrake}{@render chip("Autobrake", "text-warning")}{/if}
+      {#if Math.abs(env.wind) >= 0.5}{@render chip(`${wind_along < 0 ? "Head" : "Tail"} ${Math.round(Math.abs(env.wind) * KNOT)} kn ${env.wind > 0 ? "▶" : "◀"}`, wind_along > 2 && altitude < 60 ? "text-warning" : "text-foreground/80")}{/if}
+      {#if Math.abs(env.updraft) >= 0.4 && !on_ground}{@render chip(`${env.updraft > 0 ? "Lift" : "Sink"} ${Math.abs(env.updraft).toFixed(1)} m/s`, env.updraft > 0 ? "text-success" : "text-warning")}{/if}
       {@render chip(`Trim ${controls.trim >= 0 ? "+" : "−"}${Math.round(Math.abs(controls.trim) * 100)}`)}
       {#if controls.brake > 0}{@render chip(`Brakes ${Math.round(controls.brake * 100)}%`, "text-warning")}{/if}
       {#if turning}{@render chip(`Turning ${controls.facing > 0 ? "▶" : "◀"}`, "text-primary")}{/if}
@@ -435,6 +512,14 @@
     </div>
     {#if stall}
       <div class="af-stall rounded-md bg-warning px-2 py-0.5 text-ui font-semibold text-background" role="alert">Stall</div>
+    {/if}
+    {#if spec.engine === Engine.NONE && (can_winch || winch_drum !== null)}
+      <Button size="sm" class="pointer-events-auto pointer-coarse:h-11" variant={winch_drum !== null ? "secondary" : "primary"} onclick={toggle_winch}>
+        {winch_drum !== null ? "Release" : "Winch launch"}<span class="hidden font-mono text-2xs opacity-70 pointer-fine:inline">L</span>
+      </Button>
+    {/if}
+    {#if swapped && SWAP_NOTES[swapped]}
+      <p class="max-w-84 rounded-md bg-background/85 px-2 py-1 text-ui font-medium backdrop-blur-[2px]" role="status">Now flying the {SPECS[swapped].name}. {SWAP_NOTES[swapped]}</p>
     {/if}
     {#if shown_touchdown}
       <div
@@ -444,7 +529,7 @@
         )}
         role="status"
       >
-        {GRADE_NAMES[shown_touchdown.grade]}{shown_touchdown.tail_first ? ", tail first" : ""} · {shown_touchdown.sink.toFixed(1)} m/s
+        {GRADE_NAMES[shown_touchdown.grade]}{shown_touchdown.aux_first ? (spec.gear.layout === GearLayout.NOSE ? ", nose first" : ", tail first") : ""} · {shown_touchdown.sink.toFixed(1)} m/s
       </div>
     {/if}
   </div>
@@ -472,7 +557,7 @@
           {flight.crash.sink.toFixed(1)} m/s down · {(air.speed * KNOT).toFixed(0)} kn
         </p>
         <p class="text-2xs text-foreground/65">
-          {#if flight.crash.kind === CrashKind.HARD}Under 0.6 m/s is a kiss, under 1.5 firm; 3 m/s breaks the gear. Flare: raise the nose just above the runway and let it settle.{:else if flight.crash.kind === CrashKind.NOSE_OVER}Hard brakes or a stick held forward tip a taildragger onto its nose. Keep the stick back while braking.{:else}The plane met the ground off its wheels.{/if}
+          {#if flight.crash.kind === CrashKind.HARD}Under 0.6 m/s is a kiss, under 1.5 firm; 3 m/s breaks the gear. Flare: raise the nose just above the runway and let it settle.{:else if flight.crash.kind === CrashKind.NOSE_OVER}Hard brakes or a stick held forward tip a taildragger onto its nose. Keep the stick back while braking.{:else if flight.crash.kind === CrashKind.POD}The engines hang low under the wings: land on the mains, not nose down.{:else if flight.crash.kind === CrashKind.STALL}The wing let go too close to the ground to recover. Keep the speed up until the flare.{:else if flight.crash.kind === CrashKind.OBSTACLE}Trees, hills and buildings are solid. Climb earlier or come in higher.{:else if flight.crash.kind === CrashKind.WATER}Touch down on dry land.{:else}The plane met the ground off its wheels.{/if}
         </p>
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
@@ -493,16 +578,16 @@
         <p class="text-base font-semibold">Hangar</p>
         <p class="text-ui text-foreground/80">Pick a plane. It waits here, ready to taxi out.</p>
       </div>
-      <div class="grid basis-full gap-1.5 @md:grid-cols-3" role="group" aria-label="Plane">
+      <div class="grid basis-full grid-cols-2 gap-1.5" role="group" aria-label="Plane">
         {#each PLANE_IDS as each, i (each)}
-          <Button class="h-auto flex-col items-start gap-0 py-1.5 text-left" variant={each === plane_id ? "primary" : "quiet"} aria-pressed={each === plane_id} onclick={() => pick_plane(each)}>
+          <Button class="h-auto flex-col items-start gap-0 py-1.5 text-left whitespace-normal" variant={each === plane_id ? "primary" : "quiet"} aria-pressed={each === plane_id} onclick={() => pick_plane(each)}>
             <span class="flex items-center gap-1.5 font-semibold"><span class="hidden font-mono text-2xs opacity-70 pointer-fine:inline">{i + 1}</span>{SPECS[each].name}</span>
             <span class="text-2xs font-normal opacity-80">{BLURBS[each]}</span>
           </Button>
         {/each}
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="1" text="pick" /><KeyHint key_name="D" text="turn round" /><KeyHint key_name="Shift" text="throttle" />
+        <KeyHint key_name="1–{PLANE_IDS.length}" text="pick" /><KeyHint key_name="D" text="turn round" /><KeyHint key_name="Shift" text="throttle" />
       </p>
     </RoundCard>
   {/if}

@@ -62,9 +62,9 @@ export function build_field(): Field {
     }
   };
   grove(-520, -230, 1);
-  grove(980, 1300, 2);
+  grove(2620, 2950, 2);
   return {
-    runway: { x0: 0, x1: 650 },
+    runway: { x0: 0, x1: 2400 },
     apron: { x0: -175, x1: 0 },
     hangar: { x0: -160, x1: -118, height: 9 },
     start: -95,

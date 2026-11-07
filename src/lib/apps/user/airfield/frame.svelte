@@ -8,7 +8,7 @@
   import { clamp_zoom } from "$kit/games/play2d/camera";
   import { read_palette, type Palette } from "$kit/games/play2d/palette";
   import type { Snippet } from "svelte";
-  import { FLAP_NAMES, PitchMode, THROTTLE_LABELS, THROTTLE_NAMES, type Controls } from "./core/controls.svelte";
+  import { PitchMode, type Controls } from "./core/controls.svelte";
   import { read_scenery, type Scenery } from "./core/draw";
   import PitchPad from "./pitch-pad.svelte";
 
@@ -216,12 +216,20 @@
       </div>
 
       <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} class={cn("af-left hidden touch-none items-end select-none pointer-coarse:flex", controls_idle && "af-idle")}>
-        <Lever class="af-lever-size af-face rounded-xl p-1.5" notch={controls.notch} labels={THROTTLE_LABELS} names={THROTTLE_NAMES} neutral={0} onchange={set_lever} />
+        <Lever
+          class="af-lever-size af-face rounded-xl p-1.5"
+          notch={controls.notch}
+          labels={controls.cockpit.detents.map((detent) => detent.label)}
+          names={controls.cockpit.detents.map((detent) => detent.name)}
+          neutral={controls.cockpit.idle}
+          label={controls.cockpit.flaps.length > 1 ? "Throttle lever" : "Airbrake lever"}
+          onchange={set_lever}
+        />
       </div>
       <div class={cn("af-middle hidden touch-none grid-cols-2 gap-1.5 select-none pointer-coarse:grid", controls_idle && "af-idle")}>
-        <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" onclick={() => flaps(-1)} aria-label="Flaps up">Flaps ▲</Button>
-        <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" onclick={() => flaps(1)} aria-label="Flaps down">Flaps ▼</Button>
-        <span class="af-flaps-label af-face col-span-2 rounded-md px-1 text-center text-2xs font-medium text-foreground/80">Flaps {FLAP_NAMES[controls.flap_notch]}</span>
+        <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(-1)} aria-label="Flaps up">Flaps ▲</Button>
+        <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(1)} aria-label="Flaps down">Flaps ▼</Button>
+        <span class="af-flaps-label af-face col-span-2 rounded-md px-1 text-center text-2xs font-medium text-foreground/80">Flaps {controls.flap_name}</span>
         <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing < 0} label="Turn to face left" onclick={() => face(-1)}>
           <CaretLeftIcon weight="bold" />
         </IconButton>

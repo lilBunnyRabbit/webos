@@ -1,3 +1,5 @@
+import { Engine as EngineKind } from "./plane";
+
 const VOLUME = 0.06;
 
 interface Engine {
@@ -83,20 +85,22 @@ export class Sounds {
 
   /**
    * Every frame: the engine's spool (0 to 1), airspeed as a share of cruise, whether the stall horn sounds, how far the
-   * wing's flow has broken away (the buffet's rumble) and airspeed in m/s for the wind.
+   * wing's flow has broken away (the buffet's rumble) and airspeed in m/s for the wind. A jet whines with its spool
+   * alone; a glider has only the wind.
    */
-  drone(spool: number, cruise_share: number, stall: boolean, buffet: number, airspeed: number) {
+  drone(engine: EngineKind, spool: number, cruise_share: number, stall: boolean, buffet: number, airspeed: number) {
     const audio = this.engine ? this.context : this.audio();
     if (!audio) return;
     this.engine ??= this.build(audio);
     const e = this.engine;
     const now = audio.currentTime;
+    const jet = engine === EngineKind.JET;
     // A fixed-pitch prop: the airflow drives it, so the note rises in a dive and sags in a climb.
-    const rpm = (22 + spool * 30) * (0.85 + 0.3 * Math.min(1.6, cruise_share));
+    const rpm = jet ? 70 + spool * 190 : (22 + spool * 30) * (0.85 + 0.3 * Math.min(1.6, cruise_share));
     e.low.frequency.setTargetAtTime(rpm, now, 0.2);
-    e.high.frequency.setTargetAtTime(rpm * 2, now, 0.2);
-    e.filter.frequency.setTargetAtTime(300 + spool * 900, now, 0.2);
-    e.gain.gain.setTargetAtTime(VOLUME * (0.25 + spool * 0.9), now, 0.2);
+    e.high.frequency.setTargetAtTime(rpm * (jet ? 3.02 : 2), now, 0.2);
+    e.filter.frequency.setTargetAtTime(jet ? 700 + spool * 2400 : 300 + spool * 900, now, 0.2);
+    e.gain.gain.setTargetAtTime(engine === EngineKind.NONE ? 0 : VOLUME * (0.25 + spool * 0.9), now, 0.2);
     const wind = Math.min(1, airspeed / 45);
     e.wind_filter.frequency.setTargetAtTime(300 + wind * 1400, now, 0.3);
     e.wind_gain.gain.setTargetAtTime(VOLUME * 1.6 * wind * wind, now, 0.3);

@@ -2,10 +2,12 @@ import { describe, expect, test } from "vitest";
 import { advance, create_flight, CrashKind, Status } from "./flight";
 import {
   airborne,
+  CALM,
   air_of,
   create_plane,
   CRUISE_THROTTLE,
   DT,
+  Engine,
   G,
   level_flight,
   lift_coefficient,
@@ -17,6 +19,7 @@ import {
   measure_rollout,
   measure_stall,
   measure_stall_hold,
+  measure_takeoff,
   measure_tail_up,
   measure_touchdown,
   measure_trim_speed,
@@ -25,11 +28,12 @@ import {
   type Input,
   type Plane,
 } from "./plane";
-import { PLANE_IDS, plane_coefficients, SPECS } from "./planes";
+import { PLANE_IDS, plane_coefficients, PlaneId, SPECS } from "./planes";
 import { expo, key_step } from "./stick";
+import { winch_pull } from "./winch";
 
 const near = (value: number, target: number, share = 0.03) => expect(Math.abs(value - target)).toBeLessThanOrEqual(Math.abs(target) * share + 1e-3);
-const HANDS_OFF: Input = { throttle: 0, stick: 0, trim: 0, flaps: 0, brake: 0, facing: 1 };
+const HANDS_OFF: Input = { throttle: 0, stick: 0, trim: 0, flaps: 0, brake: 0, facing: 1, spoilers: 0, reverse: 0 };
 
 describe.each(PLANE_IDS)("%s meets its feel numbers", (id) => {
   const spec = SPECS[id];
@@ -39,28 +43,30 @@ describe.each(PLANE_IDS)("%s meets its feel numbers", (id) => {
     near(measure_stall(c), spec.stall_speed);
     near(measure_stall(c, 1), spec.flap_stall);
     near(measure_glide(c), spec.glide);
+    if (spec.engine === Engine.NONE) return;
     near(measure_climb(c).rate, spec.climb);
     near(measure_level(c, CRUISE_THROTTLE), spec.cruise);
   });
 
-  test("trim, pitch rate and roll-out", () => {
+  test("trim, pitch rate, roll-out and stall mush", () => {
     near(measure_trim_speed(c), spec.trim_speed);
     near(measure_pitch_rate(c), spec.pitch_rate);
     near(measure_rollout(c), spec.rollout);
-  });
-
-  test("stall mush, prop wash, gear and phugoid", () => {
     const hold = measure_stall_hold(c);
     near(hold.bob, spec.stall_bob, 0.1);
     near(hold.sink, spec.stall_sink);
     expect(hold.alpha_max).toBeLessThan(c.alpha_break + (6 * Math.PI) / 180);
-    near(measure_tail_up(c), spec.tail_up_speed);
-    expect(measure_touchdown(c, 2.2).peak_g).toBeLessThanOrEqual(3.5);
-    const phugoid = measure_phugoid(c);
-    near(phugoid.period, 16, 0.15);
-    expect(phugoid.damping).toBeGreaterThanOrEqual(0.05);
-    expect(phugoid.damping).toBeLessThanOrEqual(0.15);
+    if (spec.tail_up_speed !== null) near(measure_tail_up(c), spec.tail_up_speed);
   });
+});
+
+test("the trainer's gear and phugoid", () => {
+  const c = plane_coefficients(PlaneId.TRAINER);
+  expect(measure_touchdown(c, 2.2).peak_g).toBeLessThanOrEqual(3.5);
+  const phugoid = measure_phugoid(c);
+  near(phugoid.period, 16, 0.15);
+  expect(phugoid.damping).toBeGreaterThanOrEqual(0.05);
+  expect(phugoid.damping).toBeLessThanOrEqual(0.15);
 });
 
 function fly(plane: Plane, seconds: number, input: Partial<Input>, id = PLANE_IDS[0]): Plane {
@@ -77,7 +83,7 @@ describe("handling", () => {
     let tail_up = false;
     for (let t = 0; t < 40 && !airborne(plane); t += DT) {
       plane = step_plane(plane, { ...HANDS_OFF, throttle: 1, flaps: 0.5 }, c, DT);
-      if (plane.main_on && !plane.tail_on) tail_up = true;
+      if (plane.main_on && !plane.aux_on) tail_up = true;
     }
     expect(tail_up).toBe(true);
     expect(airborne(plane)).toBe(true);
@@ -144,4 +150,37 @@ describe("handling", () => {
   function spec_stall() {
     return measure_stall(c);
   }
+});
+
+describe("the other planes", () => {
+  test("the bush plane lifts off in under 80 m with flaps 2", () => {
+    expect(measure_takeoff(plane_coefficients(PlaneId.STOL), 2 / 3).roll).toBeLessThan(80);
+  });
+
+  test("the airliner rotates on its nose wheel and climbs away without a tail strike", () => {
+    const c = plane_coefficients(PlaneId.AIRLINER);
+    let flight = create_flight(create_plane(c, 0));
+    for (let t = 0; t < 90 && flight.status === Status.FLYING && flight.plane.h < 60; t += DT) {
+      const p = flight.plane;
+      const rotate = p.vx > 1.15 * measure_stall(c, 0.5);
+      const stick = rotate ? Math.max(-1, Math.min(1, ((8 * Math.PI) / 180 - p.pitch) * 6 - p.q * 4)) : 0;
+      flight = advance(flight, { ...HANDS_OFF, throttle: 1, flaps: 0.5, stick }, c, DT);
+    }
+    expect(flight.status).toBe(Status.FLYING);
+    expect(flight.plane.h).toBeGreaterThanOrEqual(60);
+    expect(flight.tail_strike).toBe(false);
+  });
+
+  test("the glider goes up on the winch", () => {
+    const c = plane_coefficients(PlaneId.GLIDER);
+    let flight = create_flight(create_plane(c, 0));
+    for (let t = 0; t < 80; t += DT) {
+      const pull = winch_pull(flight.plane, c, 1150, 0, CALM);
+      if (!pull) break;
+      const stick = air_of(flight.plane, c).speed > 24 ? 0.55 : 0;
+      flight = advance(flight, { ...HANDS_OFF, stick }, c, DT, { ...CALM, pull });
+    }
+    expect(flight.status).toBe(Status.FLYING);
+    expect(flight.plane.h).toBeGreaterThan(300);
+  });
 });
