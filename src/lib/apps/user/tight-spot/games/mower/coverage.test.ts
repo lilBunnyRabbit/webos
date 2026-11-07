@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { rect } from "$kit/games/play2d/geometry";
-import { BED_COST, CHUNK, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, REPASS, stripe, trample, type Tally } from "./coverage";
+import { BED_COST, CHUNK, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, Pattern, pattern_share, REPASS, stripe, trample, type Tally } from "./coverage";
 import { deck_corners, DECKS, swept } from "./deck";
 import { Vehicle } from "../../core/vehicle";
 
@@ -41,6 +41,18 @@ describe("coverage grid", () => {
     expect(grid.cut[0]).toBe(Cut.DARK);
     expect(mow(grid, shape, { x: 1, y: 0 }, REPASS * 4, again).overlapped).toBe(100);
     expect(overlap(again)).toBeCloseTo(100 / again.coverable);
+  });
+
+  test("a pattern counts the flat lawn by the last cut's axis, a checkerboard by both, the bank left out", () => {
+    const grid = create_grid({ ...garden, beds: [], banks: [{ shape: rect(4.5, 0, 6, 3), fall: 0 }] });
+    grid.coverable.fill(1);
+    mow(grid, rect(0, 0, 6, 3), { x: 1, y: 0 }, 0, empty());
+    expect(pattern_share(grid, Pattern.EAST_WEST)).toBe(1);
+    expect(pattern_share(grid, Pattern.CHECKER)).toBe(0);
+    mow(grid, rect(0, 0, 2.25, 3), { x: 0, y: -1 }, 5, empty());
+    expect(pattern_share(grid, Pattern.EAST_WEST)).toBeCloseTo(0.5);
+    expect(pattern_share(grid, Pattern.NORTH_SOUTH)).toBeCloseTo(0.5);
+    expect(pattern_share(grid, Pattern.CHECKER)).toBeCloseTo(0.5);
   });
 
   test("flowers run over cost lawn, each cell once", () => {

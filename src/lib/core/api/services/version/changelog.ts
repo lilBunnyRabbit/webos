@@ -40,6 +40,11 @@ export const CHANGELOG: Release[] = [
         text: "Drive Hub Airport has nine new levels: push back and tow a widebody with its heavy tug, and push an aircraft round a bend in the taxiway.",
       },
       {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub Mow Day has nine new levels: stripes in a set direction, a checkerboard, steep banks you must mow straight up and down, and big fields cut with a tractor and a trailed gang mower.",
+      },
+      {
         kind: FIXED,
         apps: ["tight-spot"],
         text: "Drive Hub Airport's Ramp lead achievement counts the levels of all four jobs, not only the pushbacks.",

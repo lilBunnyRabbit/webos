@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { daily_seed } from "$kit/games";
+import { rect } from "$kit/games/play2d/geometry";
+import { collide, obstacles } from "../../core/obstacles";
 import { Gear } from "../../core/vehicle";
 import { Cut, Ground } from "./coverage";
 import {
@@ -20,6 +22,7 @@ import {
   measure_fallback,
   out_of_reach,
   record,
+  rig_of,
   set_status,
   stars,
   Status,
@@ -48,6 +51,42 @@ describe("mow day", () => {
       for (const ground of state.grid.ground) if (ground === Ground.LAWN) lawn++;
       expect(state.tally.coverable / lawn, `level ${level}`).toBeGreaterThan(0.85);
     }
+  }, 90_000);
+
+  test("the first twelve levels are the gardens they always were; the ones after bring one thing each, then mix", () => {
+    for (let level = 1; level <= 12; level++) {
+      const round = level_round(level);
+      expect(round.twist).toBeUndefined();
+      expect(round.difficulty).toBeCloseTo((level - 1) / 11);
+    }
+    const twists = Array.from({ length: LEVEL_COUNT - 12 }, (_, i) => level_round(13 + i).twist);
+    expect(twists.slice(0, 2)).toEqual([{ pattern: "east-west" }, { bank: "straight" }]);
+    for (let level = 13; level <= LEVEL_COUNT; level++) {
+      const state = create_game(level_round(level));
+      if (state.round.twist?.bank) expect(state.garden.banks, `level ${level}`).toHaveLength(1);
+      expect(collide(state.car, obstacles(state.garden), rig_of(state.round).spec), `level ${level}`).toBeNull();
+    }
+  });
+
+  test("a bank holds a step that turns across it, like a bump, and lets the mower straighten up", () => {
+    const base = driving(create_game(level_round(1)));
+    const garden = { ...base.garden, banks: [{ shape: rect(0, 0, 40, 40), fall: Math.PI / 2 }] };
+    const across = { ...base, garden, car: { ...base.car, x: 3, y: 3, heading: 0.3 + Math.PI / 2 } };
+    expect(collide(across.car, obstacles(garden), rig_of(base.round).spec)).toBeNull();
+    const held = run(across, 1.5, { steer: 1, throttle: 1, brake: 0 });
+    expect(held.bumps).toBe(1);
+    expect(bump_hint(held)).toMatch(/across the bank/);
+    const back = run(held, 1, { steer: -1, throttle: 1, brake: 0 });
+    expect(Math.abs(back.car.heading - Math.PI / 2)).toBeLessThan(Math.abs(held.car.heading - Math.PI / 2));
+  });
+
+  test("the tractor cuts with the gang mower behind it", () => {
+    const state = run(driving(measure(create_game(level_round(17)))), 4.5);
+    expect(state.bumps).toBe(0);
+    expect(state.tally.mown).toBeGreaterThan(100);
+    const { grid } = state;
+    const ahead = Math.floor(state.car.y / 0.15) * grid.cols + Math.floor(state.car.x / 0.15);
+    expect(grid.cut[ahead]).toBe(Cut.LONG);
   });
 
   test("the daily is the same lawn for everyone", () => {

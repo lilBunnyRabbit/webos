@@ -11,6 +11,13 @@ export type Ground = (typeof Ground)[keyof typeof Ground];
 export const Cut = { LONG: 0, LIGHT: 1, DARK: 2 } as const;
 export type Cut = (typeof Cut)[keyof typeof Cut];
 
+/** The axis a cut ran along, as bits, so `crossed` can hold both. */
+export const Axis = { NONE: 0, X: 1, Y: 2 } as const;
+export type Axis = (typeof Axis)[keyof typeof Axis];
+
+export const Pattern = { EAST_WEST: "east-west", NORTH_SOUTH: "north-south", CHECKER: "checker" } as const;
+export type Pattern = (typeof Pattern)[keyof typeof Pattern];
+
 /** A cell cut again after the mower has gone this far since its first cut counts as overlap; less is the same pass. */
 export const REPASS = 1.2;
 
@@ -18,8 +25,12 @@ export interface Grid {
   cols: number;
   rows: number;
   ground: Uint8Array;
+  /** On a bank: left out of a pattern, since a bank is only mown along its fall line. */
+  bank: Uint8Array;
   coverable: Uint8Array;
   cut: Uint8Array;
+  axis: Uint8Array;
+  crossed: Uint8Array;
   first: Float32Array;
   overlapped: Uint8Array;
   trampled: Uint8Array;
@@ -30,6 +41,7 @@ export interface Grid {
 /** Steps cutting one stripe tone; the next tone starts a new run, so replaying runs in order repaints the lawn. */
 export interface Stroke {
   shade: Cut;
+  axis: Axis;
   shapes: Polygon[];
   /** Where the last shape starts: it grows with each step until the deck has gone `CHUNK` or turned `CHUNK_TURN`. */
   from: Pose;
@@ -46,10 +58,10 @@ export interface Marks {
 export const CHUNK = 0.3;
 export const CHUNK_TURN = 0.08;
 
-export function mark_cut(marks: Marks, from: Pose, to: Pose, deck: Deck, shade: Cut) {
+export function mark_cut(marks: Marks, from: Pose, to: Pose, deck: Deck, shade: Cut, axis: Axis = Axis.NONE) {
   const last = marks.cut[marks.cut.length - 1];
   marks.revision++;
-  if (last?.shade === shade) {
+  if (last?.shade === shade && last.axis === axis) {
     const start = last.from;
     const near = Math.hypot(to.x - start.x, to.y - start.y) <= CHUNK && angle_between(start.heading, to.heading) <= CHUNK_TURN;
     if (near) {
@@ -60,7 +72,7 @@ export function mark_cut(marks: Marks, from: Pose, to: Pose, deck: Deck, shade: 
     last.from = from;
     return;
   }
-  marks.cut.push({ shade, shapes: [swept(from, to, deck)], from });
+  marks.cut.push({ shade, axis, shapes: [swept(from, to, deck)], from });
 }
 
 export interface Tally {
@@ -70,26 +82,32 @@ export interface Tally {
   trampled: number;
 }
 
-export function create_grid(garden: Pick<Garden, "width" | "height" | "lawn" | "beds" | "solids">): Grid {
+export function create_grid(garden: Pick<Garden, "width" | "height" | "lawn" | "beds" | "solids"> & Partial<Pick<Garden, "banks">>): Grid {
   const cols = Math.ceil(garden.width / CELL);
   const rows = Math.ceil(garden.height / CELL);
   const size = cols * rows;
   const ground = new Uint8Array(size);
+  const bank = new Uint8Array(size);
   const blocked = garden.solids.map((solid) => solid.shape);
+  const banks = garden.banks ?? [];
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const at = { x: (col + 0.5) * CELL, y: (row + 0.5) * CELL };
       if (!garden.lawn.some((piece) => inside_convex(at, piece))) continue;
       if (blocked.some((shape) => inside_convex(at, shape))) continue;
       ground[row * cols + col] = garden.beds.some((bed) => inside_convex(at, bed)) ? Ground.BED : Ground.LAWN;
+      if (banks.some((each) => inside_convex(at, each.shape))) bank[row * cols + col] = 1;
     }
   }
   return {
     cols,
     rows,
     ground,
+    bank,
     coverable: new Uint8Array(size),
     cut: new Uint8Array(size),
+    axis: new Uint8Array(size),
+    crossed: new Uint8Array(size),
     first: new Float32Array(size),
     overlapped: new Uint8Array(size),
     trampled: new Uint8Array(size),
@@ -122,8 +140,13 @@ export function stripe(motion: Vec): Cut {
   return along >= 0 ? Cut.LIGHT : Cut.DARK;
 }
 
+export function axis_of(motion: Vec): Axis {
+  return Math.abs(motion.x) >= Math.abs(motion.y) ? Axis.X : Axis.Y;
+}
+
 export function mow(grid: Grid, shape: Polygon, motion: Vec, odometer: number, tally: Tally): Tally {
   const shade = stripe(motion);
+  const axis = axis_of(motion);
   let { mown, overlapped } = tally;
   each_cell(grid, shape, (i) => {
     if (grid.ground[i] !== Ground.LAWN) return;
@@ -135,6 +158,8 @@ export function mow(grid: Grid, shape: Polygon, motion: Vec, odometer: number, t
       if (grid.coverable[i]) overlapped++;
     }
     grid.cut[i] = shade;
+    grid.axis[i] = axis;
+    grid.crossed[i] |= axis;
   });
   return mown === tally.mown && overlapped === tally.overlapped ? tally : { ...tally, mown, overlapped };
 }
@@ -163,6 +188,18 @@ export const BED_COST = 3;
 export function coverage(tally: Tally): number {
   if (tally.coverable === 0) return 0;
   return Math.max(0, (tally.mown - tally.trampled * BED_COST) / tally.coverable);
+}
+
+// Over the flat coverable lawn, long grass included: stripes by the last cut's axis, a checkerboard by both axes.
+export function pattern_share(grid: Grid, pattern: Pattern): number {
+  let flat = 0;
+  let laid = 0;
+  for (let i = 0; i < grid.coverable.length; i++) {
+    if (!grid.coverable[i] || grid.bank[i]) continue;
+    flat++;
+    if (pattern === Pattern.CHECKER ? grid.crossed[i] === (Axis.X | Axis.Y) : grid.axis[i] === (pattern === Pattern.EAST_WEST ? Axis.X : Axis.Y)) laid++;
+  }
+  return flat === 0 ? 0 : laid / flat;
 }
 
 export function overlap(tally: Tally): number {

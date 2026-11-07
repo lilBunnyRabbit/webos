@@ -4,11 +4,13 @@ import { collide, obstacles } from "../../core/obstacles";
 import { SolidKind } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
 import { better, keep_best, levels_schema, unlocked as open_levels, with_stars, type LevelStars } from "../../core/track";
-import { bodies, create_car, Gear, MOWER, shift, step, Vehicle, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
-import { BED_COST, CELL, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, stripe, trample, type Grid, type Tally } from "./coverage";
-import { deck_centre, deck_of, swept } from "./deck";
-import { build_garden, type Garden } from "./garden";
-import { flood } from "./reach";
+import { bodies, create_car, Gear, hitch_point, jackknifed, shift, step, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
+import { axis_of, BED_COST, CELL, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, Pattern, pattern_share, stripe, trample, type Grid, type Tally } from "./coverage";
+import { deck_centre, swept } from "./deck";
+import { BankKind, build_garden, type Garden, type Grounds } from "./garden";
+import { flood, flood_towed } from "./reach";
+import { cutter, RigKind, RIGS, type Rig } from "./rig";
+import { across_bank, BANK_TOLERANCE } from "./slope";
 
 export const Mode = { LAWNS: "lawns", LEVELS: "levels" } as const;
 export type Mode = (typeof Mode)[keyof typeof Mode];
@@ -24,12 +26,10 @@ export const Status = {
 } as const;
 export type Status = (typeof Status)[keyof typeof Status];
 
-export const SPEC: VehicleSpec = MOWER;
-export const VEHICLE = Vehicle.MOWER;
-export const DECK = deck_of(VEHICLE);
-
 export const FINISH = 0.9;
 export const OVERLAP_LIMIT = 0.25;
+/** On a pattern level the second star asks for this share of the flat lawn laid the pattern's way. */
+export const PATTERN_SHARE = 0.7;
 /** A bump holds the mower where it was; pressing on is the same bump until it has backed off this far. */
 export const BUMP_CLEAR = 0.3;
 /** How long the contact rings flash after a bump, ms. */
@@ -37,13 +37,42 @@ export const BUMP_FLASH_MS = 1200;
 /** What a bump adds to the round's time, ms. */
 export const BUMP_COST_MS = 5000;
 
+/** What a level past the first twelve brings: the tractor, a stripe pattern to lay, a bank. */
+export interface Twist {
+  rig?: RigKind;
+  pattern?: Pattern;
+  bank?: BankKind;
+}
+
 export interface Round {
   mode: Mode;
   seed: number;
   difficulty: number;
   level?: number;
   daily?: string;
+  twist?: Twist;
 }
+
+export function rig_of(round: Pick<Round, "twist">): Rig {
+  return RIGS[round.twist?.rig ?? RigKind.MOWER];
+}
+
+export function pattern_of(round: Pick<Round, "twist">): Pattern | null {
+  return round.twist?.pattern ?? null;
+}
+
+function grounds_of(round: Round): Grounds | undefined {
+  if (!round.twist) return undefined;
+  return { field: round.twist.rig === RigKind.TRACTOR, bank: round.twist.bank };
+}
+
+export function garden_of(round: Round): Garden {
+  return build_garden(round.seed, round.difficulty, grounds_of(round));
+}
+
+/** Not solids: a step that breaks a rule is held like a bump. */
+export const Snag = { BANK: "bank", JACKKNIFE: "jackknife" } as const;
+export type Snag = (typeof Snag)[keyof typeof Snag];
 
 export interface GameState {
   round: Round;
@@ -68,18 +97,18 @@ export interface GameState {
 }
 
 export interface Bump {
-  kind: SolidKind;
+  kind: SolidKind | Snag;
   /** Where the mower stood when it bumped. */
   from: Vec;
 }
 
 export function create_game(round: Round): GameState {
-  const garden = build_garden(round.seed, round.difficulty);
+  const garden = garden_of(round);
   return {
     round,
     garden,
     grid: create_grid(garden),
-    car: create_car(garden.start, Gear.PARK, SPEC),
+    car: create_car(garden.start, Gear.PARK, rig_of(round).spec),
     status: Status.READY,
     ms: 0,
     odometer: 0,
@@ -100,15 +129,16 @@ export interface Measured {
 
 /** The slow part of a round: the coverable lawn from the lattice, and the par from it. */
 export function measure_round(round: Round): Measured {
-  const garden = build_garden(round.seed, round.difficulty);
+  const garden = garden_of(round);
   const grid = create_grid(garden);
-  const reach = flood(garden, grid, SPEC, DECK);
-  return { coverable: grid.coverable, count: reach.coverable, par_ms: par_time(garden, reach.coverable) };
+  const rig = rig_of(round);
+  const reach = rig.towed ? flood_towed(garden, grid, rig) : flood(garden, grid, rig.spec, rig.deck);
+  return { coverable: grid.coverable, count: reach.coverable, par_ms: par_time(garden, reach.coverable, rig, pattern_of(round)) };
 }
 
 /** When the worker fails: the whole lawn counts as coverable, so the round can still be finished. */
 export function measure_fallback(round: Round): Measured {
-  const garden = build_garden(round.seed, round.difficulty);
+  const garden = garden_of(round);
   const grid = create_grid(garden);
   const coverable = new Uint8Array(grid.ground.length);
   let count = 0;
@@ -117,7 +147,7 @@ export function measure_fallback(round: Round): Measured {
     coverable[i] = 1;
     count++;
   }
-  return { coverable, count, par_ms: par_time(garden, count) };
+  return { coverable, count, par_ms: par_time(garden, count, rig_of(round), pattern_of(round)) };
 }
 
 /** Everything left mown at best, less the flowers: once that's under the finish line, the round is lost. */
@@ -151,26 +181,34 @@ export function set_status(state: GameState, status: Status): GameState {
   return state.status === status ? state : { ...state, status };
 }
 
-export function advance(state: GameState, input: Input, dt: number, spec: VehicleSpec = SPEC): GameState {
+export function advance(state: GameState, input: Input, dt: number, spec: VehicleSpec = rig_of(state.round).spec): GameState {
   if (state.status !== Status.DRIVING) return state;
+  const rig = rig_of(state.round);
   const car = step(state.car, input, dt, spec);
   const ms = state.ms + dt * 1000;
   const hit = collide(car, obstacles(state.garden), spec);
   if (hit) return bump(state, ms, hit.solid.kind, hit.at);
+  if (rig.towed && jackknifed(car, spec)) return bump(state, ms, Snag.JACKKNIFE, hitch_point(car, spec, 0));
+  const tipping = across_bank(state.car, car, spec, state.garden);
+  // The wheel still turns, or a mower held at the limit could never steer back toward the fall line.
+  if (tipping) return bump({ ...state, car: { ...state.car, steer: car.steer } }, ms, Snag.BANK, tipping);
   const bumped = state.bumped && Math.hypot(car.x - state.bumped.from.x, car.y - state.bumped.from.y) <= BUMP_CLEAR ? state.bumped : null;
-  const was = deck_centre(state.car, DECK);
-  const now = deck_centre(car, DECK);
+  const from = cutter(state.car, rig, spec);
+  const to = cutter(car, rig, spec);
+  const was = deck_centre(from, rig.deck);
+  const now = deck_centre(to, rig.deck);
   const motion = { x: now.x - was.x, y: now.y - was.y };
   const moved = Math.hypot(motion.x, motion.y);
-  if (moved < 1e-6 && car.heading === state.car.heading) return { ...state, car, ms, bumped };
+  if (moved < 1e-6 && to.heading === from.heading) return { ...state, car, ms, bumped };
   const odometer = state.odometer + moved;
-  let tally = mow(state.grid, swept(state.car, car, DECK), motion, odometer, state.tally);
-  mark_cut(state.grid.marks, state.car, car, DECK, stripe(motion));
+  let tally = mow(state.grid, swept(from, to, rig.deck), motion, odometer, state.tally);
+  mark_cut(state.grid.marks, from, to, rig.deck, stripe(motion), axis_of(motion));
   if (state.garden.beds.length > 0) tally = trample(state.grid, bodies(car, spec), tally);
   if (state.measured && tally.trampled > state.tally.trampled && out_of_reach(tally)) {
     return { ...state, car: { ...car, speed: 0 }, ms, odometer, tally, bumped, status: Status.FLATTENED };
   }
-  const all = state.measured && tally.mown >= tally.coverable && tally.trampled === 0;
+  // A pattern isn't done when the grass is: the player says when with Finish.
+  const all = !pattern_of(state.round) && state.measured && tally.mown >= tally.coverable && tally.trampled === 0;
   return { ...state, car, ms, odometer, tally, bumped, status: all ? Status.DONE : state.status };
 }
 
@@ -178,7 +216,7 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
  * Nothing solid ends a round: a hit is a bump. The step is undone (the mower stays where it was, stopped, in gear) and
  * the first bump against something costs `BUMP_COST_MS`; pressing on is the same bump.
  */
-export function bump(state: GameState, ms: number, kind: SolidKind, at: Vec): GameState {
+export function bump(state: GameState, ms: number, kind: SolidKind | Snag, at: Vec): GameState {
   const car = { ...state.car, speed: 0 };
   if (state.bumped) return { ...state, car, ms, contact: at };
   const cost = ms + BUMP_COST_MS;
@@ -192,7 +230,7 @@ export function bump_flash(state: Pick<GameState, "bumps" | "bump_ms" | "ms" | "
 
 export function change_gear(state: GameState, gear: Gear): GameState {
   if (state.status !== Status.DRIVING) return state;
-  const car = shift(state.car, gear, SPEC);
+  const car = shift(state.car, gear, rig_of(state.round).spec);
   return car === state.car ? state : { ...state, car };
 }
 
@@ -206,17 +244,28 @@ export function finish(state: GameState): GameState {
 }
 
 /**
- * Par time from up-and-down passes over the coverable lawn: rows 1.2 m apart (a half-lock turn's shift, so each pass
- * laps the last by a hand's width) at a steady 2.6 m/s, a 4 s turn at the end of each row along the garden's longer
- * side, 8 s round every tree, island bed and pond, 6 s off the patio; then a quarter on top, up to the next 5 s.
+ * Par time from up-and-down passes over the coverable lawn: the mower's rows 1.2 m apart (a half-lock turn's shift, so
+ * each pass laps the last by a hand's width) at a steady 2.6 m/s, a 4 s turn at the end of each row along the
+ * garden's longer side, 8 s round every tree, island bed and pond, 6 s off the patio; then a quarter on top, up to the
+ * next 5 s. The tractor's numbers are its own (`RIGS`). Stripes run their rows the asked way, a checkerboard mows it
+ * all both ways, and a bank costs two turns to line up for it.
  */
-export function par_time(garden: Garden, coverable: number): number {
+export function par_time(garden: Garden, coverable: number, rig: Rig = RIGS.mower, pattern: Pattern | null = null): number {
   const area = coverable * CELL * CELL;
-  const run = area / 1.2;
-  const rows = run / Math.max(garden.width, garden.height);
+  const once = area / rig.pass;
+  const run = pattern === Pattern.CHECKER ? once * 2 : once;
+  const rows =
+    pattern === Pattern.CHECKER
+      ? once / garden.width + once / garden.height
+      : pattern === Pattern.EAST_WEST
+        ? once / garden.width
+        : pattern === Pattern.NORTH_SOUTH
+          ? once / garden.height
+          : once / Math.max(garden.width, garden.height);
   const islands = garden.beds.filter((bed) => !touches_hedge(bed, garden)).length;
   const around = garden.trees.length + islands + (garden.pond ? 1 : 0);
-  const seconds = (run / 2.6 + Math.max(0, rows - 1) * 4 + around * 8 + 6) * 1.25;
+  const turns = Math.max(0, rows - 1) + garden.banks.length * 2;
+  const seconds = (run / rig.speed + turns * rig.turn + around * rig.around + rig.leave) * 1.25;
   return Math.ceil(seconds / 5) * 5000;
 }
 
@@ -228,11 +277,39 @@ export interface Par {
   ms: number;
 }
 
-export function stars(state: Pick<GameState, "status" | "tally" | "ms">, par_ms: number | null): 0 | 1 | 2 | 3 {
+/** The second star: the pattern laid on a pattern level, the overlap kept down anywhere else. */
+export function tidy(state: Pick<GameState, "tally" | "grid" | "round">): boolean {
+  const pattern = pattern_of(state.round);
+  return pattern ? pattern_share(state.grid, pattern) >= PATTERN_SHARE : overlap(state.tally) <= OVERLAP_LIMIT;
+}
+
+export function stars(state: Pick<GameState, "status" | "tally" | "ms" | "grid" | "round">, par_ms: number | null): 0 | 1 | 2 | 3 {
   if (state.status !== Status.DONE) return 0;
-  const tidy = overlap(state.tally) <= OVERLAP_LIMIT ? 1 : 0;
+  const neat = tidy(state) ? 1 : 0;
   const quick = par_ms !== null && state.ms <= par_ms ? 1 : 0;
-  return (1 + tidy + quick) as 1 | 2 | 3;
+  return (1 + neat + quick) as 1 | 2 | 3;
+}
+
+const PATTERN_NAMES: Record<Pattern, string> = {
+  "east-west": "east–west",
+  "north-south": "north–south",
+  checker: "both ways",
+};
+
+export function pattern_name(pattern: Pattern): string {
+  return PATTERN_NAMES[pattern];
+}
+
+/** The start card's lines for what a level brings, the star it asks for first. */
+export function twist_notes(round: Round): string[] {
+  const notes: string[] = [];
+  const pattern = pattern_of(round);
+  const share = Math.round(PATTERN_SHARE * 100);
+  if (pattern === Pattern.CHECKER) notes.push(`Checkerboard: mow it one way, then across. Star: ${share}% of the flat lawn cut both ways.`);
+  else if (pattern) notes.push(`Stripes ${pattern_name(pattern)}. Star: ${share}% of the flat lawn last mown ${pattern_name(pattern)}.`);
+  if (round.twist?.bank) notes.push(`Steep bank: cross it up or down the slope, within ${Math.round((BANK_TOLERANCE * 180) / Math.PI)}°.`);
+  if (round.twist?.rig === RigKind.TRACTOR) notes.push("Tractor and 3 m gang mower: the reels behind cut. No turning on the spot, and backing round jackknifes it.");
+  return notes;
 }
 
 export function percent(share: number): number {
@@ -247,7 +324,6 @@ export const result_schema = z.object({
 });
 export type Result = z.infer<typeof result_schema>;
 
-export { better, levels_schema, type LevelStars };
 
 export const saved_schema = z.object({
   best: z.record(z.string(), result_schema),
@@ -279,11 +355,40 @@ export function record(saved: Saved, round: Round, result: Result): Recorded {
   return { saved: { best: kept.bests, levels }, improved: kept.improved, first: kept.first };
 }
 
-export const LEVEL_COUNT = 12;
+// The first twelve only grow the garden; saves keep their stars by level number, so the ladder only ever appends.
+const GROWING = 12;
+
+interface Rung {
+  name: string;
+  difficulty: number;
+  twist: Twist;
+}
+
+const LADDER: Rung[] = [
+  { name: "Stripes east–west", difficulty: 0.35, twist: { pattern: Pattern.EAST_WEST } },
+  { name: "The bank", difficulty: 0.4, twist: { bank: BankKind.STRAIGHT } },
+  { name: "Checkerboard", difficulty: 0.15, twist: { pattern: Pattern.CHECKER } },
+  { name: "Stripes by the bank", difficulty: 0.55, twist: { pattern: Pattern.NORTH_SOUTH, bank: BankKind.STRAIGHT } },
+  { name: "The big field", difficulty: 0.3, twist: { rig: RigKind.TRACTOR } },
+  { name: "Field with a bank", difficulty: 0.5, twist: { rig: RigKind.TRACTOR, bank: BankKind.STRAIGHT } },
+  { name: "Slanted bank", difficulty: 0.75, twist: { pattern: Pattern.EAST_WEST, bank: BankKind.DIAGONAL } },
+  { name: "Field in stripes", difficulty: 0.7, twist: { rig: RigKind.TRACTOR, pattern: Pattern.NORTH_SOUTH } },
+  { name: "Checkerboard on the slope", difficulty: 0.6, twist: { pattern: Pattern.CHECKER, bank: BankKind.DIAGONAL } },
+];
+
+export const LEVEL_COUNT = GROWING + LADDER.length;
 
 export function level_round(level: number): Round {
   const index = Math.max(0, Math.min(LEVEL_COUNT - 1, level - 1));
-  return { mode: Mode.LEVELS, level: index + 1, difficulty: index / (LEVEL_COUNT - 1), seed: hash(0x3077, index) };
+  const seed = hash(0x3077, index);
+  if (index < GROWING) return { mode: Mode.LEVELS, level: index + 1, difficulty: index / (GROWING - 1), seed };
+  const rung = LADDER[index - GROWING];
+  return { mode: Mode.LEVELS, level: index + 1, difficulty: rung.difficulty, seed, twist: rung.twist };
+}
+
+export function level_name(round: Round): string | null {
+  if (round.level === undefined || round.level <= GROWING) return null;
+  return LADDER[round.level - GROWING - 1]?.name ?? null;
 }
 
 export function unlocked(levels: LevelStars): number {
@@ -309,6 +414,8 @@ const HIT_NAMES: Partial<Record<SolidKind, string>> = {
 export function bump_hint(state: Pick<GameState, "bumped" | "status">): string | null {
   const hit = state.bumped;
   if (!hit || state.status !== Status.DRIVING) return null;
+  if (hit.kind === Snag.BANK) return "Too far across the bank: point up or down the slope";
+  if (hit.kind === Snag.JACKKNIFE) return "The gang mower jackknifed: pull forward";
   return `Bumped ${HIT_NAMES[hit.kind] ?? "something"}: back off`;
 }
 

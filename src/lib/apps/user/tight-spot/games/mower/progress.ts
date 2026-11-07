@@ -1,7 +1,7 @@
 import { read_levels, track_progress } from "../../core/track";
 import type { ProgressSource } from "../define";
 
-export const LEVELS = 12;
+export const LEVELS = 21;
 
 export default {
   file: "mower.json",

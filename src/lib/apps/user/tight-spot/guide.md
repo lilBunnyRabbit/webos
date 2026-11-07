@@ -183,7 +183,11 @@ Mow a garden with the zero-turn mower. It starts on the patio by the shed; mow a
 
 - Three stars: one for finishing, one for an overlap of 25% or less, one for the par time (with 5 s per bump). Par assumes tidy up-and-down passes at a steady speed with a turn at each end.
 - A best is more stars, then a quicker time; it's kept per level, per daily, and once for random lawns.
-- **Lawns:** a random garden; **New** deals another. **Levels:** 12 gardens, bigger and fuller as you go. **Daily:** the same garden for everyone today; Game Hub lists it as Drive Hub · Mower.
+- **Lawns:** a random garden; **New** deals another. **Levels:** 21. The first 12 gardens grow bigger and fuller; from 13 each level brings something new, then mixes them:
+  - **Stripes in a set direction** (east–west or north–south) and the **checkerboard** (mow it one way, then across). The second star asks for 70% of the lawn off any bank laid that way instead of the overlap, and the round only ends when you press Finish.
+  - **Banks:** a steep band of slope, shaded with arrows pointing downhill. On it, point within 25° of straight up or down; turned further across it, the mower stops like a bump (5 s) until you steer back toward the slope.
+  - **The tractor:** big fields cut with a tractor towing a 3 m gang mower. The reels behind do the cutting, it can't turn on the spot, and the mower jackknifes if you back it round (a bump: pull forward).
+- **Daily:** the same garden for everyone today; Game Hub lists it as Drive Hub · Mower.
 
 ## Valet Rush
 

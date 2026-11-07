@@ -6,10 +6,11 @@ import { bay_pointer, contact_rings, guides, hitboxes, player, solids, union } f
 import type { Polygon, Vec } from "$kit/games/play2d/geometry";
 import { SolidKind } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
-import { bodies, Gear } from "../../core/vehicle";
-import { CELL, Cut, type Grid } from "./coverage";
-import { bump_flash, SPEC, Status, VEHICLE, type GameState } from "./game";
+import { bodies, Gear, hitch_point, to_world, type Car } from "../../core/vehicle";
+import { Axis, CELL, Cut, Pattern, type Grid } from "./coverage";
+import { bump_flash, pattern_of, rig_of, Status, type GameState } from "./game";
 import type { Garden } from "./garden";
+import { cutter, GANG, type Rig } from "./rig";
 
 export interface Lawn {
   long: string;
@@ -22,6 +23,8 @@ export interface Lawn {
   trunk: string;
   crown: string;
   crown_edge: string;
+  bank: string;
+  bank_line: string;
 }
 
 /**
@@ -44,6 +47,8 @@ export function read_lawn(probe: HTMLElement): Lawn {
     trunk: token("color-mix(in oklab, var(--warning) 40%, var(--foreground))"),
     crown: green(55),
     crown_edge: green(75),
+    bank: token("color-mix(in oklab, var(--foreground) 9%, transparent)"),
+    bank_line: token("color-mix(in oklab, var(--foreground) 24%, transparent)"),
   };
 }
 
@@ -80,6 +85,15 @@ export class LawnLayer {
   private flats = 0;
   private off_beds = new Path2D();
   private on_beds = new Path2D();
+  private checker = false;
+  // A checkerboard's look takes both passes over a cell: each axis keeps a mask of where its last cut lay dark, and
+  // a cell dark one way and light the other shows dark, so crossed stripes read as squares.
+  private readonly masks = [document.createElement("canvas"), document.createElement("canvas")] as const;
+  readonly overlay = document.createElement("canvas");
+
+  get crossed(): boolean {
+    return this.checker;
+  }
 
   get width(): number {
     return this.canvas.width / this.ppm;
@@ -90,15 +104,16 @@ export class LawnLayer {
   }
 
   /** `settled` is false while the camera eases to a new zoom: the old layer, scaled, stands in until it lands. */
-  sync(grid: Grid, garden: Garden, lawn: Lawn, wanted: number, settled: boolean) {
+  sync(grid: Grid, garden: Garden, lawn: Lawn, wanted: number, settled: boolean, checker = false) {
     const width = grid.cols * CELL;
     const height = grid.rows * CELL;
     const ppm = layer_resolution(wanted, width, height);
     const cheap = grid.marks.cut.reduce((sum, run) => sum + run.shapes.length, 0) < CHEAP;
-    if (grid !== this.grid || lawn !== this.lawn || (ppm !== this.ppm && (settled || cheap))) {
+    if (grid !== this.grid || lawn !== this.lawn || checker !== this.checker || (ppm !== this.ppm && (settled || cheap))) {
       this.grid = grid;
       this.lawn = lawn;
       this.ppm = ppm;
+      this.checker = checker;
       this.repaint(grid, garden, lawn, width, height);
     }
     this.paint_marks(grid, lawn);
@@ -109,6 +124,11 @@ export class LawnLayer {
     this.canvas.width = Math.ceil(width * this.ppm);
     this.canvas.height = Math.ceil(height * this.ppm);
     ctx.setTransform(this.ppm, 0, 0, this.ppm, 0, 0);
+    for (const canvas of [...this.masks, this.overlay]) {
+      canvas.width = this.checker ? this.canvas.width : 1;
+      canvas.height = this.checker ? this.canvas.height : 1;
+      canvas.getContext("2d")!.setTransform(this.ppm, 0, 0, this.ppm, 0, 0);
+    }
     this.off_beds = new Path2D();
     this.off_beds.rect(0, 0, width, height);
     this.on_beds = new Path2D();
@@ -152,6 +172,30 @@ export class LawnLayer {
     ctx.stroke();
   }
 
+  private paint_masks(cut: Grid["marks"]["cut"], lawn: Lawn) {
+    for (let run = this.run; run < cut.length; run++) {
+      const { shade, shapes, axis } = cut[run];
+      if (axis === Axis.NONE) continue;
+      const mask = this.masks[axis === Axis.X ? 0 : 1].getContext("2d")!;
+      mask.save();
+      mask.clip(this.off_beds, "evenodd");
+      mask.globalCompositeOperation = shade === Cut.DARK ? "source-over" : "destination-out";
+      mask.fillStyle = lawn.dark;
+      mask.beginPath();
+      for (let i = run === this.run ? this.painted : 0; i < shapes.length; i++) trace(mask, shapes[i]);
+      mask.fill();
+      mask.restore();
+    }
+    const out = this.overlay.getContext("2d")!;
+    out.save();
+    out.setTransform(1, 0, 0, 1, 0, 0);
+    out.globalCompositeOperation = "copy";
+    out.drawImage(this.masks[0], 0, 0);
+    out.globalCompositeOperation = "xor";
+    out.drawImage(this.masks[1], 0, 0);
+    out.restore();
+  }
+
   private paint_marks(grid: Grid, lawn: Lawn) {
     const ctx = this.context;
     const { cut, flat, revision } = grid.marks;
@@ -162,12 +206,13 @@ export class LawnLayer {
       ctx.clip(this.off_beds, "evenodd");
       for (let run = this.run; run < cut.length; run++) {
         const { shade, shapes } = cut[run];
-        ctx.fillStyle = shade === Cut.DARK ? lawn.dark : lawn.light;
+        ctx.fillStyle = shade === Cut.DARK && !this.checker ? lawn.dark : lawn.light;
         ctx.beginPath();
         for (let i = run === this.run ? this.painted : 0; i < shapes.length; i++) trace(ctx, shapes[i]);
         ctx.fill();
       }
       ctx.restore();
+      if (this.checker) this.paint_masks(cut, lawn);
       // The last shape keeps growing with the next steps, so it's painted again until a newer one starts.
       this.run = cut.length - 1;
       this.painted = cut[this.run].shapes.length - 1;
@@ -315,10 +360,110 @@ function crowns(ctx: CanvasRenderingContext2D, garden: Garden, scale: number, la
   }
 }
 
+function banks(ctx: CanvasRenderingContext2D, garden: Garden, scale: number, lawn: Lawn) {
+  for (const bank of garden.banks) {
+    const down = { x: Math.cos(bank.fall), y: Math.sin(bank.fall) };
+    const across = { x: -down.y, y: down.x };
+    const along = bank.shape.map((p) => p.x * down.x + p.y * down.y);
+    const wide = bank.shape.map((p) => p.x * across.x + p.y * across.y);
+    const [d0, d1] = [Math.min(...along), Math.max(...along)];
+    const [w0, w1] = [Math.min(...wide), Math.max(...wide)];
+    const at = (d: number, w: number) => ({ x: down.x * d + across.x * w, y: down.y * d + across.y * w });
+    ctx.save();
+    path(ctx, bank.shape);
+    ctx.clip();
+    fill(ctx, bank.shape, lawn.bank);
+    ctx.strokeStyle = lawn.bank_line;
+    ctx.lineWidth = Math.max(0.03, 1 / scale);
+    ctx.beginPath();
+    for (let d = d0 + 0.6; d < d1 - 0.2; d += 0.6) {
+      const a = at(d, w0);
+      const b = at(d, w1);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+    }
+    ctx.stroke();
+    ctx.lineWidth = Math.max(0.06, 2 / scale);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    const middle = (d0 + d1) / 2;
+    for (let w = w0 + 1.5; w < w1 - 0.5; w += 3) {
+      const tip = at(middle + 0.35, w);
+      const left = at(middle - 0.25, w - 0.45);
+      const right = at(middle - 0.25, w + 0.45);
+      ctx.moveTo(left.x, left.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(right.x, right.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+    path(ctx, bank.shape);
+    ctx.strokeStyle = lawn.bank_line;
+    ctx.lineWidth = Math.max(0.04, 1.5 / scale);
+    ctx.stroke();
+  }
+}
+
+function gang(ctx: CanvasRenderingContext2D, car: Car, rig: Rig, scale: number, palette: Palette) {
+  const pose = cutter(car, rig);
+  const ball = hitch_point(car, rig.spec, 0);
+  const front = GANG.axle - GANG.drawbar;
+  const half = GANG.width / 2;
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = Math.max(0.06, 2 / scale);
+  ctx.beginPath();
+  for (const side of [-0.55, 0.55]) {
+    const foot = to_world(pose, { x: front, y: side });
+    ctx.moveTo(foot.x, foot.y);
+    ctx.lineTo(ball.x, ball.y);
+  }
+  ctx.stroke();
+  ctx.save();
+  ctx.translate(pose.x, pose.y);
+  ctx.rotate(pose.heading);
+  ctx.fillStyle = palette.shadow;
+  ctx.fillRect(front - GANG.box_length - 0.05, -half - 0.05, GANG.box_length + 0.1, GANG.width + 0.1);
+  for (const side of [-1, 1]) {
+    ctx.fillStyle = palette.tread;
+    ctx.fillRect(-GANG.wheel_diameter / 2, side * (GANG.track / 2) - GANG.wheel_width / 2, GANG.wheel_diameter, GANG.wheel_width);
+  }
+  ctx.fillStyle = palette.steel;
+  ctx.fillRect(front - 0.25, -half + 0.1, 0.16, GANG.width - 0.2);
+  const reels = [
+    { x: front - 0.35, y: 0, w: 1.1 },
+    { x: front - GANG.box_length + 0.55, y: -half + 0.55, w: 1.1 },
+    { x: front - GANG.box_length + 0.55, y: half - 0.55, w: 1.1 },
+  ];
+  for (const reel of reels) {
+    ctx.beginPath();
+    ctx.roundRect(reel.x - 0.5, reel.y - reel.w / 2, 0.5, reel.w, 0.12);
+    ctx.fillStyle = palette.player.body;
+    ctx.fill();
+    ctx.strokeStyle = palette.edge;
+    ctx.lineWidth = 1 / scale;
+    ctx.stroke();
+    if (scale > 10) {
+      ctx.beginPath();
+      for (let y = reel.y - reel.w / 2 + 0.12; y < reel.y + reel.w / 2 - 0.05; y += 0.12) {
+        ctx.moveTo(reel.x - 0.45, y);
+        ctx.lineTo(reel.x - 0.05, y + 0.06);
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, 0.11, 0, Math.PI * 2);
+  ctx.fillStyle = palette.ink;
+  ctx.fill();
+}
+
 export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view: View, palette: Palette, extras: Extras) {
   const { scale } = view;
   const { garden, grid } = state;
   const { lawn, layer } = extras;
+  const rig = rig_of(state.round);
   begin_frame(ctx, view, palette);
   fill(ctx, [
     { x: garden.bounds.x0, y: garden.bounds.y0 },
@@ -329,23 +474,26 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   patio(ctx, garden, scale, palette);
   beds(ctx, garden, scale, lawn);
 
-  layer.sync(grid, garden, lawn, scale * view.dpr, extras.settled);
+  layer.sync(grid, garden, lawn, scale * view.dpr, extras.settled, pattern_of(state.round) === Pattern.CHECKER);
   ctx.save();
   union(ctx, garden.lawn as Polygon[]);
   ctx.clip();
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(layer.canvas, 0, 0, layer.width, layer.height);
+  if (layer.crossed) ctx.drawImage(layer.overlay, 0, 0, layer.width, layer.height);
   ctx.restore();
+  banks(ctx, garden, scale, lawn);
 
   solids(ctx, garden.solids.filter((solid) => solid.kind === SolidKind.HEDGE || solid.kind === SolidKind.WATER), scale, palette);
   shed(ctx, garden, scale, palette);
   trunks(ctx, garden, lawn);
 
   const pulse = 0.5 + 0.5 * Math.sin(extras.time * 3);
-  if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, SPEC, scale, palette);
-  player(ctx, state.car, VEHICLE, SPEC, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
+  if (extras.guides && state.status === Status.DRIVING && state.car.gear !== Gear.PARK) guides(ctx, state.car, rig.spec, scale, palette);
+  if (rig.towed) gang(ctx, state.car, rig, scale, palette);
+  player(ctx, state.car, rig.vehicle, rig.cab, state.car.brake > 0.05 && state.car.gear !== Gear.PARK, scale, palette, extras.time);
   crowns(ctx, garden, scale, lawn);
-  if (extras.hitboxes) hitboxes(ctx, bodies(state.car, SPEC), scale, palette);
+  if (extras.hitboxes) hitboxes(ctx, bodies(state.car, rig.spec), scale, palette);
   if (bump_flash(state) && state.contact) contact_rings(ctx, state.contact, pulse, scale, palette);
 
   if (extras.uncut && state.status === Status.DRIVING) {

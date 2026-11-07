@@ -24,8 +24,9 @@
   import { SpeedChip } from "$kit/components/play2d";
   import { body_centre, Gear, max_steer, without_creep } from "../../core/vehicle";
   import type { GameProps } from "../define";
-  import { BED_COST } from "./coverage";
+  import { BED_COST, pattern_share } from "./coverage";
   import { deck_centre } from "./deck";
+  import { cutter } from "./rig";
   import { draw_scene, LawnLayer, read_lawn, type Lawn } from "./draw";
   import {
     advance,
@@ -37,12 +38,12 @@
     coverage,
     create_game,
     daily_round,
-    DECK,
     EMPTY,
     finish,
     FINISH,
     lawn_round,
     LEVEL_COUNT,
+    level_name,
     level_round,
     measure_fallback,
     Mode,
@@ -50,15 +51,19 @@
     nearest_uncut,
     overlap,
     OVERLAP_LIMIT,
+    pattern_name,
+    pattern_of,
+    PATTERN_SHARE,
     percent,
     record,
+    rig_of,
     round_key,
     round_title,
     saved_schema,
     set_status,
-    SPEC,
     stars,
     Status,
+    twist_notes,
     unlocked,
     type GameState,
     type Measured,
@@ -68,8 +73,6 @@
 
   const MODE_LABELS: Record<Mode, string> = { lawns: "Lawns", levels: "Levels" };
   const MODE_OPTIONS = (Object.keys(MODE_LABELS) as Mode[]).map((value) => ({ value, label: MODE_LABELS[value] }));
-  // Close enough to see the stripes line up with the last pass, far enough to see the next tree coming.
-  const SPAN = 16;
   const OVERVIEW_MARGIN = 0.6;
   const DAILY_MODE = "mower";
   // Past this much mown an arrow on the edge of the view leads to the nearest long grass left.
@@ -121,7 +124,14 @@
 
   // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its measure).
   const round = $derived(game.round);
-  const lock = $derived(max_steer(SPEC));
+  const rig = $derived(rig_of(round));
+  const spec = $derived(rig.spec);
+  const pattern = $derived(pattern_of(round));
+  const pattern_text = $derived(pattern ? pattern_name(pattern) : "");
+  const laid = $derived(pattern ? pattern_share(game.grid, pattern) : 0);
+  const notes = $derived(twist_notes(round));
+  const name = $derived(level_name(round));
+  const lock = $derived(max_steer(spec));
   const blocked = $derived(!win.is_focused || !win.is_visible);
   const driving = $derived(game.status === Status.DRIVING);
   const over = $derived(game.status === Status.DONE || game.status === Status.FLATTENED);
@@ -257,10 +267,10 @@
       const middle = { x: (bounds.x0 + bounds.x1) / 2, y: (bounds.y0 + bounds.y1) / 2 };
       return frame(bounds, middle, board_size.width, board_size.height, zoom, insets, fit_span(bounds, board_size.width, board_size.height, insets, OVERVIEW_MARGIN));
     }
-    const centre = body_centre(game.car, SPEC);
+    const centre = body_centre(game.car, spec);
     const ahead = game.car.speed * 0.8;
     const focus = { x: centre.x + Math.cos(game.car.heading) * ahead, y: centre.y + Math.sin(game.car.heading) * ahead };
-    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, SPAN);
+    return frame(bounds, focus, board_size.width, board_size.height, zoom, insets, rig.span);
   }
 
   function render(dt: number) {
@@ -276,7 +286,7 @@
     const now = performance.now();
     if (game.status !== Status.DRIVING || !game.measured || mown < POINT_FROM) uncut = null;
     else if (now - uncut_at > 400) {
-      uncut = nearest_uncut(game, deck_centre(game.car, DECK));
+      uncut = nearest_uncut(game, deck_centre(cutter(game.car, rig), rig.deck));
       uncut_at = now;
     }
     draw_scene(ctx, game, { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr }, palette, {
@@ -294,8 +304,8 @@
   function run(steps: number, dt: number) {
     let next = game;
     for (let i = 0; i < steps && next.status === Status.DRIVING; i++) {
-      input.step_wheel(dt, SPEC, settings.wheel);
-      next = advance(next, input.read(next.car.gear), dt, settings.creep ? SPEC : without_creep(SPEC));
+      input.step_wheel(dt, spec, settings.wheel);
+      next = advance(next, input.read(next.car.gear), dt, settings.creep ? spec : without_creep(spec));
     }
     input.follow(next.car.steer / lock);
     if (next === game) return;
@@ -587,12 +597,16 @@
           </div>
         </div>
         {#if game.status !== Status.DONE}
-          <div class="flex items-center gap-2 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-live="polite">
+          <div class="flex items-center gap-2 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui whitespace-nowrap tabular-nums backdrop-blur-[2px]" aria-live="polite">
             <span class={cn(finishable ? "text-success" : "text-foreground")}>Mown {mown_text}</span>
             <span class="relative h-1.5 w-14 overflow-hidden rounded-full bg-foreground/15" aria-hidden="true">
               <span class="absolute inset-y-0 left-0 rounded-full bg-success" style:width="{Math.min(100, (mown / FINISH) * 100)}%"></span>
             </span>
-            <span class={cn(lapped > OVERLAP_LIMIT ? "text-warning" : "text-foreground/65")}>overlap {Math.round(lapped * 100)}%</span>
+            {#if pattern}
+              <span class={cn(laid >= PATTERN_SHARE ? "text-success" : "text-foreground/65")}>{pattern_text} {Math.floor(laid * 100)}%</span>
+            {:else}
+              <span class={cn(lapped > OVERLAP_LIMIT ? "text-warning" : "text-foreground/65")}>overlap {Math.round(lapped * 100)}%</span>
+            {/if}
             {#if game.bumps > 0}<span class="text-warning">{bumps_text(game.bumps)}</span>{/if}
           </div>
         {/if}
@@ -617,14 +631,21 @@
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 flex-1 basis-52">
         <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
-          {round_title(game.round)} · {area} m²
+          {round_title(game.round)}{name ? ` · ${name}` : ""} · {area} m²
           {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
+        {#each notes as note (note)}
+          <p class="text-ui font-medium text-foreground">{note}</p>
+        {/each}
         <p class="text-ui text-foreground/80">
-          Mow {Math.round(FINISH * 100)}% of the lawn. Keep off the flowers: they cost lawn, and too many end it. A bump stops you: back off and carry on. Each one adds {BUMP_COST_MS / 1000} s.
+          {#if notes.length > 0}
+            Mow {Math.round(FINISH * 100)}% of the lawn{pattern ? ", then Finish" : ""}. Flowers and bumps cost as before.
+          {:else}
+            Mow {Math.round(FINISH * 100)}% of the lawn. Keep off the flowers: they cost lawn, and too many end it. A bump stops you: back off and carry on. Each one adds {BUMP_COST_MS / 1000} s.
+          {/if}
         </p>
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
-          Par {par_time ?? (measure_failed ? "–" : "…")} · overlap under {Math.round(OVERLAP_LIMIT * 100)}%{best ? ` · Best ${"★".repeat(best.stars)} ${format_time(best.ms, { tenths: true })}` : ""}
+          Par {par_time ?? (measure_failed ? "–" : "…")} · {pattern ? `${pattern_text} ${Math.round(PATTERN_SHARE * 100)}%` : `overlap under ${Math.round(OVERLAP_LIMIT * 100)}%`}{best ? ` · Best ${"★".repeat(best.stars)} ${format_time(best.ms, { tenths: true })}` : ""}
         </p>
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
@@ -634,7 +655,7 @@
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
         <KeyHint key_name="↑" text="forward" /><KeyHint key_name="↓" text="back" /><KeyHint key_name="← →" text="turn" /><KeyHint key_name="F" text="finish" />
       </p>
-      <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">{drive_note(SPEC)} Finish lights up at {Math.round(FINISH * 100)}%.</p>
+      <p class="basis-full text-2xs text-foreground/65 pointer-fine:hidden">{drive_note(spec) ?? ""} Finish lights up at {Math.round(FINISH * 100)}%.</p>
     </RoundCard>
   {:else if game.status === Status.PAUSED}
     <BoardOverlay title="Paused" detail="{time} · Mown {mown_text}">
@@ -650,7 +671,9 @@
           {#if new_best}<Badge class="ts-pop" tone={first_lawn ? "neutral" : "primary"}>{first_lawn ? "First lawn" : "New best"}</Badge>{/if}
         </p>
         <p class="font-mono text-2xs text-foreground/80 tabular-nums">
-          {time}{par_time ? ` (par ${par_time})` : ""} · mown {Math.floor(percent(mown))}% · overlap {Math.round(lapped * 100)}% (under {Math.round(OVERLAP_LIMIT * 100)})
+          {time}{par_time ? ` (par ${par_time})` : ""} · mown {Math.floor(percent(mown))}% · {pattern
+            ? `${pattern_text} ${Math.floor(laid * 100)}% (${Math.round(PATTERN_SHARE * 100)} asked)`
+            : `overlap ${Math.round(lapped * 100)}% (under ${Math.round(OVERLAP_LIMIT * 100)})`}
         </p>
         {#if game.bumps > 0}<p class="font-mono text-2xs text-warning tabular-nums">{bumps_text(game.bumps)}, +{(game.bumps * BUMP_COST_MS) / 1000} s on the time</p>{/if}
         {#if game.tally.trampled > 0}<p class="text-2xs text-warning">Flowers flattened: they took {Math.round(percent((game.tally.trampled * BED_COST) / Math.max(1, game.tally.coverable)))}% off.</p>{/if}
