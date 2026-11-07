@@ -10,6 +10,11 @@ export const CHANGELOG: Release[] = [
     title: "Drive Hub progress",
     changes: [
       {
+        kind: NEW,
+        apps: ["tight-spot"],
+        text: "Drive Hub has Yard Shunter: back a yard tractor under trailers, couple them and drop them square at dock doors, bays and the outbound lane, over twelve levels with a converter dolly and doubles, random jobs and a daily.",
+      },
+      {
         kind: IMPROVED,
         apps: ["tight-spot"],
         text: "Drive Hub's doorways show the stars you've earned in each game, and a licence card in the yard lists every game's stars and achievements.",

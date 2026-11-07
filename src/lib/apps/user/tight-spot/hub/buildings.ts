@@ -657,6 +657,44 @@ function test_centre(pen: Pen) {
   });
 }
 
+// The game's yard in small: a dock building along the back, trailers backed to its doors, the slot lines between.
+function freight_yard(pen: Pen) {
+  const { ctx, palette, line } = pen;
+  roof(pen, palette.asphalt);
+  fill_box(ctx, -7.4, -11.4, 7.4, -9.6, palette.pavement);
+  stroke_box(ctx, -7.4, -11.4, 7.4, -9.6, palette.wall_edge, Math.max(0.1, 2 / pen.scale));
+  ctx.strokeStyle = palette.paint;
+  ctx.lineWidth = 0.1;
+  ctx.beginPath();
+  for (const u of [-7, -3.4, 3.4, 7]) {
+    ctx.moveTo(u, -9.6);
+    ctx.lineTo(u, -0.6);
+  }
+  ctx.stroke();
+  const trailers: [number, number, string][] = [
+    [-5.2, -1.4, palette.info],
+    [0, -4, palette.warning],
+    [5.2, -1.4, palette.success],
+  ];
+  for (const [u, front, colour] of trailers) {
+    fill_box(ctx, u - 1.6, -9.6, u + 1.6, -9.35, palette.steel);
+    fill_box(ctx, u - 1.15, -9.4, u + 1.15, front, colour);
+    stroke_box(ctx, u - 1.15, -9.4, u + 1.15, front, palette.ink, line);
+    ctx.strokeStyle = palette.ink;
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    for (let v = -8.8; v < front - 0.3; v += 0.7) {
+      ctx.moveTo(u - 1, v);
+      ctx.lineTo(u + 1, v);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+    circle(ctx, u, front - 0.9, 0.16);
+    ctx.fillStyle = palette.ink;
+    ctx.fill();
+  }
+}
+
 function plain(pen: Pen) {
   const { ctx, palette, line } = pen;
   roof(pen);
@@ -694,6 +732,7 @@ const DRAW: Record<Building, (pen: Pen) => void> = {
   [Building.ARENA]: arena,
   [Building.VALET_STAND]: hotel,
   [Building.TEST_CENTRE]: test_centre,
+  [Building.FREIGHT_YARD]: freight_yard,
 };
 
 export function in_plan(ctx: CanvasRenderingContext2D, plot: Plot, draw: () => void) {

@@ -93,6 +93,7 @@ export function blueprint(building: Building | null): Blueprint {
     case Building.GARDEN:
       return { pieces: around(-7, 7, -10, SolidKind.HEDGE), u0: -7, u1: 7, back: -10 };
     case Building.APRON:
+    case Building.FREIGHT_YARD:
       return { pieces: around(-PLAN_HALF, PLAN_HALF, -PLAN_DEPTH), u0: -PLAN_HALF, u1: PLAN_HALF, back: -PLAN_DEPTH };
     case Building.FERRY:
       return { pieces: around(-PLAN_HALF, PLAN_HALF, -12.2, SolidKind.WATER), u0: -PLAN_HALF, u1: PLAN_HALF, back: -12 };

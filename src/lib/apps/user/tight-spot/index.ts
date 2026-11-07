@@ -23,7 +23,7 @@ export default define_app({
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional(),
     game: z.enum(GAME_CHOICES).optional(),
-    /** With `daily`, which game's daily (ADR-050): parking, the Warehouse, Hot Lap, Ferry Loader, Mow Day, Airport, Rodeo or Valet Rush. */
+    /** With `daily`, which game's daily (ADR-050): parking, the Warehouse, Hot Lap, Ferry Loader, Mow Day, Airport, Rodeo, Valet Rush or Yard Shunter. */
     mode: z.enum(DAILY_GAMES).optional(),
   }),
   daily_rank: {
@@ -35,6 +35,7 @@ export default define_app({
     airport: DailyRank.SCORE_ASC,
     rodeo: DailyRank.TIME,
     valet: DailyRank.SCORE_DESC,
+    shunter: DailyRank.SCORE_ASC,
   },
   achievements: GAMES.flatMap((game) => game.achievements),
   preview: () => import("./preview.webp?url"),

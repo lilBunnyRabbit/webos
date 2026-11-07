@@ -1,8 +1,8 @@
 ## Drive Hub
 
-Driving games in one small town. The app opens on the gate and the town square, your car at the gate; the view follows the car once you drive. A ring road runs round the square, and every game has a building on it, in its own district: the **Town** row (Tight Spot, Mow Day, Valet Rush, the Driving Test), **Sport** (Hot Lap, Rodeo), the **Waterfront** on the harbour (Ferry Loader, Airport) and the **Industrial** yard by the gate (the Warehouse).
+Driving games in one small town. The app opens on the gate and the town square, your car at the gate; the view follows the car once you drive. A ring road runs round the square, and every game has a building on it, in its own district: the **Town** row (Tight Spot, Mow Day, Valet Rush, the Driving Test), **Sport** (Hot Lap, Rodeo), the **Waterfront** on the harbour (Ferry Loader, Airport) and the **Industrial** yard by the gate (the Warehouse, Yard Shunter).
 
-- Each building looks like its game: a multi-storey car park for **Tight Spot**, a shed with loading docks for the **Warehouse**, a kart circuit for **Hot Lap**, a ferry berth for **Ferry Loader**, a walled garden for **Mow Day**, a stand with a parked jet for **Airport**, a fenced arena for **Rodeo**, a hotel with a valet canopy for **Valet Rush** and a test centre with practice roads for the **Driving Test**. From afar its name is on the roof; close up a lit sign in the doorway names it. Drive into the lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway.
+- Each building looks like its game: a multi-storey car park for **Tight Spot**, a shed with loading docks for the **Warehouse**, a dock with trailers backed to it for **Yard Shunter**, a kart circuit for **Hot Lap**, a ferry berth for **Ferry Loader**, a walled garden for **Mow Day**, a stand with a parked jet for **Airport**, a fenced arena for **Rodeo**, a hotel with a valet canopy for **Valet Rush** and a test centre with practice roads for the **Driving Test**. From afar its name is on the roof; close up a lit sign in the doorway names it. Drive into the lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway.
 - A game with levels shows your stars on its doorway sign and on the doorway card: earned out of all there are.
 - The **licence** card (the ID card at the right of the yard's toolbar) lists every game with its stars and the achievements you've unlocked.
 - **Games** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
@@ -120,6 +120,18 @@ Move pallets with a forklift. A job is one to four pallets, each to be taken fro
 - **Jobs:** a random warehouse and job of the size you pick, one to four pallets. **New** deals another.
 - **Levels:** 16 jobs, four of each size, the aisles and bays tighter as you go. Finish one to open the next.
 - **Daily:** the same three-pallet job for everyone today. Game Hub lists it as Drive Hub · Forklift, next to Tight Spot's daily.
+
+## Yard Shunter
+
+Move trailers round a freight yard with a yard shunter, the short tractor with a fifth wheel behind its cab. The dock doors are along the top, the trailer bays along the bottom, the aisle between. The start card lists the job: each trailer, where it stands and where it goes (*Trailer 930: Door 6 → Bay 6*). The trailer in hand pulses with its kingpin ringed; its target glows.
+
+- **Couple:** turn the shunter to face away from the trailer, line up with its kingpin (the ringed dot at its front) and back straight under it. Within a few centimetres and roughly square it latches by itself with a clunk. Off to the side, the shunter slides under the trailer's front until it meets the landing legs: pull forward and line up again. The hint says how far off you are.
+- **Tow and back in:** a trailer goes into a door or a bay tail first. Drive along the aisle past the slot, then back in, steering the trailer round with small turns of the wheel: the trailer turns the other way to the wheel when you reverse. If it folds too far, drive forward to straighten it.
+- **Drop:** once the whole trailer is inside its target and straight, stop and press **F** or **Space**, or tap **Drop**.
+- **Dolly and doubles:** a trailer on a converter dolly, and a double (two trailers with a dolly between), can't be backed. Pull them out of their lane and drive them forward into the outbound box.
+- **Bumps:** nothing ends the job. Touch a wall, a dock bumper or a trailer, or fold a trailer too far, and the rig stops where it was; back off and carry on. Each bump adds 5 seconds.
+- Three stars: the job done, the moves (changes between D and R) at or under par, the time at or under the par time the computer works out by doing the job itself. Precision scores how centred and square each drop is.
+- **Modes:** Levels (12, each bringing something new: tighter rows, a dolly, doubles), Jobs (one to four drops, **New** deals another) and a **Daily** of three, listed in Game Hub as Drive Hub · Shunter.
 
 ## Hot Lap: the race track
 

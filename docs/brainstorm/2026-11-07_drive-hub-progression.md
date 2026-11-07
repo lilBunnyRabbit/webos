@@ -86,7 +86,7 @@ Build everything and push in groups, asking before each push:
 - [ ] Rodeo and Hot Lap ladders.
 - [ ] Driving Test and Valet Rush ladders.
 - [ ] Ferry, Mow Day and Airport levels that introduce things.
-- [ ] Yard Shunter with core coupling.
+- [x] Yard Shunter with core coupling.
 
 Order:
 - The track refactor goes first; the ladders follow on top of it, one builder per game group, in parallel.

@@ -83,6 +83,7 @@ const DISTRICTS: Record<string, District> = {
   ferry: District.WATERFRONT,
   airport: District.WATERFRONT,
   forklift: District.INDUSTRIAL,
+  shunter: District.INDUSTRIAL,
 };
 
 export function district_of(id: string): District {
