@@ -14,7 +14,19 @@ import { obstacles } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
 import { bodies, create_car, Gear, rig_ends, to_world } from "../../core/vehicle";
-import { aircraft_parts, grow, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, SPAN, TAIL } from "./aircraft";
+import {
+  aircraft_parts,
+  Fleet,
+  grow,
+  is_high,
+  NARROWBODY,
+  NOSE,
+  NOSE_GEAR,
+  pose_from_nose_gear,
+  SPAN,
+  TAIL,
+  type Airframe,
+} from "./aircraft";
 import {
   finish_apron,
   frame_apron,
@@ -279,17 +291,18 @@ function in_push(frame: Frame, shape: Polygon): boolean {
  * Tow to gate: our stand is the gate, empty with its bridge pulled back; the aircraft waits on a remote stand past the
  * taxiway facing it, the tug ahead on a towbar.
  */
-export function build_tow(seed: number, difficulty: number, hitch: number): Apron {
+export function build_tow(seed: number, difficulty: number, hitch: number, airframe: Airframe = NARROWBODY): Apron {
   const rng = create_rng(hash(seed, 0x70e1));
   const t = difficulty;
+  const wide = airframe.fleet === Fleet.WIDE;
   const side = rng() < 0.5 ? -1 : 1;
-  const distance = lerp(78, 50, t) + rng() * 8;
+  const distance = (wide ? lerp(100, 78, t) : lerp(78, 50, t)) + rng() * 8;
   const remote_x = side * distance;
   const gap = 26 + rng() * 3;
-  const far = gap + (NOSE_GEAR - TAIL) + 9 + rng() * 2;
-  const spacing = lerp(54, 45, t);
+  const far = gap + (airframe.nose_gear - airframe.tail) + 9 + rng() * 2;
+  const spacing = wide ? lerp(64, 56, t) : lerp(54, 45, t);
   const reach: [number, number] = [Math.min(-60, remote_x - spacing - 24), Math.max(60, remote_x + spacing + 24)];
-  const frame = frame_apron(seed, difficulty, { far, reach });
+  const frame = frame_apron(seed, difficulty, { far, reach, airframe });
   const nose_gear = { x: remote_x, y: frame.centreline + gap };
   for (const k of [-1, 0, 1]) {
     const at = { x: remote_x + k * spacing, y: nose_gear.y };
@@ -297,7 +310,7 @@ export function build_tow(seed: number, difficulty: number, hitch: number): Apro
     if (k !== 0 && rng() < lerp(0.4, 0.85, t)) frame.parked.push(pose_from_nose_gear(at, NORTH));
   }
   frame.start = { x: remote_x, y: nose_gear.y - hitch, heading: NORTH };
-  frame.aircraft = pose_from_nose_gear(nose_gear, NORTH);
+  frame.aircraft = pose_from_nose_gear(nose_gear, NORTH, airframe);
   frame.stop = { x: 0, y: frame.nose_gear_y };
   frame.heading = NORTH;
   return finish_apron(frame);

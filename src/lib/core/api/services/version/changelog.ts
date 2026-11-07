@@ -35,6 +35,11 @@ export const CHANGELOG: Release[] = [
         text: "Drive Hub Ferry Loader has nine new levels that bring in trucks with semi-trailers, caravans, a linkspan set at an angle by the tide, and an upper car deck up an internal ramp.",
       },
       {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub Airport has nine new levels: push back and tow a widebody with its heavy tug, and push an aircraft round a bend in the taxiway.",
+      },
+      {
         kind: FIXED,
         apps: ["tight-spot"],
         text: "Drive Hub Airport's Ramp lead achievement counts the levels of all four jobs, not only the pushbacks.",

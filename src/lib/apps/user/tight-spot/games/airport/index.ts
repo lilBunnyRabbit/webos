@@ -13,7 +13,7 @@ export default define_game({
     { id: "airport-tow", title: "Towed in", text: "Tow an aircraft from a remote stand onto its gate." },
     { id: "airport-turnaround", title: "Turned around", text: "Finish a turnaround: the bags, then the push." },
     { id: "airport-by-the-book", title: "Cleared on time", text: "Earn three stars on any airport job." },
-    { id: "airport-levels", title: "Ramp lead", text: "Finish every airport level, all four jobs.", goal: 36 },
+    { id: "airport-levels", title: "Ramp lead", text: "Finish every airport level, all four jobs.", goal: 45 },
     { id: "airport-daily", title: "Daily departure", text: "Finish the daily turnaround." },
   ],
   load: () => import("./game.svelte"),

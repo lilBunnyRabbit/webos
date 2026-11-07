@@ -21,8 +21,8 @@ import {
   type Placement,
   type VehicleSpec,
 } from "../../core/vehicle";
-import { AircraftPart, aircraft_parts, grow, is_high, nose_gear, SHAPES } from "./aircraft";
-import { build_apron, my_stand, Part, type Apron } from "./apron";
+import { AIRFRAMES, AircraftPart, aircraft_parts, Fleet, grow, is_high, nose_gear, WIDEBODY, type Airframe } from "./aircraft";
+import { build_apron, facing, my_stand, Part, type Apron } from "./apron";
 import { build_baggage, build_tow, remote_stand } from "./ramp";
 import { BAGGAGE, judge_train, PARALLEL, train_done } from "./train";
 
@@ -62,6 +62,29 @@ export const TOW: VehicleSpec = {
   hitches: [{ ...PUSHBACK.hitches[0], hitch: 6.6, rest: 0 }],
 };
 
+const HEAVY_TUG: VehicleSpec = {
+  ...PUSHBACK,
+  length: 6.4,
+  width: 2.9,
+  wheelbase: 3.4,
+  rear_overhang: 1.4,
+  track: 2.4,
+  wheel_diameter: 1.05,
+  wheel_width: 0.42,
+  turning_radius: 7.8,
+  steer_time: 2.8,
+  max_forward: 1.8,
+  max_reverse: 1,
+  accel: 0.6,
+  brake: 2.4,
+};
+export const WIDE_PUSH: VehicleSpec = { ...HEAVY_TUG, hitches: [WIDEBODY.link] };
+export const WIDE_TOW: VehicleSpec = {
+  ...HEAVY_TUG,
+  max_forward: 2,
+  hitches: [{ ...WIDEBODY.link, hitch: 8.7, rest: 0 }],
+};
+
 export const STOP_ALONG = 1;
 export const ON_LINE = 0.5;
 export const MAX_ANGLE = (5 * Math.PI) / 180;
@@ -72,6 +95,8 @@ export interface Round {
   difficulty: number;
   level?: number;
   daily?: string;
+  fleet?: Fleet;
+  corner?: boolean;
 }
 
 export const Ours = { TUG: "tug", TRAIN: "train", ...AircraftPart } as const;
@@ -103,11 +128,13 @@ export interface GameState {
   loaded: boolean;
 }
 
-export function build_job(round: Pick<Round, "job" | "seed" | "difficulty">): Apron {
+export function build_job(round: Pick<Round, "job" | "seed" | "difficulty" | "fleet" | "corner">): Apron {
+  const airframe = AIRFRAMES[round.fleet ?? Fleet.NARROW];
   if (round.job === Job.BAGGAGE) return build_baggage(round.seed, round.difficulty);
   if (round.job === Job.TURNAROUND) return build_baggage(round.seed, round.difficulty, { push: true });
-  if (round.job === Job.TOW) return build_tow(round.seed, round.difficulty, TOW.hitches[0].hitch);
-  return build_apron(round.seed, round.difficulty);
+  if (round.job === Job.TOW)
+    return build_tow(round.seed, round.difficulty, rig_spec(Phase.TOW, airframe).hitches[0].hitch, airframe);
+  return build_apron(round.seed, round.difficulty, { airframe, corner: round.corner });
 }
 
 function phase_of(job: Job): Phase {
@@ -115,7 +142,14 @@ function phase_of(job: Job): Phase {
   return job === Job.TOW ? Phase.TOW : Phase.PUSH;
 }
 
-const SPECS: Record<Phase, VehicleSpec> = { bags: BAGGAGE, push: SPEC, tow: TOW };
+const SPECS: Record<Fleet, Record<Phase, VehicleSpec>> = {
+  narrow: { bags: BAGGAGE, push: SPEC, tow: TOW },
+  wide: { bags: BAGGAGE, push: WIDE_PUSH, tow: WIDE_TOW },
+};
+
+export function rig_spec(phase: Phase, airframe: Airframe): VehicleSpec {
+  return SPECS[airframe.fleet][phase];
+}
 
 function scene_of(apron: Apron, phase: Phase): Scene {
   return phase === Phase.BAGS ? { solids: [...apron.solids, ...apron.ours] } : apron;
@@ -131,7 +165,7 @@ export function create_game(round: Round): GameState {
 }
 
 function enter(apron: Apron, round: Round, phase: Phase): GameState {
-  const spec = SPECS[phase];
+  const spec = rig_spec(phase, apron.airframe);
   return {
     round,
     apron,
@@ -186,14 +220,15 @@ export function near_of({ scene, apron }: Pick<GameState, "scene" | "apron">): N
 export function contact(near: Near, apron: Apron, car: Placement, margin = 0, spec: VehicleSpec = SPEC): Contact | null {
   const tug = collide_shape(grow(corners(car, spec), margin), near.low);
   if (tug) return { at: tug.at, hit: { kind: apron.parts.get(tug.solid) ?? Part.TERMINAL, by: Ours.TUG } };
-  const parts = aircraft_parts(aircraft_pose(car, spec), margin);
+  const { airframe } = apron;
+  const parts = aircraft_parts(aircraft_pose(car, spec), margin, airframe);
   for (let i = parts.length - 1; i >= 0; i--) {
+    const part = airframe.shapes[i].part;
     // The fuselage stands taller than a neighbour's wing root, so it meets both heights.
     const found =
-      collide_shape(parts[i], is_high(i) ? near.high : near.low) ??
-      (SHAPES[i].part === AircraftPart.FUSELAGE ? collide_shape(parts[i], near.high) : null);
-    if (found)
-      return { at: found.at, hit: { kind: apron.parts.get(found.solid) ?? Part.TERMINAL, by: SHAPES[i].part } };
+      collide_shape(parts[i], is_high(i, airframe) ? near.high : near.low) ??
+      (part === AircraftPart.FUSELAGE ? collide_shape(parts[i], near.high) : null);
+    if (found) return { at: found.at, hit: { kind: apron.parts.get(found.solid) ?? Part.TERMINAL, by: part } };
   }
   return null;
 }
@@ -219,7 +254,7 @@ export function hitbox_shapes(state: Pick<GameState, "phase" | "car" | "spec" | 
   const near = near_of(state);
   return [
     corners(state.car, state.spec),
-    ...aircraft_parts(aircraft_pose(state.car, state.spec)),
+    ...aircraft_parts(aircraft_pose(state.car, state.spec), 0, state.apron.airframe),
     ...vehicle_solids(near.low.solids),
     ...vehicle_solids(near.high.solids),
     ...ground_vehicles(near.low.solids, state.apron),
@@ -244,7 +279,7 @@ export function advance(state: GameState, input: Input, dt: number, spec: Vehicl
       car: { ...car, speed: 0 },
       ms,
       status: Status.CRASHED,
-      contact: aircraft ? nose_gear(aircraft_pose(car, state.spec)) : car,
+      contact: aircraft ? nose_gear(aircraft_pose(car, state.spec), state.apron.airframe) : car,
       hit: aircraft ? { kind: STEERING, by: Ours.TUG } : { kind: JACKKNIFE, by: Ours.TRAIN, hinge: folded },
     };
   }
@@ -267,7 +302,7 @@ export interface Judged {
 /** The aircraft against its stop mark: pushed tail first onto the taxiway, or towed nose first up to the gate. */
 export function judge(apron: Apron, car: Placement, spec: VehicleSpec = SPEC): Judged {
   const pose = aircraft_pose(car, spec);
-  const gear = nose_gear(pose);
+  const gear = nose_gear(pose, apron.airframe);
   const heading = apron.heading;
   const moving = spec.hitches[0].rest ? heading + Math.PI : heading;
   const off = (p: Vec) =>
@@ -346,7 +381,7 @@ export function to_mark(state: GameState): number {
     const judged = judge_train(state.car, state.apron.train!.mark, state.apron.train!.heading);
     return Math.hypot(judged.along, judged.across);
   }
-  const { x, y } = nose_gear(aircraft_pose(state.car, state.spec));
+  const { x, y } = nose_gear(aircraft_pose(state.car, state.spec), state.apron.airframe);
   return Math.hypot(x - state.apron.stop.x, y - state.apron.stop.y);
 }
 
@@ -374,8 +409,6 @@ export const save_schema = z.object({
 export type Save = z.infer<typeof save_schema>;
 export const EMPTY_SAVE: Save = { best: {}, levels: {} };
 
-export { better };
-
 export function round_key(round: Round): string {
   if (round.daily) return `daily:${round.daily}`;
   if (round.level !== undefined) return `${round.job}:level:${round.level}`;
@@ -394,14 +427,61 @@ export function record(save: Save, round: Round, result: Result): Recorded {
   return { save: { best: kept.bests, levels }, improved: kept.improved, first: kept.first };
 }
 
-export const LEVEL_COUNTS: Record<Job, number> = { pushback: 12, baggage: 8, tow: 8, turnaround: 8 };
+interface Later {
+  difficulty: number;
+  fleet?: Fleet;
+  corner?: boolean;
+}
+
+// Later levels come after the first ones so saved stars stay on their levels.
+const FIRST: Record<Job, number> = { pushback: 12, baggage: 8, tow: 8, turnaround: 8 };
+const LATER: Record<Job, Later[]> = {
+  pushback: [
+    { difficulty: 0.15, fleet: Fleet.WIDE },
+    { difficulty: 0.75, fleet: Fleet.WIDE },
+    { difficulty: 0.15, corner: true },
+    { difficulty: 0.75, corner: true },
+    { difficulty: 0.3, fleet: Fleet.WIDE, corner: true },
+    { difficulty: 1, fleet: Fleet.WIDE, corner: true },
+  ],
+  baggage: [],
+  tow: [
+    { difficulty: 0.15, fleet: Fleet.WIDE },
+    { difficulty: 0.6, fleet: Fleet.WIDE },
+    { difficulty: 1, fleet: Fleet.WIDE },
+  ],
+  turnaround: [],
+};
+
+export const LEVEL_COUNTS = Object.fromEntries(
+  Object.entries(FIRST).map(([job, count]) => [job, count + LATER[job as Job].length])
+) as Record<Job, number>;
 const JOB_SALT: Record<Job, number> = { pushback: 0, baggage: 0xba6, tow: 0x70e, turnaround: 0x7a0 };
 
 export function level_round(level: number, job: Job = Job.PUSHBACK): Round {
-  const count = LEVEL_COUNTS[job];
-  const index = Math.max(0, Math.min(count - 1, level - 1));
+  const index = Math.max(0, Math.min(LEVEL_COUNTS[job] - 1, level - 1));
   const seed = job === Job.PUSHBACK ? hash(0x9b5c, index) : hash(0x9b5c, JOB_SALT[job], index);
-  return { job, level: index + 1, difficulty: index / (count - 1), seed };
+  const first = FIRST[job];
+  if (index < first) return { job, level: index + 1, difficulty: index / (first - 1), seed };
+  const later = LATER[job][index - first];
+  return {
+    job,
+    level: index + 1,
+    difficulty: later.difficulty,
+    seed,
+    ...(later.fleet ? { fleet: later.fleet } : {}),
+    ...(later.corner ? { corner: true } : {}),
+  };
+}
+
+export function level_tag(round: Pick<Round, "fleet" | "corner">): string | null {
+  const tags = [round.fleet === Fleet.WIDE ? "widebody" : null, round.corner ? "corner" : null].filter(Boolean);
+  return tags.length ? tags.join(", ") : null;
+}
+
+export function level_name(level: number, job: Job): string {
+  const tag = level_tag(level_round(level, job));
+  return tag ? `Level ${level} · ${tag}` : `Level ${level}`;
 }
 
 export function job_levels(save: Save, job: Job): Record<string, number> {
@@ -453,7 +533,7 @@ export function crash_title(hit: Hit | null): string {
 
 export function round_title(round: Round): string {
   if (round.daily) return "Daily turnaround";
-  if (round.level !== undefined) return `${JOB_NAMES[round.job]} · level ${round.level}`;
+  if (round.level !== undefined) return `${JOB_NAMES[round.job]} · ${level_name(round.level, round.job).toLowerCase()}`;
   return JOB_NAMES[round.job];
 }
 
@@ -462,7 +542,9 @@ export function clearance(state: Pick<GameState, "apron" | "phase" | "round">): 
   const stand = my_stand(apron).number;
   if (state.phase === Phase.BAGS)
     return `Bags for ${apron.callsign}, stand ${stand}, aft hold. Train cleared to the aircraft.`;
+  const callsign = apron.airframe.fleet === Fleet.WIDE ? `${apron.callsign} heavy` : apron.callsign;
   if (state.phase === Phase.TOW)
-    return `${apron.callsign}, tow approved, remote stand R${remote_stand(apron)} to stand ${stand}.`;
-  return `${apron.callsign}, stand ${stand}, push back approved, face ${apron.face}.`;
+    return `${callsign}, tow approved, remote stand R${remote_stand(apron)} to stand ${stand}.`;
+  if (apron.bend) return `${callsign}, stand ${stand}, push back approved round the corner, face north.`;
+  return `${callsign}, stand ${stand}, push back approved, face ${facing(apron)}.`;
 }

@@ -50,7 +50,7 @@ describe("progress", () => {
     expect(ferry.read({ bests: {}, levels: { 1: 3, 2: 2 } })).toEqual({ stars: 5, total: 63 });
     expect(ferry.read(null)).toEqual({ stars: 0, total: 63 });
     expect(ferry.read({ levels: { 1: 9 } })).toEqual({ stars: 0, total: 63 });
-    expect(airport.read({ best: {}, levels: { pushback: { 1: 3 }, tow: { 2: 1 } } })).toEqual({ stars: 4, total: 108 });
+    expect(airport.read({ best: {}, levels: { pushback: { 1: 3 }, tow: { 2: 1 } } })).toEqual({ stars: 4, total: 135 });
     expect(parking.read({ bests: {}, levels: { 1: 2 }, kinds: [], extreme: { planks: 3 } })).toEqual({ stars: 5, total: (PARKING_COUNT + COURSES.length) * 3 });
     const pass = { passed: true, serious: 0, dangerous: 0, ms: 1000 };
     expect(test_progress.read({ best: { market: { ...pass, minors: 0 }, "level-4": { ...pass, minors: 7 }, school: { ...pass, passed: false, minors: 0 } } })).toEqual({ stars: 4, total: 36 });

@@ -208,7 +208,7 @@ Work the apron. Pick a job at the top: **Pushback**, **Baggage run**, **Tow to g
 - **Tow to gate.** Tow the aircraft nose first from its remote stand across the taxiway and up to the gate, nose gear on the **STOP** bar, lined up with the lead-in line. Swing wide round corners: the aircraft's wheels cut inside the tug's.
 - **Turnaround.** The whole job: deliver the bags, then the train leaves and you're in the pushback tug at the nose. Press **Push back** and push it off. The clock runs across both parts and stops while the card is up.
 - Stop on the mark and press **P** or **Space** (or **Enter**). Off the mark, a line at the bottom says what's off.
-- Three stars: one for the job, one for never changing direction, one for the time at or under par. Each job has its own levels, tighter and tighter. The **Daily** is the same turnaround for everyone; Game Hub lists it as Drive Hub · Airport.
+- Three stars: one for the job, one for never changing direction, one for the time at or under par. Each job has its own levels, tighter and tighter. Later Pushback and Tow to gate levels bring in a **widebody** (twice the span, a heavy tug that is slow to steer and stop) and a **push round a corner**, where the taxiway bends away from the terminal and the stop bar is past the bend: keep the main gear on the centreline round the turn. The **Daily** is the same turnaround for everyone; Game Hub lists it as Drive Hub · Airport.
 
 ## Driving Test
 

@@ -26,8 +26,8 @@
   import { SpeedChip } from "$kit/components/play2d";
   import { bodies, Gear, max_steer, trailer_pose, without_creep } from "../../core/vehicle";
   import type { GameProps } from "../define";
-  import { aircraft_parts, pose_from_nose_gear, SPAN } from "./aircraft";
-  import { my_stand } from "./apron";
+  import { aircraft_parts, Fleet, pose_from_nose_gear } from "./aircraft";
+  import { facing, my_stand } from "./apron";
   import { draw_scene } from "./draw";
   import {
     advance,
@@ -44,6 +44,7 @@
     job_levels,
     job_schema,
     LEVEL_COUNTS,
+    level_name,
     level_round,
     Mode,
     mode_schema,
@@ -57,7 +58,6 @@
     set_status,
     stars,
     Status,
-    STEERING_LIMIT,
     stop_hint,
     to_mark,
     unlocked,
@@ -73,13 +73,10 @@
   const JOB_OPTIONS = JOBS.map((value) => ({ value, label: JOB_NAMES[value] }));
   const RANDOM = "random";
   const RANDOM_OPTION = [{ value: RANDOM, label: "Random" }];
-  // Wide enough for both wingtips with room to see what they pass, whichever way the aircraft points.
-  const VIEW_SPAN = SPAN + 18;
   // The train is short, but it weaves between wingtips: enough to see the next gap.
   const TRAIN_SPAN = 34;
   const OVERVIEW_MARGIN = 6;
   const DAILY_MODE = "airport";
-  const LIMIT_DEGREES = (STEERING_LIMIT * 180) / Math.PI;
 
   const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
@@ -94,7 +91,7 @@
       "airport.mode": mode_schema.catch(Mode.RANDOM),
     })
     .parse(untrack(() => prefs.value));
-  const level_schema = z.number().int().min(1).max(12).catch(1);
+  const level_schema = z.number().int().min(1).max(Math.max(...Object.values(LEVEL_COUNTS))).catch(1);
 
   let daily = $state<string | null>(daily_day ?? null);
   let job = $state<Job>(stored["airport.job"]);
@@ -143,7 +140,8 @@
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
   const wheel_degrees = $derived(Math.round((game.car.steer / lock) * 450));
   const nose = $derived(towing ? Math.round(nose_steer(game.car, spec)) : 0);
-  const nose_warning = $derived(Math.abs(nose) > LIMIT_DEGREES - 15);
+  const limit_degrees = $derived((spec.hitches[0]?.max_angle ?? 0) * (180 / Math.PI));
+  const nose_warning = $derived(Math.abs(nose) > limit_degrees - 15);
   const mark = $derived(to_mark(game));
   const time = $derived(format_time(game.ms, { tenths: true }));
   const par_time = $derived(par ? format_time(par.ms) : null);
@@ -152,7 +150,7 @@
       ? `Aft hold · ${Math.round(mark)} m`
       : game.phase === Phase.TOW
         ? `Stand ${my_stand(game.apron).number} · stop mark ${Math.round(mark)} m`
-        : `${game.apron.face === "west" ? "Face west" : "Face east"} · stop mark ${Math.round(mark)} m`
+        : `Face ${facing(game.apron)} · stop mark ${Math.round(mark)} m`
   );
   const brief = $derived(
     game.phase === Phase.BAGS
@@ -162,6 +160,14 @@
         : game.loaded
           ? "Now push the aircraft onto the taxiway, nose gear on the stop mark. Any touch ends the round."
           : "Push the aircraft onto the taxiway, nose gear on the stop mark. Any touch ends the push."
+  );
+  const novelty = $derived(
+    [
+      game.round.fleet === Fleet.WIDE ? `A widebody: its wingtips reach ${Math.round(game.apron.airframe.span / 2)} m out, and the heavy tug is slow to steer.` : "",
+      game.apron.bend ? "The taxiway bends away from the terminal: follow the centreline round the turn to the stop mark." : "",
+    ]
+      .filter(Boolean)
+      .join(" ")
   );
 
   function stored_level(which: Job): number {
@@ -268,8 +274,8 @@
   function overview(): Vec[] {
     const { apron } = game;
     if (game.phase === Phase.BAGS) return [...bodies(game.car, spec).flat(), ...aircraft_parts(apron.aircraft).flat(), apron.train!.mark];
-    const goal = pose_from_nose_gear(apron.stop, apron.heading);
-    return [...aircraft_parts(aircraft_pose(game.car, spec)), ...aircraft_parts(goal)].flat();
+    const goal = pose_from_nose_gear(apron.stop, apron.heading, apron.airframe);
+    return [...aircraft_parts(aircraft_pose(game.car, spec), 0, apron.airframe), ...aircraft_parts(goal, 0, apron.airframe)].flat();
   }
 
   function target_camera(): Camera {
@@ -287,7 +293,8 @@
     }
     const plane = aircraft_pose(game.car, spec);
     const focus = { x: (plane.x * 3 + game.car.x) / 4, y: (plane.y * 3 + game.car.y) / 4 };
-    return frame(apron.bounds, focus, board_size.width, board_size.height, zoom, insets, VIEW_SPAN);
+    // Wide enough for both wingtips with room to see what they pass, whichever way the aircraft points.
+    return frame(apron.bounds, focus, board_size.width, board_size.height, zoom, insets, apron.airframe.span + 18);
   }
 
   function render(dt: number) {
@@ -557,6 +564,7 @@
     open={Math.max(max_level, mode === Mode.LEVELS ? level : 1)}
     stars={(at) => job_levels(save.value, job)[at] ?? 0}
     value={mode === Mode.LEVELS ? String(level) : RANDOM}
+    name={(at) => level_name(at, job)}
     onpick={set_round}
   />
 {/snippet}
@@ -612,7 +620,7 @@
         <SpeedChip class="hidden pointer-coarse:block" speed={game.car.speed} />
         {#if towing}<div
           class={cn("rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", nose_warning ? "text-warning" : "text-foreground/80")}
-          title="The nose gear's angle: past {Math.round(LIMIT_DEGREES)}° it breaks the towbar"
+          title="The nose gear's angle: past {Math.round(limit_degrees)}° it breaks the towbar"
         >
           Nose {Math.abs(nose)}°{nose > 1 ? " R" : nose < -1 ? " L" : ""}
         </div>{/if}
@@ -633,6 +641,7 @@
           {#if level_best && !game.loaded}{@render star_row(level_best, false)}{/if}
         </p>
         <p class="text-ui text-foreground/80">“{clearance}”</p>
+        {#if novelty && !game.loaded}<p class="text-2xs font-medium text-primary">{novelty}</p>{/if}
         <p class="text-2xs text-foreground/65">{brief}</p>
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
           Par {par_time ?? (par_failed ? "none" : "…")}{best ? ` · Best ${"★".repeat(best.stars)} ${format_time(best.ms, { tenths: true })}` : ""}

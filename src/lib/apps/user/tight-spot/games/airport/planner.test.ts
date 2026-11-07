@@ -13,9 +13,7 @@ import {
   near_of,
   phase_done,
   random_round,
-  SPEC,
   swap_to_push,
-  TOW,
   type GameState,
 } from "./game";
 import { job_par, par_of, plan_bags, plan_push, plan_tow } from "./plan";
@@ -41,7 +39,7 @@ function prove_push(state: GameState): string | null {
   const found = plan_push(state);
   if (!found) return "no push found";
   if (par_of(found).ms < 30_000) return "par too short";
-  return replay(state, found.moves, SPEC);
+  return replay(state, found.moves, state.spec);
 }
 
 // The baggage driver steps with the real bodies and no margin already, so its run is the proof.
@@ -52,7 +50,8 @@ function prove_bags(state: GameState): string | null {
 }
 
 describe("every pushback can be done from the tug's start", () => {
-  for (const level of [1, 6, 12]) {
+  // 13 brings in the widebody, 15 the corner, 18 is both at their tightest.
+  for (const level of [1, 6, 12, 13, 15, 18]) {
     test(`level ${level}`, { timeout: 20_000 }, () => {
       expect(prove_push(create_game(level_round(level)))).toBeNull();
     });
@@ -72,12 +71,12 @@ describe("every baggage run can be driven forward", () => {
 });
 
 describe("every tow reaches its gate", () => {
-  test("levels 1 and 8, a random tow", { timeout: 20_000 }, () => {
-    for (const round of [level_round(1, Job.TOW), level_round(8, Job.TOW), random_round(31, Job.TOW)]) {
+  test("levels 1 and 8, the widebody's first and hardest, a random tow", { timeout: 20_000 }, () => {
+    for (const round of [level_round(1, Job.TOW), level_round(8, Job.TOW), level_round(9, Job.TOW), level_round(11, Job.TOW), random_round(31, Job.TOW)]) {
       const state = create_game(round);
       const found = plan_tow(state);
       expect(found, `seed ${round.seed}`).not.toBeNull();
-      expect(replay(state, found!.moves, TOW), `seed ${round.seed}`).toBeNull();
+      expect(replay(state, found!.moves, state.spec), `seed ${round.seed}`).toBeNull();
     }
   });
 });

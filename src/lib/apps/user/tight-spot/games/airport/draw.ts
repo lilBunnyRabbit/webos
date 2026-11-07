@@ -4,10 +4,10 @@ import { type Palette } from "$kit/games/play2d/palette";
 import { bay_pointer, contact_rings, guides, hitboxes, outlined, player } from "../../core/draw";
 import { flashes } from "../../core/draw-vehicles";
 import { oriented_box, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
-import { Gear, to_world, Vehicle, type VehicleSpec } from "../../core/vehicle";
-import { AircraftPart, aircraft_parts, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, SHAPES, TAIL } from "./aircraft";
+import { Gear, to_world, Vehicle } from "../../core/vehicle";
+import { AircraftPart, aircraft_parts, is_high, NARROWBODY, pose_from_nose_gear, type Airframe } from "./aircraft";
 import { KitKind, tunnel, type Apron, type Kit } from "./apron";
-import { aircraft_pose, hitbox_shapes, Phase, SPEC, Status, type GameState } from "./game";
+import { aircraft_pose, hitbox_shapes, Phase, Status, type GameState } from "./game";
 import { BAGGAGE, MIDDLE } from "./train";
 
 export interface Extras {
@@ -18,7 +18,6 @@ export interface Extras {
   font: string;
 }
 
-const TUG_ALONE: VehicleSpec = { ...SPEC, hitches: [] };
 const CART = BAGGAGE.hitches[MIDDLE];
 const TAXIWAY = 11.5;
 const STOP_BAR = 4;
@@ -66,12 +65,35 @@ function line(ctx: CanvasRenderingContext2D, points: Vec[]) {
   ctx.stroke();
 }
 
+function taxi_path(ctx: CanvasRenderingContext2D, apron: Apron, offset: number) {
+  const { bounds, centreline, bend } = apron;
+  ctx.beginPath();
+  if (!bend) {
+    ctx.moveTo(bounds.x0, centreline + offset);
+    ctx.lineTo(bounds.x1, centreline + offset);
+    return;
+  }
+  const r = bend.radius - offset;
+  ctx.moveTo(bend.side > 0 ? bounds.x0 : bounds.x1, centreline + offset);
+  ctx.lineTo(bend.centre.x, centreline + offset);
+  ctx.arc(bend.centre.x, bend.centre.y, r, -Math.PI / 2, bend.side > 0 ? 0 : -Math.PI, bend.side < 0);
+  ctx.lineTo(bend.centre.x + bend.side * r, bend.end);
+}
+
 function ground(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, palette: Palette) {
   const { bounds, centreline } = apron;
   ctx.fillStyle = palette.floor;
   ctx.fillRect(bounds.x0, 0, bounds.x1 - bounds.x0, bounds.y1);
-  ctx.fillStyle = palette.asphalt;
-  ctx.fillRect(bounds.x0, centreline - TAXIWAY, bounds.x1 - bounds.x0, TAXIWAY * 2);
+  if (apron.bend) {
+    ctx.strokeStyle = palette.asphalt;
+    ctx.lineWidth = TAXIWAY * 2;
+    ctx.lineCap = "butt";
+    taxi_path(ctx, apron, 0);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = palette.asphalt;
+    ctx.fillRect(bounds.x0, centreline - TAXIWAY, bounds.x1 - bounds.x0, TAXIWAY * 2);
+  }
   fill(ctx, apron.grass, palette.grass);
   outlined(ctx, [apron.terminal], palette.pavement, palette.wall_edge, 3 / scale);
   outlined(ctx, apron.fences, palette.wall, palette.wall_edge, 1.5 / scale);
@@ -81,10 +103,8 @@ function ground(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, pale
   ctx.lineWidth = Math.max(0.15, 1.5 / scale);
   ctx.lineCap = "butt";
   ctx.lineJoin = "round";
-  line(ctx, [
-    { x: bounds.x0, y: centreline },
-    { x: bounds.x1, y: centreline },
-  ]);
+  taxi_path(ctx, apron, 0);
+  ctx.stroke();
   const r = apron.lead_radius;
   for (const stand of apron.stands) {
     const { x, y } = stand.at;
@@ -118,10 +138,8 @@ function ground(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, pale
   ctx.strokeStyle = palette.error;
   ctx.globalAlpha = 0.45;
   ctx.setLineDash([1.2, 0.9]);
-  line(ctx, [
-    { x: bounds.x0, y: centreline - TAXIWAY - 0.6 },
-    { x: bounds.x1, y: centreline - TAXIWAY - 0.6 },
-  ]);
+  taxi_path(ctx, apron, -TAXIWAY - 0.6);
+  ctx.stroke();
   ctx.setLineDash([]);
   ctx.globalAlpha = 1;
 }
@@ -169,10 +187,12 @@ function aircraft(
   livery: Livery,
   scale: number,
   palette: Palette,
-  ghost = false
+  ghost = false,
+  airframe: Airframe = NARROWBODY
 ) {
-  const parts = aircraft_parts(pose).filter((_, i) => SHAPES[i].part !== AircraftPart.GEAR);
-  const kinds = SHAPES.filter((shape) => shape.part !== AircraftPart.GEAR).map((shape) => shape.part);
+  const { shapes, marks, nose, tail } = airframe;
+  const parts = aircraft_parts(pose, 0, airframe).filter((_, i) => shapes[i].part !== AircraftPart.GEAR);
+  const kinds = shapes.filter((shape) => shape.part !== AircraftPart.GEAR).map((shape) => shape.part);
   if (ghost) {
     ctx.strokeStyle = palette.free;
     ctx.lineWidth = Math.max(0.12, 1.5 / scale);
@@ -204,40 +224,42 @@ function aircraft(
   ctx.save();
   ctx.translate(pose.x, pose.y);
   ctx.rotate(pose.heading);
+  const w = marks.windows;
   ctx.fillStyle = livery.fin;
   ctx.beginPath();
-  ctx.moveTo(-12.5, -0.18);
-  ctx.lineTo(TAIL + 0.6, -0.12);
-  ctx.lineTo(TAIL + 0.6, 0.12);
-  ctx.lineTo(-12.5, 0.18);
+  ctx.moveTo(marks.fin, -0.18 * w);
+  ctx.lineTo(tail + 0.6, -0.12 * w);
+  ctx.lineTo(tail + 0.6, 0.12 * w);
+  ctx.lineTo(marks.fin, 0.18 * w);
   ctx.closePath();
   ctx.fill();
-  wingtips(ctx, livery.fin);
+  wingtips(ctx, livery.fin, airframe);
+  const { intake } = marks;
   for (const side of [-1, 1]) {
     ctx.beginPath();
-    ctx.ellipse(7.3, side * 5.75, 0.25, 0.95, 0, 0, Math.PI * 2);
+    ctx.ellipse(intake.x, side * intake.y, intake.length, intake.width, 0, 0, Math.PI * 2);
     ctx.fillStyle = palette.ink;
     ctx.fill();
   }
   ctx.fillStyle = body.glass;
   ctx.beginPath();
-  ctx.moveTo(NOSE - 1.1, -0.95);
-  ctx.quadraticCurveTo(NOSE - 0.5, 0, NOSE - 1.1, 0.95);
-  ctx.lineTo(NOSE - 1.9, 1.15);
-  ctx.lineTo(NOSE - 1.9, -1.15);
+  ctx.moveTo(nose - 1.1 * w, -0.95 * w);
+  ctx.quadraticCurveTo(nose - 0.5 * w, 0, nose - 1.1 * w, 0.95 * w);
+  ctx.lineTo(nose - 1.9 * w, 1.15 * w);
+  ctx.lineTo(nose - 1.9 * w, -1.15 * w);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = palette.edge;
   ctx.lineWidth = edge;
   ctx.beginPath();
-  ctx.moveTo(-12, 0);
-  ctx.lineTo(NOSE - 2.2, 0);
+  ctx.moveTo(marks.fin + 0.5, 0);
+  ctx.lineTo(nose - 2.2 * w, 0);
   ctx.stroke();
   // Gear, faintly through the body, so the nose gear can be put on the mark.
   ctx.fillStyle = palette.ink;
   ctx.globalAlpha = 0.55;
-  ctx.fillRect(NOSE_GEAR - 0.5, -0.2, 1, 0.4);
-  for (const side of [-1, 1]) ctx.fillRect(-0.6, side * 3.8 - 0.35, 1.2, 0.7);
+  ctx.fillRect(airframe.nose_gear - 0.5, -0.2, 1, 0.4);
+  main_gear(ctx, airframe);
   ctx.globalAlpha = 1;
   if (livery.beacon > 0) {
     ctx.fillStyle = palette.brake_glow;
@@ -254,9 +276,16 @@ function aircraft(
   ctx.restore();
 }
 
-function wingtips(ctx: CanvasRenderingContext2D, fin: string) {
+function wingtips(ctx: CanvasRenderingContext2D, fin: string, airframe: Airframe) {
+  const { tip } = airframe.marks;
+  const half = airframe.span / 2;
   ctx.fillStyle = fin;
-  for (const side of [-1, 1]) ctx.fillRect(-4.2, side * 17.9 - (side > 0 ? 0.35 : 0), 1.6, 0.35);
+  for (const side of [-1, 1]) ctx.fillRect(tip.x, side * half - (side > 0 ? 0.35 : 0), tip.length, 0.35);
+}
+
+function main_gear(ctx: CanvasRenderingContext2D, airframe: Airframe) {
+  const { gear } = airframe.marks;
+  for (const side of [-1, 1]) ctx.fillRect(-gear.length / 2, side * gear.y - gear.width / 2, gear.length, gear.width);
 }
 
 const OVERHEAD = 0.6;
@@ -265,34 +294,36 @@ const OVERHEAD = 0.6;
  * The wings and tailplanes again over a ground vehicle that drove under them, see-through so it reads as passing
  * beneath. The fuselage is clipped out: the tailplanes' roots overlap it.
  */
-function overhead(ctx: CanvasRenderingContext2D, pose: Pose, fin: string, scale: number, palette: Palette) {
-  const parts = aircraft_parts(pose);
-  const fuselage = parts[SHAPES.findIndex((shape) => shape.part === AircraftPart.FUSELAGE)];
+function overhead(ctx: CanvasRenderingContext2D, pose: Pose, fin: string, scale: number, palette: Palette, airframe: Airframe = NARROWBODY) {
+  const parts = aircraft_parts(pose, 0, airframe);
+  const fuselage = parts[airframe.shapes.findIndex((shape) => shape.part === AircraftPart.FUSELAGE)];
+  const reach = airframe.nose - airframe.tail + airframe.span;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(pose.x - 40, pose.y - 40, 80, 80);
+  ctx.rect(pose.x - reach, pose.y - reach, reach * 2, reach * 2);
   fuselage.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
   ctx.closePath();
   ctx.clip("evenodd");
   ctx.globalAlpha = OVERHEAD;
   const edge = Math.max(0.05, 1 / scale);
   parts.forEach((shape, i) => {
-    if (is_high(i)) outlined(ctx, [shape], palette.pavement, palette.edge, edge);
+    if (is_high(i, airframe)) outlined(ctx, [shape], palette.pavement, palette.edge, edge);
   });
   ctx.translate(pose.x, pose.y);
   ctx.rotate(pose.heading);
-  wingtips(ctx, fin);
+  wingtips(ctx, fin, airframe);
   // The main gear legs are solid to a tug under the wing, so they stay as visible as before the overlay.
   ctx.globalAlpha = 0.55;
   ctx.fillStyle = palette.ink;
-  for (const side of [-1, 1]) ctx.fillRect(-0.6, side * 3.8 - 0.35, 1.2, 0.7);
+  main_gear(ctx, airframe);
   ctx.restore();
 }
 
 function towbar(ctx: CanvasRenderingContext2D, state: GameState, scale: number, palette: Palette) {
   const pushing = state.phase === Phase.PUSH;
-  const front = to_world(state.car, { x: pushing ? SPEC.length - SPEC.rear_overhang : -SPEC.rear_overhang, y: 0 });
-  const gear = to_world(aircraft_pose(state.car, state.spec), { x: NOSE_GEAR, y: 0 });
+  const { spec } = state;
+  const front = to_world(state.car, { x: pushing ? spec.length - spec.rear_overhang : -spec.rear_overhang, y: 0 });
+  const gear = to_world(aircraft_pose(state.car, spec), { x: state.apron.airframe.nose_gear, y: 0 });
   ctx.strokeStyle = palette.ink;
   ctx.lineCap = "round";
   ctx.lineWidth = Math.max(0.22, 2.5 / scale);
@@ -425,11 +456,12 @@ export function draw_scene(
   if (!bags && playing)
     aircraft(
       ctx,
-      pose_from_nose_gear(apron.stop, apron.heading),
+      pose_from_nose_gear(apron.stop, apron.heading, apron.airframe),
       { fin: palette.free, beacon: 0 },
       scale,
       palette,
-      true
+      true,
+      apron.airframe
     );
   if (!bags) stop_mark(ctx, apron, scale, palette, pulse, playing);
 
@@ -449,14 +481,14 @@ export function draw_scene(
   } else {
     const plane = aircraft_pose(state.car, state.spec);
     const on = state.status === Status.READY ? 0 : flashes(extras.time / 1.6, true)[0] > 0.5 ? 0.85 : 0.15;
-    aircraft(ctx, plane, { fin: palette.player.body, beacon: on }, scale, palette);
+    aircraft(ctx, plane, { fin: palette.player.body, beacon: on }, scale, palette, false, apron.airframe);
     if (extras.guides && moving) guides(ctx, state.car, state.spec, scale, palette);
     towbar(ctx, state, scale, palette);
     player(
       ctx,
       { ...state.car, trailers: undefined },
       Vehicle.BAGGAGE,
-      TUG_ALONE,
+      { ...state.spec, hitches: [] },
       braking,
       scale,
       palette,

@@ -3,7 +3,7 @@ import { lerp, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit
 import type { Scene } from "../../core/obstacles";
 import { SolidKind, type Solid } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
-import { aircraft_parts, is_high, NOSE, NOSE_GEAR, pose_from_nose_gear, TAIL } from "./aircraft";
+import { aircraft_parts, is_high, NARROWBODY, pose_from_nose_gear, type Airframe, type Fleet } from "./aircraft";
 
 export const Face = { WEST: "west", EAST: "east" } as const;
 export type Face = (typeof Face)[keyof typeof Face];
@@ -57,9 +57,19 @@ export interface Train {
   door: Vec;
 }
 
+export interface Bend {
+  centre: Vec;
+  radius: number;
+  /** +1 when the taxiway runs east into the bend, −1 west. */
+  side: 1 | -1;
+  end: number;
+}
+
 export interface Apron {
   seed: number;
   difficulty: number;
+  airframe: Airframe;
+  bend: Bend | null;
   face: Face;
   heading: number;
   stands: Stand[];
@@ -88,11 +98,12 @@ export interface Apron {
   ours_kit: Kit[];
 }
 
-export const TOWBAR = 7.6;
+export const TOWBAR = -NARROWBODY.link.hitch;
 const TERMINAL_DEPTH = 14;
 const ROTUNDA = 1.4;
 const TUNNEL = 2.6;
 const FENCE = 0.4;
+const ARC_PIECES = 12;
 const AIRLINES = ["Hopper", "Warren", "Cottontail", "Burrow", "Thumper", "Clover"];
 
 export interface Layout {
@@ -105,15 +116,50 @@ export interface Layout {
   west: boolean;
 }
 
-export function layout(seed: number, difficulty: number): Layout {
+interface Sizes {
+  spacing: [number, number];
+  clearance: [number, number];
+  far: [number, number];
+  stop: [number, number];
+  run: number;
+  // Our nose stops further off the terminal than a neighbour's, so the longer tug behind it clears the bridges.
+  pull: number;
+  bend: { at: [number, number]; radius: [number, number]; past: [number, number] };
+}
+
+// A widebody's neighbours are narrowbodies: its stands are far enough apart for its wingtip to pass theirs, and the
+// fence stands beyond its wingtip on the taxiway.
+const SIZES: Record<Fleet, Sizes> = {
+  narrow: {
+    spacing: [47, 41.5],
+    clearance: [24, 19.8],
+    far: [28, 21],
+    stop: [34, 24],
+    run: 50,
+    pull: 0,
+    bend: { at: [36, 30], radius: [7, 4], past: [12, 7] },
+  },
+  wide: {
+    spacing: [61, 55],
+    clearance: [20, 14],
+    far: [41, 36.5],
+    stop: [44, 34],
+    run: 82,
+    pull: 3.1,
+    bend: { at: [50, 44], radius: [8, 5], past: [16, 10] },
+  },
+};
+
+export function layout(seed: number, difficulty: number, airframe: Airframe = NARROWBODY): Layout {
   const rng = create_rng(hash(seed, 0xa9e0));
   const t = difficulty;
+  const size = SIZES[airframe.fleet];
   return {
-    spacing: lerp(47, 41.5, t) + rng() * 1.5,
+    spacing: lerp(...size.spacing, t) + rng() * 1.5,
     nose_gap: 5.5 + rng() * 0.6,
-    clearance: lerp(24, 19.8, t) + rng() * 0.6,
-    far: lerp(28, 21, t) + rng(),
-    stop: lerp(34, 24, t) + rng() * 3,
+    clearance: lerp(...size.clearance, t) + rng() * 0.6,
+    far: lerp(...size.far, t) + rng(),
+    stop: lerp(...size.stop, t) + rng() * 3,
     east: t > 0.2 || rng() < 0.7,
     west: rng() < 0.8,
   };
@@ -124,6 +170,8 @@ export interface FrameOptions {
   docked?: boolean;
   far?: number;
   reach?: [number, number];
+  airframe?: Airframe;
+  corner?: boolean;
 }
 
 export interface Added {
@@ -132,10 +180,18 @@ export interface Added {
   part: Part;
 }
 
+export interface FrameBend {
+  x: number;
+  radius: number;
+  end: number;
+}
+
 /** An apron as built, before it's mirrored for face east: the jobs add to it in this frame. */
 export interface Frame {
   seed: number;
   difficulty: number;
+  airframe: Airframe;
+  bend: FrameBend | null;
   face: Face;
   shape: Layout;
   rng: Rng;
@@ -175,16 +231,38 @@ export function mirrorer(mirror: boolean) {
 
 export function frame_apron(seed: number, difficulty: number, options: FrameOptions = {}): Frame {
   const rng = create_rng(hash(seed, 0x5a7d));
+  const airframe = options.airframe ?? NARROWBODY;
   const face = rng() < 0.5 ? Face.WEST : Face.EAST;
-  const shape = layout(seed, difficulty);
-  const nose_gear_y = shape.nose_gap + (NOSE - NOSE_GEAR);
-  const centreline = shape.nose_gap + (NOSE - TAIL) + shape.clearance;
-  const fence_y = centreline + (options.far ?? shape.far);
+  const shape = layout(seed, difficulty, airframe);
+  const size = SIZES[airframe.fleet];
+  const gap = shape.nose_gap + size.pull;
+  const stand_y = (frame: Airframe) => shape.nose_gap + (frame.nose - frame.nose_gear);
+  const nose_gear_y = gap + (airframe.nose - airframe.nose_gear);
+  const length = airframe.nose - airframe.tail;
+  const centreline = gap + length + shape.clearance;
+  const far = options.far ?? shape.far;
+  const fence_y = centreline + far;
+
+  let bend: FrameBend | null = null;
+  let stop = { x: shape.stop, y: centreline };
+  let heading = Math.PI;
+  if (options.corner) {
+    const bent = create_rng(hash(seed, 0xbe9d));
+    const t = difficulty;
+    const x = lerp(...size.bend.at, t) + bent() * 3;
+    const radius = far + lerp(...size.bend.radius, t) + bent() * 2;
+    const past = lerp(...size.bend.past, t) + bent() * 3;
+    bend = { x, radius, end: centreline + radius + past + (airframe.nose_gear - airframe.tail) + 24 };
+    stop = { x: x + radius, y: centreline + radius + past };
+    heading = NORTH;
+  }
+
   const x0 = Math.min(-shape.spacing * 1.5 - 6, options.reach?.[0] ?? Infinity);
-  const x1 = Math.max(shape.stop + 50, options.reach?.[1] ?? -Infinity);
+  const x1 = bend ? bend.x + bend.radius + far : Math.max(shape.stop + size.run, options.reach?.[1] ?? -Infinity);
+  const last = bend ? bend.x + 16 : x1 - 16;
 
   const indices: number[] = [];
-  for (let k = Math.min(-1, Math.ceil((x0 + 6) / shape.spacing)); k * shape.spacing < x1 - 16; k++) indices.push(k);
+  for (let k = Math.min(-1, Math.ceil((x0 + 6) / shape.spacing)); k * shape.spacing < last; k++) indices.push(k);
   const occupied = (k: number) => (k === -1 ? shape.west : k === 1 ? shape.east : k !== 0 && rng() < 0.55);
 
   const parked: Pose[] = [];
@@ -193,7 +271,7 @@ export function frame_apron(seed: number, difficulty: number, options: FrameOpti
   for (const k of indices) {
     if (k === options.hall) continue;
     const x = k * shape.spacing;
-    const at = { x, y: nose_gear_y };
+    const at = { x, y: k === 0 ? nose_gear_y : stand_y(NARROWBODY) };
     stands.push({ at, mine: k === 0 });
     const from = { x: x - 9, y: ROTUNDA + 2 };
     if (k === 0 && !options.docked) {
@@ -216,11 +294,13 @@ export function frame_apron(seed: number, difficulty: number, options: FrameOpti
   return {
     seed,
     difficulty,
+    airframe,
+    bend,
     face,
     shape,
     rng,
     nose_gear_y,
-    tail_y: shape.nose_gap + (NOSE - TAIL),
+    tail_y: gap + length,
     centreline,
     fence_y,
     x0,
@@ -234,22 +314,59 @@ export function frame_apron(seed: number, difficulty: number, options: FrameOpti
     hall,
     kit: [],
     train: null,
-    start: { x: 0, y: nose_gear_y - TOWBAR, heading: Math.PI / 2 },
-    aircraft: pose_from_nose_gear({ x: 0, y: nose_gear_y }, NORTH),
-    stop: { x: shape.stop, y: centreline },
-    heading: Math.PI,
+    start: { x: 0, y: nose_gear_y + airframe.link.hitch, heading: Math.PI / 2 },
+    aircraft: pose_from_nose_gear({ x: 0, y: nose_gear_y }, NORTH, airframe),
+    stop,
+    heading,
   };
 }
 
-export function finish_apron(frame: Frame, mirror = frame.face === Face.EAST): Apron {
-  const { shape, rng, x0, x1, fence_y } = frame;
-  const terminal = rect(x0, -TERMINAL_DEPTH, x1, 0);
+interface Edges {
+  fences: Polygon[];
+  grass: Polygon;
+  y1: number;
+}
+
+function straight_edges(frame: Frame): Edges {
+  const { x0, x1, fence_y } = frame;
+  return {
+    fences: [
+      rect(x0, fence_y, x1, fence_y + FENCE),
+      rect(x0 - FENCE, 0, x0, fence_y + FENCE),
+      rect(x1, 0, x1 + FENCE, fence_y + FENCE),
+    ],
+    grass: rect(x0, fence_y + FENCE, x1, fence_y + 12),
+    y1: fence_y + 12,
+  };
+}
+
+// The fence on the inside of the turn follows the taxiway round, in short straight pieces since solids are convex.
+function bent_edges(frame: Frame, bend: FrameBend): Edges {
+  const { x0, x1, fence_y } = frame;
+  const cy = frame.centreline + bend.radius;
+  const inner = bend.radius - (fence_y - frame.centreline);
+  const at = (r: number, a: number): Vec => ({ x: bend.x + r * Math.cos(a), y: cy + r * Math.sin(a) });
+  const angle = (i: number) => -Math.PI / 2 + (i / ARC_PIECES) * (Math.PI / 2);
   const fences = [
-    rect(x0, fence_y, x1, fence_y + FENCE),
+    rect(x0, fence_y, bend.x, fence_y + FENCE),
+    rect(bend.x + inner - FENCE, cy, bend.x + inner, bend.end),
     rect(x0 - FENCE, 0, x0, fence_y + FENCE),
-    rect(x1, 0, x1 + FENCE, fence_y + FENCE),
+    rect(x1, 0, x1 + FENCE, bend.end + FENCE),
+    rect(bend.x + inner - FENCE, bend.end, x1, bend.end + FENCE),
   ];
-  const grass = rect(x0, fence_y + FENCE, x1, fence_y + 12);
+  const edge: Vec[] = [];
+  for (let i = 0; i < ARC_PIECES; i++) {
+    fences.push([at(inner, angle(i)), at(inner, angle(i + 1)), at(inner - FENCE, angle(i + 1)), at(inner - FENCE, angle(i))]);
+  }
+  for (let i = 0; i <= ARC_PIECES; i++) edge.push(at(inner - FENCE, angle(i)));
+  const grass = [{ x: x0, y: fence_y + FENCE }, ...edge, { x: bend.x + inner - FENCE, y: bend.end }, { x: x0, y: bend.end }];
+  return { fences, grass, y1: bend.end + FENCE };
+}
+
+export function finish_apron(frame: Frame, mirror = frame.face === Face.EAST): Apron {
+  const { rng, x0, x1 } = frame;
+  const terminal = rect(x0, -TERMINAL_DEPTH, x1, 0);
+  const { fences, grass, y1 } = frame.bend ? bent_edges(frame, frame.bend) : straight_edges(frame);
 
   const { point, polygon, pose, heading } = mirrorer(mirror);
 
@@ -289,9 +406,17 @@ export function finish_apron(frame: Frame, mirror = frame.face === Face.EAST): A
   let number = first;
   let remote = 0;
   const train = frame.train;
+  const bend = frame.bend;
   return {
     seed: frame.seed,
     difficulty: frame.difficulty,
+    airframe: frame.airframe,
+    bend: bend && {
+      centre: point({ x: bend.x, y: frame.centreline + bend.radius }),
+      radius: bend.radius,
+      side: mirror ? -1 : 1,
+      end: bend.end,
+    },
     face: frame.face,
     heading: heading(frame.heading),
     stands: placed.map((stand) => ({ number: stand.remote ? ++remote : number++, ...stand })),
@@ -308,7 +433,7 @@ export function finish_apron(frame: Frame, mirror = frame.face === Face.EAST): A
     solids,
     high: { solids: high },
     parts,
-    bounds: { x0: Math.min(...ends), y0: -TERMINAL_DEPTH, x1: Math.max(...ends), y1: fence_y + 12 },
+    bounds: { x0: Math.min(...ends), y0: -TERMINAL_DEPTH, x1: Math.max(...ends), y1 },
     callsign: `${pick(AIRLINES, rng)} ${random_int(102, 989, rng)}`,
     hall: frame.hall && { door: point(frame.hall.door), width: frame.hall.width },
     kit: frame.kit.map((each) => ({ kind: each.kind, pose: pose(each.pose), shape: polygon(each.shape) })),
@@ -325,9 +450,14 @@ export function finish_apron(frame: Frame, mirror = frame.face === Face.EAST): A
   };
 }
 
+export interface ApronOptions {
+  airframe?: Airframe;
+  corner?: boolean;
+}
+
 // Built as if the tail swings east (face west), then mirrored for face east.
-export function build_apron(seed: number, difficulty: number): Apron {
-  return finish_apron(frame_apron(seed, difficulty));
+export function build_apron(seed: number, difficulty: number, options: ApronOptions = {}): Apron {
+  return finish_apron(frame_apron(seed, difficulty, options));
 }
 
 export function tunnel(bridge: Bridge): Vec[] {
@@ -349,6 +479,6 @@ export function my_stand(apron: Apron): Stand {
   return apron.stands.find((stand) => stand.mine)!;
 }
 
-export function instruction(apron: Apron): string {
-  return `${apron.callsign}, stand ${my_stand(apron).number}, push back approved, face ${apron.face}.`;
+export function facing(apron: Apron): string {
+  return apron.bend ? "north" : apron.face;
 }

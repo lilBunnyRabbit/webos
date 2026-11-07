@@ -1,7 +1,7 @@
 import { add_progress, read_levels, track_progress } from "../../core/track";
 import type { ProgressSource } from "../define";
 
-export const LEVELS = { pushback: 12, baggage: 8, tow: 8, turnaround: 8 } as const;
+export const LEVELS = { pushback: 18, baggage: 8, tow: 11, turnaround: 8 } as const;
 
 export default {
   file: "airport.json",
