@@ -39,6 +39,9 @@
   const LOOK_AHEAD = 1.2;
   const BOUNDS = { x0: -1e6, x1: 1e6, y0: -1e6, y1: 6 };
   const PROFILE_WIDTH = 190;
+  const MIN_CIRCUIT_PX = 55;
+  const MAX_PLANE_PX = 80;
+  const MIN_PLANE_PX = 35;
   // Held sideways the flaps, turn, trim and brake buttons float in one row along the board's bottom edge.
   const MIDDLE_ROW = 64;
   const BLURBS: Record<PlaneId, string> = {
@@ -169,11 +172,18 @@
     return { ...insets, right: right_box.width + OVERLAY_GAP, bottom: Math.max(card_bottom, MIDDLE_ROW), left: Math.max(card_left, left_box.width + OVERLAY_GAP) };
   }
 
+  /** The fewest pixels the plane may shrink to, so it stays readable in the circuit: 14 % of the board's shorter side (55 to 80), easing to 35 between 150 and 400 m. */
+  function plane_pixels(side: number, agl: number): number {
+    const circuit = Math.min(MAX_PLANE_PX, Math.max(MIN_CIRCUIT_PX, side * 0.14));
+    return Math.max(MIN_PLANE_PX, circuit - ((circuit - MIN_PLANE_PX) * Math.max(0, agl - 150)) / 250);
+  }
+
   function target_camera(): Camera {
     const insets = control_insets();
     const agl = wheel_height(plane, c);
-    const span = Math.min(420, (tall ? 26 : 34) + 1.2 * Math.min(agl, 80) + 0.35 * Math.max(0, agl - 80));
-    const scale = Math.max(1, Math.min(board_size.width, board_size.height)) / (span / zoom);
+    const side = Math.max(1, Math.min(board_size.width, board_size.height));
+    const span = Math.min(420, (tall ? 26 : 34) + 1.2 * Math.min(agl, 80) + 0.35 * Math.max(0, agl - 80), (side * spec.length) / plane_pixels(side, agl));
+    const scale = side / (span / zoom);
     const high = (board_size.height - insets.top - insets.bottom) / scale;
     const reach = span / 3;
     const ahead = Math.max(-reach, Math.min(reach, plane.vx * LOOK_AHEAD));

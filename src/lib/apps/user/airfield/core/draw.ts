@@ -7,6 +7,7 @@ import type { Field } from "./field";
 import { facing, type BodyPoint, type Coefficients, type Plane } from "./plane";
 
 export interface Scenery {
+  horizon: string;
   sky: string;
   cloud: string;
   hill: string;
@@ -19,8 +20,9 @@ export interface Scenery {
 export function read_scenery(probe: HTMLElement): Scenery {
   const token = (value: string) => resolve_token(probe, value);
   return {
-    sky: token("color-mix(in oklch, var(--info) 10%, var(--background))"),
-    cloud: token("color-mix(in oklch, var(--foreground) 9%, transparent)"),
+    horizon: token("color-mix(in oklch, var(--info) 8%, var(--background))"),
+    sky: token("color-mix(in oklch, var(--info) 20%, var(--background-dark))"),
+    cloud: token("color-mix(in oklch, var(--background-lightest) 50%, transparent)"),
     hill: token("color-mix(in oklch, var(--success) 9%, var(--background-light))"),
     far_hill: token("color-mix(in oklch, var(--info) 7%, var(--background-light))"),
     earth: token("color-mix(in oklch, var(--success) 6%, var(--background-darker))"),
@@ -76,9 +78,15 @@ function ellipse(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number
   ctx.fill();
 }
 
+/** Height where the sky reaches its high colour: climbing out of the pale band at the horizon is a cue for height. */
+const SKY_TOP = 700;
+
 function sky_and_ground(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
   const { scenery, palette } = f;
-  ctx.fillStyle = scenery.sky;
+  const sky = ctx.createLinearGradient(0, 0, 0, -SKY_TOP);
+  sky.addColorStop(0, scenery.horizon);
+  sky.addColorStop(1, scenery.sky);
+  ctx.fillStyle = sky;
   ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, Math.max(0, -box.y0));
   ctx.fillStyle = palette.grass;
   ctx.fillRect(box.x0, 0, box.x1 - box.x0, Math.max(0, box.y1));
@@ -88,13 +96,15 @@ function sky_and_ground(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
 
 /**
  * Hills far off on the horizon, in screen pixels: at real scale a near hill would fill the view when zoomed in, so they
- * keep one size and slide past at `drift` pixels a metre flown.
+ * keep one size and slide past at `drift` pixels a metre flown. With the ground below the view they sink `sink` pixels
+ * for each pixel it is below the bottom edge, so a climb drops them out of sight.
  */
-function hills(ctx: CanvasRenderingContext2D, f: Frame, drift: number, cell: number, height: number, colour: string, seed: number) {
+function hills(ctx: CanvasRenderingContext2D, f: Frame, drift: number, sink: number, cell: number, height: number, colour: string, seed: number) {
   const { view } = f;
   const ground = view.height / 2 - view.y * view.scale;
   if (ground < 0) return;
-  const base = Math.min(ground, view.height) + 1;
+  const base = (ground > view.height ? view.height + (ground - view.height) * sink : ground) + 1;
+  if (base - height > view.height) return;
   const shift = -view.x * drift;
   const from = Math.floor(-shift / cell) - 1;
   const to = Math.ceil((view.width - shift) / cell) + 1;
@@ -110,38 +120,79 @@ function hills(ctx: CanvasRenderingContext2D, f: Frame, drift: number, cell: num
     ctx.quadraticCurveTo(mid + cell / 4, base - peak(i) * 0.6, x + cell, base - peak(i + 1) * 0.3);
   }
   ctx.lineTo(to * cell + shift, base);
+  ctx.lineTo(to * cell + shift, view.height + 1);
+  ctx.lineTo(from * cell + shift, view.height + 1);
   ctx.closePath();
   ctx.fillStyle = colour;
   ctx.fill();
   ctx.restore();
 }
 
-function clouds(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
-  const cell = 420;
-  const from = Math.floor(box.x0 / cell) - 1;
-  const to = Math.ceil(box.x1 / cell) + 1;
+interface CloudLayer {
+  /** Distance factor: 1 sits beside the plane and passes at its speed, 0.3 is far off, smaller and slower. */
+  depth: number;
+  cell: number;
+  low: number;
+  high: number;
+  /** Share of cells drawn as a long flat wisp instead of a heap. */
+  wisps: number;
+  size: number;
+  alpha: number;
+  seed: number;
+}
+
+const FAR_CLOUDS: CloudLayer = { depth: 0.3, cell: 120, low: 80, high: 900, wisps: 0.3, size: 1, alpha: 0.55, seed: 11 };
+const MID_CLOUDS: CloudLayer = { depth: 0.6, cell: 70, low: 50, high: 500, wisps: 0.5, size: 0.6, alpha: 0.75, seed: 12 };
+const NEAR_WISPS: CloudLayer = { depth: 1, cell: 12, low: 35, high: 220, wisps: 0.9, size: 0.3, alpha: 1, seed: 13 };
+const HIGH_CLOUDS: CloudLayer = { depth: 1, cell: 420, low: 220, high: 1000, wisps: 0, size: 1, alpha: 1, seed: 14 };
+
+/** One layer of clouds, filled as one path so overlaps don't darken. A layer's camera moves `depth` as far as the real one. */
+function clouds(ctx: CanvasRenderingContext2D, f: Frame, box: Box, layer: CloudLayer) {
+  const { view } = f;
+  const d = layer.depth;
+  const to_layer = (w: number, at: number) => at * d + (w - at) / d;
+  const x0 = to_layer(box.x0, view.x);
+  const x1 = to_layer(box.x1, view.x);
+  const y0 = to_layer(box.y0, view.y);
+  const y1 = to_layer(box.y1, view.y);
+  ctx.save();
+  ctx.translate(view.x, view.y);
+  ctx.scale(d, d);
+  ctx.translate(-view.x * d, -view.y * d);
   ctx.beginPath();
-  for (let i = from; i <= to; i++) {
-    for (let layer = 0; layer < 2; layer++) {
-      const h = hash(7 + layer, i);
-      if (h % 3 === 0) continue;
-      const x = i * cell + (h % cell);
-      const y = -(220 + layer * 420 + ((h >> 10) % 260));
-      const w = 50 + ((h >> 6) % 90);
-      if (y - w > box.y1 || y + w < box.y0) continue;
-      const base = y + w * 0.1;
-      for (let k = 0; k < 4; k++) {
-        const kh = hash(h, k);
-        const r = w * (0.2 + (kh % 37) / 260) * (k === 1 || k === 2 ? 1.35 : 1);
-        const cx = x + (k - 1.5) * w * 0.32;
-        ctx.moveTo(cx + r, base);
-        ctx.arc(cx, base, r, 0, Math.PI, true);
-        ctx.closePath();
+  for (let i = Math.floor(x0 / layer.cell) - 1; i <= Math.ceil(x1 / layer.cell) + 1; i++) {
+    const h = hash(layer.seed, i);
+    if (h % 5 < 2) continue;
+    const x = i * layer.cell + (h % layer.cell);
+    const y = -(layer.low + ((h >>> 10) % 1000) / 1000 * (layer.high - layer.low));
+    const w = layer.size * (40 + ((h >>> 6) % 90));
+    if (y - w > y1 || y + w < y0 || x + w < x0 || x - w > x1) continue;
+    if ((h >>> 20) % 100 < layer.wisps * 100) {
+      for (const [dx, dy, rx, ry] of [
+        [0, 0, 0.6, 0.045],
+        [0.12, -0.05, 0.32, 0.04],
+        [-0.3, 0.025, 0.25, 0.03],
+      ]) {
+        ctx.moveTo(x + (dx + rx) * w, y + dy * w);
+        ctx.ellipse(x + dx * w, y + dy * w, rx * w, ry * w, 0, 0, Math.PI * 2, true);
       }
+      continue;
+    }
+    const base = y + w * 0.1;
+    for (let k = 0; k < 4; k++) {
+      const kh = hash(h, k);
+      const r = w * (0.2 + (kh % 37) / 260) * (k === 1 || k === 2 ? 1.35 : 1);
+      const cx = x + (k - 1.5) * w * 0.32;
+      ctx.moveTo(cx + r, base);
+      ctx.arc(cx, base, r, 0, Math.PI, true);
+      ctx.closePath();
     }
   }
+  ctx.globalAlpha = layer.alpha;
   ctx.fillStyle = f.scenery.cloud;
   ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
 }
 
 function runway(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
@@ -702,9 +753,12 @@ export function draw_frame(ctx: CanvasRenderingContext2D, f: Frame) {
   const box = visible(f.view);
   sky_and_ground(ctx, f, box);
   if (box.y0 < 0) {
-    hills(ctx, f, 0.08, 420, Math.min(110, f.view.height * 0.2), f.scenery.far_hill, 3);
-    hills(ctx, f, 0.25, 180, Math.min(50, f.view.height * 0.09), f.scenery.hill, 4);
-    clouds(ctx, f, box);
+    clouds(ctx, f, box, FAR_CLOUDS);
+    hills(ctx, f, 0.08, 0.06, 420, Math.min(110, f.view.height * 0.2), f.scenery.far_hill, 3);
+    clouds(ctx, f, box, MID_CLOUDS);
+    hills(ctx, f, 0.25, 0.12, 180, Math.min(50, f.view.height * 0.09), f.scenery.hill, 4);
+    clouds(ctx, f, box, HIGH_CLOUDS);
+    clouds(ctx, f, box, NEAR_WISPS);
   }
   ctx.fillStyle = f.palette.grass;
   ctx.fillRect(box.x0, 0, box.x1 - box.x0, 0.02);
