@@ -326,12 +326,14 @@ export function route_span(route: Route, from: number, to: number, hint = 0): Ve
 }
 
 const cache = new Map<string, Route>();
+// Random routes each get a fresh id: keep the few used last, not every one dealt.
+const CACHED = 16;
 
 export function route_of(town: Town, def: RouteDef, spec: VehicleSpec): Route {
   let found = cache.get(def.id);
-  if (!found) {
-    found = build_route(town, def, spec);
-    cache.set(def.id, found);
-  }
+  if (found) cache.delete(def.id);
+  else found = build_route(town, def, spec);
+  cache.set(def.id, found);
+  if (cache.size > CACHED) cache.delete(cache.keys().next().value!);
   return found;
 }

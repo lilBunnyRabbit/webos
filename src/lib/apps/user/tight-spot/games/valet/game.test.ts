@@ -363,7 +363,15 @@ describe("levels", () => {
   });
 
   test("the endless shift keeps its arrivals: the same seed gives the same cars as before levels", () => {
-    expect(schedule(5, ENDLESS)).toEqual(schedule(5));
+    // Seed 5's first six arrivals from the schedule before levels (e06c9fe5), so the daily and endless shifts didn't change.
+    expect(schedule(5).slice(0, 6)).toEqual([
+      { at: 0, vehicle: "hatch", stay: 141747, paint: 0 },
+      { at: 51589, vehicle: "hatch", stay: 92499, paint: 0 },
+      { at: 118141, vehicle: "hatch", stay: 106109, paint: 2 },
+      { at: 168177, vehicle: "pickup", stay: 105813, paint: 0 },
+      { at: 227755, vehicle: "bus", stay: 62048, paint: 1 },
+      { at: 286230, vehicle: "hatch", stay: 94591, paint: 3 },
+    ]);
     expect(ENDLESS.arrivals).toBe(300);
   });
 

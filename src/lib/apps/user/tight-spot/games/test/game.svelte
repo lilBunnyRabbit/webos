@@ -54,9 +54,10 @@
     type GameState,
     type Result,
     type Round,
+    type TestData,
   } from "./game";
   import { daily_def, level_def, level_name, random_def } from "./levels";
-  import { ROUTE_IDS } from "./route";
+  import { ROUTE_IDS, type RouteId } from "./route";
   import { FAULT_INFO, MAX_MINORS, Severity, sheet } from "./rules";
   import { LEVEL_COUNT, level_key, level_stars, test_stars } from "./stars";
   import { town } from "./town";
@@ -87,6 +88,16 @@
   const sounds = new Sounds(() => settings);
   const the_town = town();
 
+  // Before levels the last choice was a route name: the hand-made routes are levels 1–3.
+  untrack(() => {
+    const old = ROUTE_IDS.indexOf(prefs.value["test.route"] as RouteId);
+    if (!("test.route" in prefs.value)) return;
+    if (old >= 0 && prefs.value["test.level"] === undefined) {
+      prefs.value["test.level"] = old + 1;
+      prefs.value["test.mode"] = Mode.LEVELS;
+    }
+    delete prefs.value["test.route"];
+  });
   const stored = z
     .object({
       "test.level": z.number().int().min(1).max(LEVEL_COUNT).catch(1),
@@ -169,6 +180,27 @@
     sounds.quiet();
     speech.stop(win.id);
   }
+
+  function report_levels(best: TestData["best"]) {
+    achievements.progress("test-routes", ROUTE_IDS.filter((id) => best[id]?.passed).length);
+    achievements.progress("test-levels", levels_done(level_stars(best)));
+  }
+
+  // Passes saved before levels existed count toward them; progress only ever rises, so reporting again is harmless.
+  $effect(() => {
+    if (!data.ready) return;
+    untrack(() => report_levels(data.value.best));
+  });
+
+  // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
+  $effect(() => {
+    if (!data.ready || level <= max_level) return;
+    untrack(() => {
+      level = max_level;
+      prefs.value["test.level"] = level;
+      if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
+    });
+  });
 
   $effect(() => {
     if (!blocked) return;
@@ -316,9 +348,7 @@
     sounds.parked(true);
     achievements.achieve("test-pass");
     if (state.faults.length === 0) achievements.achieve("test-clean");
-    if (state.round.level === undefined) return;
-    achievements.progress("test-routes", ROUTE_IDS.filter((id) => best[id]?.passed).length);
-    achievements.progress("test-levels", levels_done(level_stars(best)));
+    if (state.round.level !== undefined) report_levels(best);
   }
 
   function release_all() {

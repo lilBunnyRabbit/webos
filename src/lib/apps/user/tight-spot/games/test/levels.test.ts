@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { daily_seed } from "$kit/games";
 import { drive_route } from "./driver";
+import { FaultKind } from "./rules";
 import { Outcome, SPEC, Status } from "./game";
 import { features_of, Feature, junctions_of } from "./generate";
 import { daily_def, LEVEL_COUNT, level_def, random_def } from "./levels";
@@ -47,10 +49,25 @@ describe("random routes and the daily", () => {
     it(`random route ${seed} is driven clean`, () => drives_clean(random_def(seed, SPEC)));
   }
 
-  it("the daily is driven clean, the same for everyone that day", () => {
-    const def = daily_def("2026-11-07", 7331, SPEC);
-    expect(daily_def("2026-11-07", 7331, SPEC)).toEqual(def);
+  it("the daily is driven clean, the same for everyone that day and another the next", () => {
+    const of_day = (day: string) => daily_def(day, daily_seed(day, "tight-spot/test"), SPEC);
+    const def = of_day("2026-11-07");
+    expect(of_day("2026-11-07")).toEqual(def);
+    expect(of_day("2026-11-08").roads).not.toEqual(def.roads);
     drives_clean(def);
+  });
+});
+
+describe("a move only generated routes make", () => {
+  it("turning left at D off the stop line without a signal is a signal fault there", () => {
+    const hand = ROUTE_IDS.map((id) => route_def(id).roads.join(" "));
+    expect(hand.some((roads) => roads.includes("DE DH"))).toBe(false);
+    const level = Array.from({ length: LEVEL_COUNT - ROUTE_IDS.length }, (_, i) => i + ROUTE_IDS.length + 1).find((at) => level_def(at, SPEC).roads.join(" ").includes("DE DH"))!;
+    expect(level).toBeDefined();
+    const { state } = drive_route(level_def(level, SPEC), { signals: false });
+    const d = town().nodes.D.at;
+    expect(state.faults.some((fault) => fault.kind === FaultKind.SIGNAL && Math.hypot(fault.at.x - d.x, fault.at.y - d.y) < 20)).toBe(true);
+    expect(state.faults.every((fault) => fault.kind === FaultKind.SIGNAL)).toBe(true);
   });
 });
 

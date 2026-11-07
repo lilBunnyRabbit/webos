@@ -185,6 +185,16 @@
 
   $effect(() => () => sounds.close());
 
+  // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
+  $effect(() => {
+    if (!data.ready || level <= max_level) return;
+    untrack(() => {
+      level = max_level;
+      prefs.value["valet.level"] = level;
+      if (game.status === Status.READY && game.shift.level !== undefined && !daily) load(make_shift());
+    });
+  });
+
   $effect(() =>
     win.on_back(() => {
       if (settings_panel?.matches(":popover-open")) return (settings_panel.hidePopover(), true);
@@ -323,7 +333,7 @@
     input.reset();
     camera = null;
     if (next.handed > before.handed) {
-      sounds.parked(false);
+      if (next.status !== Status.OVER) sounds.parked(false);
       const tip = next.tip!;
       achievements.achieve("valet-first");
       achievements.progress("valet-clean", next.clean);
