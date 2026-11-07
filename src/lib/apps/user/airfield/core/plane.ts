@@ -101,7 +101,7 @@ export interface Input {
   /** 0 up to 1 full. */
   flaps: number;
   brake: number;
-  /** The way the pilot wants to face: 1 along +x, −1 back. */
+  /** The way the pilot wants to face: 1 along +x, −1 back. Only the ground pivot reads it; in the air the plane flies the way it faces. */
   facing: number;
 }
 
@@ -109,16 +109,15 @@ export interface Plane {
   x: number;
   /** Height of the centre of gravity above the ground. */
   h: number;
-  /** Ground velocity: along the view, into it, and up. */
+  /** Ground velocity: along the view, into it (only while pivoting on the ground), and up. */
   vx: number;
   vz: number;
   vy: number;
-  /** Heading in the horizontal plane: 0 along +x, π back along −x; grows through a turn. */
+  /** Heading in the horizontal plane: 0 along +x, π back along −x; between them only through the ground pivot. */
   yaw: number;
   /** Nose above the horizon, radians, and its rate. */
   pitch: number;
   q: number;
-  bank: number;
   /** 0 to 1, the engine's answer to the throttle. */
   spool: number;
   /** The elevator's actual deflection, −1 to 1, and the flaps' travel, 0 to 1. */
@@ -128,9 +127,6 @@ export interface Plane {
   tail_on: boolean;
 }
 
-const BANK = (30 * Math.PI) / 180;
-const ROLL_RATE = 0.8;
-const ROLL_OUT = 0.5;
 const GROUND_TURN = 0.6;
 const GROUND_TURN_SPEED = 6;
 const PROP_WASH = 0.35;
@@ -269,7 +265,6 @@ export function create_plane(c: Coefficients, x: number, face = 1): Plane {
     yaw: face > 0 ? 0 : Math.PI,
     pitch: rest.pitch,
     q: 0,
-    bank: 0,
     spool: c.spec.idle,
     elevator: 0,
     flaps: 0,
@@ -283,10 +278,7 @@ export function elevator_for(alpha: number, flaps: number, c: Coefficients): num
   return -(c.cm0 + c.cm_alpha * Math.sin(alpha) + c.spec.flap_pitch * flaps + c.cm_stall * separation(alpha, c)) / c.cm_elevator;
 }
 
-/**
- * Signed radians of turn left before the plane faces `face`, the short way round; a fresh half turn goes the positive
- * way, so a circuit's turns all bank the same side. A slight overshoot comes back instead of going round again.
- */
+/** Signed radians of turn left before the plane faces `face`, the short way round; a fresh half turn goes the positive way. */
 export function turn_left(plane: Pick<Plane, "yaw">, face: number): number {
   const left = wrap((face > 0 ? 0 : Math.PI) - plane.yaw);
   if (Math.abs(left) < 2e-3) return 0;
@@ -323,10 +315,8 @@ export function step_plane(plane: Plane, input: Input, c: Coefficients, dt: numb
   const D = qbar * s.wing_area * cd;
   const ux = V > 0.05 ? air.u / V : 1;
   const wy = V > 0.05 ? air.w / V : 0;
-  const lift_up = L * Math.cos(plane.bank);
-  let fs = T * Math.cos(plane.pitch) - D * ux - lift_up * wy;
-  let fy = T * Math.sin(plane.pitch) - D * wy + lift_up * ux - c.mass * G;
-  const fp = L * Math.sin(plane.bank);
+  let fs = T * Math.cos(plane.pitch) - D * ux - L * wy;
+  let fy = T * Math.sin(plane.pitch) - D * wy + L * ux - c.mass * G;
 
   const wash = qbar + (PROP_WASH * Math.max(0, T)) / (Math.PI * s.prop_radius ** 2);
   const sep = separation(air.alpha, c);
@@ -349,28 +339,29 @@ export function step_plane(plane: Plane, input: Input, c: Coefficients, dt: numb
 
   const cos = Math.cos(plane.yaw);
   const sin = Math.sin(plane.yaw);
-  let vx = plane.vx + ((fs * cos - fp * sin) / c.mass) * dt;
-  let vz = plane.vz + ((fs * sin + fp * cos) / c.mass) * dt;
+  let vx = plane.vx + ((fs * cos) / c.mass) * dt;
+  let vz = plane.vz + ((fs * sin) / c.mass) * dt;
   const vy = plane.vy + (fy / c.mass) * dt;
   const q = plane.q + (moment / c.inertia) * dt;
   let yaw = plane.yaw;
-  let bank = plane.bank;
 
-  const left = turn_left(plane, input.facing);
+  // A pivot starts only below taxi speed but, once under way, finishes: a plane left half turned would fly on sideways.
+  const pivoting = Math.abs(Math.sin(yaw)) > 1e-3;
   if (grounded) {
-    bank = 0;
+    const left = turn_left(plane, input.facing);
     let along_now = vx * cos + vz * sin;
-    if (left !== 0 && Math.abs(along_now) < GROUND_TURN_SPEED) yaw += Math.sign(left) * Math.min(Math.abs(left), GROUND_TURN * dt);
+    if (left !== 0 && (pivoting || Math.abs(along_now) < GROUND_TURN_SPEED)) yaw += Math.sign(left) * Math.min(Math.abs(left), GROUND_TURN * dt);
     const traction = main.fy + tail.fy;
     if (Math.abs(along_now) < 0.03 && Math.abs(fs - main.fs - tail.fs) < (env.roll + c.brake * clamp(input.brake, 0, 1)) * traction) along_now = 0;
     vx = along_now * Math.cos(yaw);
     vz = along_now * Math.sin(yaw);
   } else {
-    const ax = vx - env.wind;
-    const turn = wrap(Math.atan2(vz, ax) - yaw);
-    if (Math.hypot(ax, vz) > 1 && Math.abs(turn) < Math.PI / 2) yaw += turn;
-    const goal = left !== 0 ? Math.sign(left) * BANK * clamp(Math.abs(left) / ROLL_OUT, 0.15, 1) : 0;
-    bank = approach(bank, goal, ROLL_RATE * dt);
+    if (pivoting) {
+      const square = Math.cos(yaw) >= 0 ? 0 : Math.PI;
+      const left = wrap(square - yaw);
+      yaw += Math.sign(left) * Math.min(Math.abs(left), GROUND_TURN * dt);
+    }
+    vz = 0;
   }
 
   return {
@@ -382,7 +373,6 @@ export function step_plane(plane: Plane, input: Input, c: Coefficients, dt: numb
     yaw,
     pitch: wrap(plane.pitch + q * dt),
     q,
-    bank,
     spool,
     elevator,
     flaps,

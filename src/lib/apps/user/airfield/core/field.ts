@@ -22,6 +22,36 @@ export interface Field {
   trees: Tree[];
 }
 
+/** The world is a loop this long: flying on brings the plane back to the home field from behind. */
+export const WRAP = 8000;
+
+/**
+ * `x` in the home field's frame, the nearest copy: the plane's `x` grows without bound as it flies round, so the
+ * camera never jumps at a seam, and everything tied to the field reads it through here.
+ */
+export function home_x(field: Field, x: number): number {
+  const middle = (field.runway.x0 + field.runway.x1) / 2;
+  return x - WRAP * Math.round((x - middle) / WRAP);
+}
+
+/** Metres to the near end of the runway the way the nose points, round the wrap; null over the runway. */
+export function runway_ahead(field: Field, x: number, face: number): number | null {
+  const at = home_x(field, x);
+  if (at >= field.runway.x0 && at <= field.runway.x1) return null;
+  const end = face > 0 ? field.runway.x0 : field.runway.x1;
+  const distance = (end - at) * face;
+  return distance - WRAP * Math.floor(distance / WRAP);
+}
+
+/** World offsets of the home field's copies within `x0`..`x1`, for drawing. */
+export function field_copies(field: Field, x0: number, x1: number): number[] {
+  const left = Math.min(field.apron.x0, ...field.trees.map((t) => t.x - t.r)) - 20;
+  const right = Math.max(field.runway.x1, ...field.trees.map((t) => t.x + t.r)) + 20;
+  const copies: number[] = [];
+  for (let k = Math.ceil((x0 - right) / WRAP); k <= Math.floor((x1 - left) / WRAP); k++) copies.push(k * WRAP);
+  return copies;
+}
+
 export function build_field(): Field {
   const trees: Tree[] = [];
   const grove = (from: number, to: number, seed: number) => {
@@ -44,9 +74,11 @@ export function build_field(): Field {
 }
 
 export function surface_roll(field: Field, x: number): number {
-  return x >= field.apron.x0 && x <= field.runway.x1 ? ROLL_ASPHALT : ROLL_GRASS;
+  const at = home_x(field, x);
+  return at >= field.apron.x0 && at <= field.runway.x1 ? ROLL_ASPHALT : ROLL_GRASS;
 }
 
 export function in_hangar(field: Field, plane: Plane): boolean {
-  return plane.main_on && Math.abs(ground_speed(plane)) < 3 && plane.x > field.hangar.x0 + 2 && plane.x < field.hangar.x1 - 1;
+  const at = home_x(field, plane.x);
+  return plane.main_on && Math.abs(ground_speed(plane)) < 3 && at > field.hangar.x0 + 2 && at < field.hangar.x1 - 1;
 }

@@ -23,7 +23,7 @@
     UP_KEYS,
   } from "./core/controls.svelte";
   import { draw_frame, PUFF_LIFE, type Puff, type Scenery } from "./core/draw";
-  import { build_field, in_hangar, surface_roll } from "./core/field";
+  import { build_field, in_hangar, runway_ahead, surface_roll } from "./core/field";
   import { advance, CrashKind, create_flight, Grade, Status, stall_warning, wheel_height, type Flight, type Touchdown } from "./core/flight";
   import { air_of, CALM, create_plane, facing, turn_left, type Env } from "./core/plane";
   import { PLANE_IDS, plane_coefficients, PlaneId, SPECS } from "./core/planes";
@@ -50,7 +50,6 @@
   const CRASH_TITLES: Record<CrashKind, string> = {
     [CrashKind.HARD]: "Landed too hard",
     [CrashKind.NOSE_OVER]: "Nosed over",
-    [CrashKind.WINGTIP]: "Caught a wingtip",
     [CrashKind.GROUND]: "Hit the ground",
   };
   const GRADE_NAMES: Record<Grade, string> = { [Grade.KISS]: "Kiss", [Grade.FIRM]: "Firm", [Grade.HEAVY]: "Heavy", [Grade.HARD]: "Hard" };
@@ -98,14 +97,8 @@
   const profile_shown = $derived(board_size.width >= 300);
   // A tall board has sky to spare: the plane comes in closer, the ground sits lower than the middle but off the bottom edge, and the hint goes under the profile.
   const tall = $derived(board_size.height > board_size.width * 1.3);
-  const to_runway = $derived(runway_distance(plane.x, facing(plane)));
-
-  /** Metres to the near end of the runway the way the nose points; null over it or with it behind. */
-  function runway_distance(x: number, face: number): number | null {
-    const end = face > 0 ? field.runway.x0 : field.runway.x1;
-    const distance = (end - x) * face;
-    return distance > 0 ? distance : null;
-  }
+  const to_runway = $derived(runway_ahead(field, plane.x, facing(plane)));
+  const on_ground = $derived(plane.main_on || plane.tail_on);
 
   $effect(() => {
     if (!settings_file.ready || ready) return;
@@ -360,7 +353,7 @@
       controls.keys.add(code);
     } else if (LEFT_KEYS.has(code) || RIGHT_KEYS.has(code)) {
       event.preventDefault();
-      controls.facing = LEFT_KEYS.has(code) ? -1 : 1;
+      if (on_ground) controls.facing = LEFT_KEYS.has(code) ? -1 : 1;
     } else if ((code === "KeyF" || code === "KeyV") && !event.repeat) {
       event.preventDefault();
       controls.step_flaps(code === "KeyF" ? 1 : -1);
@@ -447,7 +440,7 @@
         Push the throttle up and roll down the runway. It lifts off by itself near 45 kn; drag the pad on the right {settings.pitch === PitchMode.PILOT ? "down" : "up"} to raise the nose.
       </span>
       <span class="hidden pointer-fine:inline">
-        Shift opens the throttle a notch. Roll down the runway: it lifts off by itself near 45 kn. {settings.pitch === PitchMode.PILOT ? "S" : "W"} raises the nose, A and D turn round.
+        Shift opens the throttle a notch. Roll down the runway: it lifts off by itself near 45 kn. {settings.pitch === PitchMode.PILOT ? "S" : "W"} raises the nose; A and D turn round on the ground.
       </span>
     </p>
   {/if}
@@ -460,7 +453,7 @@
           {flight.crash.sink.toFixed(1)} m/s down · {(air.speed * KNOT).toFixed(0)} kn
         </p>
         <p class="text-2xs text-foreground/65">
-          {#if flight.crash.kind === CrashKind.HARD}Under 0.6 m/s is a kiss, under 1.5 firm; 3 m/s breaks the gear. Flare: raise the nose just above the runway and let it settle.{:else if flight.crash.kind === CrashKind.NOSE_OVER}Hard brakes or a stick held forward tip a taildragger onto its nose. Keep the stick back while braking.{:else if flight.crash.kind === CrashKind.WINGTIP}A turn banks the wings: start it high enough that the low wing clears the ground.{:else}The plane met the ground off its wheels.{/if}
+          {#if flight.crash.kind === CrashKind.HARD}Under 0.6 m/s is a kiss, under 1.5 firm; 3 m/s breaks the gear. Flare: raise the nose just above the runway and let it settle.{:else if flight.crash.kind === CrashKind.NOSE_OVER}Hard brakes or a stick held forward tip a taildragger onto its nose. Keep the stick back while braking.{:else}The plane met the ground off its wheels.{/if}
         </p>
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
@@ -501,15 +494,16 @@
   <span class="tabular-nums">{(air.speed * KNOT).toFixed(0)} kn</span>
   <span class="tabular-nums">{Math.round(altitude)} m</span>
   <span class="tabular-nums pointer-coarse:hidden">Pitch {Math.round((plane.pitch * 180) / Math.PI)}°</span>
-  <span class="hidden @5xl:inline">W S pitch · T trim · Shift Ctrl throttle · F V flaps · B brakes · A D turn · R apron</span>
+  <span class="hidden @5xl:inline">W S pitch · T trim · Shift Ctrl throttle · F V flaps · B brakes · A D turn on the ground · R apron</span>
 {/snippet}
 
 {#if !ready}
   <div class="h-full"></div>
 {:else}
   <AirfieldFrame
-    label="Airfield. W and S pitch, Shift and Control the throttle, F and V the flaps, B brakes, A and D turn round, Escape pauses."
+    label="Airfield. W and S pitch, Shift and Control the throttle, F and V the flaps, B brakes, A and D turn round on the ground, Escape pauses."
     {controls}
+    {on_ground}
     pitch={settings.pitch}
     controls_idle={crashed || flight.status === Status.PAUSED}
     {engage}

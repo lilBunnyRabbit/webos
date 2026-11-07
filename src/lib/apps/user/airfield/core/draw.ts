@@ -3,7 +3,7 @@ import type { Insets } from "$kit/games/play2d/camera";
 import { begin_frame, type View } from "$kit/games/play2d/canvas";
 import type { Palette } from "$kit/games/play2d/palette";
 import { hash } from "$kit/games/play2d/seed";
-import type { Field } from "./field";
+import { field_copies, home_x, type Field } from "./field";
 import { facing, type BodyPoint, type Coefficients, type Plane } from "./plane";
 
 export interface Scenery {
@@ -224,8 +224,10 @@ function runway(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
     ctx.fillText("09", r.x0 + 26, 0.6);
     ctx.fillText("27", r.x1 - 26, 0.6);
   }
+  const kerb_from = Math.max(box.x0, field.apron.x0);
+  const kerb_to = Math.min(box.x1, r.x1);
   ctx.fillStyle = palette.kerb;
-  ctx.fillRect(Math.max(box.x0, field.apron.x0), -0.02, Math.min(box.x1, r.x1) - Math.max(box.x0, field.apron.x0), 0.05);
+  if (kerb_to > kerb_from) ctx.fillRect(kerb_from, -0.02, kerb_to - kerb_from, 0.05);
 }
 
 function trees(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
@@ -374,8 +376,8 @@ function project(plane: Plane, p: BodyPoint, lateral = 0): Point {
   const s = p.x * cos - p.z * sin;
   const up = p.x * sin + p.z * cos;
   return {
-    x: plane.x + s * Math.cos(plane.yaw) - lateral * Math.sin(plane.yaw) * Math.cos(plane.bank),
-    y: -(plane.h + up - lateral * Math.sin(plane.bank)),
+    x: plane.x + s * Math.cos(plane.yaw) - lateral * Math.sin(plane.yaw),
+    y: -(plane.h + up),
   };
 }
 
@@ -411,7 +413,7 @@ function subpath(ctx: CanvasRenderingContext2D, points: readonly Point[]) {
 /**
  * An outline swept across from `from` to `to` metres of lateral offset, added to the current path: the outline at both
  * ends and the band between each pair of edges, all wound one way so a nonzero fill paints their union. Side on, the two
- * ends land on each other; turned or banked, the wing shows its planform and the fuselage its width.
+ * ends land on each other; turned through the ground pivot, the fuselage shows its width and the wing its span.
  */
 function swept(ctx: CanvasRenderingContext2D, plane: Plane, outline: readonly Station[], from: number, to = from) {
   const a = outline.map((p) => project(plane, p, from * (p.w ?? 1)));
@@ -549,7 +551,7 @@ function draw_plane(ctx: CanvasRenderingContext2D, f: Frame) {
   const paint = palette.player;
   const edge = Math.max(0.035, hair(view, 1.25));
   const span = f.c.spec.span / 2;
-  const near = Math.sin(plane.yaw) * Math.cos(plane.bank) >= 0 ? 1 : -1;
+  const near = Math.sin(plane.yaw) >= 0 ? 1 : -1;
   // Drawn longer than the real 0.42 m chord when zoomed out and dark once lowered (the body is the accent colour), so the setting reads at circuit height.
   const flap_length = Math.max(0.42, hair(view, 7));
   const flap_tip = hinged(FLAP_HINGE, flap_length, (Math.PI / 180) * 40 * plane.flaps);
@@ -735,7 +737,7 @@ function profile(ctx: CanvasRenderingContext2D, f: Frame) {
   ctx.moveTo(sx(field.runway.x0), sy(0));
   ctx.lineTo(sx(field.runway.x1), sy(0));
   ctx.stroke();
-  const px = Math.max(x0 + 4, Math.min(x0 + w - 4, sx(plane.x)));
+  const px = Math.max(x0 + 4, Math.min(x0 + w - 4, sx(home_x(field, plane.x))));
   const py = Math.max(y0 + 4, sy(plane.h));
   const face = facing(plane);
   ctx.beginPath();
@@ -762,10 +764,16 @@ export function draw_frame(ctx: CanvasRenderingContext2D, f: Frame) {
   }
   ctx.fillStyle = f.palette.grass;
   ctx.fillRect(box.x0, 0, box.x1 - box.x0, 0.02);
-  trees(ctx, f, box);
-  windsock(ctx, f);
-  runway(ctx, f, box);
-  hangar(ctx, f);
+  for (const offset of field_copies(f.field, box.x0, box.x1)) {
+    const near = { ...box, x0: box.x0 - offset, x1: box.x1 - offset };
+    ctx.save();
+    ctx.translate(offset, 0);
+    trees(ctx, f, near);
+    windsock(ctx, f);
+    runway(ctx, f, near);
+    hangar(ctx, f);
+    ctx.restore();
+  }
   shadow(ctx, f);
   draw_plane(ctx, f);
   puffs(ctx, f);

@@ -20,6 +20,8 @@
   interface Props {
     label: string;
     controls: Controls;
+    /** The turn buttons only work on the ground; in the air they stay in place, disabled, so the layout doesn't jump. */
+    on_ground: boolean;
     pitch: PitchMode;
     /** Held sideways the touch controls float over the board; hidden while a card is up so it stays in sight. */
     controls_idle: boolean;
@@ -45,6 +47,7 @@
   let {
     label,
     controls,
+    on_ground,
     pitch,
     controls_idle,
     engage,
@@ -176,7 +179,7 @@
   }
 
   function face(to: number) {
-    if (engage()) controls.facing = to;
+    if (on_ground && engage()) controls.facing = to;
   }
 
   function trim() {
@@ -219,10 +222,10 @@
         <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" onclick={() => flaps(-1)} aria-label="Flaps up">Flaps ▲</Button>
         <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" onclick={() => flaps(1)} aria-label="Flaps down">Flaps ▼</Button>
         <span class="af-flaps-label af-face col-span-2 rounded-md px-1 text-center text-2xs font-medium text-foreground/80">Flaps {FLAP_NAMES[controls.flap_notch]}</span>
-        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" pressed={controls.facing < 0} label="Turn to face left" onclick={() => face(-1)}>
+        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing < 0} label="Turn to face left" onclick={() => face(-1)}>
           <CaretLeftIcon weight="bold" />
         </IconButton>
-        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" pressed={controls.facing > 0} label="Turn to face right" onclick={() => face(1)}>
+        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing > 0} label="Turn to face right" onclick={() => face(1)}>
           <CaretRightIcon weight="bold" />
         </IconButton>
         <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" onclick={trim}>Trim</Button>

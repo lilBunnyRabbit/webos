@@ -81,11 +81,14 @@ describe("handling", () => {
     expect(flight.crash?.kind).toBe(CrashKind.NOSE_OVER);
   });
 
-  test("a turn in the air comes round to face the other way", () => {
+  test("in the air it flies the way it faces; on the ground it pivots round at taxi speed", () => {
     const start = level_flight(c, 25);
-    const plane = fly(start.plane, 30, { throttle: start.throttle, trim: start.trim, stick: 0.12, facing: -1 });
-    expect(Math.cos(plane.yaw)).toBeLessThan(-0.99);
-    expect(plane.vx).toBeLessThan(0);
+    const flown = fly(start.plane, 10, { throttle: start.throttle, trim: start.trim, stick: 0, facing: -1 });
+    expect(flown.yaw).toBe(0);
+    expect(flown.vz).toBe(0);
+    expect(flown.vx).toBeGreaterThan(20);
+    const taxied = fly(create_plane(c, 0), 8, { ...HANDS_OFF, facing: -1 });
+    expect(Math.cos(taxied.yaw)).toBeLessThan(-0.99);
   });
 
   function spec_stall() {

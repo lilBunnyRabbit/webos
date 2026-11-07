@@ -14,7 +14,7 @@ export function grade(sink: number): Grade {
   return Grade.HARD;
 }
 
-export const CrashKind = { HARD: "hard", NOSE_OVER: "nose-over", WINGTIP: "wingtip", GROUND: "ground" } as const;
+export const CrashKind = { HARD: "hard", NOSE_OVER: "nose-over", GROUND: "ground" } as const;
 export type CrashKind = (typeof CrashKind)[keyof typeof CrashKind];
 
 export interface Touchdown {
@@ -60,8 +60,6 @@ function crashed(plane: Plane, c: Coefficients): CrashKind | null {
   const s = c.spec;
   if (point_at(plane, s.prop).height < 0) return plane.vy < -1.5 ? CrashKind.GROUND : CrashKind.NOSE_OVER;
   if (s.hull.some((p) => point_at(plane, p).height < 0)) return CrashKind.GROUND;
-  const wing = point_at(plane, s.wing).height;
-  if (wing - (s.span / 2) * Math.abs(Math.sin(plane.bank)) < 0) return CrashKind.WINGTIP;
   return null;
 }
 

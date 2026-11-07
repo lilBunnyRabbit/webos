@@ -1,9 +1,9 @@
 ## Airfield
 
-A small airfield seen from the side, at real scale: the hangar and the apron on the left, a 650 m runway, grass and trees past both ends. Taxi out, take off, fly wherever you like and land back on the runway. Nothing is scored yet; every touchdown is graded.
+A small airfield seen from the side, at real scale: the hangar and the apron on the left, a 650 m runway, grass and trees past both ends. Taxi out, take off, fly on and land back on the runway. The world is a loop about 8 km round: keep flying the way you face and you come back to the field from behind. Nothing is scored yet; every touchdown is graded.
 
 - Taxi into the **hangar** to pick a plane. For now it's the trainer, a light taildragger.
-- The little profile top right shows the whole field from 3 km out each side, the 3° glidepaths to both ends and where you are.
+- The little profile top right shows the whole field from 3 km out each side, the 3° glidepaths to both ends and where you are. In the air the **Runway** chip counts down to the near end of the runway ahead, round the loop.
 
 ## Flying
 
@@ -12,9 +12,9 @@ A small airfield seen from the side, at real scale: the hangar and the apron on 
 - **T** trims: the plane then holds the speed it has now, hands off.
 - **F** lowers the flaps a notch (Half, Full), **V** raises them. Flaps lift more at low speed and drag more: Half for takeoff, Full for landing.
 - **B** brakes, harder the longer you hold it. Hard brakes at speed tip a taildragger onto its nose, so keep the stick back.
-- **A** and **D** (or **←** **→**) turn round to face left or right: on the ground you pivot when slow, in the air the plane banks into a turn and comes round in about 15 seconds. A banked wing loses lift, so hold a little back stick.
+- **A** and **D** (or **←** **→**) turn round to face left or right on the ground, below taxi speed, so you can taxi back. In the air the plane flies the way it faces.
 - W pushes the stick forward and S pulls it back, as in a cockpit. Settings › **Pitch › Up is up** makes W raise the nose instead.
-- On a touch screen: the throttle lever on the left, the pitch pad on the right (drag down to pull the nose up, like a stick; it springs back when you let go), flaps, brakes, turn and trim between them.
+- On a touch screen: the throttle lever on the left, the pitch pad on the right (drag down to pull the nose up, like a stick; it springs back when you let go), flaps, brakes, turn and trim between them. The turn buttons only work on the ground.
 - **Esc** pauses, **R** puts you back on the apron, the scroll wheel, a pinch or **+** **−** zoom.
 
 ## The trainer
