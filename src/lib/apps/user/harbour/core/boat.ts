@@ -277,7 +277,7 @@ export function step_boat(boat: Boat, input: Input, c: Coefficients, dt: number,
   const rudder_side = -c.rudder * Math.sin(lock) * flow;
   fy += rudder_side;
   n += rudder_side * c.rudder_x;
-  fx -= c.rudder * 0.25 * Math.sin(lock) ** 2 * flow;
+  fx -= c.rudder * 0.1 * Math.sin(lock) ** 2 * flow;
 
   if (c.walk > 0) {
     const fade = Math.max(0, 1 - Math.abs(u) / WALK_FADE);

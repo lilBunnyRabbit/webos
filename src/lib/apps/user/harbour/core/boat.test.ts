@@ -63,7 +63,7 @@ describe("handling", () => {
   });
 
   test("coasting comes to a dead stop", () => {
-    const boat = run({ ...create_boat({ x: 0, y: 0, heading: 0 }), vx: 1 }, 90, 0);
+    const boat = run({ ...create_boat({ x: 0, y: 0, heading: 0 }), vx: 1 }, 150, 0);
     expect(speed(boat)).toBe(0);
     expect(boat.r).toBe(0);
   });
