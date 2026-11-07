@@ -18,6 +18,7 @@
   import ToastArea from "../notifications/toast-area.svelte";
   import DialogsHost from "../dialogs/dialogs-host.svelte";
   import SoloWindow from "./solo-window.svelte";
+  import AppExperimental from "../apps/app-experimental.svelte";
 
   const windows = $derived(kernel.service<WindowsService>("windows"));
   const router = $derived(kernel.service<RouterService>("router"));
@@ -54,6 +55,7 @@
         <span class="truncate text-ui font-medium" title={instance?.title ? `${instance.title} — ${manifest.name}` : undefined}>
           {instance?.title ?? manifest.name}
         </span>
+        <AppExperimental app_id={manifest.id} />
         {#if instance?.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
       {/if}
     </div>

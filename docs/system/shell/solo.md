@@ -8,7 +8,7 @@ The shell a `#/solo/{id}?{props}` link gets, on every platform: one app, full pa
 
 ```
 solo-shell.svelte        flex column, h-dvh, safe-area insets left/right
-├─ header                the window's app icon, title (or app name), unsaved dot; Guide; Open WebOS (primary link, new tab)
+├─ header                the window's app icon, title (or app name), the Experimental pill for an experimental app (ADR-097, `app-experimental.svelte`), unsaved dot; Guide; Open WebOS (primary link, new tab)
 ├─ main                  isolate
 │  ├─ solo-window.svelte the first window: app context, WindowContent at zoom 1, its sheets; no chrome
 │  ├─ EmptyState         closed: "{App} is closed" + Reopen · broken link: "This link can't open", or "This link needs a newer WebOS" + Update and reload

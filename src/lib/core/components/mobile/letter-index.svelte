@@ -44,6 +44,7 @@
   const best = $derived(matches[0] ?? gettable[0] ?? sentence.related[0]);
 
   const favourites = $derived(apps.favourites.flatMap((id) => apps.get(id) ?? []));
+  const experimental = $derived(new Set(apps.listings().flatMap((listing) => (listing.experimental ? [listing.id] : []))));
 
   /** Hold a favourite and move to reorder it; hold and let go for its menu. Lives only while a finger is down. */
   interface Drag {
@@ -374,7 +375,9 @@
                 {manifest}
                 onclick={() => launch(manifest.id)}
                 class={cn("transition-[background-color,scale,box-shadow]", lifted && "scale-[1.02] bg-background-light/90 shadow-popover")}
-              />
+              >
+                {#if experimental.has(manifest.id)}<ExperimentalBadge />{/if}
+              </AppRow>
             </li>
           {/each}
         </ul>
