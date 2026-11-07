@@ -89,3 +89,14 @@ Wave 1 (the model, the trainer, the hub and free flight) is in `src/lib/apps/use
 - **Throttle detents:** Idle, Quarter, Half, Cruise (0.75), Full. **Flaps:** Up, Half, Full.
 - **Grading in the hub:** a touchdown 1.5–3 m/s is graded Heavy (no name in the ADR); 3 m/s or more, a prop strike, a hull or wingtip on the ground are crashes. "A stall below 20 m is a crash" waits for round scoring in wave 3.
 - **HUD:** besides airspeed, height, vertical speed, flaps, throttle and the stall warning, a trim chip and the distance to the runway ahead when airborne, since at circuit height the runway is out of view.
+
+## Revision 2026-11-07: no turning in the air, a wrapping world
+The owner saw no point in the scripted bank turn. It replaces the "Turning round" item above:
+- **In the air** the plane only flies the way it faces. There's no bank and no heading change, and A/D do nothing. The air model is pure 2D: pitch, power, energy.
+- **On the ground** A/D still flip the facing below taxi speed, so the plane can taxi back.
+- **The world wraps.** x is a loop about 8 km round, so flying on brings the plane back to the home field from behind. The profile inset and the Runway chip measure distance along the wrap.
+- **Levels are one-way:** take off at A and land at B, or fly round the wrap to land where you started.
+
+Rejected:
+- **A loop to turn round:** the trainer barely has the energy for one, and the airliner can't loop.
+- **Keeping the bank turn:** it animates a 3D move the player doesn't control, and it reads oddly side-on.
