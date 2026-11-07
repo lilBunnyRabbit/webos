@@ -31,6 +31,7 @@ import {
 const GAMES = [
   { id: "parking", building: Building.CAR_PARK },
   { id: "forklift", building: Building.WAREHOUSE },
+  { id: "shunter", building: Building.FREIGHT_YARD },
   { id: "f1", building: Building.TRACK },
   { id: "ferry", building: Building.FERRY },
   { id: "mower", building: Building.GARDEN },
@@ -149,23 +150,27 @@ describe("yard", () => {
     expect(GROWN.plots.at(-1)?.open).toBe(false);
   });
 
-  // About 15 s at the yard's pace (the hatchback tops out at 8.4 m/s); the planner's path shuffles a little more than a driver.
-  test("from the gate the hatchback and the bus reach every doorway, the hatchback the pad, all a short drive", () => {
+  // One search per vehicle and doorway, each up to a few seconds here and two to three times that on CI: a test each.
+  // A short drive is the longest one round the ring road from the gate, about 130 m in a court 72 m tall.
+  describe("from the gate", () => {
     for (const [name, spec] of [
-      ["hatch", VEHICLES.hatch],
+      ["hatchback", VEHICLES.hatch],
       ["bus", VEHICLES.bus],
     ] as const) {
-      const start = gate_car(TOWN, spec);
       for (let i = 0; i < TOWN.plots.length; i++) {
-        const found = plan(start, doorway_goal(TOWN, i), near, { spec, arrive: (pose) => door_at(TOWN, pose, spec) === i });
-        expect(found, `${name} to door ${i}`).not.toBeNull();
-        expect(door_at(TOWN, found!.path.at(-1)!, spec)).toBe(i);
-        if (name === "hatch") expect(found!.moves.reduce((sum, move) => sum + Math.abs(move.distance), 0), `door ${i}`).toBeLessThan(110);
+        test(`the ${name} reaches doorway ${i}`, { timeout: 30_000 }, () => {
+          const found = plan(gate_car(TOWN, spec), doorway_goal(TOWN, i), near, { spec, arrive: (pose) => door_at(TOWN, pose, spec) === i });
+          expect(found).not.toBeNull();
+          expect(door_at(TOWN, found!.path.at(-1)!, spec)).toBe(i);
+          if (spec === VEHICLES.hatch) expect(found!.moves.reduce((sum, move) => sum + Math.abs(move.distance), 0)).toBeLessThan(150);
+        });
       }
     }
-    const spec = VEHICLES.hatch;
-    const pad = plan(gate_car(TOWN, spec), pad_car(TOWN, spec), near, { spec, arrive: (pose) => on_pad(TOWN, pose, spec) });
-    expect(pad).not.toBeNull();
+
+    test("the hatchback reaches the pad", { timeout: 30_000 }, () => {
+      const spec = VEHICLES.hatch;
+      expect(plan(gate_car(TOWN, spec), pad_car(TOWN, spec), near, { spec, arrive: (pose) => on_pad(TOWN, pose, spec) })).not.toBeNull();
+    });
   });
 
   test("a vehicle swapped from the toolbar takes the old one's place, or the nearest clear spot when it doesn't fit", () => {

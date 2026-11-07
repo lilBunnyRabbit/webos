@@ -66,6 +66,15 @@ describe("coupling and dropping", () => {
     expect(Math.hypot(reached.x - stand.hinge.x, reached.y - stand.hinge.y)).toBeGreaterThan(0.5);
   });
 
+  test("a couple after a bump on the way in, backed off or not, isn't a clean one", () => {
+    const clean = back(lined_up(start, 0.6), 2);
+    expect(clean.bumps_at_hitch).toBe(start.bumps_at_hitch);
+    const missed = back(lined_up(start, 0.6, 0.4), 4);
+    const again = back({ ...lined_up(missed, 0.6), bumps: missed.bumps, bumped: null }, 2);
+    expect(again.coupled).not.toBeNull();
+    expect(again.bumps_at_hitch).not.toBe(missed.bumps_at_hitch);
+  });
+
   test("the drop is live only inside the target, and the last one ends the job", () => {
     const coupled = back(lined_up(start, 0.6), 2);
     expect(can_drop({ ...coupled, car: { ...coupled.car, speed: 0 } as Car })).toBe(false);

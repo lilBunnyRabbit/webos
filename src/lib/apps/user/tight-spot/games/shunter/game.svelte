@@ -308,15 +308,16 @@
     if (next === game) return;
     const bumps = game.bumps;
     const was = game.coupled;
+    const since = game.bumps_at_hitch;
     game = next;
     if (next.bumps > bumps) sounds.crash();
-    if (was === null && next.coupled !== null) on_couple(next);
+    if (was === null && next.coupled !== null) on_couple(next.bumps_at_hitch === since);
   }
 
   // The fifth wheel latches by itself as the kingpin drops into it: a clunk, the gear left as it was.
-  function on_couple(state: GameState) {
+  function on_couple(clean: boolean) {
     sounds.fork(true);
-    if (!state.bumped) achievements.achieve("shunter-kingpin");
+    if (clean) achievements.achieve("shunter-kingpin");
   }
 
   function finish(state: GameState) {

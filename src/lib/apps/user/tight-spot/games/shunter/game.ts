@@ -83,6 +83,8 @@ export interface GameState {
   bumped: Bump | null;
   bumps: number;
   bump_ms: number;
+  /** `bumps` at the last couple or drop (0 at the start): a couple with none since came in clean. */
+  bumps_at_hitch: number;
 }
 
 export function yard_for(round: Round): Yard {
@@ -108,6 +110,7 @@ export function create_game(round: Round): GameState {
     bumped: null,
     bumps: 0,
     bump_ms: 0,
+    bumps_at_hitch: 0,
   };
 }
 
@@ -239,7 +242,7 @@ function latch(state: GameState, car: Car): GameState | null {
   const coupled = couple(car, state.spec, stand);
   if (!coupled) return null;
   const stands = state.stands.map((each, i) => (i === task.unit ? null : each));
-  return { ...state, car: { ...coupled.car, speed: 0 }, spec: coupled.spec, stands, coupled: task.unit };
+  return { ...state, car: { ...coupled.car, speed: 0 }, spec: coupled.spec, stands, coupled: task.unit, bumps_at_hitch: state.bumps };
 }
 
 /** `creep` is the Creep setting: without it the shunter moves only on the gas. */
@@ -336,6 +339,7 @@ export function drop_unit(state: GameState): GameState {
     stands,
     coupled: null,
     drops,
+    bumps_at_hitch: state.bumps,
     current,
     status: done ? Status.DONE : state.status,
   };
