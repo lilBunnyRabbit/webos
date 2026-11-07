@@ -102,7 +102,7 @@ The plane is drawn from its body points projected through pitch and heading, so 
 | Turn round | A/← face left, D/→ face right | ◀ ▶ | |
 | Other | Esc pause, Enter resume or back to the apron, R apron, + − zoom | | wheel zoom |
 
-Settings › Pitch: "Up is up" (W, ↑ and dragging up raise the nose) or "Pilot" (they push the stick forward). The window pauses when it loses focus.
+Settings › Pitch: "Pilot", the default (W and ↑ push the stick forward, S and ↓ pull it back, dragging down pulls), or "Up is up" (W, ↑ and dragging up raise the nose). The window pauses when it loses focus.
 
 ### Sound
 
@@ -110,7 +110,7 @@ Settings › Pitch: "Up is up" (W, ↑ and dragging up raise the nose) or "Pilot
 
 ## Data
 
-`/var/lib/apps/airfield/settings.json` through `storage.file` with a zod schema that falls back field by field: `plane`, `pitch` (`game` | `pilot`), `sound`, `seen_hint`. No progress file until wave 3.
+`/var/lib/apps/airfield/settings.json` through `storage.file` with a zod schema that falls back field by field: `plane`, `pitch` (`pilot` default | `game`), `sound`, `seen_hint`. No progress file until wave 3.
 
 ## Dependencies & licences
 

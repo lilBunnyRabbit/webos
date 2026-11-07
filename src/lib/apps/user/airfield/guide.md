@@ -13,8 +13,8 @@ A small airfield seen from the side, at real scale: the hangar and the apron on 
 - **F** lowers the flaps a notch (Half, Full), **V** raises them. Flaps lift more at low speed and drag more: Half for takeoff, Full for landing.
 - **B** brakes, harder the longer you hold it. Hard brakes at speed tip a taildragger onto its nose, so keep the stick back.
 - **A** and **D** (or **←** **→**) turn round to face left or right: on the ground you pivot when slow, in the air the plane banks into a turn and comes round in about 15 seconds. A banked wing loses lift, so hold a little back stick.
-- Settings › **Pitch › Pilot** makes up and W push the stick forward, as in a cockpit.
-- On a touch screen: the throttle lever on the left, the pitch pad on the right (drag up to raise the nose; it springs back when you let go), flaps, brakes, turn and trim between them.
+- W pushes the stick forward and S pulls it back, as in a cockpit. Settings › **Pitch › Up is up** makes W raise the nose instead.
+- On a touch screen: the throttle lever on the left, the pitch pad on the right (drag down to pull the nose up, like a stick; it springs back when you let go), flaps, brakes, turn and trim between them.
 - **Esc** pauses, **R** puts you back on the apron, the scroll wheel, a pinch or **+** **−** zoom.
 
 ## The trainer
