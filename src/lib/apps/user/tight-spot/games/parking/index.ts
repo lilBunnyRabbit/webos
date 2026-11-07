@@ -20,4 +20,5 @@ export default define_game({
     { id: "parking-extreme-all", title: "Daredevil", text: "Park at the end of every Extreme course.", goal: 9 },
   ],
   load: () => import("./game.svelte"),
+  progress: () => import("./progress").then((module) => module.default),
 });

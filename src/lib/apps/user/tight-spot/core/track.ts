@@ -51,6 +51,13 @@ export function track_progress(levels: Readonly<Record<string, number>>, count: 
   return { stars, total: count * MAX_STARS };
 }
 
+// A save read straight from disk for the yard: a bad or missing field counts as nothing finished, never an error.
+export function read_levels(save: unknown, key = "levels"): LevelStars {
+  const field = typeof save === "object" && save !== null ? (save as Record<string, unknown>)[key] : undefined;
+  const parsed = levels_schema.safeParse(field);
+  return parsed.success ? parsed.data : {};
+}
+
 export function add_progress(...parts: Progress[]): Progress {
   return parts.reduce((sum, part) => ({ stars: sum.stars + part.stars, total: sum.total + part.total }), { stars: 0, total: 0 });
 }

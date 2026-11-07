@@ -17,4 +17,5 @@ export default define_game({
     { id: "airport-daily", title: "Daily departure", text: "Finish the daily turnaround." },
   ],
   load: () => import("./game.svelte"),
+  progress: () => import("./progress").then((module) => module.default),
 });

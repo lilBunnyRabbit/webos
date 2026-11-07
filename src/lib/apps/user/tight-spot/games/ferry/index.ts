@@ -16,4 +16,5 @@ export default define_game({
     { id: "ferry-no-undo", title: "First time right", text: "Load a sailing of five or more with three stars and no undo.", secret: true },
   ],
   load: () => import("./game.svelte"),
+  progress: () => import("./progress").then((module) => module.default),
 });

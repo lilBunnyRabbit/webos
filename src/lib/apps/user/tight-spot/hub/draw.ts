@@ -11,6 +11,7 @@ import { RECESS, to_town } from "./blueprints";
 import { building, house, in_plan, shadow_of, tree } from "./buildings";
 import type { CarPark } from "./car-park";
 import { District, near, type Plot, type Yard } from "./yard";
+import type { Progress } from "../core/track";
 
 const SOON = "Soon";
 // From this many pixels a metre the doorway's own sign reads, and the roof names give way to the buildings' look.
@@ -26,6 +27,8 @@ export interface YardScene {
   names: (string | null)[];
   /** Per plot: the game's icon once it has decoded. */
   icons: (HTMLImageElement | null)[];
+  /** Per plot: the stars its game's level track has earned, shown on the doorway sign; null without a track. */
+  progress: (Progress | null)[];
   /** The plot of the game played last, whose door glows. */
   last: number | null;
   at_door: number | null;
@@ -162,11 +165,21 @@ function sign(ctx: CanvasRenderingContext2D, scene: YardScene, index: number, vi
     ctx.restore();
     return;
   }
+  const tally = close && plot.open ? scene.progress[index] : null;
+  const tally_text = tally ? `★ ${tally.stars} / ${tally.total}` : "";
+  const tally_size = size * 0.72;
+  let tally_width = 0;
+  if (tally) {
+    ctx.font = `600 ${tally_size}px ${font}`;
+    tally_width = ctx.measureText(tally_text).width;
+    ctx.font = `700 ${size}px ${font}`;
+  }
   const x0 = centre.x - width / 2;
   if (close) {
     const pad = size * 0.5;
+    const plate = Math.max(width, tally_width);
     ctx.beginPath();
-    ctx.roundRect(x0 - pad, centre.y - size * 0.95, width + pad * 2, size * 1.9, size * 0.5);
+    ctx.roundRect(centre.x - plate / 2 - pad, centre.y - size * 0.95, plate + pad * 2, size * (tally ? 2.85 : 1.9), size * 0.5);
     ctx.fillStyle = palette.void;
     ctx.globalAlpha = 0.86;
     ctx.fill();
@@ -191,6 +204,12 @@ function sign(ctx: CanvasRenderingContext2D, scene: YardScene, index: number, vi
   }
   ctx.fillStyle = plot.open ? palette.paint : palette.faint;
   ctx.fillText(name, x, centre.y);
+  if (tally) {
+    ctx.font = `600 ${tally_size}px ${font}`;
+    ctx.textAlign = "center";
+    ctx.fillStyle = palette.target;
+    ctx.fillText(tally_text, centre.x, centre.y + size * 1.25);
+  }
   if (shut) {
     ctx.font = `600 ${size * 0.62}px ${font}`;
     ctx.textAlign = "center";

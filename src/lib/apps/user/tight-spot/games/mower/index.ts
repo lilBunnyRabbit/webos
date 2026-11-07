@@ -15,4 +15,5 @@ export default define_game({
     { id: "mower-every-blade", title: "Every blade", text: "Mow all of a lawn without touching a flower.", secret: true },
   ],
   load: () => import("./game.svelte"),
+  progress: () => import("./progress").then((module) => module.default),
 });

@@ -12,6 +12,7 @@
   import { cn } from "$lib/core/utils";
   import { Button, Segmented, Select } from "$lib/core/components/ui";
   import type { Snippet } from "svelte";
+  import { Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, view_stretch, type Camera, type Insets } from "$kit/games/play2d/camera";
   import { type Palette } from "$kit/games/play2d/palette";
@@ -47,6 +48,8 @@
     type Car,
   } from "../core/vehicle";
   import { draw_yard, StaticLayer } from "./draw";
+  import LicenceCard from "./licence-card.svelte";
+  import { town_progress } from "./progress.svelte";
   import { icon_image } from "./icons";
   import { Mode, Scenario } from "../games/parking/kinds";
   import { area_of, at_below_door, below_car, door_at, door_car, drive, floor_of, GARAGE, gate_car, near, on_pad, pad_car, shelf_of, swap_car } from "./yard";
@@ -78,7 +81,9 @@
   let moved_note = $state<string | null>(null);
   let moved_timer: ReturnType<typeof setTimeout> | undefined;
 
-  const { window: win } = get_app_context();
+  const { app_id, window: win } = get_app_context();
+  const progress = town_progress(app_id, GAMES);
+  const plot_progress = $derived(YARD.plots.map((_, index) => (GAMES[index] ? (progress.get(GAMES[index].id) ?? null) : null)));
   const intro_seen = $derived(prefs.value.yard_intro === true);
   const input = new DriveInput();
   const sounds = new Sounds(() => settings);
@@ -98,6 +103,7 @@
   let board: HTMLDivElement | undefined = $state();
   let card_size = $state({ width: 0, height: 0 });
   let settings_panel: HTMLDivElement | undefined = $state();
+  let licence_panel: HTMLDivElement | undefined = $state();
   let steer_box = $state({ width: 0, height: 0 });
   let pedal_box = $state({ width: 0, height: 0 });
   let stage_rect = $state<DOMRectReadOnly>();
@@ -124,6 +130,7 @@
   const door = $derived(door_at(YARD, car, spec));
   const below = $derived(at_below_door(YARD, car, spec));
   const door_game = $derived(below ? PARKING : door === null ? null : GAMES[door]);
+  const door_progress = $derived(door_game && !below ? (progress.get(door_game.id) ?? null) : null);
   const at_pad = $derived(on_pad(YARD, car, spec));
   const last_plot = $derived(last ? GAMES.findIndex((game) => game.id === last) : -1);
   const card = $derived(door_game ? "door" : at_pad ? "pad" : moved || intro_seen ? null : "welcome");
@@ -150,8 +157,9 @@
 
   $effect(() =>
     win.on_back(() => {
-      if (!settings_panel?.matches(":popover-open")) return false;
-      settings_panel.hidePopover();
+      const open = [settings_panel, licence_panel].find((panel) => panel?.matches(":popover-open"));
+      if (!open) return false;
+      open.hidePopover();
       return true;
     })
   );
@@ -167,7 +175,7 @@
 
   // The loop draws while something moves; this covers the rest (a gear, a menu, a resize, a new theme).
   $effect(() => {
-    void [car, palette, size, zoom, settings.guides, settings.hitboxes, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, card, icons, icons_ready];
+    void [car, palette, size, zoom, settings.guides, settings.hitboxes, card_size.width, card_size.height, side_card, steer_box.width, pedal_box.width, hud_height, card, icons, icons_ready, plot_progress];
     if (awake && !blocked) return;
     untrack(() => render(0));
   });
@@ -248,6 +256,7 @@
         spec,
         names: NAMES,
         icons,
+        progress: plot_progress,
         layer,
         last: last_plot >= 0 ? last_plot : null,
         at_door: door,
@@ -398,7 +407,7 @@
     if (event.metaKey) return release_all();
     const target = event.target;
     if (is_field(target)) return;
-    if (settings_panel?.matches(":popover-open")) return;
+    if (settings_panel?.matches(":popover-open") || licence_panel?.matches(":popover-open")) return;
     const code = event.code;
     const on_button = target instanceof HTMLButtonElement;
 
@@ -442,10 +451,11 @@
 
 {#snippet toolbar()}
   {@render menu()}
-  <span class="hidden truncate px-1 text-ui font-medium @md:inline">Yard</span>
-  <Select class="w-[6.5rem] min-w-0 @md:w-28" size="sm" aria-label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={() => vehicle_shelf.id, swap_shelf} />
-  <Select class="w-[7.5rem] min-w-0 @md:w-48" size="sm" aria-label="Vehicle" options={vehicle_options} bind:value={() => vehicle, swap_here} />
+  <span class="hidden truncate px-1 text-ui font-medium @lg:inline">Yard</span>
+  <Select class="w-[5.75rem] min-w-0 @md:w-28" size="sm" aria-label="Kind of vehicle" options={SHELF_OPTIONS} bind:value={() => vehicle_shelf.id, swap_shelf} />
+  <Select class="w-[6.75rem] min-w-0 @md:w-36 @xl:w-48" size="sm" aria-label="Vehicle" options={vehicle_options} bind:value={() => vehicle, swap_here} />
   <div class="flex-1"></div>
+  <LicenceCard {app_id} games={GAMES} {progress} bind:panel={licence_panel} onfocus={focus_board} />
   <SettingsPanel {settings} {input} bind:panel={settings_panel} onmute={() => sounds.quiet()} onfocus={focus_board} />
 {/snippet}
 
@@ -468,6 +478,11 @@
         >
           <door_game.icon weight="bold" class="size-4" />
           {#if below}<span class="hidden @md:inline">{door_game.name}:</span> Multi-storey{:else}{door_game.name}{/if}
+          {#if door_progress}
+            <span class="inline-flex items-center gap-0.5 text-2xs tabular-nums" aria-label="{door_progress.stars} of {door_progress.total} stars">
+              <StarIcon weight="fill" class="size-3" />{door_progress.stars}/{door_progress.total}
+            </span>
+          {/if}
           <span class="hidden text-2xs opacity-75 pointer-fine:inline">Enter ↵</span>
         </Button>
       {/if}

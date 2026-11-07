@@ -104,7 +104,8 @@
 {#snippet menu()}
   <Button size="sm" variant="quiet" aria-label="Games" title="Yard and games" onclick={switch_game}>
     <SignpostIcon weight="bold" />
-    <span class="hidden @sm:inline">Games</span>
+    <!-- The yard's toolbar has two pickers and two buttons beside it: there the word waits for a wider window. -->
+    <span class={["hidden", active === YARD ? "@md:inline" : "@sm:inline"]}>Games</span>
   </Button>
 {/snippet}
 

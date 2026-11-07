@@ -3,6 +3,8 @@
 Driving games in one small town. The app opens on the gate and the town square, your car at the gate; the view follows the car once you drive. A ring road runs round the square, and every game has a building on it, in its own district: the **Town** row (Tight Spot, Mow Day, Valet Rush, the Driving Test), **Sport** (Hot Lap, Rodeo), the **Waterfront** on the harbour (Ferry Loader, Airport) and the **Industrial** yard by the gate (the Warehouse).
 
 - Each building looks like its game: a multi-storey car park for **Tight Spot**, a shed with loading docks for the **Warehouse**, a kart circuit for **Hot Lap**, a ferry berth for **Ferry Loader**, a walled garden for **Mow Day**, a stand with a parked jet for **Airport**, a fenced arena for **Rodeo**, a hotel with a valet canopy for **Valet Rush** and a test centre with practice roads for the **Driving Test**. From afar its name is on the roof; close up a lit sign in the doorway names it. Drive into the lit doorway and press **Enter** (or tap **Enter** on the card) to play. The building you played last has a glowing doorway.
+- A game with levels shows your stars on its doorway sign and on the doorway card: earned out of all there are.
+- The **licence** card (the ID card at the right of the yard's toolbar) lists every game with its stars and the achievements you've unlocked.
 - **Games** at the left of the toolbar jumps straight to the yard or any game, and marks the one you played last.
 - **Back** in a game returns you to the yard, out of that game's doorway.
 

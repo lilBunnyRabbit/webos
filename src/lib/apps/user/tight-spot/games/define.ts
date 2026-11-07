@@ -3,6 +3,7 @@ import type { PlayTracker } from "$kit/games";
 import type { IconComponentProps } from "phosphor-svelte";
 import type { Component, Snippet } from "svelte";
 import type { Prefs } from "../core/prefs";
+import type { Progress } from "../core/track";
 import type { DriveSettings } from "../core/settings.svelte";
 
 export const Building = {
@@ -31,6 +32,13 @@ export interface GameProps {
   onexit?: () => void;
 }
 
+export interface ProgressSource {
+  /** The game's save in the app's data folder, `/var/lib/apps/tight-spot/{file}`. */
+  file: string;
+  /** Stars earned out of the total from that save, as read from disk (`null` when there is none): never throws. */
+  read(save: unknown): Progress;
+}
+
 export interface GameDefinition {
   id: string;
   name: string;
@@ -39,6 +47,8 @@ export interface GameDefinition {
   /** Merged into the app's achievements; ids stay unique across games. */
   achievements: Achievement[];
   load: () => Promise<{ default: Component<GameProps> }>;
+  /** Its level track's stars, for the doorway sign and the licence card; a small lazy module, so the yard loads none of the game. */
+  progress?: () => Promise<ProgressSource>;
 }
 
 export function define_game(definition: GameDefinition): GameDefinition {

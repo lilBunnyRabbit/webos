@@ -17,4 +17,5 @@ export default define_game({
     { id: "forklift-top-shelf", title: "Top shelf", text: "Put a pallet away on a top shelf without a scrape." },
   ],
   load: () => import("./game.svelte"),
+  progress: () => import("./progress").then((module) => module.default),
 });

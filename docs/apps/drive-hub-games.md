@@ -23,10 +23,13 @@ export default define_game({
   building: Building.WAREHOUSE,         // how its building looks in the yard
   achievements: [{ id: "forklift-first", … }], // merged into the app's list: ids unique across games
   load: () => import("./game.svelte"),  // the only thing the shell loads
+  progress: () => import("./progress").then((module) => module.default), // optional: stars on the door and the licence card
 });
 ```
 
 The component takes `GameProps`: `settings` (the shared `DriveSettings`, owned per window by the shell), `prefs` (the app's `storage.json`, already read), `daily` (the day of the daily the app was opened with, given only to the game it names), `menu` (the Games switcher snippet: render it first in the toolbar), `play` (the window's Game Hub tracker) and `onexit` (back to the yard). It keeps all its own state; nothing is shared through a context. Bests, levels and ghosts go in a file in the app data folder (`storage.file("{id}.json", …)`, ADR-035); only last choices go in `storage.json` as `{id}.*` keys (never bare keys, which are the shared settings), through the `prefs` prop: parse them once at the top with a zod object, `.catch(default)` per field, and save with `prefs.value["{id}.level"] = level`.
+
+A game with a level track adds `progress.ts`: `{ file, read(save) } satisfies ProgressSource`, where `read` takes the save as parsed JSON (`null` without one), uses `read_levels` and `track_progress` from `core/track.ts` and never throws. Keep it free of the game's code (its own level count, no import from `game.ts`) and add the count to `games/progress.test.ts`, which checks it against the game's.
 
 The shell lazy-loads the component the first time it's entered, shows the game's toolbar over "Opening …" meanwhile, and returns to the yard with an error toast if the chunk fails.
 

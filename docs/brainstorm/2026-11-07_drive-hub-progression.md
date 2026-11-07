@@ -82,7 +82,7 @@ Build everything and push in groups, asking before each push:
 
 ## Action items
 - [x] `refactor:` `core/track.ts`; Airport, Ferry, Forklift, Mow Day and Parking on it, proofs unchanged.
-- [ ] `GameDefinition` progress summary, door stars, licence card.
+- [x] `GameDefinition` progress summary, door stars, licence card.
 - [ ] Rodeo and Hot Lap ladders.
 - [ ] Driving Test and Valet Rush ladders.
 - [ ] Ferry, Mow Day and Airport levels that introduce things.
