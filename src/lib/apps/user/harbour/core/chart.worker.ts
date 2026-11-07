@@ -1,5 +1,4 @@
-import { chart, type RoundRef } from "./rounds";
+import { serve_chart } from "$kit/games/play2d/chart-job";
+import { chart } from "./rounds";
 
-self.onmessage = ({ data }: MessageEvent<RoundRef>) => {
-  self.postMessage(chart(data));
-};
+serve_chart(chart);

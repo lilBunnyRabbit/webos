@@ -1,18 +1,16 @@
+import { better as kit_better, best_schema as kit_best_schema, progress_schema_of } from "$kit/games/play2d/progress";
 import { z } from "zod";
 import { BOAT_IDS, BoatId } from "./boats";
 import { ThrottleMode } from "./lever";
 import { LEVELS } from "./levels";
 
-export const PROGRESS_FILE = "progress.json";
+export { PROGRESS_FILE } from "$kit/games/play2d/progress";
 export const SETTINGS_FILE = "settings.json";
 
-const best_schema = z.object({ stars: z.number().int().min(1).max(3), ms: z.number().nonnegative(), perfect: z.boolean().catch(false) });
+const best_schema = kit_best_schema.extend({ perfect: z.boolean().catch(false) });
 export type Best = z.infer<typeof best_schema>;
 
-export const progress_schema = z.object({
-  version: z.literal(1).catch(1),
-  bests: z.record(z.string(), best_schema).catch({}),
-});
+export const progress_schema = progress_schema_of(best_schema);
 export type Progress = z.infer<typeof progress_schema>;
 
 export const settings_schema = z.object({
@@ -28,10 +26,8 @@ export const DEFAULT_SETTINGS: Settings = { boat: BoatId.RIB, throttle: Throttle
 
 /** More stars win, then the faster time; a Perfect is kept once earned. */
 export function better(before: Best | undefined, run: Best): { best: Best; improved: boolean } {
-  if (!before) return { best: run, improved: true };
-  const improved = run.stars > before.stars || (run.stars === before.stars && run.ms < before.ms);
-  const best = improved ? { ...run, perfect: run.perfect || before.perfect } : { ...before, perfect: before.perfect || run.perfect };
-  return { best, improved };
+  const { best, improved } = kit_better(before, run);
+  return { best: before ? { ...best, perfect: run.perfect || before.perfect } : best, improved };
 }
 
 /** Levels docked at least once, in either boat. */

@@ -13,7 +13,8 @@
   import { untrack } from "svelte";
   import { body_velocity, speed, steer_angle, to_world } from "./core/boat";
   import { BOAT_IDS, boat_coefficients, BoatId, SPECS } from "./core/boats";
-  import { work_out_chart, type ChartJob } from "./core/chart-job";
+  import { work_out_chart, type ChartJob } from "$kit/games/play2d/chart-job";
+  import ChartWorker from "./core/chart.worker?worker";
   import { Grade } from "./core/contact";
   import { draw_frame, WAKE_LIFE, type WakePoint } from "./core/draw";
   import { AHEAD_KEYS, ASTERN_KEYS, Helm, PORT_KEYS, STARBOARD_KEYS, THRUSTER_KEYS } from "./core/helm.svelte";
@@ -351,7 +352,7 @@
 
   function chart_for(ref: RoundRef, done: (chart: Chart) => void, failed: () => void) {
     job?.cancel();
-    const current = work_out_chart(ref);
+    const current = work_out_chart(new ChartWorker(), ref, "The berth couldn't be charted");
     job = current;
     current.result.then(
       (chart) => {

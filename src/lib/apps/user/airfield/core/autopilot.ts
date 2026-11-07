@@ -351,8 +351,3 @@ function to_path_height(scene: Scene, plan: Plan, x: number): number {
   return ground_at(scene.course, scene.strip.x0 + plan.aim) + Math.tan(plan.slope) * to_aim(scene, scene.strip, x, plan.aim);
 }
 
-/** Par from the autopilot's time, as in Harbour: ceil(1.4 t + 8) seconds, in ms. */
-export function par_of(seconds: number): number {
-  return Math.ceil(seconds * 1.4 + 8) * 1000;
-}
-

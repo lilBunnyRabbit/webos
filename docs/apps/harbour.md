@@ -10,9 +10,9 @@ A top-down boat docking sim. A hub harbour you sail around with the real physics
 |------|-------|
 | Model | `core/boat.ts` (3-DOF body, `step_boat`, `coefficients`, the `measure_*` feel probes, hull outline), `core/boats.ts` (the two `BoatSpec`s, coefficients cached per boat) |
 | World | `core/world.ts` (`Scene`, `Solid`, `Berth`, `SceneBuilder`, `alongside`, `box`), `core/levels.ts` (two layout builders, the 8 levels, `random_scene`), `core/hub.ts` (hub harbour, gates, shed, `crossed`) |
-| Round | `core/contact.ts` (fender contacts, `grade`), `core/round.ts` (`advance`, docked rule, `lie`, `result`), `core/progress.ts` (files and bests) |
-| Proof | `core/planner.ts` (hybrid A* over forward arcs), `core/autopilot.ts` (`prove`, `sail`, `par_of`), `core/rounds.ts` (`RoundRef`, `chart`, the daily), `core/chart.worker.ts` + `core/chart-job.ts` |
-| Screen | `harbour.app.svelte` (hub and round state, loop, camera, cards), `frame.svelte` (toolbar, board, touch controls; the kit's `Lever` with the boat's detents from `core/lever.ts`), `settings-panel.svelte`, `core/draw.ts`, `core/helm.svelte.ts` (lever notch, wheel, keys), `core/sound.ts` |
+| Round | `core/contact.ts` (fender contacts, `grade`), `core/round.ts` (`advance`, docked rule, `lie`, `result`), `core/progress.ts` (files; bests keep a Perfect on top of the kit's `better`) |
+| Proof | `core/planner.ts` (hybrid A* over forward arcs), `core/autopilot.ts` (`prove`, `sail`), `core/rounds.ts` (the boat's `RoundRef`, `chart`, the daily, on `$kit/games/play2d/rounds`), `core/chart.worker.ts` (the kit's `serve_chart`; `work_out_chart` from `$kit/games/play2d/chart-job`) |
+| Screen | `harbour.app.svelte` (hub and round state, loop, camera, cards), `frame.svelte` (toolbar, board, touch controls; the kit's `Lever` with the boat's detents from `core/lever.ts`), `settings-panel.svelte`, `core/draw.ts`, `core/helm.svelte.ts` (lever notch, wheel, keys), `core/sound.ts` (on the kit's `GameSounds`) |
 
 ## The boat model
 
@@ -105,7 +105,7 @@ Options run shortest path first; the first that docks proves the level, and its 
 | Yacht | 117 | 87 | 181 | 115 | 143 | 180 | 145 | 144 |
 | Coaster | 567 | 334 | 565 | 565 | 411 | 531 | 404 | 404 |
 
-Like the forklift's par, charting runs in a worker (`chart-job.ts`) while the start card shows; Start waits for it.
+Like the forklift's par, charting runs in a worker (the kit's `work_out_chart`) while the start card shows; Start waits for it.
 
 ## Controls
 

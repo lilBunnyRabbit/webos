@@ -12,10 +12,10 @@ A side-view takeoff and landing sim at real scale. Four planes, each solved from
 |------|-------|
 | Model | `core/plane.ts` (state, forces, `step_plane`, the `measure_*` feel probes, `coefficients`), `core/planes.ts` (the four `PlaneSpec`s, coefficients cached per plane) |
 | Flight | `core/flight.ts` (`advance`: touchdown grading, crashes, autobrake, tail strike, stall warning, hazards), `core/field.ts` (the home field: runway, apron, hangar, gates, trees, surface friction), `core/weather.ts` (wind, gusts, shear, thermals; the hub's random weather), `core/winch.ts` |
-| Rounds | `core/course.ts` (a level's world: ground line, surfaces, strips, obstacles, weather, `course_env`), `core/levels.ts` (the 20 levels and `random_scene`), `core/round.ts` (`Scene`, `step_round`, goals, `result`), `core/rounds.ts` (`RoundRef`, `chart`, the daily), `core/progress.ts` |
-| Proof | `core/autopilot.ts` (`autopilot`, `fly`, `par_of`), `core/chart.worker.ts` + `core/chart-job.ts` |
+| Rounds | `core/course.ts` (a level's world: ground line, surfaces, strips, obstacles, weather, `course_env`), `core/levels.ts` (the 20 levels and `random_scene`), `core/round.ts` (`Scene`, `step_round`, goals, `result`), `core/rounds.ts` (the plane's `RoundRef`, `chart`, the daily, on `$kit/games/play2d/rounds`), `core/progress.ts` (the kit's schema and `better`) |
+| Proof | `core/autopilot.ts` (`autopilot`, `fly`), `core/chart.worker.ts` (the kit's `serve_chart`; `work_out_chart` from `$kit/games/play2d/chart-job`) |
 | Cockpit | `core/cockpit.ts` (each plane's lever detents and flap notches), `core/controls.svelte.ts` (lever notch, trim, flaps, facing, brake ramp, stick from keys, pad or mouse, the crew walk), `pitch-pad.svelte`, the kit's `Lever` |
-| Screen | `airfield.app.svelte` (loop, camera, HUD, cards, rounds), `frame.svelte` (toolbar, board, touch controls, mouse drag, pinch), `core/draw.ts`, `core/art.ts` (each plane's drawing), `core/sound.ts`, `settings-panel.svelte` |
+| Screen | `airfield.app.svelte` (loop, camera, HUD, cards, rounds), `frame.svelte` (toolbar, board, touch controls, mouse drag, pinch), `core/draw.ts`, `core/art.ts` (each plane's drawing), `core/sound.ts` (on the kit's `GameSounds`), `settings-panel.svelte` |
 
 ## How it works
 
@@ -131,7 +131,7 @@ A round is a `Scene` (`core/round.ts`): a `Course`, a start (on the ground at re
 
 **Proof:** `levels.test.ts` flies all 20 levels, a random seed per plane and the daily. `levels.slow.test.ts` (`bun run test:slow`) flies each level again from 60 m back and on, 12 % higher and lower, and 1.5 m/s more head and tail wind: all 120 pass, the margin kept for retunes (Harbour's lesson).
 
-**Random and daily:** `random_scene(plane, seed, attempt)` lays out a landing from the seed: a strip of the plane's kind and length, 1–2.4 km out (airliner 5.5–8.5 km, glider 2.5–5 km), on or near its glidepath (a glider released for 12–18 : 1), −7 to 2.5 m/s of wind with gusts half the time, shear for the airliner a third of the time, a thermal for the glider, hills beyond the strip and trees short of it under the path. `chart` tries up to 16 attempts in a worker (`chart-job.ts`) while the card shows. The daily picks the plane from the day's seed; Game Hub ranks it `SCORE_ASC` on stars lost, ties by time (`play.daily`).
+**Random and daily:** `random_scene(plane, seed, attempt)` lays out a landing from the seed: a strip of the plane's kind and length, 1–2.4 km out (airliner 5.5–8.5 km, glider 2.5–5 km), on or near its glidepath (a glider released for 12–18 : 1), −7 to 2.5 m/s of wind with gusts half the time, shear for the airliner a third of the time, a thermal for the glider, hills beyond the strip and trees short of it under the path. `chart` tries up to 16 attempts in a worker (the kit's `work_out_chart`) while the card shows. The daily picks the plane from the day's seed; Game Hub ranks it `SCORE_ASC` on stars lost, ties by time (`play.daily`).
 
 **Progress:** `/var/lib/apps/airfield/progress.json` (Harbour's shape): `bests` keyed `level-{plane}-{n}`, `random-{plane}`, `daily-{day}`; more stars win, then time. **Achievements:** Wheels down (first round), Greaser (a kiss, no bounce), Three stars (a level), Deadstick, Logbook (all 20 levels), Daily flight, Type rating (swap planes, secret).
 

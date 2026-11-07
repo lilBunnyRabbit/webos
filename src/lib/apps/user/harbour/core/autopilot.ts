@@ -293,8 +293,3 @@ export function prove(scene: Scene, c: Coefficients): Proof {
   }
   return last;
 }
-
-/** Par in ms from the autopilot's time: room for a person who isn't a computer. */
-export function par_of(seconds: number): number {
-  return Math.ceil(seconds * 1.4 + 8) * 1000;
-}

@@ -1,3 +1,4 @@
+import { GameSounds } from "$kit/games/play2d/sound";
 import { Engine as EngineKind } from "./plane";
 
 const VOLUME = 0.06;
@@ -16,31 +17,8 @@ interface Engine {
   rumble_gain: GainNode;
 }
 
-export class Sounds {
-  private context: AudioContext | null = null;
+export class Sounds extends GameSounds {
   private engine: Engine | null = null;
-
-  constructor(private readonly enabled: () => boolean) {}
-
-  private audio(): AudioContext | null {
-    if (!this.enabled()) return null;
-    if (!this.context) {
-      try {
-        this.context = new AudioContext();
-      } catch {
-        return null;
-      }
-    }
-    if (this.context.state === "suspended") void this.context.resume();
-    return this.context;
-  }
-
-  private noise(audio: AudioContext, seconds: number): AudioBuffer {
-    const buffer = audio.createBuffer(1, Math.round(audio.sampleRate * seconds), audio.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
-    return buffer;
-  }
 
   private build(audio: AudioContext): Engine {
     const low = audio.createOscillator();
@@ -178,18 +156,12 @@ export class Sounds {
     }
   }
 
-  quiet() {
+  override quiet() {
     if (!this.engine || !this.context) return;
     const e = this.engine;
     const now = this.context.currentTime;
     for (const gain of [e.gain, e.wind_gain, e.horn_gain, e.rumble_gain]) gain.gain.setTargetAtTime(0, now, 0.05);
     for (const node of [e.low, e.high, e.wind, e.horn]) node.stop(now + 0.3);
     this.engine = null;
-  }
-
-  close() {
-    this.quiet();
-    void this.context?.close();
-    this.context = null;
   }
 }

@@ -15,7 +15,8 @@
   import { COCKPITS } from "./core/cockpit";
   import { BRAKE_KEYS, Controls, DOWN_KEYS, LEFT_KEYS, PitchMode, RIGHT_KEYS, THROTTLE_DOWN_KEYS, THROTTLE_UP_KEYS, UP_KEYS } from "./core/controls.svelte";
   import { draw_frame, PUFF_LIFE, type Puff, type Scenery } from "./core/draw";
-  import { work_out_chart, type ChartJob } from "./core/chart-job";
+  import { work_out_chart, type ChartJob } from "$kit/games/play2d/chart-job";
+  import ChartWorker from "./core/chart.worker?worker";
   import { ground_at, strip_ahead } from "./core/course";
   import { at_gate, build_field, in_hangar, runway_ahead, surface_roll, WRAP, type Gate, type GateId } from "./core/field";
   import { advance, buffet, CrashKind, create_flight, Grade, Status, stall_warning, wheel_height, type Flight, type Touchdown } from "./core/flight";
@@ -466,7 +467,7 @@
 
   function chart_for(ref: RoundRef, ok: (chart: Chart) => void, failed: () => void) {
     job?.cancel();
-    const current = work_out_chart(ref);
+    const current = work_out_chart(new ChartWorker(), ref, "The round couldn't be flown");
     job = current;
     current.result.then(
       (chart) => {

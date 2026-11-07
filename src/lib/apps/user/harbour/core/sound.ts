@@ -1,24 +1,10 @@
+import { GameSounds } from "$kit/games/play2d/sound";
+
 const VOLUME = 0.06;
 
 /** The window's sounds: an engine drone that follows the thrust, gear clunks, fender squeaks, a crash and the lines. */
-export class Sounds {
-  private context: AudioContext | null = null;
+export class Sounds extends GameSounds {
   private engine: { low: OscillatorNode; high: OscillatorNode; gain: GainNode; filter: BiquadFilterNode } | null = null;
-
-  constructor(private readonly enabled: () => boolean) {}
-
-  private audio(): AudioContext | null {
-    if (!this.enabled()) return null;
-    if (!this.context) {
-      try {
-        this.context = new AudioContext();
-      } catch {
-        return null;
-      }
-    }
-    if (this.context.state === "suspended") void this.context.resume();
-    return this.context;
-  }
 
   private blip(frequency: number, at: number, length: number, volume = VOLUME, type: OscillatorType = "sine", to?: number) {
     const audio = this.audio();
@@ -102,7 +88,7 @@ export class Sounds {
     this.blip(660, audio.currentTime + 0.09, 0.1);
   }
 
-  quiet() {
+  override quiet() {
     if (!this.engine || !this.context) return;
     const { low, high, gain } = this.engine;
     const now = this.context.currentTime;
@@ -110,11 +96,5 @@ export class Sounds {
     low.stop(now + 0.3);
     high.stop(now + 0.3);
     this.engine = null;
-  }
-
-  close() {
-    this.quiet();
-    void this.context?.close();
-    this.context = null;
   }
 }

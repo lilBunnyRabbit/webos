@@ -1,29 +1,14 @@
-import { hash } from "$kit/games/play2d/seed";
-import { par_of, prove } from "./autopilot";
+import { chart as chart_rounds, daily_pick, round_key as key_of, RoundKind, type Chart, type RoundRef as BaseRef } from "$kit/games/play2d/rounds";
+import { prove } from "./autopilot";
 import { boat_coefficients, BoatId, SPECS } from "./boats";
 import { LEVELS, random_scene } from "./levels";
 import type { Scene } from "./world";
 
-export const RoundKind = { LEVEL: "level", RANDOM: "random", DAILY: "daily" } as const;
-export type RoundKind = (typeof RoundKind)[keyof typeof RoundKind];
+export { RoundKind, type Chart };
 
-export interface RoundRef {
-  kind: RoundKind;
+export interface RoundRef extends BaseRef {
   boat: BoatId;
-  /** A fixed level's id. */
-  level?: number;
-  /** Random and daily rounds. */
-  seed?: number;
-  day?: string;
 }
-
-/** A generated layout that passes its proof, and the par the autopilot set. */
-export interface Chart {
-  attempt: number;
-  par: number | null;
-}
-
-const ATTEMPTS = 16;
 
 export function scene_of(ref: RoundRef, attempt = 0): Scene {
   const spec = SPECS[ref.boat];
@@ -31,26 +16,20 @@ export function scene_of(ref: RoundRef, attempt = 0): Scene {
   return random_scene(spec, ref.seed ?? 0, attempt);
 }
 
-/** Generated rounds try layouts from the seed until one is proven; a fixed level is proven by the tests. */
 export function chart(ref: RoundRef): Chart {
   const c = boat_coefficients(ref.boat);
-  const tries = ref.kind === RoundKind.LEVEL ? 1 : ATTEMPTS;
-  for (let attempt = 0; attempt < tries; attempt++) {
+  return chart_rounds(ref, (attempt) => {
     const proof = prove(scene_of(ref, attempt), c);
-    if (proof.ok) return { attempt, par: par_of(proof.time!) };
-  }
-  return { attempt: 0, par: null };
+    return proof.ok ? proof.time! : null;
+  });
 }
 
-/** Everyone gets the same daily: the day's seed picks the boat too. */
 export function daily_ref(day: string, seed: number): RoundRef {
-  return { kind: RoundKind.DAILY, boat: hash(seed, 7) % 2 === 0 ? BoatId.RIB : BoatId.YACHT, seed, day };
+  return { kind: RoundKind.DAILY, boat: daily_pick(seed, [BoatId.RIB, BoatId.YACHT]), seed, day };
 }
 
 export function round_key(ref: RoundRef): string {
-  if (ref.kind === RoundKind.LEVEL) return `level-${ref.level}-${ref.boat}`;
-  if (ref.kind === RoundKind.DAILY) return `daily-${ref.day}`;
-  return `random-${ref.boat}`;
+  return key_of(ref, ref.boat, `level-${ref.level}-${ref.boat}`);
 }
 
 export function round_title(ref: RoundRef): string {

@@ -132,6 +132,7 @@ What are the implications of this decision?
 | [096](./096-harbour.md) | Harbour, a boat docking sim, and the play2d kit | 2026-11-06 | Implemented (P1) |
 | [097](./097-experimental-apps.md) | Experimental apps | 2026-11-07 | Implemented |
 | [098](./098-airfield.md) | Airfield, a side-view takeoff and landing sim | 2026-11-07 | Implemented |
+| [099](./099-lunar-lander-rework.md) | Lunar Lander rework and the play2d rounds kit | 2026-11-07 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
