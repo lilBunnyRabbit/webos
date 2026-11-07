@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { collide, obstacles } from "../../core/obstacles";
 import { create_car, Gear } from "../../core/vehicle";
 import { SPEC } from "./game";
-import { build_route, ROUTE_IDS, route_span } from "./route";
+import { build_route, route_def, ROUTE_IDS, route_span } from "./route";
 import { build_town, light_at, Light, on_road, town } from "./town";
 
 describe("the town", () => {
@@ -17,7 +17,7 @@ describe("the town", () => {
 
   for (const id of ROUTE_IDS) {
     it(`lays route ${id} on the asphalt, joined up and within the lock`, () => {
-      const route = build_route(town(), id, SPEC);
+      const route = build_route(town(), route_def(id), SPEC);
       expect(route.length).toBeGreaterThan(900);
       for (let i = 1; i < route.points.length; i++) {
         const a = route.points[i - 1];
@@ -36,7 +36,7 @@ describe("the town", () => {
   }
 
   it("cuts a route span at exact distances, so the guide line slides instead of stepping", () => {
-    const route = build_route(town(), ROUTE_IDS[0], SPEC);
+    const route = build_route(town(), route_def(ROUTE_IDS[0]), SPEC);
     for (const from of [3.2, 3.45, 40.01]) {
       const span = route_span(route, from, from + 20, 0);
       let length = 0;

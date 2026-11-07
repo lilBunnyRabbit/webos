@@ -3,9 +3,21 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
   import { Badge, BoardOverlay, Button, IconButton, Select } from "$lib/core/components/ui";
-  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, ArrowFatLeft as ArrowFatLeftIcon, ArrowFatRight as ArrowFatRightIcon, ChatCircleText as ChatIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
+  import {
+    ArrowCounterClockwise as ArrowCounterClockwiseIcon,
+    ArrowFatLeft as ArrowFatLeftIcon,
+    ArrowFatRight as ArrowFatRightIcon,
+    ChatCircleText as ChatIcon,
+    Pause as PauseIcon,
+    Play as PlayIcon,
+    Star as StarIcon,
+  } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
+  import { daily_seed } from "$kit/games";
+  import { random_seed } from "$lib/core/utils/random";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done, unlocked } from "../../core/track";
   import { clamp_zoom, ease, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "$kit/games/play2d/camera";
   import type { Palette } from "$kit/games/play2d/palette";
   import DriveFrame from "../../core/drive-frame.svelte";
@@ -30,6 +42,7 @@
     counts,
     create_game,
     current_limit,
+    daily_score,
     data_schema,
     EMPTY_DATA,
     Outcome,
@@ -40,12 +53,21 @@
     Status,
     type GameState,
     type Result,
+    type Round,
   } from "./game";
-  import { route_id_schema, ROUTE_IDS, route_name, RouteId } from "./route";
+  import { daily_def, level_def, level_name, random_def } from "./levels";
+  import { ROUTE_IDS } from "./route";
   import { FAULT_INFO, MAX_MINORS, Severity, sheet } from "./rules";
+  import { LEVEL_COUNT, level_key, level_stars, test_stars } from "./stars";
   import { town } from "./town";
 
-  const ROUTE_OPTIONS = ROUTE_IDS.map((value) => ({ value, label: route_name(value) }));
+  const Mode = { LEVELS: "levels", RANDOM: "random" } as const;
+  type Mode = (typeof Mode)[keyof typeof Mode];
+  const RANDOM = "random";
+  const RANDOM_OPTION = [{ value: RANDOM, label: "Random" }];
+  const DAILY = "daily";
+  const DAILY_OPTION = { value: DAILY, label: "Daily" };
+  const DAILY_MODE = "test";
   // Slow, a parking game's view; at town speeds it pulls back and looks ahead, so a junction shows a few seconds early.
   const SPAN_SLOW = view_span(SPEC.length);
   const SPAN_FAST = 62;
@@ -55,9 +77,10 @@
   const FLASH_MS = 2600;
   const SEVERITY_LABEL = { minor: "Minor", serious: "Serious", dangerous: "Dangerous" } as const;
 
-  const { settings, prefs, menu, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const daily_day = untrack(() => daily_prop);
 
-  const { window: win, storage, achievements } = get_app_context();
+  const { app_id, window: win, storage, achievements } = get_app_context();
   const speech = $derived(kernel.service<SpeechService>("speech"));
   const data = storage.file("test.json", EMPTY_DATA, data_schema);
   const input = new DriveInput();
@@ -66,13 +89,16 @@
 
   const stored = z
     .object({
-      "test.route": route_id_schema.catch(RouteId.MARKET),
+      "test.level": z.number().int().min(1).max(LEVEL_COUNT).catch(1),
+      "test.mode": z.enum([Mode.LEVELS, Mode.RANDOM]).catch(Mode.LEVELS),
       "test.landscape-hint": z.boolean().catch(false),
     })
     .parse(untrack(() => prefs.value));
-  let route = $state<RouteId>(stored["test.route"]);
+  let daily = $state<string | null>(daily_day ?? null);
+  let mode = $state<Mode>(stored["test.mode"]);
+  let level = $state(stored["test.level"]);
   let hint_seen = $state(stored["test.landscape-hint"]);
-  let game = $state.raw<GameState>(create_game(untrack(() => route)));
+  let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
   let new_best = $state(false);
   let board_size = $state({ width: 0, height: 0, dpr: 1 });
   let palette = $state.raw<Palette | null>(null);
@@ -99,7 +125,14 @@
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
   const tally = $derived(counts(game));
   const limit = $derived(Math.round(current_limit(game) * 3.6));
-  const best = $derived<Result | undefined>(data.value.best[game.route_id]);
+  const round = $derived(game.round);
+  const best = $derived<Result | undefined>(round.level !== undefined ? data.value.best[level_key(round.level)] : undefined);
+  const levels = $derived(level_stars(data.value.best));
+  const max_level = $derived(unlocked(levels, LEVEL_COUNT));
+  const has_next_level = $derived(round.level !== undefined && round.level < LEVEL_COUNT);
+  const earned = $derived(test_stars(result_of(game) ?? undefined));
+  const go_on = $derived(round.daily ? "again" : round.level === undefined ? "new" : has_next_level && game.end?.outcome === Outcome.PASS ? "next" : "again");
+  const title = $derived(round.daily ? `Daily · ${round.daily}` : round.level !== undefined ? `Level ${round.level} · ${round.def.name}` : round.def.name);
   const rows = $derived(sheet(game.faults));
   const bubble = $derived(game.spoken && game.ms - game.spoken.ms < BUBBLE_MS && game.status !== Status.READY ? game.spoken.text : null);
   const flash = $derived.by(() => {
@@ -115,6 +148,17 @@
     const minors = `${result.minors} minor${result.minors === 1 ? "" : "s"}`;
     const heavy = result.serious + result.dangerous;
     return `${outcome} · ${minors}${heavy ? ` · ${heavy} serious` : ""}`;
+  }
+
+  function make_round(): Round {
+    if (daily) return { def: daily_def(daily, daily_seed(daily, `${app_id}/${DAILY_MODE}`), SPEC), daily };
+    if (mode === Mode.RANDOM) return { def: random_def(random_seed(), SPEC) };
+    return { def: level_def(level, SPEC), level };
+  }
+
+  function today(): string {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   }
 
   function say(text: string) {
@@ -257,14 +301,24 @@
     );
     const result = result_of(state);
     if (!result) return;
-    const saved = record(data.value, state.route_id, result);
-    if (saved.improved) data.value = saved.data;
-    new_best = saved.improved && !saved.first;
+    if (state.round.daily) {
+      play.daily(state.round.daily, result.ms, daily_score(result), DAILY_MODE);
+      achievements.achieve("test-daily");
+    }
+    let best = data.value.best;
+    if (state.round.level !== undefined) {
+      const saved = record(data.value, level_key(state.round.level), result);
+      if (saved.improved) data.value = saved.data;
+      new_best = saved.improved && !saved.first;
+      best = saved.data.best;
+    }
     if (!result.passed) return;
     sounds.parked(true);
     achievements.achieve("test-pass");
     if (state.faults.length === 0) achievements.achieve("test-clean");
-    achievements.progress("test-routes", ROUTE_IDS.filter((id) => saved.data.best[id]?.passed).length);
+    if (state.round.level === undefined) return;
+    achievements.progress("test-routes", ROUTE_IDS.filter((id) => best[id]?.passed).length);
+    achievements.progress("test-levels", levels_done(level_stars(best)));
   }
 
   function release_all() {
@@ -297,10 +351,14 @@
 
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
-    else if (game.status === Status.DONE) retry();
+    else if (game.status === Status.DONE) {
+      if (go_on === "next") next_round();
+      else if (go_on === "new") new_route();
+      else retry();
+    }
   }
 
-  function load(next: RouteId) {
+  function load(next: Round) {
     input.reset();
     sounds.quiet();
     speech.stop(win.id);
@@ -311,17 +369,38 @@
   }
 
   function retry() {
-    load(game.route_id);
+    load(game.round);
   }
 
-  function next_route() {
-    set_route(ROUTE_IDS[(ROUTE_IDS.indexOf(game.route_id) + 1) % ROUTE_IDS.length]);
+  function next_round() {
+    if (game.round.level !== undefined && has_next_level) {
+      level = Math.min(max_level, game.round.level + 1);
+      prefs.value["test.level"] = level;
+    }
+    load(make_round());
   }
 
-  function set_route(next: string) {
-    route = route_id_schema.catch(RouteId.MARKET).parse(next);
-    prefs.value["test.route"] = route;
-    load(route);
+  function new_route() {
+    daily = null;
+    load(make_round());
+  }
+
+  function set_round(next: string) {
+    if (next === DAILY) return;
+    daily = null;
+    if (next === RANDOM) mode = Mode.RANDOM;
+    else {
+      mode = Mode.LEVELS;
+      level = Math.max(1, Math.min(LEVEL_COUNT, Number(next)));
+      prefs.value["test.level"] = level;
+    }
+    prefs.value["test.mode"] = mode;
+    load(make_round());
+  }
+
+  function open_daily() {
+    daily = today();
+    load(make_round());
   }
 
   function shift(gear: Gear) {
@@ -419,10 +498,30 @@
   <Badge tone={severity === Severity.MINOR ? "warning" : "error"}>{SEVERITY_LABEL[severity]}</Badge>
 {/snippet}
 
+{#snippet star_row(count: number, reveal: boolean)}
+  <span class="inline-flex items-center gap-0.5" role="img" aria-label="{count} of 3 stars">
+    {#each [1, 2, 3] as n (n)}
+      <span class={cn("inline-grid", n <= count ? "text-primary" : "text-foreground/20", reveal && n <= count && "ts-star")} style:animation-delay={reveal ? `${n * 140}ms` : undefined}>
+        <StarIcon weight="fill" class="size-4" />
+      </span>
+    {/each}
+  </span>
+{/snippet}
+
 {#snippet toolbar()}
   {@render menu?.()}
-  <Select class="w-[7.5rem] min-w-0" size="sm" aria-label="Route" options={ROUTE_OPTIONS} bind:value={() => game.route_id, set_route} />
+  <TrackPicker
+    class="w-[8.5rem] min-w-0 @md:w-44"
+    label="Route"
+    before={daily ? [DAILY_OPTION, ...RANDOM_OPTION] : RANDOM_OPTION}
+    open={Math.max(max_level, mode === Mode.LEVELS ? level : 1)}
+    stars={(at) => levels[at] ?? 0}
+    name={(at) => `${at}. ${level_name(at)}`}
+    value={daily ? DAILY : mode === Mode.LEVELS ? String(level) : RANDOM}
+    onpick={set_round}
+  />
   <div class="flex-1"></div>
+  {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}
   <SettingsPanel {settings} {input} bind:panel={settings_panel} onmute={mute} onfocus={focus_board} />
   <IconButton size="sm" class="hidden @md:inline-flex" label={play_label} disabled={!can_pause} onclick={toggle_pause}>
     {#if game.status === Status.DRIVING}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
@@ -430,6 +529,9 @@
   <IconButton size="sm" class="hidden @md:inline-flex" label="Start the test again" onclick={retry}>
     <ArrowCounterClockwiseIcon weight="bold" />
   </IconButton>
+  {#if mode === Mode.RANDOM && !daily}
+    <Button size="sm" variant="primary" onclick={new_route}>New</Button>
+  {/if}
 {/snippet}
 
 {#snippet overlay()}
@@ -482,13 +584,18 @@
   {#if game.status === Status.READY}
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 flex-1 basis-52">
-        <p class="text-base font-semibold">Driving Test · {route_name(game.route_id)}</p>
-        <p class="text-ui text-foreground/80">Follow the examiner, park in the marked bay, pull up when asked. Over {MAX_MINORS} minors or one serious fault fails.</p>
+        <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
+          <span>{title}</span>
+          {#if round.level !== undefined}{@render star_row(levels[round.level] ?? 0, false)}{/if}
+        </p>
+        <p class="text-ui text-foreground/80">Follow the examiner, park in the marked bay, pull up when asked. Over {MAX_MINORS} minors or one serious fault fails; no minors earns three stars, up to 5 two.</p>
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
           {(game.route.length / 1000).toFixed(1)} km{best ? ` · Best ${result_text(best)}` : ""}
         </p>
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
+        {#if !daily && mode === Mode.RANDOM}<Button variant="quiet" onclick={new_route}>New route</Button>{/if}
+        {#if !daily}<Button variant="quiet" class="@lg:hidden" onclick={open_daily}>Daily</Button>{/if}
         <Button variant="primary" onclick={start}>Start</Button>
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
@@ -500,7 +607,7 @@
       {/if}
     </RoundCard>
   {:else if game.status === Status.PAUSED}
-    <BoardOverlay title="Paused" detail="{route_name(game.route_id)} · {clock_text(game.ms)}">
+    <BoardOverlay title="Paused" detail="{title} · {clock_text(game.ms)}">
       <Button size="sm" variant="quiet" onclick={retry}>Restart</Button>
       <Button size="sm" variant="primary" onclick={start}>Resume</Button>
     </BoardOverlay>
@@ -511,8 +618,10 @@
           <span class={cn(game.end.outcome === Outcome.PASS ? "text-success" : "text-error")}>
             {game.end.outcome === Outcome.PASS ? "Pass" : game.end.outcome === Outcome.FAIL ? "Fail" : "Test stopped"}
           </span>
+          {#if game.end.outcome !== Outcome.STOPPED}{@render star_row(earned, true)}{/if}
           {#if new_best}<Badge class="ts-pop" tone="primary">New best</Badge>{/if}
         </p>
+        <p class="text-ui text-foreground/80">{title}</p>
         <p class="font-mono text-2xs text-foreground/80 tabular-nums">
           {tally.minors}/{MAX_MINORS} minor · {tally.serious} serious · {tally.dangerous} dangerous · {clock_text(game.ms)}{game.park ? ` · Bay ${game.park.score}%` : ""}
         </p>
@@ -535,18 +644,29 @@
         {/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
-        <Button variant="quiet" onclick={next_route}>Next route</Button>
-        <Button variant="primary" onclick={retry}>Again</Button>
+        {#if go_on === "next"}
+          <Button variant="quiet" onclick={retry}>Again</Button>
+          <Button variant="primary" onclick={next_round}>Next level</Button>
+        {:else if go_on === "new"}
+          <Button variant="quiet" onclick={retry}>Again</Button>
+          <Button variant="primary" onclick={new_route}>New route</Button>
+        {:else}
+          <Button variant="primary" onclick={retry}>Again</Button>
+        {/if}
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="drives it again" />
+        {#if go_on === "again"}
+          <KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="drives it again" />
+        {:else}
+          <KeyHint key_name="Enter" text={go_on === "next" ? "next level" : "new route"} /><KeyHint key_name="R" text="drives it again" />
+        {/if}
       </p>
     </RoundCard>
   {/if}
 {/snippet}
 
 {#snippet status()}
-  <span>{route_name(game.route_id)}</span>
+  <span class="truncate">{title}</span>
   <span class="tabular-nums">{clock_text(game.ms)}</span>
   <span class="tabular-nums">{tally.minors} minor{tally.minors === 1 ? "" : "s"}{tally.serious + tally.dangerous ? ` · ${tally.serious + tally.dangerous} serious` : ""}</span>
   <span class="tabular-nums">Limit {limit}</span>
@@ -596,5 +716,33 @@
 
   :global(.ts-pop) {
     animation: var(--animate-pop-in) 520ms both;
+  }
+
+  .ts-star {
+    animation: ts-star 380ms var(--ease-out) both;
+  }
+
+  @keyframes ts-star {
+    from {
+      opacity: 0;
+      scale: 0.3;
+    }
+    60% {
+      opacity: 1;
+      scale: 1.25;
+    }
+    to {
+      scale: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ts-star {
+      animation-delay: 0ms !important;
+    }
+  }
+
+  :global(html[data-motion="off"]) .ts-star {
+    animation-delay: 0ms !important;
   }
 </style>

@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { angle_between, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { Signal } from "../../core/signal";
 import { body_ends, type VehicleSpec } from "../../core/vehicle";
@@ -7,10 +6,9 @@ import { ControlKind, LaneKind, LOT_ROAD, node_arms, NodeKind, SignKind, Turn, t
 export const RouteId = { MARKET: "market", STATION: "station", SCHOOL: "school" } as const;
 export type RouteId = (typeof RouteId)[keyof typeof RouteId];
 export const ROUTE_IDS: readonly RouteId[] = [RouteId.MARKET, RouteId.STATION, RouteId.SCHOOL];
-export const route_id_schema = z.enum([RouteId.MARKET, RouteId.STATION, RouteId.SCHOOL]);
 
-interface RouteDef {
-  id: RouteId;
+export interface RouteDef {
+  id: string;
   name: string;
   start: { road: string; to: string; at: number };
   roads: string[];
@@ -41,8 +39,8 @@ const DEFS: Record<RouteId, RouteDef> = {
   },
 };
 
-export function route_name(id: RouteId): string {
-  return DEFS[id].name;
+export function route_def(id: RouteId): RouteDef {
+  return DEFS[id];
 }
 
 export const EventKind = { APPROACH: "approach", RING_EXIT: "ring-exit" } as const;
@@ -77,7 +75,7 @@ export interface LimitZone {
 }
 
 export interface Route {
-  id: RouteId;
+  id: string;
   name: string;
   points: Vec[];
   headings: number[];
@@ -169,8 +167,8 @@ export function limit_at(route: Pick<Route, "limits">, s: number): number {
   return limit;
 }
 
-export function build_route(town: Town, id: RouteId, spec: VehicleSpec): Route {
-  const def = DEFS[id];
+export function build_route(town: Town, def: RouteDef, spec: VehicleSpec): Route {
+  const id = def.id;
   const roads = [def.start.road, ...def.roads];
   const toward: string[] = [def.start.to];
   for (let i = 1; i < roads.length; i++) {
@@ -329,11 +327,11 @@ export function route_span(route: Route, from: number, to: number, hint = 0): Ve
 
 const cache = new Map<string, Route>();
 
-export function route_of(town: Town, id: RouteId, spec: VehicleSpec): Route {
-  let found = cache.get(id);
+export function route_of(town: Town, def: RouteDef, spec: VehicleSpec): Route {
+  let found = cache.get(def.id);
   if (!found) {
-    found = build_route(town, id, spec);
-    cache.set(id, found);
+    found = build_route(town, def, spec);
+    cache.set(def.id, found);
   }
   return found;
 }

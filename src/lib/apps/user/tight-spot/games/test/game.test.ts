@@ -3,7 +3,7 @@ import { Signal } from "../../core/signal";
 import { body_ends, create_car, Gear } from "../../core/vehicle";
 import { drive_route, type DriverOptions } from "./driver";
 import { bay_park, better, create_game, Outcome, record, result_of, SPEC, Status } from "./game";
-import { locate, ROUTE_IDS, RouteId, type Route } from "./route";
+import { locate, route_def, ROUTE_IDS, RouteId, type Route } from "./route";
 import { FaultKind, FRESH_WATCH, judge, log_signal, passes, Severity, sheet, signalled, type Fault, type View, type Watch } from "./rules";
 import { town } from "./town";
 
@@ -16,7 +16,7 @@ function road_start(route: Route, road: string): number {
 }
 
 function drive(id: RouteId, options: DriverOptions = {}) {
-  const { state } = drive_route(id, options);
+  const { state } = drive_route(route_def(id), options);
   expect(state.status).toBe(Status.DONE);
   return state;
 }
@@ -36,25 +36,25 @@ describe("a careful driver who knows only the signs passed and the turns asked f
 
 describe("a limit starts at its sign", () => {
   it("turns into the car park at 17 km/h and slows at the 10 sign: no fault", () => {
-    const route = create_game(RouteId.MARKET).route;
+    const route = create_game({ def: route_def(RouteId.MARKET) }).route;
     const sign = route.limits.find((zone) => zone.limit < 3)!.s;
     expect(kinds(drive(RouteId.MARKET, { rush: { from: sign - 12, to: sign, speed: 17 / 3.6 } }).faults)).toEqual([]);
   });
 
   it("drives the school road at 49 km/h up to the 30 sign: no fault", () => {
-    const route = create_game(RouteId.SCHOOL).route;
+    const route = create_game({ def: route_def(RouteId.SCHOOL) }).route;
     const sign = route.limits.find((zone) => zone.limit < 9)!.s;
     expect(kinds(drive(RouteId.SCHOOL, { rush: { from: sign - 40, to: sign, speed: 49 / 3.6 } }).faults)).toEqual([]);
   });
 
   it("takes the road's limit as soon as the car is out of the car park", () => {
-    const route = create_game(RouteId.MARKET).route;
+    const route = create_game({ def: route_def(RouteId.MARKET) }).route;
     expect(kinds(drive(RouteId.MARKET, { rush: { from: route.lot.to + 0.1, to: route.lot.to + 30, speed: 30 / 3.6 } }).faults)).toEqual([]);
   });
 });
 
 describe("judging a moment", () => {
-  const route = create_game(RouteId.MARKET).route;
+  const route = create_game({ def: route_def(RouteId.MARKET) }).route;
   const nose = body_ends(SPEC).front;
   const lights = route.events.find((event) => event.control?.kind === "lights")!;
   const straight_on = route.events.find((event) => event.node === "B")!;
@@ -120,21 +120,21 @@ describe("one mistake, one fault", () => {
   });
 
   it("40 through the 30 zone is one speeding fault", () => {
-    const route = create_game(RouteId.SCHOOL).route;
+    const route = create_game({ def: route_def(RouteId.SCHOOL) }).route;
     const from = road_start(route, "IJ") + 15;
     const state = drive(RouteId.SCHOOL, { rush: { from, to: from + 70, speed: 40 / 3.6 } });
     expect(kinds(state.faults)).toEqual(["minor speed"]);
   });
 
   it("the right lane at a left turn is the wrong lane", () => {
-    const route = create_game(RouteId.SCHOOL).route;
+    const route = create_game({ def: route_def(RouteId.SCHOOL) }).route;
     const line = route.events.find((event) => event.lane === "BE>E:1")!.s;
     const state = drive(RouteId.SCHOOL, { shift: { from: line - 60, to: line + 2, by: 3.5 } });
     expect(kinds(state.faults)).toEqual(["minor wrong-lane"]);
   });
 
   it("hugging the centre line is poor lane position", () => {
-    const route = create_game(RouteId.MARKET).route;
+    const route = create_game({ def: route_def(RouteId.MARKET) }).route;
     const from = road_start(route, "EF") + 30;
     const state = drive(RouteId.MARKET, { shift: { from, to: from + 40, by: -1.5 } });
     expect(kinds(state.faults)).toEqual(["minor lane-position"]);
@@ -188,6 +188,6 @@ describe("judging", () => {
     const first = record({ best: {} }, RouteId.MARKET, fail);
     expect(first.first).toBe(true);
     expect(record(first.data, RouteId.MARKET, pass).improved).toBe(true);
-    expect(result_of(create_game(RouteId.MARKET))).toBeNull();
+    expect(result_of(create_game({ def: route_def(RouteId.MARKET) }))).toBeNull();
   });
 });

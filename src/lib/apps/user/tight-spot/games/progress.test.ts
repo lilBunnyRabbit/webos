@@ -23,6 +23,9 @@ import { LEVELS as F1_LEVELS } from "./f1/progress";
 import rodeo_game from "./rodeo";
 import { LEVEL_COUNT as RODEO_COUNT } from "./rodeo/game";
 import { LEVELS as RODEO_LEVELS } from "./rodeo/progress";
+import test_game from "./test";
+import { LEVEL_COUNT as TEST_COUNT } from "./test/levels";
+import test_progress, { LEVELS as TEST_LEVELS } from "./test/progress";
 
 // The yard's progress modules carry their own counts so it never loads a game; these keep them in step with the games.
 describe("progress", () => {
@@ -36,6 +39,7 @@ describe("progress", () => {
     expect(SHUNTER_LEVELS).toBe(SHUNTER_COUNT);
     expect(RODEO_LEVELS).toBe(RODEO_COUNT);
     expect(F1_LEVELS).toBe(F1_COUNT);
+    expect(TEST_LEVELS).toBe(TEST_COUNT);
   });
 
   test("stars come from the save as it is on disk, and a bad one counts as none", () => {
@@ -44,6 +48,9 @@ describe("progress", () => {
     expect(ferry.read({ levels: { 1: 9 } })).toEqual({ stars: 0, total: 36 });
     expect(airport.read({ best: {}, levels: { pushback: { 1: 3 }, tow: { 2: 1 } } })).toEqual({ stars: 4, total: 108 });
     expect(parking.read({ bests: {}, levels: { 1: 2 }, kinds: [], extreme: { planks: 3 } })).toEqual({ stars: 5, total: (PARKING_COUNT + COURSES.length) * 3 });
+    const pass = { passed: true, serious: 0, dangerous: 0, ms: 1000 };
+    expect(test_progress.read({ best: { market: { ...pass, minors: 0 }, "level-4": { ...pass, minors: 7 }, school: { ...pass, passed: false, minors: 0 } } })).toEqual({ stars: 4, total: 36 });
+    expect(test_progress.read({ best: { market: "bad" } })).toEqual({ stars: 0, total: 36 });
   });
 
   test("an every-level achievement's goal is every level of the game", () => {
@@ -55,5 +62,6 @@ describe("progress", () => {
     expect(goal(shunter_game, "shunter-levels")).toBe(SHUNTER_COUNT);
     expect(goal(rodeo_game, "rodeo-levels")).toBe(RODEO_COUNT);
     expect(goal(f1_game, "f1-levels")).toBe(F1_COUNT);
+    expect(goal(test_game, "test-levels")).toBe(TEST_COUNT);
   });
 });

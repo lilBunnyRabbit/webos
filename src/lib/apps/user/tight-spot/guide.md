@@ -211,11 +211,14 @@ Work the apron. Pick a job at the top: **Pushback**, **Baggage run**, **Tow to g
 
 ## Driving Test
 
-A driving exam in a small town, driven on the right. The examiner tells you where to go a few seconds before each junction, in a bubble at the top and out loud with sound on. Pick a route (**Market**, **Station** or **School**) from the toolbar.
+A driving exam in a small town, driven on the right. The examiner tells you where to go a few seconds before each junction, in a bubble at the top and out loud with sound on. Pick a route from the toolbar:
+
+- **Levels:** 12 routes, starting with **Market**, **Station** and **School**, then longer ones with more junctions: the stop line, the roundabout, the lights, the one-way street. Pass one to open the next. Stars: a pass with no minors is three, up to 5 minors two, more one.
+- **Random:** a new route through the town each time; **New** deals another. **Daily:** the same route for everyone today, ranked by fewest faults, then time; Game Hub lists it as Drive Hub · Test.
 
 - **Follow the road** unless told to turn. Signal before every turn with **Z** (left) and **X** (right), or the arrows over the wheel on touch. The signal turns itself off as you straighten up after the turn; press the same side again to cancel it.
 - **Signs and lights:** keep to the limit in the red circle (50 in town, 30 by the school, 10 in the car park; the HUD shows the one you're on). Stop at a **STOP** sign, slow right down at a give-way line (the triangle), wait for green at the lights. A solid line is not to be crossed. On the two-lane one-way street, the arrows say which lane goes where.
 - **The bay park:** you'll be asked to turn into the test centre car park. Park in the highlighted bay, inside the lines and straight, and press **P** or **Space**. Then drive out the other gate.
 - **Pull up:** at the end, pull up close to the right-hand kerb with a right signal and press **P**. That ends the test.
 - **Faults:** minor, serious or dangerous. More than **15 minors**, or any serious or dangerous fault, fails. Hitting a parked car or a building ends the test; so does leaving the route. The sheet at the end lists every fault and why it matters.
-- The faster you go, the less the wheel turns. Your best result per route is kept.
+- Your best result per level is kept.

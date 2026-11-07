@@ -19,7 +19,7 @@ export const UPCOMING: readonly string[] = [];
 export const GAME_CHOICES = [YARD, "parking", "forklift", "f1", "ferry", "mower", "airport", "rodeo", "valet", "test", "shunter"] as const;
 export type GameChoice = (typeof GAME_CHOICES)[number];
 // The games with a daily, in Game Hub's row order: each is one mode of the app's per-mode daily (ADR-050).
-export const DAILY_GAMES = ["parking", "forklift", "f1", "ferry", "mower", "airport", "rodeo", "valet", "shunter"] as const satisfies readonly GameChoice[];
+export const DAILY_GAMES = ["parking", "forklift", "f1", "ferry", "mower", "airport", "rodeo", "valet", "shunter", "test"] as const satisfies readonly GameChoice[];
 export type DailyGame = (typeof DAILY_GAMES)[number];
 
 export function is_daily_game(id: string | undefined): id is DailyGame {

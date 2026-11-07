@@ -6,8 +6,8 @@ import { fit, MAX_ANGLE } from "$kit/games/play2d/precision";
 import { Signal } from "../../core/signal";
 import { angle_between } from "$kit/games/play2d/geometry";
 import { bodies, body_centre, create_car, Gear, HATCHBACK, headings, shift, step, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
-import { limit_at, locate, route_of, type Located, type Route, type RouteId } from "./route";
-import { FaultKind, FRESH_WATCH, judge, passes, Severity, signalled, tally, type Fault, type Tally, type Watch } from "./rules";
+import { limit_at, locate, route_of, type Located, type Route, type RouteDef } from "./route";
+import { FaultKind, FRESH_WATCH, judge, MAX_MINORS, passes, Severity, signalled, tally, type Fault, type Tally, type Watch } from "./rules";
 import { HALF, LANE, town, type Town } from "./town";
 
 // The stock hatchback tops out at 30 km/h, under every limit in town.
@@ -47,7 +47,7 @@ export interface End {
 }
 
 export interface GameState {
-  route_id: RouteId;
+  round: Round;
   route: Route;
   car: Car;
   status: Status;
@@ -64,11 +64,17 @@ export interface GameState {
   end: End | null;
 }
 
-export function create_game(route_id: RouteId): GameState {
-  const route = route_of(town(), route_id, SPEC);
+export interface Round {
+  def: RouteDef;
+  level?: number;
+  daily?: string;
+}
+
+export function create_game(round: Round): GameState {
+  const route = route_of(town(), round.def, SPEC);
   const car = create_car(route.start, Gear.PARK, SPEC);
   return {
-    route_id,
+    round,
     route,
     car,
     status: Status.READY,
@@ -273,7 +279,12 @@ export function better(a: Result, b: Result): boolean {
   return a.ms < b.ms;
 }
 
-export function record(data: TestData, route: RouteId, result: Result): { data: TestData; improved: boolean; first: boolean } {
+// A serious fault outweighs a pass's worth of minors, so a fail never outranks a pass.
+export function daily_score(result: Result): number {
+  return result.minors + (result.serious + result.dangerous) * (MAX_MINORS + 1);
+}
+
+export function record(data: TestData, route: string, result: Result): { data: TestData; improved: boolean; first: boolean } {
   const old = data.best[route];
   const improved = !old || better(result, old);
   return { data: improved ? { best: { ...data.best, [route]: result } } : data, improved, first: old === undefined };

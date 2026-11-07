@@ -1,7 +1,7 @@
 import { NO_SIGNAL, Signal, signal_after, toggle_signal, type SignalState } from "../../core/signal";
 import { body_ends, Gear, max_steer, steer_base, without_creep, type Input } from "../../core/vehicle";
 import { advance, change_gear, create_game, current_limit, prompted, set_status, SPEC, Status, type GameState } from "./game";
-import { EventKind, type Route, type RouteId } from "./route";
+import { EventKind, type Route, type RouteDef } from "./route";
 import { ControlKind, green_left, until_green } from "./town";
 
 // The proof driver, for tests only: a careful learner who follows the route's line by pure pursuit and knows only what a
@@ -69,9 +69,9 @@ export interface Drive {
   state: GameState;
 }
 
-export function drive_route(id: RouteId, options: DriverOptions = {}): Drive {
+export function drive_route(def: RouteDef, options: DriverOptions = {}): Drive {
   const pace = options.pace ?? 0.8;
-  let state = set_status(create_game(id), Status.DRIVING);
+  let state = set_status(create_game({ def }), Status.DRIVING);
   state = change_gear(state, Gear.DRIVE);
   const route = state.route;
   const lock = max_steer(SPEC);

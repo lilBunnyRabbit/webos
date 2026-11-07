@@ -39,6 +39,11 @@ export const CHANGELOG: Release[] = [
         apps: ["lunar-lander"],
         text: "Lunar Lander is rebuilt (experimental): fly a lander, twin pods or a heavy shuttle at real scale on the Moon, Mars and Earth with a throttle lever, through 15 missions with craters, caves and cargo, a random mission and a daily, or freely around the base.",
       },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub's Driving Test has 12 levels with stars for a clean drive, random routes through the town and a daily test.",
+      },
     ],
   },
   {
