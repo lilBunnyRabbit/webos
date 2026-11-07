@@ -189,6 +189,8 @@ const GEAR_RAMP = 0.06;
 const AUX_DAMPING = 0.7;
 const SPOILER_TIME = 1;
 const REVERSER_TIME = 1.5;
+/** The reverser stows below this ground speed, as a real one does, so it never backs the plane up. */
+const REVERSE_STOW = 8;
 /** Full back stick holds the wing this far past the lift curve's peak. */
 const HOLD_PAST_PEAK = (1 * Math.PI) / 180;
 const DAMPING_RATIO = 0.8;
@@ -381,12 +383,14 @@ function contact(plane: Plane, p: BodyPoint, k: number, damping: number, mu: num
 
 export function step_plane(plane: Plane, input: Input, c: Coefficients, dt: number, env: Env = CALM): Plane {
   const s = c.spec;
-  const spool = plane.spool + (spool_for(input.throttle, c) - plane.spool) * (1 - Math.exp(-dt / s.engine_lag));
+  // Reverse power waits for the reverser to be out (an interlock), so the Reverse notch never pushes the plane forward.
+  const throttle = input.reverse > 0 && plane.reverser < 0.95 ? 0 : input.throttle;
+  const spool = plane.spool + (spool_for(throttle, c) - plane.spool) * (1 - Math.exp(-dt / s.engine_lag));
   const command = clamp(input.trim + input.stick, -1, 1);
   const elevator = plane.elevator + (command - plane.elevator) * (1 - Math.exp(-dt / s.elevator_lag));
   const flaps = approach(plane.flaps, clamp(input.flaps, 0, 1), dt / s.flap_time);
   const spoilers = approach(plane.spoilers, s.spoiler_drag > 0 ? clamp(input.spoilers, 0, 1) : 0, dt / SPOILER_TIME);
-  const reverser = approach(plane.reverser, s.reverse > 0 && plane.main_on ? clamp(input.reverse, 0, 1) : 0, dt / REVERSER_TIME);
+  const reverser = approach(plane.reverser, s.reverse > 0 && plane.main_on && ground_speed(plane) > REVERSE_STOW ? clamp(input.reverse, 0, 1) : 0, dt / REVERSER_TIME);
 
   const air = air_of(plane, c, env);
   const V = air.speed;
@@ -487,7 +491,7 @@ export function measure_stall(c: Coefficients, flaps = 0): number {
   return Math.sqrt((2 * weight(c)) / (RHO * c.spec.wing_area * top));
 }
 
-function alpha_for(cl: number, flaps: number, c: Coefficients): number {
+export function alpha_for(cl: number, flaps: number, c: Coefficients): number {
   const wing = cl - c.flap_cl * flaps;
   const a = c.cl_alpha;
   if (wing <= c.cl_max - a * ROUND && wing >= CL_MIN + a * ROUND) return c.alpha0 + wing / a;

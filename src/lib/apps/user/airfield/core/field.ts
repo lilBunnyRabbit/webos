@@ -20,7 +20,18 @@ export interface Field {
   start: number;
   windsock: number;
   trees: Tree[];
+  /** Stands along the apron left of the hangar: a level of the plane's track, random, the daily. */
+  gates: Gate[];
 }
+
+export type GateId = number | "random" | "daily";
+
+export interface Gate {
+  id: GateId;
+  x: number;
+}
+
+const GATES: GateId[] = [1, 2, 3, 4, 5, "random", "daily"];
 
 /** The world is a loop this long: flying on brings the plane back to the home field from behind. */
 export const WRAP = 8000;
@@ -61,16 +72,23 @@ export function build_field(): Field {
       x += 9 + ((h >> 8) % 14);
     }
   };
-  grove(-520, -230, 1);
+  grove(-900, -560, 1);
   grove(2620, 2950, 2);
   return {
     runway: { x0: 0, x1: 2400 },
-    apron: { x0: -175, x1: 0 },
+    apron: { x0: -470, x1: 0 },
     hangar: { x0: -160, x1: -118, height: 9 },
     start: -95,
     windsock: 340,
     trees,
+    gates: GATES.map((id, i) => ({ id, x: -215 - i * 36 })),
   };
+}
+
+export function at_gate(field: Field, plane: Plane): Gate | null {
+  if (!plane.main_on || Math.abs(ground_speed(plane)) > 1.5) return null;
+  const at = home_x(field, plane.x);
+  return field.gates.find((gate) => Math.abs(gate.x - at) < 7) ?? null;
 }
 
 export function surface_roll(field: Field, x: number): number {

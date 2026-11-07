@@ -178,6 +178,13 @@
     if (engage()) controls.step_flaps(by);
   }
 
+  function walk(event: PointerEvent, to: number) {
+    if (!on_ground || !engage()) return;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    controls.facing = to;
+    controls.held_walk = to;
+  }
+
   function face(to: number) {
     if (on_ground && engage()) controls.facing = to;
   }
@@ -230,10 +237,10 @@
         <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(-1)} aria-label="Flaps up">Flaps ▲</Button>
         <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(1)} aria-label="Flaps down">Flaps ▼</Button>
         <span class="af-flaps-label af-face col-span-2 rounded-md px-1 text-center text-2xs font-medium text-foreground/80">Flaps {controls.flap_name}</span>
-        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing < 0} label="Turn to face left" onclick={() => face(-1)}>
+        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing < 0} label="Turn to face left" onclick={() => face(-1)} onpointerdown={(event) => walk(event, -1)} onlostpointercapture={() => (controls.held_walk = 0)}>
           <CaretLeftIcon weight="bold" />
         </IconButton>
-        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing > 0} label="Turn to face right" onclick={() => face(1)}>
+        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing > 0} label="Turn to face right" onclick={() => face(1)} onpointerdown={(event) => walk(event, 1)} onlostpointercapture={() => (controls.held_walk = 0)}>
           <CaretRightIcon weight="bold" />
         </IconButton>
         <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" onclick={trim}>Trim</Button>

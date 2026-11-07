@@ -178,7 +178,7 @@ export const SPECS: Record<PlaneId, PlaneSpec> = {
     engine_lag: 1,
     elevator_lag: 0.12,
     flap_time: 1,
-    spoiler_drag: 0.09,
+    spoiler_drag: 0.12,
     spoiler_lift: 0.15,
     reverse: 0,
     autobrake: 0,

@@ -4,6 +4,7 @@ import { begin_frame, type View } from "$kit/games/play2d/canvas";
 import type { Palette } from "$kit/games/play2d/palette";
 import { hash } from "$kit/games/play2d/seed";
 import type { PlaneArt, Station } from "./art";
+import { ground_at, local, ObstacleKind, SurfaceKind, type Course, type Strip } from "./course";
 import { field_copies, home_x, type Field } from "./field";
 import { clearance, facing, point_at, type BodyPoint, type Coefficients, type Env, type Plane } from "./plane";
 import type { Weather } from "./weather";
@@ -64,6 +65,9 @@ export interface Frame {
   winch: { drum: number; on: boolean } | null;
   /** The approach profile's reach either side of the runway and its height, metres. */
   profile_size: { reach: number; top: number };
+  /** A round's world, null in the hub. */
+  world: { course: Course; target: Strip; start_x: number; slope: number; clear: { x: number; height: number } | null; top: number } | null;
+  gates: { x: number; label: string; stars: number; daily: boolean }[];
   ground_at: (x: number) => number;
 }
 
@@ -100,6 +104,10 @@ function sky_and_ground(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
   sky.addColorStop(0, scenery.horizon);
   sky.addColorStop(1, scenery.sky);
   ctx.fillStyle = sky;
+  if (f.world) {
+    ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, box.y1 - box.y0);
+    return;
+  }
   ctx.fillRect(box.x0, box.y0, box.x1 - box.x0, Math.max(0, -box.y0));
   ctx.fillStyle = palette.grass;
   ctx.fillRect(box.x0, 0, box.x1 - box.x0, Math.max(0, box.y1));
@@ -114,7 +122,7 @@ function sky_and_ground(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
  */
 function hills(ctx: CanvasRenderingContext2D, f: Frame, drift: number, sink: number, cell: number, height: number, colour: string, seed: number) {
   const { view } = f;
-  const ground = view.height / 2 - view.y * view.scale;
+  const ground = view.height / 2 + (-f.ground_at(view.x) - view.y) * view.scale;
   if (ground < 0) return;
   const base = (ground > view.height ? view.height + (ground - view.height) * sink : ground) + 1;
   if (base - height > view.height) return;
@@ -246,13 +254,22 @@ function runway(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
 }
 
 function trees(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
+  for (const t of f.field.trees) {
+    if (t.x + t.r < box.x0 || t.x - t.r > box.x1) continue;
+    tree(ctx, f, t, 0);
+  }
+}
+
+/** A trunk and a crown of three circles (or a stacked conifer, one in three), standing on the ground at `base`. */
+function tree(ctx: CanvasRenderingContext2D, f: Frame, t: { x: number; height: number; r: number }, base: number) {
   const { palette, view } = f;
   const edge = Math.max(0.06, hair(view, 1.25));
   ctx.lineJoin = "round";
-  for (const tree of f.field.trees) {
-    if (tree.x + tree.r < box.x0 || tree.x - tree.r > box.x1) continue;
-    const { x, height } = tree;
-    const r = Math.min(tree.r, height * 0.32);
+  ctx.save();
+  ctx.translate(0, base);
+  {
+    const { x, height } = t;
+    const r = Math.min(t.r, height * 0.32);
     const trunk = Math.max(0.4, height * 0.07);
     ctx.beginPath();
     ctx.roundRect(x - trunk / 2, -height * 0.5, trunk, height * 0.5, trunk * 0.3);
@@ -286,6 +303,7 @@ function trees(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
     ctx.fill();
     ctx.restore();
   }
+  ctx.restore();
 }
 
 function hangar(ctx: CanvasRenderingContext2D, f: Frame) {
@@ -342,10 +360,11 @@ function hangar(ctx: CanvasRenderingContext2D, f: Frame) {
   }
 }
 
-function windsock(ctx: CanvasRenderingContext2D, f: Frame) {
+function windsock(ctx: CanvasRenderingContext2D, f: Frame, x: number, base: number) {
   const { palette, view } = f;
-  const x = f.field.windsock;
   const edge = Math.max(0.04, hair(view, 1.25));
+  ctx.save();
+  ctx.translate(0, base);
   ctx.beginPath();
   ctx.roundRect(x - 0.09, -6.2, 0.18, 6.2, 0.09);
   solid(ctx, palette.steel, edge, palette.edge);
@@ -375,6 +394,7 @@ function windsock(ctx: CanvasRenderingContext2D, f: Frame) {
   ctx.lineWidth = edge;
   ctx.strokeStyle = palette.edge;
   ctx.stroke();
+  ctx.restore();
 }
 
 interface Point {
@@ -619,12 +639,13 @@ function draw_plane(ctx: CanvasRenderingContext2D, f: Frame) {
 
 function shadow(ctx: CanvasRenderingContext2D, f: Frame) {
   const { plane, c } = f;
-  const fade = Math.max(0, 1 - plane.h / 120);
+  const ground = f.ground_at(plane.x);
+  const fade = Math.max(0, 1 - (plane.h - ground) / (120 * Math.max(1, c.spec.length / 12)));
   if (fade <= 0) return;
   const side = Math.abs(Math.cos(plane.yaw));
   const width = (c.spec.length * side + c.spec.span * (1 - side)) * 0.5;
   ctx.globalAlpha = fade;
-  ellipse(ctx, plane.x, 0.05, width * (0.7 + 0.3 * fade), 0.18, f.scenery.shadow);
+  ellipse(ctx, plane.x, -ground + 0.05, width * (0.7 + 0.3 * fade), 0.18, f.scenery.shadow);
   ctx.globalAlpha = 1;
 }
 
@@ -632,7 +653,7 @@ function puffs(ctx: CanvasRenderingContext2D, f: Frame) {
   for (const puff of f.puffs) {
     const t = puff.age / PUFF_LIFE;
     ctx.globalAlpha = Math.max(0, 0.5 * (1 - t));
-    ellipse(ctx, puff.x - t * 2, -0.4 - t * 0.8, 0.5 + t * 2.4 * puff.size, 0.3 + t * 1.1 * puff.size, f.palette.glow);
+    ellipse(ctx, puff.x - t * 2, -f.ground_at(puff.x) - 0.4 - t * 0.8, 0.5 + t * 2.4 * puff.size, 0.3 + t * 1.1 * puff.size, f.palette.glow);
   }
   ctx.globalAlpha = 1;
 }
@@ -767,11 +788,304 @@ function winch(ctx: CanvasRenderingContext2D, f: Frame) {
   ctx.stroke();
 }
 
+/** The level's world, drawn once per copy of its wrap in view: ground, what lies on it, and what stands on it. */
+function course_copies(f: Frame, box: Box): number[] {
+  const world = f.world!.course;
+  const copies: number[] = [];
+  for (let k = Math.floor(box.x0 / world.wrap) - 1; k <= Math.floor(box.x1 / world.wrap) + 1; k++) copies.push(k * world.wrap);
+  return copies.filter((offset) => offset + world.wrap >= box.x0 - 50 && offset <= box.x1 + 50);
+}
+
+function ground_path(ctx: CanvasRenderingContext2D, world: Course, x0: number, x1: number, depth: number, bottom: number) {
+  const g = world.ground;
+  ctx.beginPath();
+  ctx.moveTo(x0, -ground_at(world, x0) + depth);
+  for (const [x, h] of g) if (x > x0 && x < x1) ctx.lineTo(x, -h + depth);
+  ctx.lineTo(x1, -ground_at(world, x1) + depth);
+  ctx.lineTo(x1, bottom);
+  ctx.lineTo(x0, bottom);
+  ctx.closePath();
+}
+
+const STRIP_FILL: Record<SurfaceKind, (f: Frame) => string> = {
+  [SurfaceKind.ASPHALT]: (f) => f.scenery.runway,
+  [SurfaceKind.WET]: (f) => f.scenery.runway,
+  [SurfaceKind.GRASS]: (f) => f.palette.hedge,
+  [SurfaceKind.DIRT]: (f) => f.palette.wood,
+  [SurfaceKind.SAND]: (f) => f.palette.load,
+  [SurfaceKind.WATER]: (f) => f.palette.water,
+};
+
+function course_ground(ctx: CanvasRenderingContext2D, f: Frame, near: Box) {
+  const world = f.world!.course;
+  const x0 = Math.max(0, near.x0 - 10);
+  const x1 = Math.min(world.wrap, near.x1 + 10);
+  if (x1 <= x0) return;
+  ground_path(ctx, world, x0, x1, 0, near.y1 + 5);
+  ctx.fillStyle = f.palette.grass;
+  ctx.fill();
+  ground_path(ctx, world, x0, x1, 1.2, near.y1 + 5);
+  ctx.fillStyle = f.scenery.earth;
+  ctx.fill();
+  for (const s of world.surfaces) {
+    if (s.x1 < x0 || s.x0 > x1) continue;
+    const a = Math.max(s.x0, x0);
+    const b = Math.min(s.x1, x1);
+    if (s.kind === SurfaceKind.WATER) {
+      ctx.beginPath();
+      ctx.rect(a, -0.3, b - a, near.y1 + 5);
+      ctx.fillStyle = f.palette.water;
+      ctx.fill();
+      ctx.strokeStyle = f.palette.water_edge;
+      ctx.lineWidth = Math.max(0.05, hair(f.view, 1));
+      ctx.beginPath();
+      for (let x = a; x < b; x += 6) {
+        ctx.moveTo(x, -0.3 + Math.sin(x * 0.3 + f.time * 2) * 0.08);
+        ctx.lineTo(x + 3, -0.3 + Math.sin(x * 0.3 + f.time * 2 + 1) * 0.08);
+      }
+      ctx.stroke();
+      continue;
+    }
+    ctx.beginPath();
+    ctx.moveTo(a, -ground_at(world, a));
+    for (const [x, h] of world.ground) if (x > a && x < b) ctx.lineTo(x, -h);
+    ctx.lineTo(b, -ground_at(world, b));
+    ctx.lineTo(b, -ground_at(world, b) + 1.2);
+    ctx.lineTo(a, -ground_at(world, a) + 1.2);
+    ctx.closePath();
+    ctx.fillStyle = STRIP_FILL[s.kind](f);
+    ctx.fill();
+  }
+  for (const strip of world.strips) {
+    if (strip.x1 < x0 || strip.x0 > x1) continue;
+    const paved = strip.kind === SurfaceKind.ASPHALT || strip.kind === SurfaceKind.WET;
+    ctx.fillStyle = paved ? f.palette.paint : f.palette.kerb;
+    const step = paved ? 50 : 24;
+    for (let x = strip.x0 + 30; x < strip.x1 - 30; x += step) {
+      if (x + 30 < x0 || x > x1) continue;
+      ctx.fillRect(x, -ground_at(world, x) + 0.5, paved ? 30 : 8, 0.14);
+    }
+    if (paved) {
+      for (const [end, dir] of [
+        [strip.x0, 1],
+        [strip.x1, -1],
+      ] as const) {
+        for (let k = 0; k < 6; k++) {
+          const x = end + dir * (3 + k * 3.2) - (dir < 0 ? 2.2 : 0);
+          ctx.fillRect(x, -ground_at(world, x) + 0.15, 2.2, 0.9);
+        }
+      }
+    }
+    if (strip.kind === SurfaceKind.WET) {
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = f.palette.water;
+      for (let x = strip.x0 + 7; x < strip.x1; x += 23) ctx.fillRect(x, -ground_at(world, x) + 0.02, 9, 0.12);
+      ctx.globalAlpha = 1;
+    }
+  }
+}
+
+function course_obstacles(ctx: CanvasRenderingContext2D, f: Frame, near: Box) {
+  const { palette, view } = f;
+  const world = f.world!.course;
+  const edge = Math.max(0.06, hair(view, 1.25));
+  for (const o of world.obstacles) {
+    if (o.x1 < near.x0 - 20 || o.x0 > near.x1 + 20) continue;
+    const base = -ground_at(world, (o.x0 + o.x1) / 2);
+    if (o.kind === ObstacleKind.TREES) {
+      const count = Math.max(1, Math.round((o.x1 - o.x0) / 9));
+      for (let i = 0; i < count; i++) {
+        const x = o.x0 + ((i + 0.5) * (o.x1 - o.x0)) / count;
+        const height = o.top * (0.86 + (hash(Math.round(x), 3) % 15) / 100);
+        tree(ctx, f, { x, height: Math.min(height, o.top), r: Math.min(4.5, (o.x1 - o.x0) / count / 1.6 + 1.2) }, base);
+      }
+    } else if (o.kind === ObstacleKind.HEDGE) {
+      ctx.beginPath();
+      ctx.roundRect(o.x0 - 1, base - o.top, o.x1 - o.x0 + 2, o.top, Math.min(1.5, o.top / 2));
+      solid(ctx, palette.hedge_edge, edge, palette.edge);
+    } else if (o.kind === ObstacleKind.MAST) {
+      const mid = (o.x0 + o.x1) / 2;
+      const half = Math.max(0.6, (o.x1 - o.x0) / 4);
+      ctx.beginPath();
+      ctx.moveTo(mid - half * 2, base);
+      ctx.lineTo(mid - 0.3, base - o.top);
+      ctx.lineTo(mid + 0.3, base - o.top);
+      ctx.lineTo(mid + half * 2, base);
+      ctx.lineWidth = Math.max(0.12, hair(view, 1.5));
+      ctx.strokeStyle = palette.steel;
+      ctx.stroke();
+      for (let y = 4; y < o.top; y += 5) {
+        const w = half * 2 * (1 - y / o.top) + 0.3;
+        ctx.beginPath();
+        ctx.moveTo(mid - w, base - y);
+        ctx.lineTo(mid + w, base - y);
+        ctx.stroke();
+      }
+      ellipse(ctx, mid, base - o.top - 0.4, Math.max(0.5, hair(view, 3)), Math.max(0.5, hair(view, 3)), palette.error);
+    } else {
+      ctx.beginPath();
+      ctx.rect(o.x0, base - o.top * 0.65, o.x1 - o.x0, o.top * 0.65);
+      solid(ctx, palette.pillar, edge, palette.edge);
+      ctx.beginPath();
+      ctx.moveTo(o.x0 - 1, base - o.top * 0.65);
+      ctx.lineTo((o.x0 + o.x1) / 2, base - o.top);
+      ctx.lineTo(o.x1 + 1, base - o.top * 0.65);
+      ctx.closePath();
+      solid(ctx, palette.brake, edge, palette.edge);
+    }
+  }
+  const target = f.world!.target;
+  const sock = target.x0 - 25;
+  if (sock > near.x0 - 10 && sock < near.x1 + 10) windsock(ctx, f, sock, -ground_at(world, sock));
+  const clear = f.world!.clear;
+  if (clear && clear.x > near.x0 - 10 && clear.x < near.x1 + 10) {
+    const base = -ground_at(world, clear.x);
+    ctx.setLineDash([Math.max(0.5, hair(view, 4)), Math.max(0.5, hair(view, 4))]);
+    ctx.lineWidth = Math.max(0.08, hair(view, 1.5));
+    ctx.strokeStyle = palette.target;
+    ctx.beginPath();
+    ctx.moveTo(clear.x, base);
+    ctx.lineTo(clear.x, base - clear.height - 25);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(clear.x, base - clear.height);
+    ctx.lineTo(clear.x + Math.max(4, hair(view, 18)), base - clear.height - Math.max(1.5, hair(view, 6)));
+    ctx.lineTo(clear.x, base - clear.height - Math.max(3, hair(view, 12)));
+    ctx.closePath();
+    ctx.fillStyle = palette.target;
+    ctx.fill();
+  }
+}
+
+/** The stands on the hub's apron: a painted box and a board with the round's name and its stars. */
+function gate_signs(ctx: CanvasRenderingContext2D, f: Frame) {
+  const { palette, view } = f;
+  const edge = Math.max(0.05, hair(view, 1.25));
+  for (const gate of f.gates) {
+    ctx.strokeStyle = palette.paint;
+    ctx.lineWidth = 0.18;
+    ctx.beginPath();
+    ctx.moveTo(gate.x - 7, -0.02);
+    ctx.lineTo(gate.x + 7, -0.02);
+    ctx.stroke();
+    ctx.fillStyle = palette.target;
+    ctx.fillRect(gate.x - 0.15, -0.06, 0.3, 0.06);
+    const post = gate.x + 6.5;
+    ctx.beginPath();
+    ctx.roundRect(post - 0.08, -3.4, 0.16, 3.4, 0.08);
+    solid(ctx, palette.steel, edge, palette.edge);
+    const w = Math.max(3.2, gate.label.length * 0.6 + 1);
+    ctx.beginPath();
+    ctx.roundRect(post - w / 2, -5.6, w, 2.4, 0.3);
+    solid(ctx, gate.daily ? palette.target : palette.floor, edge, palette.edge);
+    if (view.scale < 2.5) continue;
+    ctx.font = `600 1px ${f.font}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = gate.daily ? palette.floor : palette.ink;
+    ctx.fillText(gate.label, post, -4.75);
+    for (let i = 0; i < 3; i++) star(ctx, post - 0.75 + i * 0.75, -3.85, 0.3, i < gate.stars ? palette.warning : palette.faint);
+  }
+}
+
+function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, colour: string) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const radius = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius);
+  }
+  ctx.closePath();
+  ctx.fillStyle = colour;
+  ctx.fill();
+}
+
+/** The round's profile, top right: the ground from the start to past the strip, the glidepath to it and the plane. */
+function course_profile(ctx: CanvasRenderingContext2D, f: Frame) {
+  const { view, palette, plane } = f;
+  const world = f.world!;
+  const w = Math.min(190, view.width * 0.42);
+  const h = w * 0.36;
+  const x0 = view.width - w - 8 - f.insets.right;
+  const y0 = 8 + f.insets.top;
+  const left = world.start_x - 150;
+  const right = Math.max(world.target.x1, world.clear?.x ?? 0) + 250;
+  let top = 60;
+  for (const [x, g] of world.course.ground) if (x >= left && x <= right) top = Math.max(top, g + 40);
+  top = Math.max(top, world.top);
+  const span = right - left;
+  const at = local(world.course, plane.x);
+  const sx = (x: number) => x0 + ((x - left) / span) * w;
+  const sy = (alt: number) => y0 + h - 5 - (Math.min(alt, top) / top) * (h - 10);
+  ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+  ctx.fillStyle = palette.floor;
+  ctx.globalAlpha = 0.88;
+  ctx.beginPath();
+  ctx.roundRect(x0, y0, w, h, 6);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = palette.kerb;
+  ctx.stroke();
+  ctx.save();
+  ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(sx(left), sy(ground_at(world.course, left)));
+  for (let x = left; x <= right; x += span / 80) ctx.lineTo(sx(x), sy(ground_at(world.course, x)));
+  ctx.lineTo(x0 + w, y0 + h);
+  ctx.lineTo(x0, y0 + h);
+  ctx.closePath();
+  ctx.fillStyle = palette.faint;
+  ctx.fill();
+  if (world.clear === null) {
+    const aim = world.target.x0 + (world.target.x1 - world.target.x0) * 0.12;
+    const slope = Math.tan((world.slope * Math.PI) / 180);
+    const ground = ground_at(world.course, aim);
+    ctx.setLineDash([3, 3]);
+    ctx.strokeStyle = palette.guide;
+    ctx.beginPath();
+    ctx.moveTo(sx(aim), sy(ground));
+    ctx.lineTo(sx(aim - (top - ground) / slope), sy(top));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  } else {
+    ctx.strokeStyle = palette.target;
+    ctx.beginPath();
+    ctx.moveTo(sx(world.clear.x), sy(ground_at(world.course, world.clear.x)));
+    ctx.lineTo(sx(world.clear.x), sy(ground_at(world.course, world.clear.x) + world.clear.height));
+    ctx.stroke();
+  }
+  ctx.fillStyle = palette.error;
+  for (const o of world.course.obstacles) {
+    if (o.x1 < left || o.x0 > right) continue;
+    const g = ground_at(world.course, (o.x0 + o.x1) / 2);
+    ctx.fillRect(sx(o.x0), sy(g + o.top), Math.max(1.5, sx(o.x1) - sx(o.x0)), sy(g) - sy(g + o.top));
+  }
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = palette.paint;
+  ctx.beginPath();
+  ctx.moveTo(sx(world.target.x0), sy(ground_at(world.course, world.target.x0)));
+  ctx.lineTo(sx(world.target.x1), sy(ground_at(world.course, world.target.x1)));
+  ctx.stroke();
+  const px = Math.max(x0 + 4, Math.min(x0 + w - 4, sx(at)));
+  const py = Math.max(y0 + 4, sy(plane.h));
+  const face = facing(plane);
+  ctx.beginPath();
+  ctx.moveTo(px + face * 5, py);
+  ctx.lineTo(px - face * 4, py - 3.5);
+  ctx.lineTo(px - face * 4, py + 3.5);
+  ctx.closePath();
+  ctx.fillStyle = palette.target;
+  ctx.fill();
+  ctx.restore();
+}
+
 export function draw_frame(ctx: CanvasRenderingContext2D, f: Frame) {
   begin_frame(ctx, f.view, f.palette);
   const box = visible(f.view);
   sky_and_ground(ctx, f, box);
-  if (box.y0 < 0) {
+  if (box.y0 < -f.ground_at(f.view.x)) {
     clouds(ctx, f, box, FAR_CLOUDS);
     hills(ctx, f, 0.08, 0.06, 420, Math.min(110, f.view.height * 0.2), f.scenery.far_hill, 3);
     clouds(ctx, f, box, MID_CLOUDS);
@@ -780,22 +1094,36 @@ export function draw_frame(ctx: CanvasRenderingContext2D, f: Frame) {
     thermal_cues(ctx, f, box, "clouds");
     clouds(ctx, f, box, NEAR_WISPS);
   }
-  ctx.fillStyle = f.palette.grass;
-  ctx.fillRect(box.x0, 0, box.x1 - box.x0, 0.02);
-  for (const offset of field_copies(f.field, box.x0, box.x1)) {
-    const near = { ...box, x0: box.x0 - offset, x1: box.x1 - offset };
-    ctx.save();
-    ctx.translate(offset, 0);
-    trees(ctx, f, near);
-    windsock(ctx, f);
-    runway(ctx, f, near);
-    hangar(ctx, f);
-    ctx.restore();
+  if (f.world) {
+    for (const offset of course_copies(f, box)) {
+      const near = { ...box, x0: box.x0 - offset, x1: box.x1 - offset };
+      ctx.save();
+      ctx.translate(offset, 0);
+      course_ground(ctx, f, near);
+      course_obstacles(ctx, f, near);
+      ctx.restore();
+    }
+  } else {
+    ctx.fillStyle = f.palette.grass;
+    ctx.fillRect(box.x0, 0, box.x1 - box.x0, 0.02);
+    for (const offset of field_copies(f.field, box.x0, box.x1)) {
+      const near = { ...box, x0: box.x0 - offset, x1: box.x1 - offset };
+      ctx.save();
+      ctx.translate(offset, 0);
+      trees(ctx, f, near);
+      windsock(ctx, f, f.field.windsock, 0);
+      runway(ctx, f, near);
+      hangar(ctx, f);
+      gate_signs(ctx, f);
+      ctx.restore();
+    }
   }
   thermal_cues(ctx, f, box, "shimmer");
   winch(ctx, f);
   shadow(ctx, f);
   draw_plane(ctx, f);
   puffs(ctx, f);
-  if (f.profile) profile(ctx, f);
+  if (!f.profile) return;
+  if (f.world) course_profile(ctx, f);
+  else profile(ctx, f);
 }

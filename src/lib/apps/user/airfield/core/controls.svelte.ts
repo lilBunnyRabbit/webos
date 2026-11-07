@@ -28,6 +28,8 @@ export class Controls {
   /** A finger on the pitch pad or a mouse drag on the board: it wins over the keys while held. */
   held_stick = $state<number | null>(null);
   held_brake = $state(false);
+  /** A finger held on a turn button: the ground crew walk an engineless plane that way. */
+  held_walk = $state(0);
   brake = $state(0);
   readonly keys = new SvelteSet<string>();
 
@@ -49,6 +51,14 @@ export class Controls {
 
   get flap_name(): string {
     return this.cockpit.flap_names[this.flap_notch];
+  }
+
+  /** Which way the crew walk the plane: a held turn key or button. */
+  get walk(): number {
+    if (this.held_walk) return this.held_walk;
+    const left = this.pressed(LEFT_KEYS);
+    const right = this.pressed(RIGHT_KEYS);
+    return left === right ? 0 : left ? -1 : 1;
   }
 
   get stick(): number {
@@ -102,6 +112,7 @@ export class Controls {
     this.keys.clear();
     this.held_stick = null;
     this.held_brake = false;
+    this.held_walk = 0;
     this.key_stick = 0;
     this.brake = 0;
   }
