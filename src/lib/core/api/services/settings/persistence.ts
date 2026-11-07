@@ -19,7 +19,7 @@ import {
   type ThemeToken,
   type Wallpaper,
 } from "./type";
-import { BRAND_DARK, BRAND_LIGHT, derive_surfaces, legacy_surface, surface_step } from "./themes";
+import { BRAND_DARK, BRAND_LIGHT, brand_palette, derive_surfaces, legacy_surface, surface_step } from "./themes";
 import { PATHS } from "../files/hierarchy";
 import { DEFAULT_APPEARANCE } from "./appearance";
 import { BUILTIN_FONTS, DEFAULT_FONT, is_font_file_name } from "./fonts";
@@ -116,17 +116,26 @@ function parse_saved_themes(saved: unknown): SavedTheme[] {
   return result;
 }
 
+// Brand Light's lower shades before 4.9.0, rounded; a save holding them gets the brand's exact values, so it still
+// matches the preset.
+const ROUNDED_BRAND_LIGHT: Partial<Record<ThemeToken, string>> = {
+  background_dark: "oklch(0.89 0.0562 86.47)",
+  background_darker: "oklch(0.832 0.077 86.47)",
+  background_darkest: "oklch(0.774 0.0725 86.47)",
+};
+
 function merge_theme(saved: unknown): Theme {
   const source = (saved ?? {}) as Partial<Record<ThemeToken, unknown>>;
   // Tokens a save predates come from the matching brand palette, or are derived from its own background.
-  const brand = [BRAND_DARK, BRAND_LIGHT].find((palette) => palette.background === source.background);
+  const brand = brand_palette(source.background);
   const derived = derive_surfaces();
   const theme = { ...BRAND_DARK, ...(brand ?? derived) };
   for (const token of Object.keys(theme) as ThemeToken[]) {
     const value = source[token];
     if (typeof value !== "string") continue;
     const legacy = token in derived && value === legacy_surface(surface_step(token as keyof typeof derived));
-    theme[token] = legacy ? derived[token as keyof typeof derived] : value;
+    const rounded = brand === BRAND_LIGHT && value === ROUNDED_BRAND_LIGHT[token];
+    theme[token] = legacy ? derived[token as keyof typeof derived] : rounded ? BRAND_LIGHT[token] : value;
   }
   return theme;
 }

@@ -40,6 +40,9 @@ describe("theme files", () => {
     const { desktop: _, ...old } = BRAND_DARK;
     const result = parse_theme_file(JSON.stringify({ format: "webos-theme", version: 1, name: "A", theme: old }), any_colour);
     expect(result.ok && result.theme.theme).toEqual(BRAND_DARK);
+    const { desktop: __, ...old_light } = BRAND_LIGHT;
+    const light = parse_theme_file(JSON.stringify({ format: "webos-theme", version: 1, name: "B", theme: old_light }), any_colour);
+    expect(light.ok && light.theme.theme).toEqual(BRAND_LIGHT);
   });
 
   test("names values that aren't colours", () => {

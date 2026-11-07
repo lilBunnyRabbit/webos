@@ -1,5 +1,6 @@
 <script lang="ts">
   import kernel, {
+    desktop_glow,
     Platform,
     THEME_PRESETS,
     TaskbarPosition,
@@ -171,7 +172,7 @@
 />
 
 <div role="region" aria-label="Introduction" class="fixed inset-0 flex flex-col overflow-y-auto bg-desktop text-foreground">
-  <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--background-dark),transparent_70%)]"></div>
+  <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--glow),transparent_70%)]" style:--glow={desktop_glow(settings.theme.desktop)}></div>
 
   <div class="relative flex items-center justify-between px-6 py-4">
     <LogoLockup height={32} />

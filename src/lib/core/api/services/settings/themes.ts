@@ -70,6 +70,11 @@ export const WHILE_TRUE: Theme = {
   desktop: DEFAULT_DESKTOP,
 };
 
+/** The brand palette a theme was made from, by its `background`: fills the tokens an older save or file lacks. */
+export function brand_palette(background: unknown): Theme | undefined {
+  return [BRAND_DARK, BRAND_LIGHT].find((palette) => palette.background === background);
+}
+
 const SURFACE_STEPS: Record<ThemeSurfaceToken, number> = {
   background_lightest: 3,
   background_lighter: 2,

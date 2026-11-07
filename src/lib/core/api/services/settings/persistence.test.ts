@@ -129,6 +129,12 @@ describe("surface ladder migration", () => {
     expect(load(old_brand_light)).toBe(BRAND_LIGHT.desktop);
   });
 
+  test("a Brand Light save with the old rounded lower shades is Brand Light again", () => {
+    const { desktop: _, ...current } = BRAND_LIGHT;
+    const theme = { ...current, background_dark: "oklch(0.89 0.0562 86.47)", background_darker: "oklch(0.832 0.077 86.47)", background_darkest: "oklch(0.774 0.0725 86.47)" };
+    expect(parse_settings(JSON.stringify({ version: SETTINGS_VERSION, theme }))!.theme).toEqual(BRAND_LIGHT);
+  });
+
   test("the wallpaper glow sits two shades above the desktop", () => {
     expect(desktop_glow(DEFAULT_DESKTOP)).toBe("var(--background-dark)");
     expect(desktop_glow("var(--background)")).toBe("var(--background-lighter)");

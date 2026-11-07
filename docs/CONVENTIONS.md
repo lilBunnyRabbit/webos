@@ -196,7 +196,7 @@ The app follows the [lilBunnyRabbit brand](https://lilbunnyrabbit.github.io/bran
 | `mark-ears` | Fixed logo colour. The same in every theme |
 
 - All values are OKLCH. Tailwind's default palette is **disabled** (`--color-*: initial`), so `red-500`, `white` and similar don't compile. If a colour seems to be missing, it's a token at reduced opacity, not a new colour.
-- The brand's seven-shade surface ladder is in every theme (`background-darkest` … `background-lightest`, ADR-024). Desktop on darkest, windows on `background`, chrome and cards on `background-light`, fields recessed on `background-darker` (raised on `background-lightest` in light palettes). At most three shades per view. Neutral fills are `foreground` at an opacity.
+- The brand's seven-shade surface ladder is in every theme (`background-darkest` … `background-lightest`, ADR-024). Desktop on the `desktop` token (darkest, Brand Light's page), windows on `background`, chrome and cards on `background-light`, fields recessed on `background-darker` (raised on `background-lightest` in light palettes). At most three shades per view. Neutral fills are `foreground` at an opacity.
 - A preset that defines only the five base colours gets the rest from `derive_theme()`. It follows the brand formula: states sit at the primary colour's lightness with fixed hues, and tertiary and cottontail derive from primary. Never hand-pick extra colours for a preset.
 - Interaction opacity, from the brand modifiers: hover `opacity-85`, active `opacity-70`, disabled `opacity-38`. Muted text is `text-foreground/65`, for captions and metadata only.
 

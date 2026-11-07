@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { UpdateStage, type VersionService } from "$lib/core/api";
+  import kernel, { desktop_glow, UpdateStage, type SettingsService, type VersionService } from "$lib/core/api";
   import { progress_line } from "$lib/core/api/services/version/precache";
   import { compare_versions } from "$lib/core/api/services/version/semver";
   import { cn } from "$lib/core/utils";
@@ -11,6 +11,7 @@
   import { Badge, Button, Spinner } from "../ui";
 
   const version = $derived(kernel.service<VersionService>("version"));
+  const settings = $derived(kernel.service<SettingsService>("settings"));
 
   const STEPS = [
     { stage: UpdateStage.INSTALLING, label: "Downloading the new version" },
@@ -42,7 +43,7 @@
     class="@container fixed inset-0 z-[10000] grid place-items-center bg-desktop p-4 text-foreground"
     transition:fade={{ duration: motion_reduced() ? 0 : 150 }}
   >
-    <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--background-dark),transparent_70%)]"></div>
+    <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--glow),transparent_70%)]" style:--glow={desktop_glow(settings.theme.desktop)}></div>
     <div
       class={cn(
         "relative grid max-h-full w-full overflow-y-auto rounded-2xl bg-background-dark ring-1 ring-foreground/8",

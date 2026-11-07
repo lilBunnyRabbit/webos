@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BRAND_DARK, DEFAULT_DESKTOP, find_saved, THEME_PRESETS, type SavedTheme, type Theme, type ThemeToken } from "$lib/core/api/services/settings";
+import { BRAND_DARK, brand_palette, DEFAULT_DESKTOP, find_saved, THEME_PRESETS, type SavedTheme, type Theme, type ThemeToken } from "$lib/core/api/services/settings";
 
 export const THEME_FILE_EXTENSION = ".webos-theme";
 export const THEME_FILE_FORMAT = "webos-theme";
@@ -32,8 +32,8 @@ export function parse_theme_file(raw: string, is_colour: (value: string) => bool
   const result = theme_file_schema.safeParse(data);
   if (!result.success) return { ok: false, error: "The file isn't a WebOS theme." };
   const { version, name } = result.data;
-  // Files saved before themes had a desktop colour get the default one.
-  const theme: Record<string, unknown> = { desktop: DEFAULT_DESKTOP, ...result.data.theme };
+  // Files saved before themes had a desktop colour get it like an older save does: the brand palette's, else the default.
+  const theme: Record<string, unknown> = { desktop: brand_palette(result.data.theme.background)?.desktop ?? DEFAULT_DESKTOP, ...result.data.theme };
   if (version !== THEME_FILE_VERSION) return { ok: false, error: "The theme was made by a newer version of WebOS." };
 
   const missing = TOKENS.filter((token) => typeof theme[token] !== "string");

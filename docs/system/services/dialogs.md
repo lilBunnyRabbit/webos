@@ -115,7 +115,7 @@ Each shell mounts one: `desktop-shell.svelte` after its grid, and `window-mini.s
   - `position-anchor: --dialog-{id}`.
   - Anchored: `position-area: bottom span-right`, `position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline`. A dropdown below-right of the point that flips at the viewport edges.
   - Unanchored: `position-area: span-all` with `place-self: anchor-center`, centred on the fallback point. The fallback point is the focused window's or the window container's centre, off the screen's centre by the taskbar or nav bar, so a tall dialog would run off an edge; spanning the screen lets `anchor-center` shift it back on. Margins of 1rem plus the top and bottom safe areas keep it clear of the edges and a phone's status bar. Tall dialogs cap their height at `100dvh` minus 2rem and both safe areas.
-  - The `<dialog>` itself is unstyled (transparent, no padding, no border). The `::backdrop` is the shared scrim `--overlay` (`background-darkest` at 60%, defined on `html` in `app.css`) for every dialog; unanchored ones (centred questions) also blur it 2px. The component draws its own surface and must give it one (floating layers use `bg-background-lighter`, see [docs/design/patterns.md](../../design/patterns.md#dialogs-and-menus)) and its own entrance (`animate-pop-in`).
+  - The `<dialog>` itself is unstyled (transparent, no padding, no border). The `::backdrop` is the shared scrim `--overlay` (the `desktop` colour at 60%, defined on `html` in `app.css`) for every dialog; unanchored ones (centred questions) also blur it 2px. The component draws its own surface and must give it one (floating layers use `bg-background-lighter`, see [docs/design/patterns.md](../../design/patterns.md#dialogs-and-menus)) and its own entrance (`animate-pop-in`).
 - Renders `<entry.component {...entry.props} resolve={entry.resolve} />`.
 
 What the platform gives for free: the top layer (above every window and toast), modality, focus trap and return, Esc, outside-click dismissal, and stacking. Stacked dialogs are separate modal dialogs; an outside click closes the topmost only, and the click does not reach what's underneath.
@@ -146,7 +146,7 @@ A `rounded-2xl bg-background-lighter` card: a tinted `primary` icon tile, "Pick 
 
 ### Third consumer: `IntroDialog`
 
-`src/lib/core/components/intro/intro-dialog.svelte`, shown by [VersionService](version.md#release-notes-and-introduction) on first boot and from Settings › About, with `dismissible: false`. It resolves `true` from Skip or the last page. Its root is `fixed inset-0`, so it covers the viewport wherever the host centres it (on replay the fallback point is the focused window's centre); its opaque `background-darkest` hides the scrim.
+`src/lib/core/components/intro/intro-dialog.svelte`, shown by [VersionService](version.md#release-notes-and-introduction) on first boot and from Settings › About, with `dismissible: false`. It resolves `true` from Skip or the last page. Its root is `fixed inset-0`, so it covers the viewport wherever the host centres it (on replay the fallback point is the focused window's centre); its opaque `desktop` colour hides the scrim.
 
 ## Divergence from ADR
 

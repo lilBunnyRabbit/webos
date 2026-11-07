@@ -19,10 +19,10 @@ The tokens were right, but WebOS used the wrong one for the biggest area. The de
 
 **Decision (owner):** option 3. "Themes get a 'desktop' colour that defaults to the darkest shade. Brand Light sets it to its cream page colour; While True keeps its orange desktop and Brand Dark is unchanged."
 
-### How it was built
+### How it was built (builder calls within the decision)
 - `desktop` is the 18th `ThemeToken`, a CSS colour string like the derived tokens: `DEFAULT_DESKTOP` = `var(--background-darkest)` for Brand Dark, While True, `derive_theme()` and every preset; Brand Light `var(--background)`. Written as `--desktop`, the Tailwind colour `desktop`.
-- Old saves: `merge_theme()` already fills missing tokens from the brand palette with the same `background`, else Brand Dark, so a saved Brand Light gets the cream desktop and everything else the default. `.webos-theme` files without it import with the default.
-- Everything that painted the frame uses `bg-desktop`. The scrim is the desktop at 60% (unchanged on every theme but Brand Light, where it's a cream veil). The wallpaper glow is `desktop_glow()`: the ladder shade two above the desktop, so it's still `background-dark` over the default, and `background-lighter` over Brand Light instead of a tan smudge.
+- Old saves: `merge_theme()` already fills missing tokens from the brand palette with the same `background`, else Brand Dark, so a saved Brand Light gets the cream desktop and everything else the default. `.webos-theme` files without it get the same fill. A save still holding Brand Light's old rounded lower shades snaps to the exact ones, so it still matches the preset.
+- Everything that painted the frame uses `bg-desktop`. Builder call: the scrim is the desktop at 60% (unchanged on every theme but Brand Light, where it's a cream veil). Builder call: the wallpaper, intro and update-overlay glow is `desktop_glow()`: the ladder shade two above the desktop, so it's still `background-dark` over the default, and `background-lighter` over Brand Light instead of a tan smudge.
 - Settings › Edit colours lists Desktop under Surfaces; the theme card's miniature paints it; the Style Guide shows it.
 - Checked: While True, Red & Black, Brand Dark (desktop, start menu with scrim, App Store, phone home) and Light Pastel Blue are pixel-identical to before apart from the clock.
 

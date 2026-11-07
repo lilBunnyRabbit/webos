@@ -73,7 +73,7 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 Two things follow the desktop:
 
 - **Scrim:** `--overlay` is `color-mix(in oklch, var(--desktop) 60%, transparent)`, so the desktop's own colour veils what's behind a menu or dialog (darkest on most themes, cream on Brand Light).
-- **Wallpaper glow:** the grid, glow and tint presets fade `--glow` into the desktop. `wallpaper.svelte` sets it from `desktop_glow(theme.desktop)`, the ladder shade two above the desktop: `background-dark` over the default, `background-lighter` over Brand Light, `background-dark` when the desktop isn't a ladder shade.
+- **Glow:** the wallpaper's grid, glow and tint presets, the introduction and the update overlay fade `--glow` into the desktop. Each sets it from `desktop_glow(theme.desktop)`, the ladder shade two above the desktop: `background-dark` over the default, `background-lighter` over Brand Light, `background-dark` when the desktop isn't a ladder shade.
 
 Shadows are still cast in `background-darkest`, not the desktop.
 

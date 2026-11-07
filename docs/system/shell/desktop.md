@@ -21,20 +21,20 @@ Source: `src/lib/core/components/desktop/` · Services: [desktop](../services/de
 - Flatten `desktop.list()` into `cells` (`{ item, x, y }`, reading order: rows top to bottom, cells left to right) and render each at `grid-column: x+1; grid-row: y+1`, keyed by entry name: a `DesktopItem`, or a `DesktopWidget` spanning its size for a widget.
 - Render nothing until the grid has at least 1×1.
 
-It sits in `desktop-shell.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-background-darkest` too.
+It sits in `desktop-shell.svelte` under the [window manager](window-manager.md), in a wrapper with no padding, so the surface runs to the screen edge and behind the floating taskbar strip. The OS grid behind it is `bg-desktop` too.
 
 ## Wallpaper
 
-`wallpaper.svelte` (ADR-011 revision) draws `settings.wallpaper`, or its `value` prop (Settings' previews). It's an `absolute inset-0 -z-10` layer on `bg-background-darkest`, so its parent is `isolate`: the layer stays above the parent's background and below the icons.
+`wallpaper.svelte` (ADR-011 revision) draws `settings.wallpaper`, or its `value` prop (Settings' previews). It's an `absolute inset-0 -z-10` layer on `bg-desktop` (the theme's `desktop` colour, [theming](../theming.md#the-desktop)), so its parent is `isolate`: the layer stays above the parent's background and below the icons.
 
 | Kind | Drawn as |
 |------|----------|
 | Preset `grid` | The glow; the desktop adds the dots (above). The phone home has no cells, so it shows the glow alone |
 | Preset `glow` | A `background-dark` ellipse glowing from the top: shades of one surface, which the brand allows |
 | Preset `tint` | The glow plus one `primary` ellipse (30%) fading in from the bottom right: one brand colour into the surface, never a blend of two |
-| Preset `plain` | `background-darkest` only |
+| Preset `plain` | The `desktop` colour only |
 | Live | The glow, then the entry's `background` layer ([live wallpapers](#live-wallpapers)). On the phone, the grid preset |
-| Image | The file at `path` as an object URL (revoked on change), `background-size` cover / contain / auto (tile repeats, center doesn't), `filter: blur()` with the layer grown by twice the blur so the edges don't fade, then `background-darkest` at `dim` opacity on top. A missing file draws the glow |
+| Image | The file at `path` as an object URL (revoked on change), `background-size` cover / contain / auto (tile repeats, center doesn't), `filter: blur()` with the layer grown by twice the blur so the edges don't fade, then the `desktop` colour at `dim` opacity on top. A missing file draws the glow |
 
 The surface gets `data-wallpaper-image` while an image is set. An unlayered rule in `app.css` then gives every `[data-wallpaper-label]` (desktop and phone home labels) a `background/72` backing, so labels stay readable on any photo.
 
@@ -118,7 +118,7 @@ Cosmetic only; the window's DOM is never touched. `turrets/damage.ts` holds the 
 - **Model.** `Map<id, { window, bites }>`. A `Bite` is `{ edge, offset, depth, seed }`: `offset` along its edge from that edge's start (left for top and bottom, top for left and right), `depth` inward, so a bite moves and resizes with its target.
 - **Chip.** The overlay queues each `shield_impacts` hit and applies the queue at its next frame, against the rects read once for that frame. A hit within a bite's half-width + 4px on the same edge digs it 2.5px deeper and steers it up to 3px (20% of the gap) toward the cursor's position along the edge. It never digs deeper than the cursor sits inside the target, nor past the cap of 18% of the short side or 60px, whichever is smaller. Any other hit opens a 4px bite, up to 64 per target. Half-width is `4 + depth × 0.75`.
 - **Prune.** Each damage frame drops widgets no longer on the desktop. Windows missing from the context are kept, since a minimized or popped-out window comes back with its damage; the 16 most recently chipped hidden windows are kept and older ones dropped. Window ids are fresh UUIDs, so a closed window's damage can't show again and only ages out.
-- **Draw.** On the overlay, back to front: widgets, then windows. For each target with bites, a clip to its rect, a 2px `foreground` rim at 35%, then the bites filled in `background_darkest` over it, so overlapping bites keep only the outer half of the rim. Then every window above that target is `clearRect`ed, so a bite on a window never shows through one in front. Sparks are drawn after. The outline is a seeded jagged arch (8 steps, ±jag), built once into a `Path2D` per bite list and target size (a chip replaces the list) and drawn translated to the target.
+- **Draw.** On the overlay, back to front: widgets, then windows. For each target with bites, a clip to its rect, a 2px `foreground` rim at 35%, then the bites filled in the `desktop` colour over it, so overlapping bites keep only the outer half of the rim. Then every window above that target is `clearRect`ed, so a bite on a window never shows through one in front. Sparks are drawn after. The outline is a seeded jagged arch (8 steps, ±jag), built once into a `Path2D` per bite list and target size (a chip replaces the list) and drawn translated to the target.
 - **Loop.** While there is damage and the pointer is on the page, the overlay redraws every frame so bites follow a dragged window; without the pointer it draws only on resize, theme, option change or Repair. Measured at 64 bites on each of 3 windows and a widget, with frantic fire, the damage pass costs about 0.07 ms a frame (0.4 ms before the path cache).
 - **Repair.** "Repair everything" in the Damage row calls `damage_store.clear()`, which tells the overlay to draw a clean still frame.
 

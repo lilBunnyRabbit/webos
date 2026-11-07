@@ -159,7 +159,7 @@ Both toasts use app id `version`, so they're in the notification history.
 
 ### `IntroDialog`
 
-`components/intro/intro-dialog.svelte`, a full-viewport takeover (`fixed inset-0`, `background-darkest` with a `background-dark` glow at the top), shown as a non-dismissible system dialog ([dialogs](dialogs.md#third-consumer-introdialog)). Esc does nothing; Skip (top right, on every page but the last) resolves.
+`components/intro/intro-dialog.svelte`, a full-viewport takeover (`fixed inset-0`, the `desktop` colour with a glow two shades above it at the top, `desktop_glow()`), shown as a non-dismissible system dialog ([dialogs](dialogs.md#third-consumer-introdialog)). Esc does nothing; Skip (top right, on every page but the last) resolves.
 
 | Page | Content |
 |------|---------|
