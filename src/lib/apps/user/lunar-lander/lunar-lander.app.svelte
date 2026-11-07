@@ -23,7 +23,7 @@
   import { HOVER_NOTCH } from "./core/lever";
   import { env_of, LOAD_HOLD, result, settled_on, start_ship, step_mission, type Result, type Scene } from "./core/mission";
   import { MISSIONS } from "./core/missions";
-  import { better, DEFAULT_PROGRESS, DEFAULT_SETTINGS, is_open, missions_done, PROGRESS_FILE, progress_schema, SETTINGS_FILE, settings_schema, unlocked_ships } from "./core/progress";
+  import { better, DEFAULT_LEGACY, DEFAULT_PROGRESS, DEFAULT_SETTINGS, is_open, LEGACY_FILE, legacy_schema, migrated, missions_done, PROGRESS_FILE, progress_schema, SETTINGS_FILE, settings_schema, unlocked_ships } from "./core/progress";
   import { daily_ref, mission_ref, round_brief, round_key, round_title, RoundKind, scene_of, type Chart, type RoundRef } from "./core/rounds";
   import { SHIP_IDS, ship_coefficients, ShipId, SPECS } from "./core/ships";
   import { Sounds } from "./core/sound";
@@ -37,6 +37,7 @@
   const play = track_play(app_id, () => win.is_visible);
   const settings_file = storage.file(SETTINGS_FILE, DEFAULT_SETTINGS, settings_schema);
   const progress = storage.file(PROGRESS_FILE, DEFAULT_PROGRESS, progress_schema);
+  const legacy = storage.file(LEGACY_FILE, DEFAULT_LEGACY, legacy_schema);
 
   interface Pending {
     gate: Gate | null;
@@ -155,8 +156,14 @@
   });
 
   $effect(() => {
-    if (!settings_file.ready || ready) return;
+    if (!settings_file.ready || !progress.ready || !legacy.ready || ready) return;
     untrack(() => {
+      const carried = migrated(progress.value, legacy.value);
+      if (carried) {
+        progress.value = carried;
+        achievements.progress("landings-25", carried.landings);
+        achievements.progress("every-ship", carried.ships_landed.length);
+      }
       ship_id = unlocked_ships(progress.value.bests).includes(settings_file.value.ship) ? settings_file.value.ship : ShipId.LANDER;
       to_base();
       ready = true;
@@ -330,7 +337,7 @@
   function stars_for(id: GateId): number {
     const bests = progress.value.bests;
     if (id === RoundKind.DAILY) return bests[`daily-${today()}`]?.stars ?? 0;
-    if (id === RoundKind.RANDOM) return bests[`random-${ship_id}`]?.stars ?? 0;
+    if (id === RoundKind.RANDOM) return bests[`random-${ship_id}-${settings.body}`]?.stars ?? 0;
     return bests[`level-${id}`]?.stars ?? 0;
   }
 
@@ -404,7 +411,7 @@
     achievements.progress("every-ship", ships.length);
     if (body.id === BodyId.EARTH) achievements.achieve("earth");
     if (body.rho > 0 && Math.abs(env.wind) >= 3) achievements.achieve("crosswind");
-    if (touchdown.sink < 0.25 && touchdown.tilt < 1 && touchdown.off_centre < 1) achievements.achieve("soft-touch");
+    if (touchdown.pad >= 0 && touchdown.sink < 0.25 && touchdown.tilt < 1 && touchdown.off_centre < 1) achievements.achieve("soft-touch");
   }
 
   function open_card(gate: Gate | null, ref: RoundRef = ref_for(gate!.id)) {

@@ -28,6 +28,25 @@ export type Settings = z.infer<typeof settings_schema>;
 
 export const DEFAULT_SETTINGS: Settings = { ship: ShipId.LANDER, body: BodyId.MOON, air: true, wind: false, infinite_fuel: false, sound: true, seen_hint: false };
 
+/** The arcade game's `storage.json`, read once: its landings and the ships it had landed carry on into Frequent flyer and Fleet pilot. */
+export const LEGACY_FILE = "storage.json";
+
+export const legacy_schema = z.object({
+  best: z.record(z.string(), z.number()).catch({}),
+  landings: z.number().int().nonnegative().catch(0),
+});
+export type Legacy = z.infer<typeof legacy_schema>;
+
+export const DEFAULT_LEGACY: Legacy = { best: {}, landings: 0 };
+
+/** The old bests were keyed by ship first (`pods-moon-air`), so a ship with any best had landed. */
+export function migrated(progress: Progress, legacy: Legacy): Progress | null {
+  if (progress.landings > 0 || progress.ships_landed.length > 0 || legacy.landings === 0) return null;
+  const keys = Object.keys(legacy.best);
+  const ships = SHIP_IDS.filter((ship) => keys.some((key) => key === ship || key.startsWith(`${ship}-`)));
+  return { ...progress, landings: legacy.landings, ships_landed: ships };
+}
+
 export function done(bests: Progress["bests"], n: number): boolean {
   return !!bests[`level-${n}`];
 }

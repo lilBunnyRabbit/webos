@@ -14,6 +14,8 @@ export interface Terrain {
   rocks: readonly (readonly Vec[])[];
   x0: number;
   x1: number;
+  /** The base's ends turn the ship back; a mission's are a crash past them. */
+  soft_edges?: boolean;
 }
 
 export interface Weather {

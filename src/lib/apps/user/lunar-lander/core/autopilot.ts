@@ -17,6 +17,7 @@ const VY_MAX = 6;
 const TILT_MAX = 35 * DEG;
 const NEAR_GROUND_TILT = 2 * DEG;
 const FINAL_TILT = 15 * DEG;
+const TURN_DEADBAND = 1 * DEG;
 const CLEARANCE = 10;
 const WAYPOINT_RADIUS = 12;
 const HOVER_OVER_PAD = 14;
@@ -113,10 +114,14 @@ export function autopilot(state: MissionState, c: Coefficients, pilot: Pilot): I
   const tilt = clamp(-Math.atan(ax / g), -tilt_max, tilt_max);
   const throttle = clamp((m * (ay + g)) / Math.max(0.3, Math.cos(ship.angle)) / T, 0, 1);
   // The fastest turn that still stops on the tilt wanted: a slow-turning ship overshot it by tens of degrees.
-  const error = tilt - ship.angle;
+  // A player's turn is a key: left, right or let go (the rate hold stops it). So is the autopilot's: it lets go once
+  // the turn under way would carry it onto the tilt wanted.
   const spin_accel = (0.8 * c.spec.spin * DEG) / c.spec.spin_up;
-  const rate = Math.sign(error) * Math.min(c.spec.spin * DEG, 4 * Math.abs(error), Math.sqrt(2 * spin_accel * Math.abs(error)));
-  return { throttle, turn: rate / (c.spec.spin * DEG) };
+  const coast = (ship.spin * Math.abs(ship.spin)) / (2 * spin_accel);
+  const error = tilt - (ship.angle + coast);
+  // A degree of lean pushes six times harder on Earth than on the Moon, so the band left alone shrinks with g.
+  const band = Math.max(0.25 * DEG, Math.min(TURN_DEADBAND, 0.06 / g));
+  return { throttle, turn: Math.abs(error) > band ? Math.sign(error) : 0 };
 }
 
 export interface Proof {

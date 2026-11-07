@@ -36,7 +36,7 @@ export function build_base(): Base {
     features: [mesa(-320, -230, 70, 50), hill(end - 30, 160, 90), ...xs.slice(0, -1).map((x, i) => hill(x + GATE_STEP / 2, 26, 2 + (i % 3)))],
     pads: [{ x: -60, width: 26 }, ...xs.map((x) => ({ x, width: PAD_WIDTH, y: 0 }))],
   });
-  return { terrain: t, hangar_pad: 0, hangar: { x0: -150, x1: -88, height: 22 }, gates: ids.map((id, i) => ({ id, pad: i + 1, x: xs[i] })) };
+  return { terrain: { ...t, soft_edges: true }, hangar_pad: 0, hangar: { x0: -150, x1: -88, height: 22 }, gates: ids.map((id, i) => ({ id, pad: i + 1, x: xs[i] })) };
 }
 
 export const BASE_START = -60;

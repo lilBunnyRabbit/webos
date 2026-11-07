@@ -60,7 +60,7 @@ A split-thrust ship's turn scales with its thrust, so the pods turn faster on Ma
 
 ### Touchdown and crashes
 
-`advance` steps the ship and judges it. A landing is a foot meeting the ground after at least 0.4 s with every foot off it; its sink is the fastest closing speed of a foot that touched. Kiss < 0.5 m/s, Firm < 1.2, Heavy below the ship's safe sink, and at or over it the legs break (`HARD`). Sliding at the ship's safe slide or more (`SLID`) or leaning past its safe tilt off square to the ground under the feet (`TILTED`) is a crash too. A hull point under the ground (`HULL`), any hull point or foot inside rock (`ROCK`) and flying 60 m past the area's ends (`LOST`) end the flight.
+`advance` steps the ship and judges it. A landing is a foot meeting the ground after at least 0.4 s with every foot off it; its sink is the fastest closing speed of a foot that touched. Kiss < 0.5 m/s, Firm < 1.2, Heavy below the ship's safe sink, and at or over it the legs break (`HARD`). Sliding at the ship's safe slide or more (`SLID`) or leaning past its safe tilt off square to the ground under the feet (`TILTED`) is a crash too. A hull point under the ground (`HULL`), the hull's outline (the convex hull of its points, `hull_outline`) overlapping rock or a foot inside it (`ROCK`, the kit's SAT `overlaps`, so a rock corner can't slip between two hull points) and flying 60 m past a mission's ends (`LOST`) end the flight. The base's ends are soft (`Terrain.soft_edges`): the ship stops there, its outward speed gone.
 
 ### Missions
 
@@ -70,23 +70,23 @@ Stars: done; gentle (no touchdown other than a kiss, and one landing per stop); 
 
 | Mission | Ship, body | What | Autopilot | Par |
 |---|---|---|---|---|
-| 1 First touchdown | Lander, Moon | pad 50 m off, 70 m up | 29.9 s | 0:50 |
-| 2 Over the hills | Lander, Moon | 820 m past three hills | 76.2 s | 1:55 |
-| 3 Crater floor | Lander, Moon | pad on a crater floor 70 m down | 88.5 s | 2:12 |
-| 4 Ridge top | Lander, Moon | pad on a 130 m ridge | 84.1 s | 2:06 |
-| 5 Supply run | Lander, Moon | 1.2 t crate to a mesa | 137.6 s | 3:21 |
-| 6 Twin pods | Pods, Moon | the pods' first pad | 60.0 s | 1:32 |
-| 7 Canyon | Pods, Moon | down a 120 m canyon | 89.5 s | 2:14 |
-| 8 Red dust | Lander, Mars | gusts to 11 m/s | 65.1 s | 1:40 |
-| 9 Crew hop | Pods, Mars | crew over a 100 m ridge | 114.6 s | 2:49 |
-| 10 Lava tube | Lander, Mars | pad under a rock roof | 77.4 s | 1:57 |
-| 11 Heavy lift | Shuttle, Moon | 4 t container to a mesa | 186.5 s | 4:30 |
-| 12 Valles | Shuttle, Mars | 160 m canyon, gusts | 88.0 s | 2:12 |
-| 13 Home | Lander, Earth | Earth gravity, breeze | 54.1 s | 1:24 |
-| 14 Sea cliff | Pods, Earth | cliff top into a 6 m/s headwind | 62.3 s | 1:36 |
-| 15 Deep cave | Pods, Mars | cave dropping 60 m under two roofs | 91.1 s | 2:16 |
+| 1 First touchdown | Lander, Moon | pad 50 m off, 70 m up | 29.8 s | 0:50 |
+| 2 Over the hills | Lander, Moon | 820 m past three hills | 76.0 s | 1:55 |
+| 3 Crater floor | Lander, Moon | pad on a crater floor 70 m down | 88.4 s | 2:12 |
+| 4 Ridge top | Lander, Moon | pad on a 130 m ridge | 84.4 s | 2:07 |
+| 5 Supply run | Lander, Moon | 1.2 t crate to a mesa | 138.1 s | 3:22 |
+| 6 Twin pods | Pods, Moon | the pods' first pad | 59.8 s | 1:32 |
+| 7 Canyon | Pods, Moon | down a 120 m canyon | 89.2 s | 2:13 |
+| 8 Red dust | Lander, Mars | gusts to 11 m/s | 65.5 s | 1:40 |
+| 9 Crew hop | Pods, Mars | crew over a 100 m ridge | 115.7 s | 2:51 |
+| 10 Lava tube | Lander, Mars | pad under a rock roof | 77.7 s | 1:57 |
+| 11 Heavy lift | Shuttle, Moon | 4 t container to a mesa | 198.4 s | 4:46 |
+| 12 Valles | Shuttle, Mars | 160 m canyon, gusts | 98.0 s | 2:26 |
+| 13 Home | Lander, Earth | Earth gravity, breeze | 54.6 s | 1:25 |
+| 14 Sea cliff | Pods, Earth | cliff top into a 6 m/s headwind | 62.7 s | 1:36 |
+| 15 Deep cave | Pods, Mars | cave dropping 60 m under two roofs | 91.2 s | 2:16 |
 
-**The autopilot** (`autopilot.ts`) flies the mission through `step_mission` at 1/120 s with a continuous throttle (a player has detents and Space). Through each stop's waypoints, then to a hover 14 m over the pad (cruising at least 22 m above the highest ground between) and straight down at `0.3 + 0.28 × feet height` m/s. Laterally a speed toward the target that can still stop there, turned into a lean (at most 35°, narrowing to 2° over the last 14 m) with a lead on the push the current lean already gives and a gain scaled by how fast the ship turns; the lean is reached by the fastest turn that still stops on it (`√(2 α Δθ)`). Vertically a speed from the height error, with a floor of +2.5 m/s within 10 m of the ground ahead, and a slow-down below a rise ahead until the ship has climbed over it. The par is the kit's `ceil(1.4 t + 8)` s.
+**The autopilot** (`autopilot.ts`) flies the mission through `step_mission` at 1/120 s. Its turn input is the player's: left, right or let go (−1, 0, 1), through the same rate command and attitude hold; its throttle is continuous where a player has the lever's detents and Space (Airfield's precedent), the one control it has that a player hasn't. Through each stop's waypoints, then to a hover 14 m over the pad (cruising at least 22 m above the highest ground between) and straight down at `0.3 + 0.28 × feet height` m/s. Laterally a speed toward the target that can still stop there, turned into a lean (at most 35°, narrowing to 2° over the last 14 m) with a lead on the push the current lean already gives and a gain scaled by how fast the ship turns; the lean is reached by holding the turn until the spin under way would coast onto it (`ω|ω| / 2α`), then letting go, within a band of 1° that shrinks with g (0.06 m/s² of push: 0.35° on Earth). Vertically a speed from the height error, with a floor of +2.5 m/s within 10 m of the ground ahead, and a slow-down below a rise ahead until the ship has climbed over it. The par is the kit's `ceil(1.4 t + 8)` s.
 
 **Proof:** `missions.test.ts` flies all 15 missions and a random mission for every ship on every body. `missions.slow.test.ts` (`bun run test:slow`) flies each mission again 20 m back and on, 12 % higher and lower, drifting 3 m/s back, and with 1.5 m/s more wind either way: all 105 pass.
 
@@ -94,7 +94,7 @@ Stars: done; gentle (no touchdown other than a kiss, and one landing per stop); 
 
 ### The base
 
-`build_base()`: the hangar (scenery) and its pad at x −60, then gates every 55 m from x 60: missions 1 to 15, Random, Daily; a mesa and a hill close the ends. You start parked on the hangar pad with the lever at Off. Standing on the hangar pad shows the picker: the three ships (locked ones say which mission unlocks them; keys 1 to 3) and the body; **Lift off** (Enter) puts it away until you leave the pad. Settling on a gate opens its card (title, ship, body, brief, best, par once the worker has flown it; Start or Not now, and that gate stays shut until you leave it). A locked mission's card says which to finish first. Coming back from a mission parks you on its gate.
+`build_base()`: the hangar (scenery) and its pad at x −60, then gates every 55 m from x 60: missions 1 to 15, Random, Daily; a mesa and a hill close the ends, and past them a soft edge stops the ship. You start parked on the hangar pad with the lever at Off. Standing on the hangar pad shows the picker: the three ships (locked ones say which mission unlocks them; keys 1 to 3) and the body; **Lift off** (Enter) puts it away until you leave the pad. Settling on a gate opens its card (title, ship, body, brief, best, par once the worker has flown it; Start or Not now, and that gate stays shut until you leave it). A locked mission's card says which to finish first. Coming back from a mission parks you on its gate.
 
 Free flight follows the settings: Air (the body's own air; off is a vacuum), Wind (5 m/s gusting 4, needs air) and Infinite fuel.
 
@@ -122,9 +122,9 @@ All on theme tokens: `read_palette` plus `read_scenery` (per body: sky, ground, 
 
 ## Data
 
-Through `storage.file` with zod schemas that fall back field by field: `/var/lib/apps/lunar-lander/settings.json` (`ship`, `body`, `air`, `wind`, `infinite_fuel`, `sound`, `seen_hint`) and `progress.json` (`version`, `bests` keyed `level-{n}`, `random-{ship}`, `daily-{day}`, `landings`, `ships_landed`). The old `storage.json` (points bests) is no longer read.
+Through `storage.file` with zod schemas that fall back field by field: `/var/lib/apps/lunar-lander/settings.json` (`ship`, `body`, `air`, `wind`, `infinite_fuel`, `sound`, `seen_hint`) and `progress.json` (`version`, `bests` keyed `level-{n}`, `random-{ship}-{body}`, `daily-{day}`, `landings`, `ships_landed`). The arcade game's `storage.json` is read once, never written: when `progress.json` has no landings yet, its landing count and the ships its bests name carry over (`migrated`), so Frequent flyer and Fleet pilot go on; its points bests are dropped. The window waits for all three files before it picks the saved ship.
 
-**Achievements** (the ids from before the rework): Touchdown (settle on a pad), Heavy landing (on Earth), Crosswind (with 3 m/s of wind or more), Fleet pilot (every ship, from `ships_landed`), Frequent flyer (25 settled landings, from `landings`), Feather (secret: a touchdown under 0.25 m/s, under 1° and within 1 m of a pad's centre). A landing counts once the ship has settled on a pad.
+**Achievements** (the ids from before the rework): Touchdown (settle on a pad), Heavy landing (on Earth), Crosswind (with 3 m/s of wind or more), Fleet pilot (every ship, from `ships_landed`), Frequent flyer (25 settled landings, from `landings`), Feather (secret: a touchdown on a pad, under 0.25 m/s, under 1° and within 1 m of its centre; a touchdown off the pads has no centre). A landing counts once the ship has settled on a pad.
 
 ## Dependencies & licences
 
@@ -134,7 +134,7 @@ None beyond the repo's.
 
 - No deorbit or descent missions, no fourth ship (ADR-099).
 - Mars air at its real density barely pushes a ship: the gusts there are a mild hazard. Earth's wind is the one you feel.
-- The autopilot is slower than a good pilot and has a continuous throttle, so par is lenient.
+- The autopilot is slower than a good pilot, so par is lenient; its throttle is continuous where a player's has detents (its turn is a key, like a player's).
 - Rock is convex shapes; a cave roof is one or two of them.
 - The browser's frame loop splits frames into equal steps, so a flight isn't bit-identical to the Node proof.
 

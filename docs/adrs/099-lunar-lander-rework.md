@@ -69,5 +69,8 @@ Decided within scope while building; none changes a shape outside the app and th
 - **Lever.** Off, Low, Sink, Hover, Rise, Full round the throttle that hovers the ship as loaded now, so the notches move with cargo; Space is a full burn.
 - **Unlocks and achievements.** A ship unlocks for the base once a mission flown in it is done. The six achievement ids count settled landings on any pad (base or mission): Touchdown, Heavy landing (Earth), Crosswind (3 m/s or more), Fleet pilot (`ships_landed` in `progress.json`), Frequent flyer (`landings`), Feather (under 0.25 m/s, under 1°, within 1 m of the pad's centre).
 - **Daily** ranks by time (`DailyRank.TIME`), as decided; Harbour and Airfield rank on stars lost.
-- **The base** is bounded (walls at both ends), not wrapping.
+- **The base** is bounded, not wrapping: past the walls a soft edge stops the ship (its outward speed gone) instead of losing it; a mission's ends stay a crash.
+- **Proof inputs:** the autopilot turns with the player's keys (−1, 0, 1 through the rate hold); its throttle is continuous, as in Airfield.
+- **Random bests** are keyed by ship and body (`random-{ship}-{body}`).
+- **Old data:** the arcade `storage.json` is read once for its landing count and landed ships, so two achievements' progress carries on; its points bests are dropped.
 - **Known limit.** Mars air at its real density barely moves a ship, so Mars gusts are a mild hazard; Earth's wind is the one felt.

@@ -95,7 +95,7 @@ Apps' `storage.json` keys, listed by their localStorage name before 4.0 (`app.{i
 | `app.hutches.{stats,daily,game,size,auto-cross}` | `user/hutches` | Stats per size; daily puzzle; game in progress; last size; auto-cross switch |
 | `app.jigsaw.{game,pieces,solves}` | `user/jigsaw` | Puzzle in progress (picture path, seed, piece positions, time; only for a picture from WebOS files); last piece count; puzzles finished (achievements) |
 | `app.kakuro.{stats,daily,game,size}` | `user/kakuro` | Stats; daily puzzle; game in progress; last size |
-| `app.lunar-lander.{best,landings,ship,gravity,air,wind,infinite_fuel}` | `user/lunar-lander` | Legacy: the arcade game's points bests, landings and picks. Not read since the rework (ADR-099): the app keeps `settings.json` and `progress.json` in `/var/lib/apps/lunar-lander/` ([page](../apps/lunar-lander.md#data)) |
+| `app.lunar-lander.{best,landings,ship,gravity,air,wind,infinite_fuel}` | `user/lunar-lander` | Legacy: the arcade game's points bests, landings and picks. Read once since the rework (ADR-099) for the landing count and landed ships, never written: the app keeps `settings.json` and `progress.json` in `/var/lib/apps/lunar-lander/` ([page](../apps/lunar-lander.md#data)) |
 | `app.markdown-pdf.settings` | `user/markdown-pdf` | Page and print settings |
 | `app.maze.{prefs,best_ms,escapes}` | `user/maze` | Last algorithm/size/speed/solver; best play time per size; mazes escaped (achievements) |
 | `app.moonrabbit.{journal,idle-minutes,hidden-seconds,quick-offer-declined}` | `user/moonrabbit` | Last journal's folder name (read by the widget too); auto-lock after idle (minutes, 0 = never) and when hidden (seconds); journal ids whose quick-unlock offer was declined |

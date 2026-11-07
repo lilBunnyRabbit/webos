@@ -1,4 +1,5 @@
-import { wrap_angle } from "$kit/games/play2d/geometry";
+import { overlaps } from "$kit/games/play2d/collision";
+import { wrap_angle, type Vec } from "$kit/games/play2d/geometry";
 import { DEG, offset, step_ship, world_point, type Coefficients, type Env, type Input, type Ship } from "./lander";
 import { in_rock, pad_under, type Terrain } from "./world";
 
@@ -28,7 +29,7 @@ export interface Touchdown {
   at: number;
   /** The pad both feet came down on, or −1. */
   pad: number;
-  /** Metres from the pad's centre. */
+  /** Metres from the pad's centre; Infinity off the pads. */
   off_centre: number;
 }
 
@@ -77,25 +78,54 @@ function touchdown_of(before: Ship, after: Ship, c: Coefficients, env: Env, terr
   const slope = Math.atan2(env.ground(xs[xs.length - 1]) - env.ground(xs[0]), xs[xs.length - 1] - xs[0]);
   const tilt = Math.abs(wrap_angle(after.angle - slope)) / DEG;
   const pad = pad_under(terrain, xs);
-  const centre = pad >= 0 ? (terrain.pads[pad].x0 + terrain.pads[pad].x1) / 2 : after.x;
-  return { sink, slide: Math.abs(before.vx), tilt, grade: grade(sink, s.safe.sink), x: after.x, at: time, pad, off_centre: Math.abs(after.x - centre) };
+  const off_centre = pad >= 0 ? Math.abs(after.x - (terrain.pads[pad].x0 + terrain.pads[pad].x1) / 2) : Infinity;
+  return { sink, slide: Math.abs(before.vx), tilt, grade: grade(sink, s.safe.sink), x: after.x, at: time, pad, off_centre };
+}
+
+/** The hull's outline: the convex hull of its points, so a rock's corner can't slip between two of them. */
+export function hull_outline(ship: Pick<Ship, "x" | "y" | "angle">, c: Coefficients): Vec[] {
+  const points = c.spec.hull.map((p) => world_point(ship, p)).sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (o: Vec, a: Vec, b: Vec) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const half = (list: Vec[]) => {
+    const out: Vec[] = [];
+    for (const p of list) {
+      while (out.length >= 2 && cross(out[out.length - 2], out[out.length - 1], p) <= 0) out.pop();
+      out.push(p);
+    }
+    out.pop();
+    return out;
+  };
+  return [...half(points), ...half([...points].reverse())];
 }
 
 function crashed(ship: Ship, c: Coefficients, env: Env, terrain: Terrain): CrashKind | null {
   for (const p of c.spec.hull) {
     const at = world_point(ship, p);
     if (at.y < env.ground(at.x)) return CrashKind.HULL;
-    if (in_rock(terrain, at)) return CrashKind.ROCK;
   }
-  for (const foot of c.spec.feet) if (in_rock(terrain, world_point(ship, foot))) return CrashKind.ROCK;
-  if (ship.x < terrain.x0 - LOST_MARGIN || ship.x > terrain.x1 + LOST_MARGIN) return CrashKind.LOST;
+  if (terrain.rocks.length) {
+    const outline = hull_outline(ship, c);
+    if (terrain.rocks.some((rock) => overlaps(outline, rock))) return CrashKind.ROCK;
+    for (const foot of c.spec.feet) if (in_rock(terrain, world_point(ship, foot))) return CrashKind.ROCK;
+  }
+  if (!terrain.soft_edges && (ship.x < terrain.x0 - LOST_MARGIN || ship.x > terrain.x1 + LOST_MARGIN)) return CrashKind.LOST;
   return null;
+}
+
+/** A soft edge turns the ship back instead: it stops at the edge, its outward speed gone. */
+function kept_inside(ship: Ship, terrain: Terrain): Ship {
+  if (!terrain.soft_edges) return ship;
+  const lo = terrain.x0 - LOST_MARGIN;
+  const hi = terrain.x1 + LOST_MARGIN;
+  if (ship.x < lo) return { ...ship, x: lo, vx: Math.max(0, ship.vx) };
+  if (ship.x > hi) return { ...ship, x: hi, vx: Math.min(0, ship.vx) };
+  return ship;
 }
 
 export function advance(flight: Flight, input: Input, c: Coefficients, dt: number, env: Env, terrain: Terrain): Flight {
   if (flight.status !== Status.FLYING) return flight;
   const before = flight.ship;
-  const ship = step_ship(before, input, c, dt, env);
+  const ship = kept_inside(step_ship(before, input, c, dt, env), terrain);
   const up = airborne(ship);
   const landed = !up && flight.air_time >= LANDING_AIR_TIME;
   const touchdown = landed ? touchdown_of(before, ship, c, env, terrain, flight.time) : flight.touchdown;

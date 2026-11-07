@@ -37,7 +37,7 @@ export function daily_ref(day: string, seed: number): RoundRef {
 }
 
 export function round_key(ref: RoundRef): string {
-  return key_of(ref, ref.ship, `level-${ref.level}`);
+  return key_of(ref, `${ref.ship}-${ref.body}`, `level-${ref.level}`);
 }
 
 export function round_title(ref: RoundRef): string {
