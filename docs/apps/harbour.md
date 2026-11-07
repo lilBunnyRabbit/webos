@@ -2,7 +2,7 @@
 
 ADR: [096](../adrs/096-harbour.md) · Decided: [brainstorm](../brainstorm/2026-11-06_harbour.md) · Code: `src/lib/apps/user/harbour/`
 
-A top-down boat docking sim. A hub harbour you sail around with the real physics, gates that open levels, a boat shed that swaps the RIB and the yacht. Built on the play2d kit (`$kit/games/play2d`, `$kit/components/play2d`) that came out of Drive Hub; the boat model, contacts, judging and proof are the app's own.
+A top-down boat docking sim. A hub harbour you sail around with the real physics, gates that open levels, a boat shed that swaps the RIB and the yacht. Built on the play2d kit (`$kit/games/play2d`, `$kit/components/play2d`) that came out of Drive Hub; the boat model, contacts, judging and proof are the app's own. Released as experimental (`experimental: true` in `meta.ts`, [ADR-097](../adrs/097-experimental-apps.md)) while the handling is tuned; graduating deletes that line.
 
 ## Where things are
 

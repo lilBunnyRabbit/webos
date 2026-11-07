@@ -13,7 +13,11 @@ export const CHANGELOG: Release[] = [
       {
         kind: NEW,
         apps: ["harbour"],
-        text: "Harbour is a boat docking game: sail a RIB or a yacht around a small harbour and bring it gently alongside or into a box berth, with momentum, prop walk and fenders to kiss.",
+        text: "Harbour is a boat docking game (experimental): sail a RIB or a yacht around a small harbour and bring it gently alongside or into a box berth, with momentum, prop walk and fenders to kiss.",
+      },
+      {
+        kind: NEW,
+        text: "Apps still being worked on now carry an Experimental badge in the App Store, the app list, Game Hub and their window.",
       },
     ],
   },

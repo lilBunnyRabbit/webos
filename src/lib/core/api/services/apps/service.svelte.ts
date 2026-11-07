@@ -951,8 +951,8 @@ function as_props(props: unknown): AppProps | undefined {
 }
 
 function text_of(entry: CatalogueApp): AppMeta {
-  const { description, keywords, pitch, example, authors } = entry;
-  return Object.fromEntries(Object.entries({ description, keywords, pitch, example, authors }).filter(([, value]) => value !== undefined));
+  const { description, keywords, pitch, example, authors, experimental } = entry;
+  return Object.fromEntries(Object.entries({ description, keywords, pitch, example, authors, experimental }).filter(([, value]) => value !== undefined));
 }
 
 /** Gives the icon component its source while keeping the props each caller passes (`class`, `weight`) reactive. */

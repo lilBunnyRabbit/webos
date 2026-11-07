@@ -214,10 +214,11 @@ A stub is an `AppManifest` built from the entry: `id`, `name`, `version`, `categ
 
 ### App text
 
-An app's display text (`description`, `keywords`, `pitch`, `example`, `authors`) is written in its `meta.ts` ([manifest](../apps/manifest.md#meta-metats)); the build copies it into the app's catalogue entry, and the OS reads it from there. No `meta.ts` loads at runtime.
+An app's display text (`description`, `keywords`, `pitch`, `example`, `authors`) and its `experimental` flag (ADR-097) are written in its `meta.ts` ([manifest](../apps/manifest.md#meta-metats)); the build copies it into the app's catalogue entry, and the OS reads it from there. No `meta.ts` loads at runtime.
 
 - **`meta(id)`** resolves the entry's text (`{}` for an app without any or an unknown id); an id the device doesn't know fetches the catalogue first.
 - **`listings(filter?)`** is the read side: every `AppListing` (`AppManifest & AppMeta & { daily?, achievement_count? }`), from a `$derived` over the registry and the entries. Text is there as soon as an app is known; it never awaits. `filter.installed` and `filter.all` work as in `list()`; Game Hub, Settings › About › Credits and the Style Guide pass `all: true` instead of calling `catalogue()` themselves. The start menu, the mobile app list, the first-boot intro's suggestions, the App Store and Showcase, Game Hub, Settings › About › Credits and the Style Guide derive their lists from it. `app list`, `app info` and `taskbar list` await `meta(id)` per app. VersionService opens the first-boot intro and the new-app announcement after `catalogue()`, then reads `listings()` ([version](version.md)).
+- `experimental` comes through `text_of` like the text: `manifest_data` copies `meta.experimental === true` into the entry (left out otherwise), so `listings()` and `meta(id)` both carry it. List surfaces read it from the listing; the window title bar and the mobile switcher read `meta(id)` ([manifest](../apps/manifest.md#meta-metats)).
 - `daily` comes from the entry (props take `daily`, ADR-035): a stub has no `props` schema, so Game Hub reads `daily` to list a game's daily puzzle without loading it.
 
 ### Recent apps
@@ -342,6 +343,7 @@ Contributes `app list|info|launch`, `app guide <app>` (launches an installed app
 The shell never installs (ADR-040):
 
 - An app's commands get `available: () => installed ? (own available ?? true) : "{App} isn't installed. Install it in the App Store"`, so an uninstalled app's commands leave the palette and completion, and running one fails with that reason. System apps are the exception (ADR-077): their commands (`docs`, `tour`) stay available and open the app on demand, with the Install toast, since boot always knows their entries.
+- The `app` value has columns `id`, `name`, `category`, `authors` and `experimental` (a boolean, ADR-097), so `app list | where experimental == true` lists the experimental apps; `app info` shows it as an `experimental` row.
 - `app list` and the `app` completer list installed apps only; `app info` takes any app; `app launch` on one that isn't installed fails with the same message.
 - `open` is a file open: the file's app opens through `launch`, installed or not, and isn't installed by it.
 

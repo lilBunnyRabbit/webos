@@ -23,6 +23,7 @@
   import AppBadge from "../apps/app-badge.svelte";
   import AppProgress from "../apps/app-progress.svelte";
   import AppRow from "../apps/app-row.svelte";
+  import ExperimentalBadge from "../apps/experimental-badge.svelte";
   import { app_menu } from "../apps/app-actions";
   import { Button } from "../ui";
   import { add_widget_menu, EDIT_HOME_ITEM, home_item_menu } from "./home-actions";
@@ -53,6 +54,7 @@
       .flatMap((id) => apps.get(id) ?? [])
       .slice(0, RECENT_COUNT);
   });
+  const experimental = $derived(new Set(apps.listings().flatMap((listing) => (listing.experimental ? [listing.id] : []))));
 
   const clock = new Ticker(() => true, 60_000);
   const time = $derived(new Date(clock.now).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }));
@@ -268,7 +270,9 @@
                 data-home-row
                 on_menu={(point) => void app_menu(manifest, point, { recent: true })}
                 onclick={() => apps.launch(manifest.id)}
-              />
+              >
+                {#if experimental.has(manifest.id)}<ExperimentalBadge />{/if}
+              </AppRow>
             </li>
           {/each}
         </ul>

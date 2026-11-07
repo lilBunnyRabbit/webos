@@ -24,6 +24,7 @@
   import { route_url } from "$lib/core/api/services/router/route";
   import { get_app_context } from "$lib/core/contexts/app";
   import AppByline from "$lib/core/components/apps/app-byline.svelte";
+  import ExperimentalBadge from "$lib/core/components/apps/experimental-badge.svelte";
   import AchievementList from "$lib/core/components/achievements/achievement-list.svelte";
   import { uninstall_app } from "$lib/core/components/apps/app-actions";
   import { Badge, Button, IconButton } from "$lib/core/components/ui";
@@ -154,6 +155,7 @@
         <h2 class="flex flex-wrap items-center gap-2 text-2xl leading-tight font-semibold">
           {manifest.name}
           {#if freshness === "new"}<Badge tone="primary">New</Badge>{:else if freshness === "updated"}<Badge tone="info">Updated</Badge>{/if}
+          {#if manifest.experimental}<ExperimentalBadge />{/if}
         </h2>
         <p class="text-ui text-foreground/65">{category_label(manifest)}</p>
         <AppByline {manifest} />

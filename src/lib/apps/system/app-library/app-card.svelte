@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { AppListing } from "$lib/core/api";
   import { set_drag_app } from "$lib/core/components/apps/drag";
+  import ExperimentalBadge from "$lib/core/components/apps/experimental-badge.svelte";
   import { cn } from "$lib/core/utils";
   import { Trophy as TrophyIcon } from "phosphor-svelte";
   import type { Snippet } from "svelte";
@@ -45,7 +46,12 @@
         {/if}
       </p>
     </div>
-    {#if badge}<span class="shrink-0 self-start">{@render badge()}</span>{/if}
+    {#if badge || manifest.experimental}
+      <span class="flex shrink-0 flex-col items-end gap-1 self-start">
+        {@render badge?.()}
+        {#if manifest.experimental}<ExperimentalBadge />{/if}
+      </span>
+    {/if}
   </div>
   <p class={cn("text-2xs text-pretty text-foreground/80", lines === 3 ? "line-clamp-3" : "line-clamp-2 min-h-[2lh]")}>{app_story(manifest).solution}</p>
   <p class="-mt-2 line-clamp-2 min-h-[1lh] text-2xs text-pretty text-foreground/65">{#if manifest.example}Try: {manifest.example}{/if}</p>

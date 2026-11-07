@@ -9,6 +9,7 @@
   import { fade } from "svelte/transition";
   import { flushSync, untrack } from "svelte";
   import AppRow from "../apps/app-row.svelte";
+  import ExperimentalBadge from "../apps/experimental-badge.svelte";
   import { app_menu } from "../apps/app-actions";
   import { SentenceSearch } from "../apps/sentence-search.svelte";
   import { Button, IconButton, Input } from "../ui";
@@ -284,7 +285,9 @@
       on_menu={(point) => void app_menu(app, point, { on_launch: close })}
       onclick={() => launch(app.id)}
       class={cn("min-w-0 flex-1", scrub?.pick === app.id && "bg-primary/14 text-primary")}
-    />
+    >
+      {#if app.experimental}<ExperimentalBadge />{/if}
+    </AppRow>
     {#if !apps.is_installed(app.id)}
       <Button size="sm" pressed class="shrink-0" aria-label="Install {app.name}" onclick={() => apps.install(app.id)}>Install</Button>
     {/if}

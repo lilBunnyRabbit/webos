@@ -7,6 +7,7 @@
   import MobileWindow from "./mobile-window.svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
   import { can_update } from "../apps/app-actions";
+  import AppExperimental from "../apps/app-experimental.svelte";
 
   let { switcher, onpick }: { switcher: boolean; onpick: (id: WindowId) => void } = $props();
 
@@ -118,6 +119,7 @@
           <div class="flex h-8 items-center gap-2 px-1 select-none">
             <instance.app.manifest.icon class="size-5 shrink-0" weight="duotone" />
             <span class="min-w-0 flex-1 truncate text-ui font-medium">{instance.title ?? instance.app.manifest.name}</span>
+            <AppExperimental app_id={instance.app.id} />
             {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
             {#if can_update(instance.app.id)}
               <Button size="sm" pressed aria-label="Update {instance.app.manifest.name}" onclick={() => void apps.restart(instance.app.id)}>Update</Button>

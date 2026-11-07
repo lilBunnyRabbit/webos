@@ -66,6 +66,7 @@ export default {
   keywords: ["photo", "crop"],
   pitch: { problem: "…", solution: "…" },
   example: "crop a photo to a square",
+  experimental: true,
 } satisfies AppMeta;
 ```
 
@@ -76,6 +77,7 @@ export default {
 | `pitch` | `AppPitch` (`{ problem: string; solution: string }`) | The sentence search (weight 1, with the category label). The App Store's Showcase card and detail: the problem the app solves, from the user's side, and what it does about it, one short sentence each, user-facing (no ADR numbers or service names). Without it the Showcase shows `description` as the answer and no problem line. Every bundled app has one (2.2) |
 | `example` | `string` | One concrete thing to use the app for, an imperative phrase in lower case with no full stop, under about 40 characters ("shrink a photo under 1 MB"), naming only what the app really does. The App Store shows it as "Try: …" on cards (one muted line under the pitch, the line held empty without one, so cards don't jump) and in the app page's What {name} does card; launcher and App Store search match it like `description`. Not shown in list rows, which already fill their two lines. Every bundled app has one (4.4) |
 | `authors` | `AppAuthor[]` (`{ name: string; github?: string; url?: string }`) | Who made the app. Omitted or empty means the owner, `OWNER = { name: "lilBunnyRabbit", github: "lilBunnyRabbit" }`. `app_authors(meta)` in `services/apps/authors.ts` resolves it; the credit links to `github.com/{github}`, else `url`. Shown as "By …" in the App Store details and the new-app announcement, in Settings › About › Credits, and as `author` in `app info` and an `authors` column in `app list` |
+| `experimental` | `true` | The app is still being worked on (ADR-097). Every place that lists it with room for a label shows a `warning` Badge reading "Experimental" (`components/apps/experimental-badge.svelte`): App Store cards (stacked under the New / Updated badge), list rows and the app page, Discover's Featured cards, the start menu's tiles (not Recent, one row tall), the phone's Recent rows and app list rows, Game Hub's library cards, the new-app announcement, and the window title bar and the mobile switcher's card header (`app-experimental.svelte`, which reads `apps.meta(id)`). `app info` has an `experimental` row and the `app` value an `experimental` column (`app list \| where experimental == true`). Graduating deletes the line, in a release with an `improved` changelog line; the catalogue keeps no history of it. Omitted means a finished app |
 
 How it loads: it doesn't, at runtime. The build calls `meta()` in Node and writes the text into `store/catalogue.json`; the dev server and tests run the same `manifest_data()` on the glob. Readers get each app with its text as an `AppListing` (`AppManifest & AppMeta`, plus `daily`) from `apps.listings()`, or one app's through `apps.meta(id)` ([apps](../services/apps.md#app-text)).
 

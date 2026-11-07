@@ -5,6 +5,7 @@
   import { CATEGORY_ICONS } from "./category-icons";
   import type { HeroCard, Shelf as ShelfData } from "./discover";
   import { ASK_EXAMPLES } from "./featured";
+  import ExperimentalBadge from "$lib/core/components/apps/experimental-badge.svelte";
   import IconTile from "./icon-tile.svelte";
   import { LIBRARY_CATEGORIES, LibraryCategory } from "./library";
   import { ScrollRow } from "./scroll-row.svelte";
@@ -96,12 +97,13 @@
               <p class="text-2xs font-medium tracking-wide text-primary uppercase">{card.overline}</p>
               <div class="flex items-center gap-3">
                 <IconTile manifest={card.manifest} size="lg" />
-                <h4 class="min-w-0 text-xl leading-tight font-semibold">
+                <h4 class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xl leading-tight font-semibold">
                   <button
                     type="button"
                     class="hero-open text-left after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none"
                     onclick={() => onselect(card.manifest)}>{card.manifest.name}</button
                   >
+                  {#if card.manifest.experimental}<ExperimentalBadge />{/if}
                 </h4>
               </div>
               <p class="max-w-md text-sm text-pretty text-foreground/80">{card.tagline}</p>

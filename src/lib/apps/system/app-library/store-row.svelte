@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { AppListing } from "$lib/core/api";
   import { set_drag_app } from "$lib/core/components/apps/drag";
+  import ExperimentalBadge from "$lib/core/components/apps/experimental-badge.svelte";
   import type { Snippet } from "svelte";
   import IconTile from "./icon-tile.svelte";
   import { category_label } from "./library";
@@ -25,9 +26,12 @@
 >
   <IconTile {manifest} />
   <div class="min-w-0 flex-1">
-    <button type="button" class="row-open block max-w-full truncate text-left text-ui font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none" onclick={() => onselect(manifest)}>
-      {manifest.name}
-    </button>
+    <div class="flex min-w-0 items-center gap-1.5">
+      <button type="button" class="row-open block min-w-0 truncate text-left text-ui font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none" onclick={() => onselect(manifest)}>
+        {manifest.name}
+      </button>
+      {#if manifest.experimental}<ExperimentalBadge />{/if}
+    </div>
     <div class="line-clamp-2 text-2xs text-pretty text-foreground/80">
       {#if detail}{@render detail()}{:else}{category_label(manifest)}{#if manifest.description}<span class="hidden @md:inline">{` · ${manifest.description}`}</span>{/if}{/if}
     </div>

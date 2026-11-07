@@ -47,7 +47,7 @@ src/lib/
     ├── system/{id}/              # bundled OS apps
     └── user/{id}/                # everything else
         ├── index.ts              # define_app manifest (eager)
-        ├── meta.ts               # description, keywords, pitch, authors: `meta: () => import("./meta")` (the build copies it into the catalogue, ADR-049, ADR-077)
+        ├── meta.ts               # description, keywords, pitch, example, authors, experimental: `meta: () => import("./meta")` (the build copies it into the catalogue, ADR-049, ADR-077)
         ├── icon.svelte           # the app's own icon
         ├── highlights.ts         # App Store showcase slides, `highlights: () => import("./highlights")` (lazy)
         ├── guide.md              # how to use or play it, short markdown: `guide: () => import("./guide.md?raw")` (lazy, ADR-085); the window's ? and the first open show it
@@ -117,7 +117,7 @@ export default define_app({
 - Discovered by folder: the build writes every app into the catalogue, the dev server and tests glob them in `src/lib/apps/index.ts` (ADR-077). No registration.
 - Flat manifest, complex config nested under `defaults` (ADR-001).
 - Explicit `component: () => import(...)`. No convention-based discovery of the component.
-- Display text (`description`, `keywords`, `pitch`, `authors`) goes in `meta.ts`, never in `index.ts` (ADR-049): the build copies it into the app's catalogue entry, so the OS shows it without loading the app (ADR-077).
+- Display text (`description`, `keywords`, `pitch`, `example`, `authors`) and the `experimental` flag (ADR-097) go in `meta.ts`, never in `index.ts` (ADR-049): the build copies it into the app's catalogue entry, so the OS shows it without loading the app (ADR-077).
 - Shell commands: `shell: () => import("./commands")`, never an inline object. `commands.ts` default-exports the `ShellContribution` ([writing an app](system/apps/writing-an-app.md)).
 - Sheets for other apps: `provides: { kind: () => import("./kind-sheet.svelte") }`, the key declared in `AppSheets`; callers use `win.request("app-id::kind")` and handle `null` ([manifest](system/apps/manifest.md#provides-adr-079), ADR-079).
 - Everything a manifest imports ships with its manifest chunk (`{id}.manifest-<hash>.js`), which loads after first paint for every installed app, and a module the app's lazy code also imports is loaded with it whole. Constants and formatters the manifest needs live in a small module of their own (`pdf-tools/kinds.ts`, `game-hub/labels.ts`), never in the app's logic files. The boot budget is 180 KB gz (`bun run build && bun run budget`, `scripts/boot-budget.ts`).

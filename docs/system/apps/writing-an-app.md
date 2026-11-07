@@ -7,7 +7,7 @@ The short path from nothing to a window. Details live in [manifest.md](manifest.
 ```
 src/lib/apps/user/notes/        # or system/ for a bundled OS app
 ├── index.ts                    # manifest: the build reads it, its chunk loads after first paint once installed
-├── meta.ts                     # description, keywords, pitch, authors; the build copies it into the catalogue
+├── meta.ts                     # description, keywords, pitch, example, authors, experimental; the build copies it into the catalogue
 └── notes.app.svelte            # component, loaded on launch
 ```
 

@@ -87,6 +87,10 @@ describe("manifest_data", () => {
     expect(data).toEqual({ id: "a", name: "A", category: "media", system: true });
   });
 
+  test("an experimental app carries the flag", () => {
+    expect(manifest_data({ id: "a", name: "A", category: "games", icon: null }, { experimental: true }, false).experimental).toBe(true);
+  });
+
   test("achievements become a count", () => {
     const achievements = [{ id: "x", title: "X", text: "Do x." }, { id: "y", title: "Y", text: "Do y.", goal: 3 }];
     expect(manifest_data({ id: "a", name: "A", category: "games", icon: null, achievements }, {}, false).achievements).toBe(2);

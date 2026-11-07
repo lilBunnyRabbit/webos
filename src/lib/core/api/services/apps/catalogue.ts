@@ -28,6 +28,7 @@ export interface CatalogueApp {
   pitch?: { problem: string; solution: string };
   example?: string;
   authors?: { name: string; github?: string; url?: string }[];
+  experimental?: true;
   defaults?: Record<string, unknown>;
   replaces?: { app: string; props?: Record<string, unknown> }[];
   restore?: boolean;
@@ -105,6 +106,7 @@ export function manifest_data(manifest: Record<string, unknown>, meta: Record<st
     pitch: meta.pitch,
     example: meta.example,
     authors: meta.authors,
+    experimental: meta.experimental === true || undefined,
     defaults: manifest.defaults,
     replaces: manifest.replaces,
     restore: manifest.restore === false ? false : undefined,

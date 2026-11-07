@@ -16,6 +16,7 @@
   import { Button, IconButton } from "../ui";
   import { view_transition } from "$lib/core/utils/view-transition";
   import { can_update } from "../apps/app-actions";
+  import AppExperimental from "../apps/app-experimental.svelte";
 
   let { zoom = $bindable(), window_id, focused }: { zoom: number; window_id: WindowId; focused: boolean } = $props();
 
@@ -51,6 +52,7 @@
 <div class={cn("flex min-w-0 items-center gap-2 transition-opacity duration-150", !focused && "opacity-80")}>
   <instance.app.manifest.icon class="size-4 shrink-0 text-foreground/80" weight="duotone" />
   <span class="truncate text-ui font-medium" title={instance.title ? `${instance.title} — ${instance.app.manifest.name}` : undefined}>{instance.title ?? instance.app.manifest.name}</span>
+  <AppExperimental app_id={instance.app.id} />
   {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
 </div>
 

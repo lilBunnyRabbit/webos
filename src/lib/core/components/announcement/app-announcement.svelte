@@ -22,6 +22,7 @@
     X as XIcon,
   } from "phosphor-svelte";
   import AppByline from "../apps/app-byline.svelte";
+  import ExperimentalBadge from "../apps/experimental-badge.svelte";
   import { Badge, Button, IconButton } from "../ui";
 
   interface Props extends DialogProps<true> {
@@ -143,6 +144,7 @@
               <div class="min-w-0 flex-1">
                 <p class="flex items-baseline gap-2">
                   <span class="truncate text-ui font-semibold">{manifest.name}</span>
+                  {#if manifest.experimental}<ExperimentalBadge class="self-center" />{/if}
                   <span class="shrink-0 font-mono text-2xs text-foreground/65">v{version}</span>
                 </p>
                 <p class="line-clamp-2 text-ui text-foreground/65 @md:line-clamp-1">{manifest.description ?? category(manifest)}</p>
@@ -162,7 +164,10 @@
         {#key manifest.id}
           <div class="relative flex animate-pop-in flex-col gap-5 px-5 pt-7 pb-5 @md:px-6">
             <header class="flex flex-col items-center gap-3 text-center">
-              <Badge tone="primary"><SparkleIcon weight="fill" /> New app</Badge>
+              <div class="flex flex-wrap justify-center gap-1.5">
+                <Badge tone="primary"><SparkleIcon weight="fill" /> New app</Badge>
+                {#if manifest.experimental}<ExperimentalBadge />{/if}
+              </div>
               {@render app_tile(manifest, "lg")}
               <div class="flex flex-col gap-1">
                 <h2 class="text-xl font-semibold text-balance">{manifest.name}</h2>

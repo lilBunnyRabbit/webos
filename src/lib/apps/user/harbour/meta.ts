@@ -8,4 +8,5 @@ export default {
     solution: "A boat with momentum, a rudder that needs flow and a prop that walks astern, docked gently onto fenders in a harbour you sail around.",
   },
   example: "bring a yacht alongside between two moored boats",
+  experimental: true,
 } satisfies AppMeta;

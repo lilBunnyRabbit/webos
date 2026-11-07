@@ -24,6 +24,7 @@ function app_value(manifest: AppManifest, meta: AppMeta): Tagged {
     category: manifest.system ? "System" : APP_CATEGORY_LABELS[manifest.category],
     authors: author_names(meta),
     description: meta.description ?? "",
+    experimental: meta.experimental === true,
   };
 }
 
@@ -79,7 +80,7 @@ export function apps_shell(
     },
     values: {
       app: {
-        columns: ["id", "name", "category", "authors"],
+        columns: ["id", "name", "category", "authors", "experimental"],
         text: (app) => `${String(app.id).padEnd(20)} ${String(app.name)}`,
         // The shell never installs (ADR-040): an app that isn't installed opens in the App Store to be installed.
         open: (app) => void (apps.is_installed(String(app.id)) ? apps.launch(String(app.id)) : apps.launch(LIBRARY, { app: String(app.id) })),

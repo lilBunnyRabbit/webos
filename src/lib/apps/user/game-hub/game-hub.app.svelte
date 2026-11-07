@@ -12,6 +12,7 @@
   import { Button, EmptyState, IconButton, Section, Segmented, Select, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import AchievementList from "$lib/core/components/achievements/achievement-list.svelte";
+  import ExperimentalBadge from "$lib/core/components/apps/experimental-badge.svelte";
   import { format_time, use_plays } from "$kit/games";
   import { cn } from "$lib/core/utils";
   import {
@@ -153,7 +154,10 @@
             >
               {@render game_icon(game.icon, "md")}
               <span class="flex min-w-0 flex-1 flex-col self-stretch">
-                <span class="truncate text-sm font-semibold">{game.name}</span>
+                <span class="flex min-w-0 items-center gap-1.5">
+                  <span class="truncate text-sm font-semibold">{game.name}</span>
+                  {#if game.experimental}<ExperimentalBadge />{/if}
+                </span>
                 {#if game.description}<span class="mt-0.5 line-clamp-2 text-ui text-foreground/65">{game.description}</span>{/if}
                 <span class="mt-auto flex items-center gap-2 pt-2 text-2xs text-foreground/65">
                   {#if stats}

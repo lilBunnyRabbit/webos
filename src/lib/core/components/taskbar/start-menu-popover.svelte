@@ -30,6 +30,7 @@
   import CommandMode from "./command-mode.svelte";
   import { Button, EmptyState, IconButton, Input, Kbd } from "../ui";
   import AppBadge from "../apps/app-badge.svelte";
+  import ExperimentalBadge from "../apps/experimental-badge.svelte";
   import AppProgress from "../apps/app-progress.svelte";
   import { apply_favourite, CLEAR_RECENT_ITEM, favourite_item, INSTALL_ITEM, OPEN_ITEM, uninstall_app } from "../apps/app-actions";
   import RecentApps from "../apps/recent-apps.svelte";
@@ -79,6 +80,7 @@
   });
   const best = $derived(matches[0] ?? gettable[0] ?? sentence.related[0]);
   const sections = $derived(group_apps(installed));
+  const experimental = $derived(new Set(apps.listings().flatMap((listing) => (listing.experimental ? [listing.id] : []))));
 
   type TileKind = "recent" | "favourite" | null;
 
@@ -224,6 +226,8 @@
       <AppBadge app_id={manifest.id} />
     </span>
     <span class="line-clamp-1 max-w-full text-2xs font-medium">{manifest.name}</span>
+    <!-- Recent is one row tall, sized by its first tile: a taller tile there would be cut off. -->
+    {#if kind !== "recent" && experimental.has(manifest.id)}<ExperimentalBadge />{/if}
     {#if manifest === best && query}<span class="sr-only">(Enter)</span>{/if}
   </button>
   {#if !apps.is_installed(manifest.id)}

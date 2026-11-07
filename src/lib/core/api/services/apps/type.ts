@@ -288,6 +288,8 @@ export interface AppMeta {
   example?: string;
   /** Who made the app, credited in the App Store, the new-app announcement, Settings › About and `app info`. Omitted means the owner. */
   authors?: AppAuthor[];
+  /** Still being worked on (ADR-097): listings, the window title bar and `app info` show an "Experimental" badge. Graduating deletes the line. */
+  experimental?: true;
 }
 
 export type AppListing = AppManifest & AppMeta & {
