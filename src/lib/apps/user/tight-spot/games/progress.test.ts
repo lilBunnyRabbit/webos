@@ -17,6 +17,9 @@ import parking, { COURSES as PARKING_COURSES, LEVELS as PARKING_LEVELS } from ".
 import shunter_game from "./shunter";
 import { LEVEL_COUNT as SHUNTER_COUNT } from "./shunter/levels";
 import { LEVELS as SHUNTER_LEVELS } from "./shunter/progress";
+import rodeo_game from "./rodeo";
+import { LEVEL_COUNT as RODEO_COUNT } from "./rodeo/game";
+import { LEVELS as RODEO_LEVELS } from "./rodeo/progress";
 
 // The yard's progress modules carry their own counts so it never loads a game; these keep them in step with the games.
 describe("progress", () => {
@@ -28,6 +31,7 @@ describe("progress", () => {
     expect(PARKING_LEVELS).toBe(PARKING_COUNT);
     expect(PARKING_COURSES).toBe(COURSES.length);
     expect(SHUNTER_LEVELS).toBe(SHUNTER_COUNT);
+    expect(RODEO_LEVELS).toBe(RODEO_COUNT);
   });
 
   test("stars come from the save as it is on disk, and a bad one counts as none", () => {
@@ -45,5 +49,6 @@ describe("progress", () => {
     expect(goal(forklift_game, "forklift-levels")).toBe(FORKLIFT_COUNT);
     expect(goal(mower_game, "mower-levels")).toBe(MOWER_COUNT);
     expect(goal(shunter_game, "shunter-levels")).toBe(SHUNTER_COUNT);
+    expect(goal(rodeo_game, "rodeo-levels")).toBe(RODEO_COUNT);
   });
 });

@@ -2,8 +2,9 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { daily_seed, format_time } from "$kit/games";
   import { cn } from "$lib/core/utils";
-  import { Badge, BoardOverlay, Button, IconButton, Select } from "$lib/core/components/ui";
-  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
+  import { report_error } from "$kit/utils/report-error";
+  import { Badge, BoardOverlay, Button, IconButton, Segmented, Select } from "$lib/core/components/ui";
+  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { z } from "zod";
   import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "$kit/games/play2d/camera";
@@ -21,6 +22,8 @@
   import { Sounds } from "../../core/sound";
   import { SpeedChip } from "$kit/components/play2d";
   import { body_centre, can_crab, Gear, max_steer, rig_length, Vehicle, VEHICLE_NAMES, VEHICLES, without_creep } from "../../core/vehicle";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done, with_stars } from "../../core/track";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
   import {
@@ -32,8 +35,15 @@
     create_game,
     daily_round,
     data_schema,
+    EMPTY_DATA,
     experimental,
     knocked,
+    LEVEL_COUNT,
+    LEVELS,
+    level_of,
+    level_round,
+    Mode,
+    mode_schema,
     PENALTY_MS,
     record_best,
     rodeo_shelf,
@@ -44,17 +54,23 @@
     shelves_done,
     SHELVES,
     spec_of,
+    stars,
     Status,
     step_line,
     toggle_crab,
     total_ms,
+    unlocked,
     vehicle_schema,
-    type Data,
     type GameState,
+    type Recorded,
+    type Par,
     type Round,
   } from "./game";
+  import { work_out_par, type ParJob } from "./par";
 
   const COURSE_OPTIONS = Array.from({ length: COURSE_COUNT }, (_, i) => ({ value: String(i + 1), label: `Course ${i + 1}` }));
+  const MODE_LABELS: Record<Mode, string> = { courses: "Courses", levels: "Levels" };
+  const MODE_OPTIONS = (Object.keys(MODE_LABELS) as Mode[]).map((value) => ({ value, label: MODE_LABELS[value] }));
   const SHELF_OPTIONS = SHELVES.map((shelf) => ({ value: shelf.id, label: shelf.name }));
   const OVERVIEW_MARGIN = 1;
   const DAILY_MODE = "rodeo";
@@ -63,20 +79,26 @@
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
-  const data = storage.file<Data>("rodeo.json", { bests: {} }, data_schema);
+  const data = storage.file("rodeo.json", EMPTY_DATA, data_schema);
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
   const stored = z
     .object({
+      "rodeo.mode": mode_schema.catch(Mode.LEVELS),
       "rodeo.vehicle": vehicle_schema.catch(Vehicle.HATCH),
       "rodeo.course": z.number().int().min(1).max(COURSE_COUNT).catch(1),
+      "rodeo.level": z.number().int().min(1).catch(1),
     })
     .parse(untrack(() => prefs.value));
+  let mode = $state<Mode>(stored["rodeo.mode"]);
   let vehicle = $state<Vehicle>(stored["rodeo.vehicle"]);
   let course = $state(stored["rodeo.course"]);
+  let level = $state(Math.min(LEVEL_COUNT, stored["rodeo.level"]));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
+  let par = $state.raw<Par | null>(null);
+  let par_failed = $state(false);
   let new_best = $state(false);
   let first_run = $state(false);
   let board_size = $state({ width: 0, height: 0, dpr: 1 });
@@ -93,9 +115,20 @@
 
   let camera: Camera | null = null;
   let readings: Record<End, number | null> = { front: null, rear: null };
+  let par_job: ParJob | null = null;
+  // A level finished before its par was known: the par, when it lands, may still earn it the time star.
+  let awaiting: { state: GameState; stars: number } | null = null;
   const sounds = new Sounds(() => settings);
 
+  // `game` is replaced every frame; the round object only changes with a new round (Again keeps it, and its par).
+  const round = $derived(game.round);
   const spec = $derived(spec_of(game.round));
+  const level_info = $derived(level_of(round));
+  const max_level = $derived(unlocked(data.value.levels));
+  const level_best = $derived(round.level !== undefined ? (data.value.levels[round.level] ?? 0) : 0);
+  const has_next_level = $derived(round.level !== undefined && round.level < LEVEL_COUNT);
+  const earned = $derived(stars(game, par?.ms ?? null));
+  const par_time = $derived(par ? format_time(par.ms) : null);
   const lock = $derived(max_steer(spec));
   const span = $derived(view_span(rig_length(spec)));
   const blocked = $derived(!win.is_focused || !win.is_visible);
@@ -123,8 +156,49 @@
 
   function make_round(): Round {
     if (daily) return daily_round(daily, daily_seed(daily, `${app_id}/${DAILY_MODE}`));
+    if (mode === Mode.LEVELS) return level_round(level);
     return course_round(vehicle, course);
   }
+
+  // The saved level can be past what's open (a reset data file): it's clamped once the file is read.
+  $effect(() => {
+    if (!data.ready || level <= max_level) return;
+    untrack(() => {
+      level = max_level;
+      prefs.value["rodeo.level"] = level;
+      if (game.status === Status.READY && game.round.level !== undefined && !daily) load(make_round());
+    });
+  });
+
+  // A level's par comes from the planner in a worker; the run can start, and finish, before it's known.
+  $effect(() => {
+    const current = round;
+    untrack(() => {
+      par_job?.cancel();
+      par_job = null;
+      par = null;
+      par_failed = false;
+      if (current.level === undefined) return;
+      const job = work_out_par(current);
+      par_job = job;
+      job.result.then(
+        (found) => {
+          if (par_job !== job) return;
+          par = found;
+          par_failed = found === null;
+          settle(current, found);
+        },
+        (reason: unknown) => {
+          if (par_job !== job) return;
+          par_failed = true;
+          awaiting = null;
+          report_error(app_id, "Couldn't work out the par", reason);
+        }
+      );
+    });
+  });
+
+  $effect(() => () => par_job?.cancel());
 
   function today(): string {
     const now = new Date();
@@ -247,20 +321,46 @@
     if (before.status === Status.DRIVING && next.status === Status.DONE) finish(next);
   }
 
+  function record(state: GameState, score: number): Recorded {
+    const cones = knocked(state);
+    const ms = Math.round(total_ms(state));
+    const at = state.round.level;
+    const done = record_best(data.value.bests, state.round, { ms, cones, ...(at === undefined ? {} : { stars: score }) });
+    data.value.bests = done.bests;
+    if (at !== undefined) {
+      data.value.levels = with_stars(data.value.levels, at, score);
+      achievements.progress("rodeo-levels", levels_done(data.value.levels));
+    }
+    return done;
+  }
+
+  // The time star arrives with the par: the run is recorded again with it, as a better result.
+  function settle(for_round: Round, found: Par | null) {
+    const waiting = awaiting;
+    if (!waiting || waiting.state.round !== for_round) return;
+    awaiting = null;
+    if (!found) return;
+    const score = stars(waiting.state, found.ms);
+    if (score <= waiting.stars) return;
+    const done = record(waiting.state, score);
+    if (game.round === for_round && game.status === Status.DONE) new_best ||= done.improved;
+  }
+
   function finish(state: GameState) {
     release_all();
     const cones = knocked(state);
     const ms = Math.round(total_ms(state));
-    const done = record_best(data.value.bests, state.round, { ms, cones });
-    data.value.bests = done.bests;
+    const score = stars(state, par?.ms ?? null);
+    const done = record(state, score);
     new_best = done.improved;
     first_run = done.first;
+    awaiting = state.round.level !== undefined && !par && !par_failed && score < 3 ? { state, stars: score } : null;
     sounds.parked(new_best && !first_run);
     if (experimental(state.round.vehicle)) return;
     achievements.achieve("rodeo-first");
     if (cones === 0) achievements.achieve("rodeo-clean");
     if (spec_of(state.round).hitches.length > 0) achievements.achieve("rodeo-rig");
-    achievements.progress("rodeo-shelves", shelves_done(done.bests));
+    achievements.progress("rodeo-shelves", shelves_done(data.value.bests));
     if (state.round.daily) {
       play.daily(state.round.daily, ms, cones, DAILY_MODE);
       achievements.achieve("rodeo-daily");
@@ -306,15 +406,40 @@
 
   function next_course() {
     daily = null;
-    course = (course % COURSE_COUNT) + 1;
-    prefs.value["rodeo.course"] = course;
+    if (game.round.level !== undefined) {
+      level = Math.min(max_level, game.round.level + 1);
+      prefs.value["rodeo.level"] = level;
+    } else {
+      course = (course % COURSE_COUNT) + 1;
+      prefs.value["rodeo.course"] = course;
+    }
     load(make_round());
   }
 
+  const can_go_on = $derived(!game.round.daily && (game.round.level === undefined || (has_next_level && max_level > game.round.level)));
+
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
-    else if (game.status === Status.DONE && !game.round.daily) next_course();
+    else if (game.status === Status.DONE && can_go_on) next_course();
     else if (over) retry();
+  }
+
+  function set_mode(next: Mode) {
+    daily = null;
+    mode = next;
+    prefs.value["rodeo.mode"] = next;
+    load(make_round());
+  }
+
+  function level_name(at: number): string {
+    return `${at} · ${LEVELS[at - 1].name}`;
+  }
+
+  function set_level(next: string) {
+    daily = null;
+    level = Math.max(1, Math.min(max_level, Number(next)));
+    prefs.value["rodeo.level"] = level;
+    load(make_round());
   }
 
   function set_course(next: string) {
@@ -450,11 +575,32 @@
   </div>
 {/snippet}
 
+{#snippet star_row(count: number, reveal: boolean)}
+  <span class="inline-flex items-center gap-0.5" role="img" aria-label="{count} of 3 stars">
+    {#each [1, 2, 3] as n (n)}
+      <span class={cn("inline-grid", n <= count ? "text-primary" : "text-foreground/20", reveal && n <= count && "ts-star")} style:animation-delay={reveal ? `${n * 140}ms` : undefined}>
+        <StarIcon weight="fill" class="size-4" />
+      </span>
+    {/each}
+  </span>
+{/snippet}
+
 {#snippet toolbar()}
   {@render menu?.()}
+  <Segmented size="sm" class="hidden @xl:inline-flex" label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
+  <Select class="w-[6.5rem] min-w-0 @xl:hidden" size="sm" aria-label="Mode" options={MODE_OPTIONS} bind:value={() => mode, set_mode} />
   {#if daily}
     <span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>
-    <Button size="sm" variant="quiet" class="hidden @md:inline-flex" onclick={leave_daily}>Courses</Button>
+    <Button size="sm" variant="quiet" class="hidden @md:inline-flex" onclick={leave_daily}>{MODE_LABELS[mode]}</Button>
+  {:else if mode === Mode.LEVELS}
+    <TrackPicker
+      class="w-[7.5rem] min-w-0 @md:w-40"
+      open={max_level}
+      stars={(at) => data.value.levels[at] ?? 0}
+      name={level_name}
+      value={String(level)}
+      onpick={set_level}
+    />
   {:else}
     <Select class="w-[7.5rem] min-w-0" size="sm" aria-label="Course" options={COURSE_OPTIONS} bind:value={() => String(course), set_course} />
     <Select class="hidden w-40 min-w-0 @2xl:inline-flex" size="sm" aria-label="Vehicle" options={vehicle_options} bind:value={() => vehicle, set_vehicle} />
@@ -523,22 +669,26 @@
       <div class="min-w-0 flex-1 basis-52">
         <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
           {round_title(game.round)}
-          {#if daily}<Badge tone="primary">{VEHICLE_NAMES[game.round.vehicle]}</Badge>{/if}
+          {#if daily || level_info}<Badge tone="primary">{VEHICLE_NAMES[game.round.vehicle]}</Badge>{/if}
+          {#if level_best}{@render star_row(level_best, false)}{/if}
         </p>
-        <p class="text-ui text-foreground/80">Gates in order, the slalom, stop in the box, back out through the gate. A cone is +5 s, the fence ends the run.</p>
+        {#if level_info}<p class="text-ui font-medium">{level_info.brings}</p>{/if}
+        <p class="text-ui text-foreground/80">
+          Gates in order,{level_info?.shape.bay ? " turn round in the bay," : ""} the slalom, stop in the box, back out through the gate. A cone is +5 s, the fence ends the run.
+        </p>
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
-          {best ? `Best ${format_time(best.ms, { tenths: true })}${best.cones ? ` (${best.cones} down)` : ""}` : "No run yet"}
+          {level_info ? `Par ${par_time ?? (par_failed ? "none" : "…")} · ` : ""}{best ? `Best ${format_time(best.ms, { tenths: true })}${best.cones ? ` (${best.cones} down)` : ""}` : "No run yet"}
         </p>
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
         {#if daily}
-          <Button variant="quiet" class="@md:hidden" onclick={leave_daily}>Courses</Button>
+          <Button variant="quiet" class="@md:hidden" onclick={leave_daily}>{MODE_LABELS[mode]}</Button>
         {:else}
           <Button variant="quiet" class="@lg:hidden" onclick={open_daily}>Daily</Button>
         {/if}
         <Button variant="primary" onclick={start}>Start</Button>
       </div>
-      {#if !daily}{@render vehicle_picker()}{/if}
+      {#if !daily && !level_info}{@render vehicle_picker()}{/if}
       {#if trial}<p class="basis-full text-2xs text-warning">Experimental: no course is proven for a chain of trailers, so this one may be impossible. Runs count for bests only.</p>{/if}
       {#if note}<p class="basis-full text-2xs text-foreground/65">{note}</p>{/if}
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
@@ -555,19 +705,21 @@
       <div class="min-w-0 flex-1 basis-52">
         <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
           {time}
+          {#if level_info}{@render star_row(earned, true)}{/if}
           {#if cones_down === 0}<Badge class="ts-pop" tone="success">Clean</Badge>{/if}
           {#if new_best}<Badge class="ts-pop" tone={first_run ? "neutral" : "primary"}>{first_run ? "First run" : "New best"}</Badge>{/if}
         </p>
         <p class="font-mono text-2xs text-foreground/80 tabular-nums">
-          {format_time(game.ms, { tenths: true })} driving · {penalty_text(cones_down)}{best && !new_best ? ` · best ${format_time(best.ms, { tenths: true })}` : ""}
+          {format_time(game.ms, { tenths: true })} driving · {penalty_text(cones_down)}{par_time ? ` · par ${par_time}` : ""}{best && !new_best ? ` · best ${format_time(best.ms, { tenths: true })}` : ""}
         </p>
+        {#if level_info && !par && !par_failed}<p class="text-2xs text-foreground/65">Working out the par…</p>{/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
-        <Button variant={game.round.daily ? "primary" : "quiet"} onclick={retry}>Again</Button>
-        {#if !game.round.daily}<Button variant="primary" onclick={next_course}>Next course</Button>{/if}
+        <Button variant={can_go_on ? "quiet" : "primary"} onclick={retry}>Again</Button>
+        {#if can_go_on}<Button variant="primary" onclick={next_course}>{level_info ? "Next level" : "Next course"}</Button>{/if}
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        {#if !game.round.daily}<KeyHint key_name="Enter" text="next course" />{/if}<KeyHint key_name="R" text="again" />
+        {#if can_go_on}<KeyHint key_name="Enter" text={level_info ? "next level" : "next course"} />{/if}<KeyHint key_name="R" text="again" />
       </p>
     </RoundCard>
   {:else if game.status === Status.CRASHED}
@@ -619,7 +771,37 @@
 />
 
 <style>
+  .ts-star {
+    animation: ts-star 380ms var(--ease-out) both;
+  }
+
   :global(.ts-pop) {
     animation: var(--animate-pop-in) 520ms both;
+  }
+
+  @keyframes ts-star {
+    from {
+      opacity: 0;
+      scale: 0.3;
+    }
+    60% {
+      opacity: 1;
+      scale: 1.25;
+    }
+    to {
+      scale: 1;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ts-star,
+    :global(.ts-pop) {
+      animation-delay: 0ms !important;
+    }
+  }
+
+  :global(html[data-motion="off"]) .ts-star,
+  :global(html[data-motion="off"] .ts-pop) {
+    animation-delay: 0ms !important;
   }
 </style>

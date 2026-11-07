@@ -87,14 +87,16 @@ Park the car in the marked bay without touching anything. The bay pulses; its ar
 
 ## Rodeo: the course
 
-Pick any vehicle from the garage, trailers and machines included, and drive a timed course built for it: the bigger the vehicle and the wider it turns, the more room it gets.
+Drive a timed cone course built for your vehicle: the bigger it is and the wider it turns, the more room it gets.
 
-- **Gates:** three pairs of cones down the first lane, in order. Drive between them; the next one glows.
+- **Gates:** pairs of cones down the first lane, in order. Drive between them; the next one glows.
+- **Turn bay:** on some levels the far end is a fenced bay too narrow to U-turn in. Drive in and turn round in three: forward, back, forward. It counts once the whole vehicle is inside it facing back down the course.
 - **Slalom:** turn round at the far end and weave down the other lane, passing each cone on the side its arrow shows.
 - **Stop box:** drive through the last gate into the box and stop with the whole vehicle inside it.
 - **Reverse gate:** back out through the gate you came in by. The run ends when your front is through it.
 - **Cones:** each cone you knock over adds 5 seconds and the run goes on. Touching the fence, or jackknifing a trailer, ends it.
-- **Courses:** twelve, with a best per vehicle and course. **Daily:** today's course with a vehicle picked for everyone; Game Hub lists it as Drive Hub · Rodeo.
+- **Levels:** twelve, each in a set vehicle and each bringing in something new: tighter gates, a longer slalom, the turn bay, a van, a bus, a trailer. Three stars: one for finishing, one for no cone down, one for the time (cones included) at or under par, which comes from the computer driving the course itself. Finish a level to open the next.
+- **Courses:** twelve free courses with any vehicle from the garage, trailers and machines included, with a best per vehicle and course. **Daily:** today's course with a vehicle picked for everyone; Game Hub lists it as Drive Hub · Rodeo.
 
 ## Warehouse: the forklift
 

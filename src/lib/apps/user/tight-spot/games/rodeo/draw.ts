@@ -3,7 +3,7 @@ import { begin_frame, fill, path, type View } from "$kit/games/play2d/canvas";
 import { type Palette } from "$kit/games/play2d/palette";
 import { bay_arrow, bay_pointer, beams, contact_rings, guides, hitboxes, outlined, player, sensor_arcs } from "../../core/draw";
 import { SolidKind } from "../../core/scene";
-import type { Pose, Vec } from "$kit/games/play2d/geometry";
+import type { Polygon, Pose, Vec } from "$kit/games/play2d/geometry";
 import type { End } from "../../core/sensors";
 import { bodies, Gear } from "../../core/vehicle";
 import { BOX_HEADING, StepKind, type Gate } from "./course";
@@ -155,22 +155,26 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
   ctx.lineWidth = Math.max(0.15, 2 / scale);
   ctx.stroke();
 
-  const box_step = course.steps.findIndex((step) => step.kind === StepKind.STOP);
-  const box_current = playing && state.current === box_step;
-  const box_done = state.current > box_step;
-  ctx.save();
-  if (box_current) {
-    ctx.shadowColor = palette.target;
-    ctx.shadowBlur = 8 * view.dpr;
-  }
-  fill(ctx, course.box, box_done ? palette.parked_fill : box_current ? palette.target_fill : palette.pavement);
-  path(ctx, course.box);
-  ctx.strokeStyle = box_done ? palette.parked : box_current ? palette.target : palette.paint;
-  ctx.lineWidth = Math.max(0.1, (box_current ? 3 : 1.5) / scale);
-  ctx.lineJoin = "miter";
-  ctx.stroke();
-  ctx.restore();
-  bay_arrow(ctx, { shape: course.box, heading: BOX_HEADING, either: false }, box_done ? palette.parked : palette.paint);
+  const marked = (kind: StepKind, shape: Polygon) => {
+    const at = course.steps.findIndex((step) => step.kind === kind);
+    const current = playing && state.current === at;
+    const done = state.current > at;
+    ctx.save();
+    if (current) {
+      ctx.shadowColor = palette.target;
+      ctx.shadowBlur = 8 * view.dpr;
+    }
+    fill(ctx, shape, done ? palette.parked_fill : current ? palette.target_fill : palette.pavement);
+    path(ctx, shape);
+    ctx.strokeStyle = done ? palette.parked : current ? palette.target : palette.paint;
+    ctx.lineWidth = Math.max(0.1, (current ? 3 : 1.5) / scale);
+    ctx.lineJoin = "miter";
+    ctx.stroke();
+    ctx.restore();
+    bay_arrow(ctx, { shape, heading: BOX_HEADING, either: false }, done ? palette.parked : palette.paint);
+  };
+  if (course.bay) marked(StepKind.TURN, course.bay);
+  marked(StepKind.STOP, course.box);
 
   // Pass lines: the next one bright, later ones faint, done ones gone. A slalom's line only shows near its cone.
   course.steps.forEach((step, i) => {
@@ -195,7 +199,7 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     const mid = { x: (step.gate.a.x + step.gate.b.x) / 2, y: (step.gate.a.y + step.gate.b.y) / 2 };
     const heading = Math.atan2(step.gate.normal.y, step.gate.normal.x);
     if (step.kind === StepKind.REVERSE) {
-      if (state.current >= box_step) chevron(ctx, { x: mid.x + step.gate.normal.x * 0.8, y: mid.y }, heading, 0.9, colour);
+      if (state.current >= course.steps.length - 2) chevron(ctx, { x: mid.x + step.gate.normal.x * 0.8, y: mid.y }, heading, 0.9, colour);
     } else chevron(ctx, { x: mid.x + step.gate.normal.x * 0.8, y: mid.y }, heading, 0.9, colour);
   });
 
@@ -230,11 +234,15 @@ export function draw_scene(ctx: CanvasRenderingContext2D, state: GameState, view
     const mine = playing && i === state.current;
     items.push({ at: mid, text: String(gate_number), size: badge, colour: mine ? palette.void : palette.paint, pill: mine ? palette.target : palette.floor });
   });
-  const box_xs = course.box.map((p) => p.x);
-  const box_ys = course.box.map((p) => p.y);
-  if (scale * (Math.max(...box_xs) - Math.min(...box_xs)) > badge * 4) {
-    items.push({ at: { x: (Math.min(...box_xs) + Math.max(...box_xs)) / 2, y: Math.min(...box_ys) - 0.9 }, text: "STOP", size: badge, colour: palette.paint });
-  }
+  const label = (shape: Polygon, text: string, inside: boolean) => {
+    const xs = shape.map((p) => p.x);
+    const ys = shape.map((p) => p.y);
+    if (scale * (Math.max(...xs) - Math.min(...xs)) <= badge * 4) return;
+    const y = inside ? Math.min(...ys) + 0.9 : Math.min(...ys) - 0.9;
+    items.push({ at: { x: (Math.min(...xs) + Math.max(...xs)) / 2, y }, text, size: badge, colour: palette.paint });
+  };
+  label(course.box, "STOP", false);
+  if (course.bay) label(course.bay, "TURN", true);
   tags(ctx, items, view, extras.font, palette);
 
   if (next && state.status === Status.DRIVING) {

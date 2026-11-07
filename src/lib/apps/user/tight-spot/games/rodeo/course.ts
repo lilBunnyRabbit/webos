@@ -10,7 +10,7 @@ export const CONE = 0.45;
 const EAST = 0;
 const WEST = Math.PI;
 
-export const StepKind = { GATE: "gate", SLALOM: "slalom", STOP: "stop", REVERSE: "reverse" } as const;
+export const StepKind = { GATE: "gate", SLALOM: "slalom", TURN: "turn", STOP: "stop", REVERSE: "reverse" } as const;
 export type StepKind = (typeof StepKind)[keyof typeof StepKind];
 
 /** A line to cross between `a` and `b`, moving along `normal`; a reverse gate only counts backing up. */
@@ -40,6 +40,8 @@ export interface Course {
   middle: number;
   /** The middle of the U-turn between the lanes. */
   turn: Vec;
+  /** Fenced, too narrow for a U-turn: a level's three-point turn. */
+  bay: Polygon | null;
   start: Pose;
   start_line: [Vec, Vec];
   box: Polygon;
@@ -47,6 +49,15 @@ export interface Course {
 
 export function rig_width(spec: VehicleSpec): number {
   return Math.max(spec.width, ...spec.hitches.map((link) => link.width));
+}
+
+export interface CourseShape {
+  gates: number;
+  cones: number;
+  /** Shares of a free course's gate room and cone spacing: below 1 is tighter. */
+  room: number;
+  spacing: number;
+  bay: boolean;
 }
 
 function gate(x: number, y: number, width: number, normal: Vec): Gate {
@@ -57,8 +68,9 @@ function gate(x: number, y: number, width: number, normal: Vec): Gate {
  * A seeded course for one vehicle, scaled to its size and turning circle: east down one lane through gates, a U-turn,
  * west down the other through a cone slalom, on through a reverse gate into a stop box, then back out through that gate.
  * Gaps, cone spacing and the turn grow with the rig's length, width and turning circle, and with any trailer's length.
+ * Without `shape` it's a free course; a level's shape sets the counts and squeezes the gaps, and a bay closes the far end.
  */
-export function build_course(seed: number, spec: VehicleSpec): Course {
+export function build_course(seed: number, spec: VehicleSpec, shape?: CourseShape): Course {
   const rng = create_rng(hash(seed, 0x40de0));
   const length = rig_length(spec);
   const width = rig_width(spec);
@@ -69,7 +81,7 @@ export function build_course(seed: number, spec: VehicleSpec): Course {
   // A frame steer's joint bends only as it rolls, so every change of curve takes it a stretch of ground.
   const ramp = spec.drive.kind === DriveKind.FRAME ? (2 * max_steer(spec)) / FRAME_RAMP : 0;
 
-  const clear = Math.max(0.4, 0.3 * width) * lerp(1.3, 0.95, rng());
+  const clear = Math.max(0.4, 0.3 * width) * lerp(1.3, 0.95, rng()) * (shape?.room ?? 1);
   const gate_width = width + clear * 2 + CONE;
   const swing = 0.35 * width + 0.25 * radius;
   const north_half = swing + gate_width / 2 + 0.6;
@@ -81,8 +93,14 @@ export function build_course(seed: number, spec: VehicleSpec): Course {
   const south = north + lanes;
   const middle = (north + south) / 2;
 
+  // Narrower than a U-turn's circle, long enough for the rig crosswise; the lanes jog in to it and back out.
+  const bay = shape?.bay ?? false;
+  const bay_half = Math.max(length / 2 + 0.9, 0.33 * (2 * radius + width));
+  const bay_depth = length + radius + 1;
+  const jog = bay ? 2 * Math.sqrt(radius * Math.max(lanes / 2 - bay_half + width / 2 + 0.3, 0.5)) * 1.2 + 0.5 * length : 0;
+
   // The gap to the next gate grows with how far across the lane it jumps.
-  const count = 3;
+  const count = shape?.gates ?? 3;
   const offsets = Array.from({ length: count }, () => (rng() * 2 - 1) * swing);
   const gates_x: number[] = [];
   let x = WALL + MARGIN + length;
@@ -93,11 +111,12 @@ export function build_course(seed: number, spec: VehicleSpec): Course {
     gates_x.push(x);
     was = offset;
   }
-  const north_need = x + Math.max(0.4 * length, 0.5 * radius) + trail * 0.5 + 1;
+  const north_need = x + Math.max(0.4 * length, 0.5 * radius) + trail * 0.5 + 1 + jog;
 
-  const cones_count = 4 + Math.floor(rng() * 2);
-  const spacing = (2 * Math.sqrt(2 * cone_room * radius) + 0.6 * length + trail * 0.8 + ramp * 2) * lerp(1.05, 1.3, rng());
-  const lead = Math.max(0.8 * length, 4) + spacing / 2 + trail * 0.5;
+  const drawn = 4 + Math.floor(rng() * 2);
+  const cones_count = shape?.cones ?? drawn;
+  const spacing = (2 * Math.sqrt(2 * cone_room * radius) + 0.6 * length + trail * 0.8 + ramp * 2) * lerp(1.05, 1.3, rng()) * (shape?.spacing ?? 1);
+  const lead = Math.max(0.8 * length, 4) + spacing / 2 + trail * 0.5 + jog;
   const run_in = Math.max(length + 2, spacing * 0.6 + 0.8 * length);
   const behind = Math.max(1, 0.25 * length) * lerp(0.8, 1.2, rng());
   const slack = Math.max(0.7, 0.12 * length) * lerp(1.3, 0.9, rng());
@@ -107,10 +126,12 @@ export function build_course(seed: number, spec: VehicleSpec): Course {
 
   const turn_x = Math.max(north_need, south_need);
   const reach = Math.hypot(lanes / 2 + width / 2, Math.max(body_ends(spec).front, length / 2)) + 1.5;
-  const east = turn_x + reach + MARGIN;
+  const east = bay ? turn_x + bay_depth + WALL : turn_x + reach + MARGIN;
   const bottom = south + south_half + MARGIN + WALL;
+  const bay_box = bay ? rect(turn_x, middle - bay_half, east - WALL, middle + bay_half) : null;
 
   const steps: Step[] = gates_x.map((gx, i) => ({ kind: StepKind.GATE, gate: gate(gx, north + offsets[i], gate_width, { x: 1, y: 0 }) }));
+  if (bay_box) steps.push({ kind: StepKind.TURN, box: bay_box });
   const first_side = rng() < 0.5 ? -1 : 1;
   const cone_xs = Array.from({ length: cones_count }, (_, i) => turn_x - lead - spacing * i);
   cone_xs.forEach((cx, i) => {
@@ -134,9 +155,9 @@ export function build_course(seed: number, spec: VehicleSpec): Course {
     else if (step.kind === StepKind.SLALOM) cones.push(step.gate!.a);
   }
 
-  const solids: Solid[] = [rect(0, 0, east, WALL), rect(0, 0, WALL, bottom), rect(east - WALL, 0, east, bottom), rect(0, bottom - WALL, east, bottom)].map(
-    (shape) => ({ kind: SolidKind.WALL, shape })
-  );
+  const fence = [rect(0, 0, east, WALL), rect(0, 0, WALL, bottom), rect(east - WALL, 0, east, bottom), rect(0, bottom - WALL, east, bottom)];
+  if (bay_box) fence.push(rect(turn_x, 0, east, middle - bay_half), rect(turn_x, middle + bay_half, east, bottom));
+  const solids: Solid[] = fence.map((shape) => ({ kind: SolidKind.WALL, shape }));
   const start = pose_from_centre({ x: WALL + MARGIN + length / 2, y: north, heading: EAST }, spec);
   const line_x = WALL + MARGIN + length + 0.3;
   return {
@@ -148,6 +169,7 @@ export function build_course(seed: number, spec: VehicleSpec): Course {
     steps,
     middle,
     turn: { x: turn_x, y: middle },
+    bay: bay_box,
     start,
     start_line: [
       { x: line_x, y: north - north_half },

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { inside_convex, overlaps } from "$kit/games/play2d/collision";
-import { bounds_of, bounds_overlap, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
+import { angle_between, bounds_of, bounds_overlap, rect, type Bounds, type Polygon, type Pose, type Vec } from "$kit/games/play2d/geometry";
 import { STANDING } from "../../core/keys";
 import { collide, obstacles, type Obstacles } from "../../core/obstacles";
 import { SolidKind } from "../../core/scene";
@@ -23,7 +23,8 @@ import {
   type VehicleSpec,
 } from "../../core/vehicle";
 import { GARAGE, type Shelf } from "../../hub/yard";
-import { build_course, CONE, StepKind, type Course, type Gate, type Step } from "./course";
+import { better, keep_best, levels_schema, unlocked as open_levels, type LevelStars } from "../../core/track";
+import { build_course, CONE, StepKind, type Course, type CourseShape, type Gate, type Step } from "./course";
 
 export const Status = {
   READY: "ready",
@@ -34,15 +35,57 @@ export const Status = {
 } as const;
 export type Status = (typeof Status)[keyof typeof Status];
 
+export const Mode = { COURSES: "courses", LEVELS: "levels" } as const;
+export type Mode = (typeof Mode)[keyof typeof Mode];
+export const mode_schema = z.enum([Mode.COURSES, Mode.LEVELS]);
+
 export const PENALTY_MS = 5000;
 export const COURSE_COUNT = 12;
 
 export interface Round {
   vehicle: Vehicle;
-  /** 1 to `COURSE_COUNT`; the daily has its own seed instead. */
+  /** 1 to `COURSE_COUNT`; a level and the daily have their own seed instead. */
   course: number | null;
   seed: number;
+  level?: number;
   daily?: string;
+}
+
+export interface Level {
+  name: string;
+  seed: number;
+  vehicle: Vehicle;
+  shape: CourseShape;
+  /** What the level brings in, on its start card. */
+  brings: string;
+}
+
+const shape = (gates: number, cones: number, room: number, spacing: number, bay = false): CourseShape => ({ gates, cones, room, spacing, bay });
+
+/** Each level brings in one thing: a vehicle, tighter gates, a longer slalom, the bay's three-point turn, a trailer. */
+export const LEVELS: readonly Level[] = [
+  { name: "First run", vehicle: Vehicle.HATCH, seed: 101, shape: shape(2, 3, 1.3, 1.15), brings: "Two wide gates and three cones: learn the run." },
+  { name: "Full course", vehicle: Vehicle.HATCH, seed: 102, shape: shape(3, 4, 1, 1), brings: "Three gates and four cones, a full course." },
+  { name: "Tight gates", vehicle: Vehicle.HATCH, seed: 113, shape: shape(3, 4, 0.7, 1), brings: "Tighter gates, less room either side." },
+  { name: "Long slalom", vehicle: Vehicle.HATCH, seed: 104, shape: shape(4, 6, 0.85, 0.85), brings: "A longer slalom, its cones closer together." },
+  { name: "Three-point turn", vehicle: Vehicle.HATCH, seed: 105, shape: shape(3, 4, 1, 1, true), brings: "A bay at the far end too narrow to U-turn in: turn round in three." },
+  { name: "Van", vehicle: Vehicle.VAN, seed: 106, shape: shape(3, 5, 0.9, 1), brings: "A van: longer, wider, a bigger circle." },
+  { name: "Van in the bay", vehicle: Vehicle.VAN, seed: 107, shape: shape(4, 5, 0.8, 0.9, true), brings: "The van's three-point turn, through tighter gates." },
+  { name: "Bus", vehicle: Vehicle.BUS, seed: 108, shape: shape(3, 4, 1, 1), brings: "A bus: its long wheelbase cuts every corner." },
+  { name: "Trailer", vehicle: Vehicle.TOWING, seed: 109, shape: shape(3, 4, 1, 1), brings: "A trailer: it follows wide, and backs out the other way." },
+  { name: "Trailer slalom", vehicle: Vehicle.TOWING, seed: 110, shape: shape(4, 5, 0.85, 0.9), brings: "The trailer through tighter gates and more cones." },
+  { name: "Bus in the bay", vehicle: Vehicle.BUS, seed: 111, shape: shape(4, 5, 0.85, 0.9, true), brings: "A three-point turn in a bus." },
+  { name: "Final", vehicle: Vehicle.PICKUP, seed: 112, shape: shape(5, 7, 0.7, 0.85, true), brings: "Everything at once, all of it tight, in a pickup." },
+];
+export const LEVEL_COUNT = LEVELS.length;
+
+export function level_round(level: number): Round {
+  const at = Math.max(1, Math.min(LEVEL_COUNT, Math.round(level)));
+  return { vehicle: LEVELS[at - 1].vehicle, course: null, seed: LEVELS[at - 1].seed, level: at };
+}
+
+export function level_of(round: Round): Level | null {
+  return round.level === undefined ? null : LEVELS[round.level - 1];
 }
 
 export interface Cone {
@@ -113,7 +156,7 @@ export function daily_round(day: string, seed: number): Round {
 
 export function create_game(round: Round): GameState {
   const spec = spec_of(round);
-  const course = build_course(round.seed, spec);
+  const course = build_course(round.seed, spec, level_of(round)?.shape);
   return {
     round,
     course,
@@ -164,12 +207,16 @@ export function in_box(car: Placement, box: Polygon, spec: VehicleSpec): boolean
   return bodies(car, spec).every((body) => body.every((corner) => inside_convex(corner, box)));
 }
 
+/** Facing back down the course within this, the whole rig in the bay, a three-point turn is done. */
+export const TURNED = 0.35;
+
 /**
  * Whether a move from `was` to `now` finishes the step: crossing a gate the right way (backing up for the reverse
- * gate), or standing in the stop box with the whole rig inside it.
+ * gate), standing in the stop box with the whole rig inside it, or turned round inside the bay.
  */
 export function step_done(step: Step, was: Placement, now: Placement, speed: number, spec: VehicleSpec): boolean {
   if (step.kind === StepKind.STOP) return Math.abs(speed) < STANDING && in_box(now, step.box!, spec);
+  if (step.kind === StepKind.TURN) return angle_between(now.heading, Math.PI) < TURNED && in_box(now, step.box!, spec);
   if (step.kind === StepKind.REVERSE && speed >= 0) return false;
   return crossed(step.gate!, nose(was, spec), nose(now, spec));
 }
@@ -262,6 +309,7 @@ export function step_name(step: Step, index: number, steps: readonly Step[]): st
     const of = steps.filter((each) => each.kind === StepKind.SLALOM).length;
     return `Slalom ${index - first + 1}/${of} · pass it on the ${step.side! > 0 ? "right" : "left"}`;
   }
+  if (step.kind === StepKind.TURN) return "Turn round in the bay";
   if (step.kind === StepKind.STOP) return "Stop in the box";
   return "Back out through the gate";
 }
@@ -283,20 +331,38 @@ export function crash_title(crash: Crash | null): string {
   return crash === Crash.JACKKNIFE ? "Jackknifed" : "Hit the fence";
 }
 
+export interface Par {
+  ms: number;
+}
+
+/** One for the course done, one for no cone down, one for the time (cones included) at or under the planner's par. */
+export function stars(state: Pick<GameState, "status" | "cones" | "ms">, par_ms: number | null): 0 | 1 | 2 | 3 {
+  if (state.status !== Status.DONE) return 0;
+  const clean = knocked(state) === 0 ? 1 : 0;
+  const quick = par_ms !== null && total_ms(state) <= par_ms ? 1 : 0;
+  return (1 + clean + quick) as 1 | 2 | 3;
+}
+
 export const result_schema = z.object({
   ms: z.number().nonnegative(),
   cones: z.number().int().nonnegative(),
-  /** On a daily's best only: its key doesn't name the vehicle. */
+  /** On a level's best only. */
+  stars: z.number().int().min(1).max(3).optional(),
+  /** On a daily's and a level's best: their keys don't name the vehicle. */
   vehicle: vehicle_schema.optional(),
 });
 export type Result = z.infer<typeof result_schema>;
 export const bests_schema = z.record(z.string(), result_schema);
 export type Bests = z.infer<typeof bests_schema>;
-export const data_schema = z.object({ bests: bests_schema });
+// Saves from before the levels have no `levels`.
+export const data_schema = z.object({ bests: bests_schema, levels: levels_schema.default({}) });
 export type Data = z.infer<typeof data_schema>;
+export const EMPTY_DATA: Data = { bests: {}, levels: {} };
 
 export function round_key(round: Round): string {
-  return round.daily ? `daily:${round.daily}` : `${round.vehicle}:${round.course}`;
+  if (round.daily) return `daily:${round.daily}`;
+  if (round.level !== undefined) return `level:${round.level}`;
+  return `${round.vehicle}:${round.course}`;
 }
 
 export interface Recorded {
@@ -305,21 +371,28 @@ export interface Recorded {
   first: boolean;
 }
 
+const quicker = (a: Result | undefined, b: Result) => !a || b.ms < a.ms;
+const starrier = (a: Result | undefined, b: Result) => better(a && { stars: a.stars ?? 0, ms: a.ms }, { stars: b.stars ?? 0, ms: b.ms });
+
+/** A free course or the daily keeps its quickest run; a level its most stars, then its quickest. */
 export function record_best(bests: Bests, round: Round, result: Result): Recorded {
-  const key = round_key(round);
-  const old = bests[key];
-  const improved = !old || result.ms < old.ms;
-  const run = round.daily ? { ...result, vehicle: round.vehicle } : result;
-  return { bests: improved ? { ...bests, [key]: run } : bests, improved, first: !old };
+  const run = round.daily || round.level !== undefined ? { ...result, vehicle: round.vehicle } : result;
+  return keep_best(bests, round_key(round), run, round.level !== undefined ? starrier : quicker);
 }
 
-/** Garage shelves with a run by one of their vehicles, dailies included; the experimental chains don't count. */
+export function unlocked(levels: LevelStars): number {
+  return open_levels(levels, LEVEL_COUNT);
+}
+
+/** Garage shelves with a run by one of their vehicles, dailies and levels included; the experimental chains don't count. */
 export function shelves_done(bests: Bests): number {
   const vehicles = new Set<string>();
-  for (const [key, best] of Object.entries(bests)) vehicles.add(key.startsWith("daily:") ? (best.vehicle ?? "") : key.split(":")[0]);
+  for (const [key, best] of Object.entries(bests)) vehicles.add(best.vehicle ?? key.split(":")[0]);
   return GARAGE.filter((shelf) => shelf.vehicles.some((each) => !experimental(each) && vehicles.has(each))).length;
 }
 
 export function round_title(round: Round): string {
-  return round.daily ? "Daily rodeo" : `Course ${round.course}`;
+  if (round.daily) return "Daily rodeo";
+  if (round.level !== undefined) return `Level ${round.level}`;
+  return `Course ${round.course}`;
 }

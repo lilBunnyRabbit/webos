@@ -12,6 +12,8 @@ export default define_game({
     { id: "rodeo-rig", title: "Rig rodeo", text: "Finish a course towing a trailer." },
     { id: "rodeo-shelves", title: "Whole garage", text: "Finish a course with a vehicle from every garage shelf.", goal: 7 },
     { id: "rodeo-daily", title: "Daily rodeo", text: "Finish the daily rodeo." },
+    { id: "rodeo-levels", title: "Ring master", text: "Finish every rodeo level.", goal: 12 },
   ],
   load: () => import("./game.svelte"),
+  progress: () => import("./progress").then((module) => module.default),
 });

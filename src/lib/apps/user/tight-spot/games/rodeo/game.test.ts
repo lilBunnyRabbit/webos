@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { collide, obstacles } from "../../core/obstacles";
 import { End, sensor } from "../../core/sensors";
-import { NO_INPUT, rig_ends, rig_length, Vehicle, VEHICLES, type Car } from "../../core/vehicle";
+import { NO_INPUT, pose_from_centre, rig_ends, rig_length, Vehicle, VEHICLES, type Car } from "../../core/vehicle";
 import { build_course, CONE, StepKind } from "./course";
 import {
   advance,
@@ -21,6 +21,12 @@ import {
   step_done,
   total_ms,
   touched,
+  data_schema,
+  LEVEL_COUNT,
+  level_round,
+  LEVELS,
+  stars,
+  unlocked,
   type GameState,
 } from "./game";
 
@@ -155,5 +161,68 @@ describe("bests", () => {
     expect(chains.length).toBeGreaterThan(0);
     expect(chains.every(experimental)).toBe(true);
     expect(SHELVES.slice(0, -1).every((shelf) => !shelf.vehicles.some(experimental))).toBe(true);
+  });
+});
+
+describe("levels", () => {
+  test("a level's course has its counts, and a bay too narrow to U-turn in", () => {
+    LEVELS.forEach((level, i) => {
+      const state = create_game(level_round(i + 1));
+      const { course } = state;
+      const spec = VEHICLES[level.vehicle];
+      const kinds = course.steps.map((step) => step.kind);
+      expect(kinds.filter((kind) => kind === StepKind.GATE)).toHaveLength(level.shape.gates);
+      expect(kinds.filter((kind) => kind === StepKind.SLALOM)).toHaveLength(level.shape.cones);
+      expect(kinds.includes(StepKind.TURN)).toBe(level.shape.bay);
+      expect(collide(state.car, obstacles(course), spec)).toBeNull();
+      if (!course.bay) return;
+      expect(kinds.indexOf(StepKind.TURN)).toBe(level.shape.gates);
+      const ys = course.bay.map((p) => p.y);
+      expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(2 * spec.turning_radius + spec.width);
+    });
+  });
+
+  test("the free courses keep their layout", () => {
+    const round = course_round(Vehicle.HATCH, 3);
+    expect(build_course(7, VEHICLES.hatch).bay).toBeNull();
+    expect(create_game(round).course).toEqual(build_course(round.seed, VEHICLES.hatch));
+  });
+
+  test("the bay counts turned round with the whole rig inside", () => {
+    const { course } = create_game(level_round(5));
+    const step = course.steps.find((each) => each.kind === StepKind.TURN)!;
+    const xs = step.box!.map((p) => p.x);
+    const ys = step.box!.map((p) => p.y);
+    const spec = VEHICLES.hatch;
+    const inside = pose_from_centre({ x: (Math.min(...xs) + Math.max(...xs)) / 2, y: (Math.min(...ys) + Math.max(...ys)) / 2, heading: Math.PI }, spec);
+    expect(step_done(step, inside, inside, 0, spec)).toBe(true);
+    expect(step_done(step, inside, { ...inside, heading: Math.PI / 2 }, 0, spec)).toBe(false);
+    expect(step_done(step, inside, { ...inside, x: Math.min(...xs) }, 0, spec)).toBe(false);
+  });
+
+  test("stars: done, no cone down, the time with cones at or under par", () => {
+    const done = { ...create_game(level_round(1)), status: Status.DONE, ms: 40_000 };
+    const one_down = { ...done, cones: done.cones.map((cone, i) => (i === 0 ? { ...cone, down: { ...cone.at, heading: 0 } } : cone)) };
+    expect(stars(done, 40_000)).toBe(3);
+    expect(stars(done, null)).toBe(2);
+    expect(stars(one_down, 50_000)).toBe(2);
+    expect(stars(one_down, 44_000)).toBe(1);
+    expect(stars({ ...done, status: Status.CRASHED }, 40_000)).toBe(0);
+  });
+
+  test("a level keeps its most stars, then its quickest, and opens the next", () => {
+    const round = level_round(2);
+    const first = record_best({}, round, { ms: 50_000, cones: 0, stars: 2 });
+    expect(Object.keys(first.bests)).toEqual(["level:2"]);
+    expect(first.bests["level:2"].vehicle).toBe(round.vehicle);
+    expect(record_best(first.bests, round, { ms: 40_000, cones: 1, stars: 1 }).improved).toBe(false);
+    expect(record_best(first.bests, round, { ms: 60_000, cones: 0, stars: 3 }).improved).toBe(true);
+    expect(unlocked({})).toBe(1);
+    expect(unlocked({ 1: 1, 2: 3 })).toBe(3);
+    expect(unlocked({ [LEVEL_COUNT]: 3 })).toBe(LEVEL_COUNT);
+  });
+
+  test("an old save without levels still reads", () => {
+    expect(data_schema.parse({ bests: { "hatch:1": { ms: 1, cones: 0 } } }).levels).toEqual({});
   });
 });
