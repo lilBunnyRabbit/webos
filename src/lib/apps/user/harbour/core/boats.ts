@@ -69,15 +69,11 @@ export const SPECS: Record<BoatId, BoatSpec> = {
     rudder_time: 12,
     lock: 35,
     added: { surge: 0.05, sway: 0.9, yaw: 1 },
-    thrusters: { turn: 1.2, lag: 1.5 },
+    thrusters: { turn: 3, lag: 1.5 },
   },
 };
 
 const derived = new Map<BoatId, Coefficients>();
-
-export function next_boat(id: BoatId): BoatId {
-  return BOAT_IDS[(BOAT_IDS.indexOf(id) + 1) % BOAT_IDS.length];
-}
 
 export function spec_coefficients(spec: BoatSpec): Coefficients {
   return boat_coefficients(spec.id as BoatId);

@@ -2,7 +2,7 @@
 
 ADR: [096](../adrs/096-harbour.md) · Decided: [brainstorm](../brainstorm/2026-11-06_harbour.md) · Code: `src/lib/apps/user/harbour/`
 
-A top-down boat docking sim. A hub harbour you sail around with the real physics, gates that open levels, a boat shed that cycles the RIB, the yacht and the cargo coaster. Built on the play2d kit (`$kit/games/play2d`, `$kit/components/play2d`) that came out of Drive Hub; the boat model, contacts, judging and proof are the app's own. Released as experimental (`experimental: true` in `meta.ts`, [ADR-097](../adrs/097-experimental-apps.md)) while the handling is tuned; graduating deletes that line.
+A top-down boat docking sim. A hub harbour you sail around with the real physics, gates that open levels, a boat shed where you pick the RIB, the yacht or the cargo coaster. Built on the play2d kit (`$kit/games/play2d`, `$kit/components/play2d`) that came out of Drive Hub; the boat model, contacts, judging and proof are the app's own. Released as experimental (`experimental: true` in `meta.ts`, [ADR-097](../adrs/097-experimental-apps.md)) while the handling is tuned; graduating deletes that line.
 
 ## Where things are
 
@@ -28,7 +28,7 @@ Each step (`step_boat`, semi-implicit Euler at the frame loop's ≤ 1/120 s step
    - the steering angle `δ = lock · x(0.35 + 0.65|x|)` for a rudder share `x` (`steer_angle`): progressive, since quadratic cross-flow damping alone made a tenth of the wheel turn a sixth as tight as full lock;
    - thrust `gear · power · (ahead or astern thrust)`. A shaft boat pushes along the keel; an outboard turns the thrust by `δ` at `x = −0.45 L`, so it steers ahead, astern and from rest;
    - thrusters (the coaster): each spools toward its input with the spec's `lag` and pushes `thruster · fade(u)` sideways at ±0.45 L; `fade` is 1 up to 1 m/s and 0 from 2.6 m/s. The boat doesn't settle to a stop while one runs;
-   - the rudder (or the outboard leg) at `−0.45 L`: side force `−C_r · sin δ · q` with `q = u|u|` (halved astern, so it's weak and reversed) plus the prop wash `wash · thrust share` going ahead; a quarter of that as drag by `sin² δ`, against the flow over the rudder (so it brakes astern too);
+   - the rudder (or the outboard leg) at `−0.45 L`: side force `−C_r · sin δ · q` with `q = u|u|` plus `wash · thrust share`: the prop's wash going ahead, and astern its suction drawing water aft-to-fore across the rudder at the same share (negative), which is what lets a shaft boat steer backing out; a quarter of that as drag by `sin² δ`, against the flow over the rudder (so it brakes astern too);
    - prop walk: astern `−walk · |T|` sideways at the prop (ahead 3 % of that the other way), fading out by 1.2 m/s: the stern walks to port;
    - an outside push (contacts) rotated into the body frame.
 4. Accelerations over the effective masses `m(1 + added.surge)`, `m(1 + added.sway)`, `I = m(0.25 L)²(1 + added.yaw)`, rotated back to the world, velocity first, then pose.
@@ -58,7 +58,7 @@ Each step (`step_boat`, semi-implicit Euler at the frame loop's ≤ 1/120 s step
 | Carry, grip | 6 m, 12 | 18 m, 40 | 120 m, 150 |
 | Turn, kick, walk | 7 °/s, 22 °/s, 0 | 1.8 °/s, 8 °/s, 0.25 m | 0.35 °/s, 0.8 °/s, 0.15 m |
 | Lags | engine 0.3 s, gear 0.4 s, rudder 2.4 s | 0.5 s, 0.6 s, 3 s | 2.5 s, 3 s, 12 s |
-| Thrusters | | | 1.2 °/s at rest (≈ 89 kN each), spool 1.5 s |
+| Thrusters | | | 3 °/s at rest, spool 1.5 s |
 
 What that gives (steady radius in lengths, slow / full ahead): full lock 1.2 / 1.0 (RIB), 1.0 / 0.9 (yacht), 1.3 / 0.9 (coaster); a tenth of the wheel 12 / 8, 15 / 10, 27 / 14. Full astern from full ahead stops the RIB in 0.9 L, the yacht in 1.1 L and the coaster in 2.9 L (79 s).
 
@@ -87,7 +87,7 @@ Held for 1 s (`DOCK_HOLD`), the lines go on for 1.2 s and the round is done. Sta
 
 Two builders scale with the boat: `alongside_level` (a long pontoon along the top of a basin, optional moored neighbours a gap apart) and `box_level` (fingers off a main pontoon, neighbours in the slots, optional boats across the fairway). Gaps and fairways are given in units of `max(L, 1.2 × R)`, R the boat's steady turn at slow ahead with full wheel (`turn_radius`, thrusters helping for the coaster): the RIB and the yacht turn wider than a length, so their units grow. Start distances and the basin's depth use a unit of `min(L, 20 m)`, so a coaster isn't sent half a kilometre; along an alongside pontoon the start stays in lengths, so the coaster runs straight in. A box slot's clearance grows with a beam over 3.3 m. Moored boats are ~5 % bigger or smaller than yours. The 8 levels: Visitors' pontoon, Box berth, Come about, Between neighbours, Off the fairway, Short gap, Narrow fairway, Last space. `random_scene(spec, seed, attempt)` picks the kind and its numbers from `hash(seed, attempt)`.
 
-The hub (`build_hub(scale)`, `hub_scale(L) = max(1, L / 10)`) is a 150 × 100 m basin for the RIB and the yacht, everything grown 4.5× for the coaster (quays, pontoons, moored boats, buoys, gates, the shed, the 40 m card radius and the 9 m return) with quays, two decorative pontoons, piles, gates 1–8 in two rows and Random and Daily on the right, and the shed top left. Crossing a gate's line arms it; dropping under 0.3 m/s within 40 m opens its card and charts the round in the worker. Sailing into the shed swaps the boat and puts the new one at the shed's mouth; leaving the shed re-arms it. Coming back from a round puts you 9 m past that gate, heading away.
+The hub (`build_hub(scale)`, `hub_scale(L) = max(1, L / 10)`) is a 150 × 100 m basin for the RIB and the yacht, everything grown 4.5× for the coaster (quays, pontoons, moored boats, buoys, gates, the shed, the 40 m card radius and the 9 m return) with quays, two decorative pontoons, piles, gates 1–8 in two rows and Random and Daily on the right, and the shed top left. Crossing a gate's line arms it; dropping under 0.3 m/s within 40 m opens its card and charts the round in the worker. Inside the shed a Boat shed card lists the three boats (buttons, or 1–3 on keys); picking one puts it at the shed's mouth, still inside, so the card stays until you sail out. Coming back from a round puts you 9 m past that gate, heading away.
 
 ## Proof
 

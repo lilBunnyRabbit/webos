@@ -2,7 +2,7 @@
 
 A small harbour you sail around. Every numbered pair of buoys is a level: sail between them and stop, and its card opens. **Random** and **Daily** are the two gates on the right. Nothing is judged in the harbour itself: bump into what you like.
 
-- The **boat shed**, top left, swaps your boat: RIB, then the yacht, then the coaster, then back to the RIB. The harbour grows to fit the coaster.
+- Sail into the **boat shed**, top left, and pick your boat: the RIB, the yacht or the coaster. The harbour grows to fit the coaster.
 - The board by each gate shows the level's number and your stars in the boat you're sailing.
 
 ## The helm

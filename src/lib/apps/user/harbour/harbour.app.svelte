@@ -12,7 +12,7 @@
   import { Anchor as AnchorIcon, ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { body_velocity, speed, steer_angle, to_world } from "./core/boat";
-  import { boat_coefficients, BoatId, next_boat, SPECS } from "./core/boats";
+  import { BOAT_IDS, boat_coefficients, BoatId, SPECS } from "./core/boats";
   import { work_out_chart, type ChartJob } from "./core/chart-job";
   import { Grade } from "./core/contact";
   import { draw_frame, WAKE_LIFE, type WakePoint } from "./core/draw";
@@ -80,7 +80,12 @@
   let wake: WakePoint[] = [];
   let wake_clock = 0;
   let touch_age = 0;
-  let in_shed_now = false;
+  let in_shed_now = $state(false);
+  const SHED_BLURBS: Record<BoatId, string> = {
+    [BoatId.RIB]: "4.5 m, outboard. Nimble, the motor swings the stern.",
+    [BoatId.YACHT]: "10 m, single screw. Prop walk astern, carries way.",
+    [BoatId.CARGO]: "45 m coaster. Bow and stern thrusters, very heavy.",
+  };
   let job: ChartJob | null = null;
   let swap_timer = 0;
 
@@ -251,7 +256,7 @@
       lines,
       squash: game.squash,
       touch: game.last_touch ? { touch: game.last_touch, age: touch_age } : null,
-      hub: in_hub ? { hub, stars: stars_for, shed_label: `Boat shed · swap to the ${SPECS[next_boat(boat_id)].name}` } : undefined,
+      hub: in_hub ? { hub, stars: stars_for, shed_label: "Boat shed" } : undefined,
     });
   }
 
@@ -307,15 +312,14 @@
       const middle = { x: (pending_gate.port.x + pending_gate.starboard.x) / 2, y: pending_gate.port.y };
       if (Math.hypot(next.boat.x - middle.x, next.boat.y - middle.y) > 40 * hub.scale) pending_gate = null;
     }
-    const inside = in_shed(hub, next.boat);
-    if (inside && !in_shed_now) swap_boat();
-    in_shed_now = inside;
+    in_shed_now = in_shed(hub, next.boat);
   }
 
   let pending_gate: Gate | null = null;
 
-  function swap_boat() {
-    boat_id = next_boat(boat_id);
+  function swap_boat(id: BoatId) {
+    if (id === boat_id) return;
+    boat_id = id;
     settings_file.value.boat = boat_id;
     helm.reset();
     wake = [];
@@ -533,6 +537,14 @@
       }
       return;
     }
+    if (in_hub && in_shed_now && !card && /^Digit[1-9]$/.test(code) && !event.repeat) {
+      const pick = BOAT_IDS[Number(code.slice(5)) - 1];
+      if (pick) {
+        event.preventDefault();
+        swap_boat(pick);
+      }
+      return;
+    }
     if (card || game.status === Status.PAUSED || (on_button && code === "Space")) return;
     const ahead = AHEAD_KEYS.has(code);
     const astern = ASTERN_KEYS.has(code);
@@ -640,7 +652,7 @@
 
   {#if in_hub && !settings.seen_hint && !card}
     <p class="pointer-events-none absolute inset-x-2 bottom-2 mx-auto max-w-80 rounded-md bg-background/85 px-2 py-1 text-center text-ui text-foreground/80 backdrop-blur-[2px]">
-      Sail through a numbered gate and stop to start a level. The boat shed, top left, swaps your boat.
+      Sail through a numbered gate and stop to start a level. Sail into the boat shed, top left, to pick your boat.
     </p>
   {/if}
 
@@ -677,6 +689,24 @@
     <BoardOverlay title="Charting today's berth">
       <Spinner label="Charting" />
     </BoardOverlay>
+  {:else if in_hub && in_shed_now}
+    <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
+      <div class="min-w-0 basis-full">
+        <p class="text-base font-semibold">Boat shed</p>
+        <p class="text-ui text-foreground/80">Pick a boat. It waits here, ready to sail out.</p>
+      </div>
+      <div class="grid basis-full gap-1.5 @md:grid-cols-3" role="group" aria-label="Boat">
+        {#each BOAT_IDS as each, i (each)}
+          <Button class="h-auto flex-col items-start gap-0 py-1.5 text-left" variant={each === boat_id ? "primary" : "quiet"} aria-pressed={each === boat_id} onclick={() => swap_boat(each)}>
+            <span class="flex items-center gap-1.5 font-semibold"><span class="hidden font-mono text-2xs opacity-70 pointer-fine:inline">{i + 1}</span>{SPECS[each].name}</span>
+            <span class="text-2xs font-normal opacity-80">{SHED_BLURBS[each]}</span>
+          </Button>
+        {/each}
+      </div>
+      <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
+        <KeyHint key_name="1–{BOAT_IDS.length}" text="pick" /><KeyHint key_name="W" text="sail out" />
+      </p>
+    </RoundCard>
   {:else if round && game.status === Status.READY}
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 flex-1 basis-52">

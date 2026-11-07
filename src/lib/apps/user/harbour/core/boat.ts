@@ -121,7 +121,8 @@ const REST_SPEED = 0.02;
 const REST_TURN = (0.5 * Math.PI) / 180;
 const SETTLE_SPEED = 0.15;
 const SETTLE_RATE = 0.35;
-const ASTERN_RUDDER = 0.5;
+const ASTERN_RUDDER = 1;
+const ASTERN_SUCTION = 1;
 const WALK_FADE = 1.2;
 const WALK_AHEAD = 0.03;
 const KEEL_AT = 0.3;
@@ -271,7 +272,8 @@ export function step_boat(boat: Boat, input: Input, c: Coefficients, dt: number,
     n += side * c.prop_x;
   } else fx += thrust;
 
-  const flow = u * Math.abs(u) * (u < 0 ? ASTERN_RUDDER : 1) + (thrust > 0 ? c.wash * (thrust / c.thrust_ahead) : 0);
+  // Astern the prop draws water aft-to-fore across the rudder: weaker than the wash ahead, but it is what lets a yacht steer backing out.
+  const flow = u * Math.abs(u) * (u < 0 ? ASTERN_RUDDER : 1) + c.wash * (thrust / c.thrust_ahead) * (thrust > 0 ? 1 : ASTERN_SUCTION);
   const rudder_side = -c.rudder * Math.sin(lock) * flow;
   fy += rudder_side;
   n += rudder_side * c.rudder_x;

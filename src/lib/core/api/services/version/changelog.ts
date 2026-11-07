@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.7.0",
+    date: "2026-11-07",
+    title: "Harbour boat shed",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["harbour"],
+        text: "Harbour's boat shed now lets you pick the RIB, the yacht or the coaster instead of cycling through them.",
+      },
+      {
+        kind: FIXED,
+        apps: ["harbour"],
+        text: "The yacht and the coaster now turn when you go astern with the wheel over, and the coaster's thrusters swing it round faster.",
+      },
+    ],
+  },
+  {
     version: "4.6.0",
     date: "2026-11-07",
     title: "Harbour",
