@@ -14,6 +14,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub's doorways show the stars you've earned in each game, and a licence card in the yard lists every game's stars and achievements.",
       },
+      {
+        kind: FIXED,
+        apps: ["tight-spot"],
+        text: "Drive Hub Airport's Ramp lead achievement counts the levels of all four jobs, not only the pushbacks.",
+      },
     ],
   },
   {

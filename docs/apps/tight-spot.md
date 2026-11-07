@@ -771,7 +771,7 @@ A baggage run to our aircraft on Pushback's apron (bridge pulled back, kit kept 
 - **Par** (`job_par`, in a worker per round): the job's driver at a careful pace, times 1.25, rounded up to 5 s: pushes and tows at 1.3 m/s, the baggage run at 2.2 m/s, a turnaround both added up.
 - HUD: the gear strip, the job's line ("Face west · stop mark 41 m", "Aft hold · 35 m", "Stand 23 · stop mark 109 m"), and with an aircraft the nose gear's angle, amber within 15° of the lock. With an aircraft the camera frames the wingspan (54 m across the shorter side at zoom 1); before the start it frames the rig and its goal, whose outline is drawn dashed (the aircraft at its stop bar, or the middle cart beside the glowing hold door).
 - Random rounds (difficulty 0.15–0.85), levels per job (difficulty 0 → 1; Pushback's seeds `hash(0x9b5c, index)` as before, the others' `hash(0x9b5c, salt, index)`), and one daily: a turnaround (difficulty 0.3–0.8, seed `daily_seed(day, "tight-spot/airport")`), reported to Game Hub as stars lost, then time.
-- Achievements: Off blocks (a push, alone or in a turnaround), One smooth push, Bags on board, Towed in, Turned around, Cleared on time (three stars on any job), Ramp lead (every pushback level) and Daily departure (the daily turnaround), ids `airport-…`.
+- Achievements: Off blocks (a push, alone or in a turnaround), One smooth push, Bags on board, Towed in, Turned around, Cleared on time (three stars on any job), Ramp lead (every level of all four jobs, 36; until 4.10 it counted the 12 pushback levels only) and Daily departure (the daily turnaround), ids `airport-…`.
 
 ### Every job can be done
 

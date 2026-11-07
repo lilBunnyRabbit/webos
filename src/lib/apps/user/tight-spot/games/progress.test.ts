@@ -1,5 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { LEVEL_COUNTS } from "./airport/game";
+import airport_game from "./airport";
+import ferry_game from "./ferry";
+import forklift_game from "./forklift";
+import mower_game from "./mower";
 import airport, { LEVELS as AIRPORT_LEVELS } from "./airport/progress";
 import { LEVEL_COUNT as FERRY_COUNT } from "./ferry/game";
 import ferry, { LEVELS as FERRY_LEVELS } from "./ferry/progress";
@@ -28,5 +32,13 @@ describe("progress", () => {
     expect(ferry.read({ levels: { 1: 9 } })).toEqual({ stars: 0, total: 36 });
     expect(airport.read({ best: {}, levels: { pushback: { 1: 3 }, tow: { 2: 1 } } })).toEqual({ stars: 4, total: 108 });
     expect(parking.read({ bests: {}, levels: { 1: 2 }, kinds: [], extreme: { planks: 3 } })).toEqual({ stars: 5, total: (PARKING_COUNT + COURSES.length) * 3 });
+  });
+
+  test("an every-level achievement's goal is every level of the game", () => {
+    const goal = (game: typeof ferry_game, id: string) => game.achievements.find((each) => each.id === id)?.goal;
+    expect(goal(airport_game, "airport-levels")).toBe(Object.values(LEVEL_COUNTS).reduce((sum, count) => sum + count, 0));
+    expect(goal(ferry_game, "ferry-levels")).toBe(FERRY_COUNT);
+    expect(goal(forklift_game, "forklift-levels")).toBe(FORKLIFT_COUNT);
+    expect(goal(mower_game, "mower-levels")).toBe(MOWER_COUNT);
   });
 });

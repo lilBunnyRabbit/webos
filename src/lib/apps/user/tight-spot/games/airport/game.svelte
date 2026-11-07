@@ -69,7 +69,8 @@
   import { MIDDLE } from "./train";
 
   const DONE_TITLES: Record<Job, string> = { pushback: "Push complete", baggage: "Bags delivered", tow: "On the gate", turnaround: "Turnaround complete" };
-  const JOB_OPTIONS = (Object.keys(JOB_NAMES) as Job[]).map((value) => ({ value, label: JOB_NAMES[value] }));
+  const JOBS = Object.keys(JOB_NAMES) as Job[];
+  const JOB_OPTIONS = JOBS.map((value) => ({ value, label: JOB_NAMES[value] }));
   const RANDOM = "random";
   const RANDOM_OPTION = [{ value: RANDOM, label: "Random" }];
   // Wide enough for both wingtips with room to see what they pass, whichever way the aircraft points.
@@ -344,7 +345,7 @@
     if (done_job === Job.TOW) achievements.achieve("airport-tow");
     if (done_job === Job.TURNAROUND) achievements.achieve("airport-turnaround");
     if (score === 3) achievements.achieve("airport-by-the-book");
-    if (done_job === Job.PUSHBACK && state.round.level !== undefined) achievements.progress("airport-levels", levels_done(job_levels(done.save, done_job)));
+    if (state.round.level !== undefined) achievements.progress("airport-levels", JOBS.reduce((sum, each) => sum + levels_done(job_levels(done.save, each)), 0));
     if (state.round.daily) {
       play.daily(state.round.daily, result.ms, 3 - score, DAILY_MODE);
       achievements.achieve("airport-daily");
