@@ -8,6 +8,7 @@ import { pass_portals } from "../../core/portals";
 import { fit, MAX_ANGLE } from "$kit/games/play2d/precision";
 import { SolidKind, type Bay, type Solid } from "../../core/scene";
 import { hash } from "$kit/games/play2d/seed";
+import { keep_best, levels_schema, MAX_STARS, with_stars } from "../../core/track";
 import {
   bodies,
   body_centre,
@@ -47,10 +48,6 @@ export const QUICK_TIP = 10;
 export const PRECISE_TIP = 5;
 export const QUICK_WINDOW = 60_000;
 const BUS_FACTOR = 2;
-const SCHEDULE = 300;
-const START_GAP = 60_000;
-const MIN_GAP = 24_000;
-const RAMP = 12;
 const PAINTS = 5;
 
 export type Customer = typeof Vehicle.HATCH | typeof Vehicle.VAN | typeof Vehicle.PICKUP | typeof Vehicle.CITY | typeof Vehicle.SUV | typeof Vehicle.BUS;
@@ -61,9 +58,24 @@ const CARS: readonly [Customer, number][] = [
   [Vehicle.PICKUP, 1.5],
   [Vehicle.VAN, 1.5],
 ];
-const BUS_CHANCE = 0.14;
-const BUS_EVERY = 8;
-const BUS_FROM = 4;
+export type BusRule = { chance: number; every: number; from: number } | { at: readonly number[] };
+
+export interface Rules {
+  arrivals: number;
+  start_gap: number;
+  min_gap: number;
+  ramp: number;
+  bus: BusRule | null;
+  rush?: { from: number; count: number; gap: number };
+}
+
+export const ENDLESS: Rules = {
+  arrivals: 300,
+  start_gap: 60_000,
+  min_gap: 24_000,
+  ramp: 12,
+  bus: { chance: 0.14, every: 8, from: 4 },
+};
 
 export interface Arrival {
   at: number;
@@ -75,6 +87,8 @@ export interface Arrival {
 export interface Shift {
   seed: number;
   daily?: string;
+  level?: number;
+  rules?: Rules;
 }
 
 export interface Ticket {
@@ -144,6 +158,7 @@ export interface GameState {
   served: number;
   /** Counts the portals passed, so the screen can cut the camera to the car's new place. */
   passes: number;
+  finished: boolean;
 }
 
 function pick_car(roll: number): Customer {
@@ -157,14 +172,17 @@ function pick_car(roll: number): Customer {
 }
 
 /** Pure: the same seed always gives the same cars at the same times, faster and faster. The first is waiting at the start. */
-export function schedule(seed: number, count = SCHEDULE): Arrival[] {
+export function schedule(seed: number, rules: Rules = ENDLESS): Arrival[] {
   const rng = create_rng(hash(seed, 0x7a1e));
   const list: Arrival[] = [];
+  const { bus: buses, rush } = rules;
   let at = 0;
-  let last_bus = -BUS_EVERY;
-  for (let i = 0; i < count; i++) {
-    if (i > 0) at += Math.round(lerp(START_GAP, MIN_GAP, Math.min(1, i / RAMP)) * (0.7 + 0.6 * rng()));
-    const bus = i >= BUS_FROM && i - last_bus >= BUS_EVERY && rng() < BUS_CHANCE;
+  let last_bus = buses && "every" in buses ? -buses.every : 0;
+  for (let i = 0; i < rules.arrivals; i++) {
+    const rushing = rush !== undefined && i >= rush.from && i < rush.from + rush.count;
+    const gap = rushing ? rush.gap : lerp(rules.start_gap, rules.min_gap, Math.min(1, i / rules.ramp));
+    if (i > 0) at += Math.round(gap * (0.7 + 0.6 * rng()));
+    const bus = !buses ? false : "at" in buses ? buses.at.includes(i) : i >= buses.from && i - last_bus >= buses.every && rng() < buses.chance;
     if (bus) last_bus = i;
     const vehicle = bus ? Vehicle.BUS : pick_car(rng());
     const stay = Math.round(bus ? lerp(50_000, 80_000, rng()) : lerp(70_000, 150_000, rng()));
@@ -309,7 +327,7 @@ export function create_game(shift: Shift): GameState {
   const state: GameState = {
     shift,
     street,
-    schedule: schedule(shift.seed),
+    schedule: schedule(shift.seed, shift.rules),
     next: 0,
     queue: [],
     tickets: [],
@@ -335,6 +353,7 @@ export function create_game(shift: Shift): GameState {
     tip: null,
     served: 0,
     passes: 0,
+    finished: false,
   };
   return tick(state, 0);
 }
@@ -490,16 +509,20 @@ export function leave(state: GameState): GameState {
 function hand_back(state: GameState): GameState {
   const ticket = state.job!.ticket;
   const amount = tip_for(ticket, state.ms);
+  const handed = state.handed + 1;
+  const finished = state.shift.level !== undefined && handed === state.schedule.length;
+  const status = finished ? Status.OVER : Status.STAND;
   return with_scene({
     ...state,
     tickets: state.tickets.filter((each) => each !== ticket),
     job: null,
     held: false,
-    status: Status.STAND,
-    resume: Status.STAND,
+    status,
+    resume: status,
+    finished,
     score: state.score + amount,
     tips: state.tips + amount,
-    handed: state.handed + 1,
+    handed,
     clean: ticket.dented ? 0 : state.clean + 1,
     tip: { amount, vehicle: ticket.vehicle, at: state.ms },
     walk: null,
@@ -578,19 +601,34 @@ export const result_schema = z.object({
   ms: z.number().nonnegative(),
   handed: z.number().int().nonnegative(),
   dents: z.number().int().nonnegative(),
+  stars: z.number().int().min(0).max(MAX_STARS).optional(),
 });
 export type Result = z.infer<typeof result_schema>;
-export const data_schema = z.object({ best: z.record(z.string(), result_schema) });
+// `levels` came in 4.10; a save from before has none.
+export const data_schema = z.object({ best: z.record(z.string(), result_schema), levels: levels_schema.default({}) });
 export type ValetData = z.infer<typeof data_schema>;
-export const EMPTY_DATA: ValetData = { best: {} };
+export const EMPTY_DATA: ValetData = { best: {}, levels: {} };
 
 export function shift_key(shift: Shift): string {
-  return shift.daily ? `daily:${shift.daily}` : "shifts";
+  if (shift.daily) return `daily:${shift.daily}`;
+  return shift.level !== undefined ? `level:${shift.level}` : "shifts";
 }
 
 export function better(a: Result | undefined, b: Result): boolean {
   if (!a) return true;
+  if ((b.stars ?? 0) !== (a.stars ?? 0)) return (b.stars ?? 0) > (a.stars ?? 0);
   return b.score !== a.score ? b.score > a.score : b.ms < a.ms;
+}
+
+export interface Goals {
+  target: number;
+  high: number;
+}
+
+/** A level's stars, each its own goal once the shift is done at the target: the higher target, and not one dent. */
+export function shift_stars(state: Pick<GameState, "finished" | "score" | "dents">, goals: Goals): number {
+  if (!state.finished || state.score < goals.target) return 0;
+  return 1 + (state.score >= goals.high ? 1 : 0) + (state.dents === 0 ? 1 : 0);
 }
 
 export interface Recorded {
@@ -600,14 +638,14 @@ export interface Recorded {
 }
 
 export function record(data: ValetData, shift: Shift, result: Result): Recorded {
-  const key = shift_key(shift);
-  const old = data.best[key];
-  const improved = better(old, result);
-  return { data: improved ? { best: { ...data.best, [key]: result } } : data, improved, first: old === undefined };
+  const kept = keep_best(data.best, shift_key(shift), result, better);
+  const levels = shift.level !== undefined && result.stars ? with_stars(data.levels, shift.level, result.stars) : data.levels;
+  return { data: { best: kept.bests, levels }, improved: kept.improved, first: kept.first };
 }
 
-export function result_of(state: GameState): Result {
-  return { score: final_score(state), ms: Math.round(state.ms), handed: state.handed, dents: state.dents };
+export function result_of(state: GameState, goals?: Goals): Result {
+  const result = { score: final_score(state), ms: Math.round(state.ms), handed: state.handed, dents: state.dents };
+  return goals ? { ...result, stars: shift_stars(state, goals) } : result;
 }
 
 export function countdown(ticket: Ticket, ms: number): number {

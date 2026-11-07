@@ -196,7 +196,8 @@ Run a valet stand on the open lot. Cars pull up at the stand on the south road, 
 - **Switch cars:** stuck behind the queue with a fetched car? Stop it in any free bay (a kerb bay counts) in **P** and press **L** (or **Leave it here**). It's parked again with its owner still waiting; walk back and take the next car, or fetch another.
 - A new car never pulls up on top of you: it waits at the end of the street until its place is clear.
 - **Enter** at the stand fetches if an owner is back, else takes the next car. Fetching while three wait is risky: the walk can let the fourth arrive.
-- **New** starts a random shift. **Daily** is the same lot and arrivals for everyone today, ranked by score; Game Hub lists it as Drive Hub · Valet.
+- **Levels:** 12 shifts with a set number of cars, picked in the toolbar. The bus, the garage floors below and a rush hour come in as you go. Hand every car back to finish; stars for reaching the target score, a higher one, and not a single dent. Each level opens the next.
+- **Endless** is a random shift that goes on until four wait; **New** starts another. **Daily** is the same lot and arrivals for everyone today, ranked by score; Game Hub lists it as Drive Hub · Valet.
 
 ## Airport
 

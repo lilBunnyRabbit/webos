@@ -12,13 +12,18 @@ import {
   can_fetch,
   change_gear,
   create_game,
+  data_schema,
   DENT_COST,
+  EMPTY_DATA,
+  ENDLESS,
   fetch,
   JobKind,
   leave,
   parked_in,
   QUEUE_LIMIT,
+  record,
   schedule,
+  shift_stars,
   start,
   Status,
   take,
@@ -28,7 +33,9 @@ import {
   walk_ms,
   type Customer,
   type GameState,
+  type Shift,
 } from "./game";
+import { has_floors, LEVELS, level_shift, type ShiftLevel } from "./levels";
 import { arrival_pose, build_street, overview, overview_focus, queue_poses } from "./street";
 
 const CUSTOMERS: readonly Customer[] = [Vehicle.HATCH, Vehicle.CITY, Vehicle.SUV, Vehicle.PICKUP, Vehicle.VAN, Vehicle.BUS];
@@ -75,7 +82,7 @@ describe("schedule", () => {
   });
 
   test("now and then the bus, never two close together", () => {
-    const buses = schedule(11, 200).flatMap((arrival, i) => (arrival.vehicle === Vehicle.BUS ? [i] : []));
+    const buses = schedule(11, { ...ENDLESS, arrivals: 200 }).flatMap((arrival, i) => (arrival.vehicle === Vehicle.BUS ? [i] : []));
     expect(buses.length).toBeGreaterThan(2);
     buses.slice(1).forEach((at, i) => expect(at - buses[i]).toBeGreaterThanOrEqual(8));
   });
@@ -277,36 +284,109 @@ function drive_ms(a: Vec, b: Vec): number {
   return ((Math.abs(a.x - b.x) + Math.abs(a.y - b.y)) / PAR_SPEED) * 1000 + MANOEUVRE;
 }
 
+function par_shift(shift: Shift, until = Infinity): { state: GameState; most: number } {
+  let state = start(create_game(shift));
+  let most = 0;
+  while (state.status !== Status.OVER && state.ms < until) {
+    most = Math.max(most, state.queue.length);
+    const owners = waiting(state);
+    if (owners.length && (state.queue.length < 2 || !state.queue.length)) {
+      state = fetch(state);
+      if (state.status !== Status.STAND && state.status !== Status.DRIVING) break;
+      if (state.status !== Status.DRIVING) continue;
+      const vehicle = state.job!.ticket.vehicle;
+      const from = { x: state.car.x, y: state.car.y };
+      state = tick(state, state.ms + drive_ms(from, centroid(state.street.returns.shape)));
+      if (state.status === Status.OVER) break;
+      state = change_gear(put(state, centred(state.street.returns, vehicle)), Gear.PARK);
+    } else if (state.queue.length) {
+      state = take(state);
+      const vehicle = state.job!.ticket.vehicle;
+      const from = { x: state.car.x, y: state.car.y };
+      const bay = free_bays(state, vehicle).sort((a, b) => drive_ms(from, centroid(a.shape)) - drive_ms(from, centroid(b.shape)))[0];
+      expect(bay, `seed ${shift.seed}: a free bay for the ${vehicle}`).toBeDefined();
+      state = tick(state, state.ms + drive_ms(from, centroid(bay.shape)));
+      if (state.status === Status.OVER) break;
+      state = change_gear(put(state, centred(bay, vehicle)), Gear.PARK);
+    } else state = tick(state, state.ms + 1000);
+  }
+  return { state, most };
+}
+
 describe("par valet", () => {
   test.each([1, 2, 3])("keeps the queue under the limit for five minutes on seed %i", (seed) => {
-    let state = start(create_game({ seed }));
-    let most = 0;
-    while (state.status !== Status.OVER && state.ms < 300_000) {
-      most = Math.max(most, state.queue.length);
-      const owners = waiting(state);
-      if (owners.length && (state.queue.length < 2 || !state.queue.length)) {
-        state = fetch(state);
-        if (state.status !== Status.STAND && state.status !== Status.DRIVING) break;
-        if (state.status !== Status.DRIVING) continue;
-        const vehicle = state.job!.ticket.vehicle;
-        const from = { x: state.car.x, y: state.car.y };
-        state = tick(state, state.ms + drive_ms(from, centroid(state.street.returns.shape)));
-        if (state.status === Status.OVER) break;
-        state = change_gear(put(state, centred(state.street.returns, vehicle)), Gear.PARK);
-      } else if (state.queue.length) {
-        state = take(state);
-        const vehicle = state.job!.ticket.vehicle;
-        const from = { x: state.car.x, y: state.car.y };
-        const bay = free_bays(state, vehicle).sort((a, b) => drive_ms(from, centroid(a.shape)) - drive_ms(from, centroid(b.shape)))[0];
-        expect(bay, `seed ${seed}: a free bay for the ${vehicle}`).toBeDefined();
-        state = tick(state, state.ms + drive_ms(from, centroid(bay.shape)));
-        if (state.status === Status.OVER) break;
-        state = change_gear(put(state, centred(bay, vehicle)), Gear.PARK);
-      } else state = tick(state, state.ms + 1000);
-    }
+    const { state, most } = par_shift({ seed }, 300_000);
     expect(state.status, `seed ${seed}: ended at ${Math.round(state.ms / 1000)} s`).not.toBe(Status.OVER);
     expect(most).toBeLessThan(QUEUE_LIMIT);
     expect(state.handed).toBeGreaterThan(0);
+  });
+
+  test.each(LEVELS.map((level, i) => [i + 1, level.name] as const))("holds level %i (%s) to three stars, and on two other streets to the target", (level) => {
+    const goals = LEVELS[level - 1];
+    const { state } = par_shift(level_shift(level));
+    expect(state.finished, `level ${level}: ended at ${Math.round(state.ms / 1000)} s with ${state.handed} handed back`).toBe(true);
+    expect(shift_stars(state, goals), `level ${level}: ${state.score} pts`).toBe(3);
+    for (const seed of [5, 6]) {
+      const other = par_shift({ ...level_shift(level), seed }).state;
+      expect(shift_stars(other, goals), `level ${level} seed ${seed}: ${other.score} pts, finished ${other.finished}`).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("levels", () => {
+  test("bring in the bus, the garage floors and a rush hour as they go, and grow", () => {
+    const first = (has: (level: ShiftLevel) => boolean) => LEVELS.findIndex(has) + 1;
+    expect(LEVELS[0].rules.bus).toBeNull();
+    expect(LEVELS[0].garage).toBe(false);
+    expect(first((level) => level.rules.bus !== null)).toBeGreaterThan(1);
+    expect(first((level) => level.garage)).toBeGreaterThan(first((level) => level.rules.bus !== null));
+    expect(first((level) => level.rules.rush !== undefined)).toBeGreaterThan(first((level) => level.garage));
+    expect(LEVELS.at(-1)!.rules.arrivals).toBeGreaterThan(LEVELS[0].rules.arrivals * 3);
+    LEVELS.forEach((level) => expect(level.high).toBeGreaterThan(level.target));
+  });
+
+  test("each level's street has garage floors exactly when the level brings them in, and its schedule the buses it names", () => {
+    LEVELS.forEach((level, i) => {
+      const shift = level_shift(i + 1);
+      expect(has_floors(shift.seed), level.name).toBe(level.garage);
+      const buses = schedule(shift.seed, level.rules).flatMap((arrival, at) => (arrival.vehicle === Vehicle.BUS ? [at] : []));
+      expect(buses, level.name).toEqual(level.rules.bus && "at" in level.rules.bus ? [...level.rules.bus.at] : []);
+    });
+  });
+
+  test("a rush brings its cars closer together", () => {
+    const rules = LEVELS.find((level) => level.rules.rush)!.rules;
+    const list = schedule(9, rules);
+    const gaps = list.slice(1).map((arrival, i) => arrival.at - list[i].at);
+    const { from, count, gap } = rules.rush!;
+    for (let i = from; i < from + count; i++) expect(gaps[i - 1]).toBeLessThanOrEqual(gap * 1.3);
+  });
+
+  test("the endless shift keeps its arrivals: the same seed gives the same cars as before levels", () => {
+    expect(schedule(5, ENDLESS)).toEqual(schedule(5));
+    expect(ENDLESS.arrivals).toBe(300);
+  });
+
+  test("a level ends when the last car is handed back; stars for the target, the higher one and no dents", () => {
+    const goals = { target: 50, high: 80 };
+    const done = { finished: true, dents: 0 };
+    expect(shift_stars({ ...done, score: 49 }, goals)).toBe(0);
+    expect(shift_stars({ ...done, score: 50, dents: 1 }, goals)).toBe(1);
+    expect(shift_stars({ ...done, score: 50 }, goals)).toBe(2);
+    expect(shift_stars({ ...done, score: 80, dents: 2 }, goals)).toBe(2);
+    expect(shift_stars({ ...done, score: 80 }, goals)).toBe(3);
+    expect(shift_stars({ finished: false, score: 200, dents: 0 }, goals)).toBe(0);
+  });
+
+  test("a level's best keeps more stars first, and its stars open the next", () => {
+    const shift = level_shift(1);
+    const one = record(EMPTY_DATA, shift, { score: 90, ms: 1000, handed: 4, dents: 1, stars: 2 });
+    expect(one.data.levels).toEqual({ 1: 2 });
+    const two = record(one.data, shift, { score: 60, ms: 1000, handed: 4, dents: 0, stars: 3 });
+    expect(two.improved).toBe(true);
+    expect(two.data.best["level:1"].stars).toBe(3);
+    expect(record(two.data, { seed: 1 }, { score: 10, ms: 1, handed: 1, dents: 0 }).data.levels).toEqual({ 1: 3 });
+    expect(data_schema.parse({ best: {} })).toEqual(EMPTY_DATA);
   });
 });
 

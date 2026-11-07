@@ -26,6 +26,9 @@ import { LEVELS as RODEO_LEVELS } from "./rodeo/progress";
 import test_game from "./test";
 import { LEVEL_COUNT as TEST_COUNT } from "./test/levels";
 import test_progress, { LEVELS as TEST_LEVELS } from "./test/progress";
+import valet_game from "./valet";
+import { LEVEL_COUNT as VALET_COUNT } from "./valet/levels";
+import valet, { LEVELS as VALET_LEVELS } from "./valet/progress";
 
 // The yard's progress modules carry their own counts so it never loads a game; these keep them in step with the games.
 describe("progress", () => {
@@ -40,6 +43,7 @@ describe("progress", () => {
     expect(RODEO_LEVELS).toBe(RODEO_COUNT);
     expect(F1_LEVELS).toBe(F1_COUNT);
     expect(TEST_LEVELS).toBe(TEST_COUNT);
+    expect(VALET_LEVELS).toBe(VALET_COUNT);
   });
 
   test("stars come from the save as it is on disk, and a bad one counts as none", () => {
@@ -51,6 +55,8 @@ describe("progress", () => {
     const pass = { passed: true, serious: 0, dangerous: 0, ms: 1000 };
     expect(test_progress.read({ best: { market: { ...pass, minors: 0 }, "level-4": { ...pass, minors: 7 }, school: { ...pass, passed: false, minors: 0 } } })).toEqual({ stars: 4, total: 36 });
     expect(test_progress.read({ best: { market: "bad" } })).toEqual({ stars: 0, total: 36 });
+    expect(valet.read({ best: { shifts: { score: 40, ms: 1, handed: 3, dents: 0 } } })).toEqual({ stars: 0, total: 36 });
+    expect(valet.read({ best: {}, levels: { 1: 3, 2: 1 } })).toEqual({ stars: 4, total: 36 });
   });
 
   test("an every-level achievement's goal is every level of the game", () => {
@@ -63,5 +69,6 @@ describe("progress", () => {
     expect(goal(rodeo_game, "rodeo-levels")).toBe(RODEO_COUNT);
     expect(goal(f1_game, "f1-levels")).toBe(F1_COUNT);
     expect(goal(test_game, "test-levels")).toBe(TEST_COUNT);
+    expect(goal(valet_game, "valet-levels")).toBe(VALET_COUNT);
   });
 });

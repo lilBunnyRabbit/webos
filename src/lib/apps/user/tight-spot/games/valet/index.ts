@@ -1,5 +1,6 @@
 import { Key as KeyIcon } from "phosphor-svelte";
 import { Building, define_game } from "../define";
+import { LEVELS } from "./progress";
 
 export default define_game({
   id: "valet",
@@ -13,7 +14,9 @@ export default define_game({
     { id: "valet-clean", title: "Not a scratch", text: "Hand back eight cars in a row without a dent.", goal: 8 },
     { id: "valet-hundred", title: "Big tipper", text: "Score 100 in one shift." },
     { id: "valet-daily", title: "Daily shift", text: "Work the daily shift." },
-    { id: "valet-ten-minutes", title: "Long shift", text: "Keep the stand going for ten minutes.", secret: true },
+    { id: "valet-levels", title: "Head valet", text: "Finish every Valet Rush shift level.", goal: LEVELS },
+    { id: "valet-ten-minutes", title: "Long shift", text: "Keep the endless stand going for ten minutes.", secret: true },
   ],
   load: () => import("./game.svelte"),
+  progress: () => import("./progress").then((module) => module.default),
 });

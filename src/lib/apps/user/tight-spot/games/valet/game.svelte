@@ -4,8 +4,11 @@
   import { random_seed } from "$lib/core/utils/random";
   import { cn } from "$lib/core/utils";
   import { Badge, BoardOverlay, Button, IconButton } from "$lib/core/components/ui";
-  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon } from "phosphor-svelte";
+  import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
+  import { z } from "zod";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done, unlocked } from "../../core/track";
   import { clamp_zoom, ease, fade, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "$kit/games/play2d/camera";
   import { type Palette } from "$kit/games/play2d/palette";
   import { veil } from "../../core/draw";
@@ -47,6 +50,7 @@
     record,
     result_of,
     shift_key,
+    shift_stars,
     spec_of,
     start,
     Status,
@@ -57,6 +61,7 @@
     type GameState,
     type Shift,
   } from "./game";
+  import { LEVEL_COUNT, LEVELS, level_shift } from "./levels";
   import { overview, overview_focus } from "./street";
 
   const OVERVIEW_MARGIN = 2;
@@ -64,15 +69,29 @@
   const DAILY_MODE = "valet";
   const SHOWN_TICKETS = 4;
   const NOTE_MS = 3500;
+  const Mode = { LEVELS: "levels", ENDLESS: "endless" } as const;
+  type Mode = (typeof Mode)[keyof typeof Mode];
+  const ENDLESS_PICK = "endless";
+  const DAILY_PICK = "daily";
+  const ENDLESS_OPTION = { value: ENDLESS_PICK, label: "Endless" };
+  const DAILY_OPTION = { value: DAILY_PICK, label: "Daily" };
 
-  const { settings, daily: daily_prop, menu, play, onexit }: GameProps = $props();
+  const { settings, prefs, daily: daily_prop, menu, play, onexit }: GameProps = $props();
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
   const data = storage.file("valet.json", EMPTY_DATA, data_schema);
   const input = new DriveInput();
+  const stored = z
+    .object({
+      "valet.mode": z.enum([Mode.LEVELS, Mode.ENDLESS]).catch(Mode.LEVELS),
+      "valet.level": z.number().int().min(1).max(LEVEL_COUNT).catch(1),
+    })
+    .parse(untrack(() => prefs.value));
 
   let daily = $state<string | null>(daily_day ?? null);
+  let mode = $state<Mode>(stored["valet.mode"]);
+  let level = $state(stored["valet.level"]);
   let game = $state.raw<GameState>(create_game(untrack(() => make_shift())));
   let new_best = $state(false);
   let first_run = $state(false);
@@ -102,6 +121,17 @@
   const can_pause = $derived(game.status === Status.READY || live || game.status === Status.PAUSED);
   const play_label = $derived(live ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const best = $derived(data.value.best[shift_key(game.shift)]);
+  const goals = $derived(game.shift.level !== undefined ? LEVELS[game.shift.level - 1] : null);
+  const max_level = $derived(unlocked(data.value.levels, LEVEL_COUNT));
+  const earned = $derived(goals ? shift_stars(game, goals) : 0);
+  const has_next_level = $derived(game.shift.level !== undefined && game.shift.level < LEVEL_COUNT);
+  const over_line = $derived.by(() => {
+    if (!goals || !game.finished) return `${QUEUE_LIMIT} cars waiting at the stand.`;
+    if (earned === 0) return `Every car back, short of ${goals.target} pts.`;
+    const missing = [final_score(game) < goals.high ? `${goals.high} pts` : null, game.dents ? "no dents" : null].filter(Boolean);
+    return missing.length ? `Every car back. ${missing.join(" and ")} for another star.` : "Every car back, and not a scratch.";
+  });
+  const title = $derived(game.shift.daily ? "Daily shift" : goals ? `Level ${game.shift.level} · ${goals.name}` : "Endless shift");
   const line = $derived(hint(game));
   const queue = $derived(queued(game));
   const owners = $derived(waiting(game));
@@ -136,6 +166,7 @@
 
   function make_shift(): Shift {
     if (daily) return { seed: daily_seed(daily, `${app_id}/${DAILY_MODE}`), daily };
+    if (mode === Mode.LEVELS) return level_shift(level);
     return { seed: random_seed() };
   }
 
@@ -272,14 +303,16 @@
 
   function finish(state: GameState) {
     release_all();
-    const result = result_of(state);
+    const level = state.shift.level;
+    const result = result_of(state, level !== undefined ? LEVELS[level - 1] : undefined);
     const done = record(data.value, state.shift, result);
     data.value = done.data;
     new_best = done.improved;
     first_run = done.first;
     sounds.parked(new_best && !first_run);
+    if (level !== undefined) achievements.progress("valet-levels", levels_done(done.data.levels));
     if (result.score >= 100) achievements.achieve("valet-hundred");
-    if (state.ms >= 600_000) achievements.achieve("valet-ten-minutes");
+    if (state.ms >= 600_000 && level === undefined) achievements.achieve("valet-ten-minutes");
     if (state.shift.daily) {
       play.daily(state.shift.daily, result.ms, result.score, DAILY_MODE);
       achievements.achieve("valet-daily");
@@ -289,15 +322,15 @@
   function settled(before: GameState, next: GameState) {
     input.reset();
     camera = null;
-    if (next.status === Status.OVER) return finish(next);
     if (next.handed > before.handed) {
       sounds.parked(false);
       const tip = next.tip!;
       achievements.achieve("valet-first");
       achievements.progress("valet-clean", next.clean);
       if (tip.vehicle === Vehicle.BUS && tip.amount > 0) achievements.achieve("valet-bus");
-      return;
     }
+    if (next.status === Status.OVER) return finish(next);
+    if (next.handed > before.handed) return;
     const parked = next.tickets.find((ticket) => ticket.id === before.job?.ticket.id);
     sounds.parked(false);
     if ((parked?.precision ?? 0) >= PERFECT) achievements.achieve("valet-precise");
@@ -368,7 +401,9 @@
     else if (driving && game.car.gear !== Gear.PARK && Math.abs(game.car.speed) < STANDING) shift(Gear.PARK);
     else if (over) {
       if (game.shift.daily) retry();
-      else new_shift();
+      else if (game.shift.level === undefined) new_shift();
+      else if (earned > 0 && has_next_level) next_level();
+      else retry();
     }
   }
 
@@ -389,6 +424,26 @@
 
   function new_shift() {
     daily = null;
+    load(make_shift());
+  }
+
+  function next_level() {
+    if (game.shift.level === undefined || !has_next_level) return;
+    level = Math.min(max_level, game.shift.level + 1);
+    prefs.value["valet.level"] = level;
+    load(make_shift());
+  }
+
+  function set_pick(next: string) {
+    if (next === DAILY_PICK) return;
+    daily = null;
+    if (next === ENDLESS_PICK) mode = Mode.ENDLESS;
+    else {
+      mode = Mode.LEVELS;
+      level = Math.max(1, Math.min(LEVEL_COUNT, Number(next)));
+      prefs.value["valet.level"] = level;
+    }
+    prefs.value["valet.mode"] = mode;
     load(make_shift());
   }
 
@@ -501,11 +556,28 @@
   }
 </script>
 
+{#snippet star_row(count: number, reveal: boolean)}
+  <span class="inline-flex items-center gap-0.5" role="img" aria-label="{count} of 3 stars">
+    {#each [1, 2, 3] as n (n)}
+      <span class={cn("inline-grid", n <= count ? "text-primary" : "text-foreground/20", reveal && n <= count && "ts-star")} style:animation-delay={reveal ? `${n * 140}ms` : undefined}>
+        <StarIcon weight="fill" class="size-4" />
+      </span>
+    {/each}
+  </span>
+{/snippet}
+
 {#snippet toolbar()}
   {@render menu?.()}
-  {#if daily}
-    <span class="truncate px-1.5 text-ui font-medium">Daily · {daily}</span>
-  {/if}
+  <TrackPicker
+    class="w-[8.5rem] min-w-0 @md:w-44"
+    label="Shift"
+    before={daily ? [DAILY_OPTION, ENDLESS_OPTION] : [ENDLESS_OPTION]}
+    open={Math.max(max_level, mode === Mode.LEVELS ? level : 1)}
+    stars={(at) => data.value.levels[at] ?? 0}
+    name={(at) => `${at}. ${LEVELS[at - 1].name}`}
+    value={daily ? DAILY_PICK : mode === Mode.LEVELS ? String(level) : ENDLESS_PICK}
+    onpick={set_pick}
+  />
   <div class="flex-1"></div>
   {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}
   <SettingsPanel {settings} {input} bind:panel={settings_panel} onmute={() => sounds.quiet()} onfocus={focus_board} />
@@ -515,7 +587,7 @@
   <IconButton size="sm" class="hidden @md:inline-flex" label="Restart this shift" onclick={retry}>
     <ArrowCounterClockwiseIcon weight="bold" />
   </IconButton>
-  {#if !daily}<Button size="sm" variant="primary" onclick={new_shift}>New</Button>{/if}
+  {#if !daily && mode === Mode.ENDLESS}<Button size="sm" variant="primary" onclick={new_shift}>New</Button>{/if}
 {/snippet}
 
 {#snippet queue_strip(class_name: string)}
@@ -551,8 +623,9 @@
 
 {#snippet score_chip(class_name: string)}
   <div class={cn("rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", class_name)}>
-    <span>{game.score}</span>
+    <span>{game.score}{#if goals}<span class="text-foreground/60">/{goals.target}</span>{/if}</span>
     <span class="text-foreground/60"> pts</span>
+    {#if goals}<span class="text-foreground/60"> · {game.handed}/{game.schedule.length} cars</span>{/if}
     <span class={cn(game.dents ? "text-error" : "text-foreground/60")}> · {game.dents} {game.dents === 1 ? "dent" : "dents"}</span>
   </div>
 {/snippet}
@@ -620,9 +693,19 @@
   {#if game.status === Status.READY}
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 flex-1 basis-52">
-        <p class="text-base font-semibold">{game.shift.daily ? "Daily shift" : "Valet Rush"}</p>
-        <p class="text-ui text-foreground/80">Park each car in any free bay and fetch it when its owner is back. Four waiting at the stand ends the shift.</p>
-        <p class="mt-0.5 text-2xs text-foreground/65">A touch is a dent: −{DENT_COST} and that car's tip is gone, but the shift goes on.</p>
+        <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
+          <span>{title}</span>
+          {#if game.shift.level !== undefined}{@render star_row(data.value.levels[game.shift.level] ?? 0, false)}{/if}
+        </p>
+        {#if goals}
+          <p class="text-ui text-foreground/80">
+            {game.schedule.length} cars{goals.rules.bus ? ", a bus among them" : ""}{goals.rules.rush ? ", and a rush when they come close together" : ""}. Park each in any free bay and hand it back when its owner returns. Four waiting at the stand ends the shift.
+          </p>
+          <p class="mt-0.5 text-2xs text-foreground/65">Stars: {goals.target} pts, {goals.high} pts, and not one dent. A dent is −{DENT_COST} and that car's tip.</p>
+        {:else}
+          <p class="text-ui text-foreground/80">Park each car in any free bay and fetch it when its owner is back. Four waiting at the stand ends the shift.</p>
+          <p class="mt-0.5 text-2xs text-foreground/65">A touch is a dent: −{DENT_COST} and that car's tip is gone, but the shift goes on.</p>
+        {/if}
         {#if best}<p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">Best {best.score} · {best.handed} handed back</p>{/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
@@ -662,21 +745,34 @@
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 flex-1 basis-52">
         <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
-          Shift over: {final_score(game)} pts
-          {#if new_best}<Badge class="ts-pop" tone={first_run ? "neutral" : "primary"}>{first_run ? "First shift" : "New best"}</Badge>{/if}
+          {game.finished ? "Shift done" : "Shift over"}: {final_score(game)} pts
+          {#if goals}{@render star_row(earned, true)}{/if}
+          {#if new_best}<Badge class="ts-pop" tone={first_run ? "neutral" : "primary"}>{first_run ? (goals ? "First try" : "First shift") : "New best"}</Badge>{/if}
         </p>
-        <p class="text-ui text-foreground/80">{QUEUE_LIMIT} cars waiting at the stand.</p>
+        <p class="text-ui text-foreground/80">{over_line}</p>
         <p class="font-mono text-2xs text-foreground/80 tabular-nums">
           {time} · {game.served} parked · {game.handed} handed back · tips {game.tips} · {game.dents} {game.dents === 1 ? "dent" : "dents"}
         </p>
         {#if best && !new_best}<p class="font-mono text-2xs text-foreground/65 tabular-nums">Best {best.score}</p>{/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
-        <Button variant="quiet" onclick={retry}>Again</Button>
-        {#if !game.shift.daily}<Button variant="primary" onclick={new_shift}>New shift</Button>{/if}
+        {#if game.shift.daily}
+          <Button variant="primary" onclick={retry}>Again</Button>
+        {:else if goals}
+          {#if earned > 0 && has_next_level}
+            <Button variant="quiet" onclick={retry}>Again</Button>
+            <Button variant="primary" onclick={next_level}>Next level</Button>
+          {:else}
+            <Button variant="primary" onclick={retry}>Again</Button>
+          {/if}
+        {:else}
+          <Button variant="quiet" onclick={retry}>Again</Button>
+          <Button variant="primary" onclick={new_shift}>New shift</Button>
+        {/if}
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        {#if !game.shift.daily}<KeyHint key_name="Enter" text="new shift" />{/if}
+        {#if !game.shift.daily && !goals}<KeyHint key_name="Enter" text="new shift" />{/if}
+        {#if goals && earned > 0 && has_next_level}<KeyHint key_name="Enter" text="next level" />{/if}
         <KeyHint key_name="R" text="again" />
       </p>
     </RoundCard>
@@ -684,10 +780,10 @@
 {/snippet}
 
 {#snippet status()}
-  <span>{game.shift.daily ? `Daily · ${game.shift.daily}` : "Valet Rush"}</span>
+  <span>{game.shift.daily ? `Daily · ${game.shift.daily}` : goals ? `Level ${game.shift.level}` : "Endless"}</span>
   <span class="tabular-nums">{time}</span>
-  <span class="tabular-nums">{game.score} pts</span>
-  <span class="tabular-nums">Handed back {game.handed}</span>
+  <span class="tabular-nums">{game.score}{goals ? `/${goals.target}` : ""} pts</span>
+  <span class="tabular-nums">{goals ? `${game.handed}/${game.schedule.length} back` : `Handed back ${game.handed}`}</span>
   <span class="hidden @5xl:inline">T takes a car · F fetches one · P or Space parks · L leaves a fetched car in its bay · Esc pauses · + − zoom</span>
 {/snippet}
 
@@ -720,9 +816,32 @@
     animation: var(--animate-pop-in) 520ms both;
   }
 
+  .ts-star {
+    animation: ts-star 380ms var(--ease-out) both;
+  }
+
+  @keyframes ts-star {
+    from {
+      opacity: 0;
+      scale: 0.3;
+    }
+    60% {
+      opacity: 1;
+      scale: 1.25;
+    }
+    to {
+      scale: 1;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .ts-star,
     :global(.ts-pop) {
       animation-delay: 0ms !important;
     }
+  }
+
+  :global(html[data-motion="off"]) .ts-star {
+    animation-delay: 0ms !important;
   }
 </style>

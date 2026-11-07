@@ -44,6 +44,11 @@ export const CHANGELOG: Release[] = [
         apps: ["tight-spot"],
         text: "Drive Hub's Driving Test has 12 levels with stars for a clean drive, random routes through the town and a daily test.",
       },
+      {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub's Valet Rush has 12 shift levels with target scores and stars, bringing in the bus, the garage floors and a rush hour; the endless shift stays.",
+      },
     ],
   },
   {
