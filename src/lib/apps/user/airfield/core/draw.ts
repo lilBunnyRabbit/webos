@@ -4,7 +4,7 @@ import { begin_frame, type View } from "$kit/games/play2d/canvas";
 import type { Palette } from "$kit/games/play2d/palette";
 import { hash } from "$kit/games/play2d/seed";
 import { field_copies, home_x, type Field } from "./field";
-import { facing, type BodyPoint, type Coefficients, type Plane } from "./plane";
+import { facing, point_at, type BodyPoint, type Coefficients, type Plane } from "./plane";
 
 export interface Scenery {
   horizon: string;
@@ -539,7 +539,8 @@ const ELEVATOR_HINGE: BodyPoint = { x: -4.42, z: 0.48 };
 const MAIN_AXLE: BodyPoint = { x: 0.35, z: -0.7 };
 const TYRE = disc(MAIN_AXLE, 0.3);
 const HUB = disc(MAIN_AXLE, 0.12, 10);
-const TAIL_TYRE = disc({ x: -4.6, z: -0.1 }, 0.1, 10);
+const TAIL_AXLE: BodyPoint = { x: -4.6, z: -0.1 };
+const TAIL_TYRE = disc(TAIL_AXLE, 0.1, 10);
 const PROP_HUB: BodyPoint = { x: 2.12, z: 0.15 };
 const TRACK = 0.9;
 const TYRE_HALF = 0.12;
@@ -558,6 +559,16 @@ function draw_plane(ctx: CanvasRenderingContext2D, f: Frame) {
   const flap_down = plane.flaps > 0.02;
   const elevator_tip = hinged(ELEVATOR_HINGE, 0.48, -plane.elevator * 0.45);
   const rod_width = Math.max(0.07, hair(view, 1.5));
+  // The springs let a contact point sink below the ground; the tyre is drawn lifted back onto it and the leg shortened.
+  const lift = (contact: BodyPoint) => {
+    const sunk = Math.max(0, -point_at(plane, contact).height);
+    return (p: BodyPoint): BodyPoint => ({ x: p.x + sunk * Math.sin(plane.pitch), z: p.z + sunk * Math.cos(plane.pitch) });
+  };
+  const main_up = lift(f.c.spec.gear.main);
+  const tail_up = lift(f.c.spec.gear.tail);
+  const axle = main_up(MAIN_AXLE);
+  const tyre = TYRE.map(main_up);
+  const hub_disc = HUB.map(main_up);
 
   const half = (sign: number) => {
     const first = sign !== near;
@@ -570,14 +581,14 @@ function draw_plane(ctx: CanvasRenderingContext2D, f: Frame) {
       solid(ctx, paint.roof, edge, palette.edge);
     };
     const gear = () => {
-      rod(ctx, plane, { x: 0.8, z: -0.38 }, sign * 0.3, MAIN_AXLE, sign * TRACK, rod_width, palette.ink);
-      rod(ctx, plane, { x: -0.1, z: -0.34 }, sign * 0.3, MAIN_AXLE, sign * TRACK, rod_width, palette.ink);
+      rod(ctx, plane, { x: 0.8, z: -0.38 }, sign * 0.3, axle, sign * TRACK, rod_width, palette.ink);
+      rod(ctx, plane, { x: -0.1, z: -0.34 }, sign * 0.3, axle, sign * TRACK, rod_width, palette.ink);
       ctx.beginPath();
-      swept(ctx, plane, TYRE, sign * (TRACK - TYRE_HALF), sign * (TRACK + TYRE_HALF));
+      swept(ctx, plane, tyre, sign * (TRACK - TYRE_HALF), sign * (TRACK + TYRE_HALF));
       solid(ctx, palette.ink, edge, palette.edge);
       if (!first) {
         ctx.beginPath();
-        swept(ctx, plane, HUB, sign * (TRACK + TYRE_HALF));
+        swept(ctx, plane, hub_disc, sign * (TRACK + TYRE_HALF));
         ctx.fillStyle = palette.steel;
         ctx.fill();
       }
@@ -603,9 +614,9 @@ function draw_plane(ctx: CanvasRenderingContext2D, f: Frame) {
   };
 
   half(-near);
-  rod(ctx, plane, { x: -4.25, z: 0.08 }, 0, { x: -4.6, z: -0.1 }, 0, rod_width, palette.ink);
+  rod(ctx, plane, { x: -4.25, z: 0.08 }, 0, tail_up(TAIL_AXLE), 0, rod_width, palette.ink);
   ctx.beginPath();
-  swept(ctx, plane, TAIL_TYRE, -0.05, 0.05);
+  swept(ctx, plane, TAIL_TYRE.map(tail_up), -0.05, 0.05);
   solid(ctx, palette.ink, edge, palette.edge);
 
   ctx.beginPath();

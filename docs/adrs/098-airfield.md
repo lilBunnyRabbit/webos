@@ -100,3 +100,10 @@ The owner saw no point in the scripted bank turn. It replaces the "Turning round
 Rejected:
 - **A loop to turn round:** the trainer barely has the energy for one, and the airliner can't loop.
 - **Keeping the bank turn:** it animates a 3D move the player doesn't control, and it reads oddly side-on.
+
+## Revision 2026-11-07: stick shaping and weight feel
+From the weight-feel audit ([brainstorm](../brainstorm/2026-11-07_plane-sim.md), "Weight feel"). It changes what W/S do:
+- **W/S move the stick progressively**, at 0.7 per second, not straight to a deflection: a tap is a nudge, a 1.5 s hold at cruise pulls about 2 g. The brainstorm said about 1 per second; 1 per second reaches full stick in 1 s and 2.5 g, so the rate was set by the 2 g target. Let go and it springs back to the trim as before.
+- **Every pitch input goes through an expo** (`0.6 s³ + 0.4 s`): keys, the touch pad and the mouse drag alike. Pad and mouse stay direct.
+- **The model** gains feel fields `stall_bob`, `stall_sink`, `gear_sag` and `tail_up_speed`, solved in `coefficients()`, and the trim includes the prop wash. To make a mush reachable with the 30 °/s pitch rate, the stall break (`cm_stall`) is the bob's lever and the short-period damping ratio went from 0.55 to 0.8; extra pitch damping once the flow separates, the audit's other lever, deepened the stall in this model and was left out.
+- **Camera** eases height slower than distance, through an optional `rate_y` on the kit's `ease`; Harbour and Drive Hub keep the default.

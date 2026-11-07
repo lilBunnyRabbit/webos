@@ -8,7 +8,7 @@ A small airfield seen from the side, at real scale: the hangar and the apron on 
 ## Flying
 
 - **Throttle**: **Shift** (or **E**) opens it a notch, **Ctrl** (or **Q**) closes one: Idle, Quarter, Half, Cruise, Full. The engine takes a moment to answer.
-- **Pitch**: **W** and **S** (or **↑** **↓**) move the stick; let go and it springs back to the trim. A tap is a nudge, a held key goes all the way. Or drag up and down on the board with the mouse.
+- **Pitch**: **W** and **S** (or **↑** **↓**) move the stick, gradually: a tap is a nudge, holding a key pulls harder the longer you hold it. Let go and it springs back to the trim. Or drag up and down on the board with the mouse. Small movements are fine and gentle, the last of the travel is strong.
 - **T** trims: the plane then holds the speed it has now, hands off.
 - **F** lowers the flaps a notch (Half, Full), **V** raises them. Flaps lift more at low speed and drag more: Half for takeoff, Full for landing.
 - **B** brakes, harder the longer you hold it. Hard brakes at speed tip a taildragger onto its nose, so keep the stick back.

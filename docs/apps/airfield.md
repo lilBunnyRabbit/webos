@@ -24,11 +24,11 @@ A side-view takeoff and landing sim at real scale. Wave 1 of three (ADR-098 "Bui
 1. **Actuators.** Spool approaches `idle + (1 − idle) × throttle` with `engine_lag`; the elevator follows `trim + stick` (clamped to ±1) with `elevator_lag`; flaps travel at `1 / flap_time`.
 2. **Air.** Air velocity is ground velocity minus `Env.wind` (along +x) and `Env.updraft`. `u` is its component along the heading, `w` the vertical; `γ = atan2(w, u)` and the wing's angle of attack `α = pitch + incidence − γ`. Wave 1 flies `CALM`; the plumbing is there for wave 2's wind, gusts and thermals.
 3. **Lift.** `CL = a(α − α0)` with `a = 2π·AR/(AR + 2)`, rounded over 2° before the peak (`ROUND`), then broken: past the peak it falls to 60 % of `cl_max` within a few degrees (`STALL_BREAK`), blending into a flat plate (`1.1 sin 2α`) beyond about 35°. Mirrored below `CL_MIN`. Flaps add `flap_cl × flaps`, halved once the flow has separated. Ground effect adds up to 8 % lift.
-4. **Drag.** `CD = CD0 + gear + flap_drag × flaps + k·φ·CL² + 1.2 sin²α × separation`, `k = 1/(π e AR)` and `φ = (16h/b)² / (1 + (16h/b)²)` the induced drag left at wing height `h` (McCormick), so inside a span the wing floats.
+4. **Drag.** `CD = CD0 + gear + flap_drag × flaps + k·φ·CL² + cd_stall sin²α × separation`, `k = 1/(π e AR)` and `φ = (16h/b)² / (1 + (16h/b)²)` the induced drag left at wing height `h` (McCormick), so inside a span the wing floats.
 5. **Thrust** along the fuselage: `T = thrust × spool × (1 − V/zero_thrust)`, falling with airspeed like a fixed-pitch prop.
 6. **Forces** in the heading's vertical plane: thrust along the pitch, drag against the air, lift square to it. There is no bank: the air model is 2D, pitch, power and energy.
-7. **Pitch moment.** `q̄Sc (Cm0 + Cmα sin α + flap_pitch × flaps + cm_stall × separation)` plus the elevator `(q̄ + 0.35 T / prop disc) S c cm_elevator × elevator` (prop wash gives the tail authority at taxi speeds) plus damping `¼ρVSc² cm_q q`.
-8. **Gear.** Main and tail wheels are spring-dampers on their body points (main ω 12 rad/s on the mass, tail ω 22 rad/s on the inertia over the tail arm, damping ratio 0.7), with rolling friction (`ROLL_ASPHALT` 0.025, grass 0.05, the tail wheel twice that) and brakes on the mains, smoothed over 0.3 m/s. Their forces act at the wheels, so a braking main wheel below and ahead of the centre of gravity pitches the nose down: hard brakes with the tail light tip it over. Standing still the plane holds when friction can.
+7. **Pitch moment.** `q̄Sc (Cm0 + Cmα sin α + flap_pitch × flaps + cm_stall × separation)` plus the elevator `(q̄ + prop_wash × T / prop disc) S c cm_elevator × elevator` (prop wash gives the tail authority at taxi speeds) plus damping `¼ρVSc² cm_q q`. `elevator_for` and the T key trim with the same wash (`wash_ratio`, `wash_now`), so a plane trimmed at cruise or slow holds its attitude hands off.
+8. **Gear.** Main and tail wheels are spring-dampers on their body points. The mains are a bungee: ω `√(g / gear_sag)` on the mass (9 rad/s for 0.12 m of sag), damping ratio 0.3 acting only while the leg compresses and ramped in over its first 6 cm, so first contact has no spike and a firm landing rebounds. The tail wheel is ω 22 rad/s on the inertia over the tail arm, damping 0.7 both ways. Rolling friction (`ROLL_ASPHALT` 0.025, grass 0.05, the tail wheel twice that) and brakes on the mains, smoothed over 0.3 m/s. Their forces act at the wheels, so a braking main wheel below and ahead of the centre of gravity pitches the nose down: hard brakes with the tail light tip it over. Standing still the plane holds when friction can.
 9. **Heading.** On the ground the wheels kill sideways slip, and below 6 m/s the plane pivots toward the wanted facing (`Input.facing`) at 34 °/s; a pivot under way finishes even if the plane speeds up, so it never leaves the ground half turned. In the air the plane flies the way it faces: `facing` is ignored, `vz` is zero, and a pivot somehow left unfinished squares up to the nearest way at the same rate.
 
 ### Specs by feel
@@ -41,11 +41,16 @@ A side-view takeoff and landing sim at real scale. Wave 1 of three (ADR-098 "Bui
 | `glide` | `CD0` | best `L/D` over airspeed at idle, flaps up (`measure_glide`) |
 | `climb`, `cruise` | `thrust`, `zero_thrust` | best steady climb at full throttle (`measure_climb`) and level speed at the Cruise detent, 0.75 (`measure_level`); nested bisection, three rounds with the glide since idle thrust feeds it |
 | `trim_speed` | `Cm0` | zero elevator holds level flight at that speed |
-| (stall reach) | `cm_elevator` | full back stick holds 2.3° past the peak, so the wing can be stalled |
-| `pitch_rate` | pitch inertia | peak pitch rate in 2 s of full back stick from trimmed level flight (`measure_pitch_rate`); `cm_q` follows from a 0.55 damping ratio at the trim speed |
+| (stall reach) | `cm_elevator` | full back stick holds 1° past the peak, so the wing stalls and mushes |
+| `pitch_rate` | pitch inertia | peak pitch rate in 2 s of full back stick from trimmed level flight (`measure_pitch_rate`); `cm_q` follows from a 0.8 damping ratio at the trim speed |
+| `tail_up_speed` | `prop_wash` | ground speed where full throttle and half forward stick lift the tail (`measure_tail_up`, settled first, tail off for 0.3 s) |
+| `stall_bob`, `stall_sink` | `cm_stall`, `cd_stall` | full back stick at idle for 25 s from trimmed level flight at 1.15 × stall, from 10 s on: the pitch swing and the mean sink (`measure_stall_hold`); `cm_elevator` is re-solved with the break so the hold stays 1° past the peak |
+| `gear_sag` | main gear ω | `√(g / sag)` |
+
+The solve runs four rounds of pitch inertia, prop wash and the stall pair, since each feeds the others (the break raises `cm_elevator`, which the pitch-rate solve answers with inertia), then pins the pitch rate once more.
 | `rollout` | brake friction | ground roll from touchdown at 1.05 × flap stall, idle, full flaps, stick back, half brakes (`measure_rollout`) |
 
-`plane.test.ts` re-measures every feel number within 3 % and checks the hands-off takeoff (tail up, then airborne by itself), the stall's nose drop, the nose-over on hard brakes with the stick forward, that the facing input does nothing in the air while the ground pivot turns the plane round. `field.test.ts` checks the wrap.
+`plane.test.ts` re-measures every feel number within 3 % (the bob within 10 %) and checks: the touchdown at 2.2 m/s (the gear's design sink) stays at or under 3.5 g; the phugoid (`measure_phugoid`, a 3 m/s kick at the trim speed) has a period of 16 s ± 15 % and damping 0.05–0.15; trimmed hands off at cruise and at 20 m/s the pitch rate after 2 s is under 0.1 °/s; a held key pulls about 2 g in 1.5 s at cruise; full forward stick at full throttle doesn't tip it over before 8 m/s; the hands-off takeoff (tail up, then airborne by itself), the stall's nose drop, the nose-over on hard brakes with the stick forward, and that the facing input does nothing in the air while the ground pivot turns the plane round. `field.test.ts` checks the wrap.
 
 ### The trainer
 
@@ -59,13 +64,19 @@ A light taildragger, 600 kg, 10.7 m span, 16.6 m², fixed gear, three-point atti
 | Cruise (0.75 throttle) | 34 m/s (66 kn) | 34.0; full throttle 39.6 m/s |
 | Hands-off speed | 25 m/s | 25.0 |
 | Peak pitch rate | 30 °/s | 30.0 |
-| Roll-out, half brakes | 120 m | 120; full brakes, stick back 83 m |
-| Take-off roll, full throttle hands off | not a spec | 149 m to 22.9 m/s (half flaps), 168 m to 24.9 m/s (flaps up) |
+| Roll-out, half brakes | 120 m | 120 |
+| Stall held at idle: pitch swing, sink | 9°, 4.5 m/s | 8.7°, 4.50 m/s; the angle of attack tops out 2° past the peak |
+| Tail-up speed, half forward stick | 11 m/s | 11.1 |
+| Gear sag | 0.12 m | stroke 6 / 11 / 15 cm and 1.4 / 2.3 / 3.2 g at 0.6 / 1.5 / 2.2 m/s sink; rebound 1 / 10 / 17 cm |
+| Phugoid at the trim speed | 16 s ± 15 %, damping 0.05–0.15 | 18.4 s, 0.14 |
+| Trimmed hands off, 2 s on | under 0.1 °/s | 0.000 at 34 and 20 m/s |
+| A held key for 1.5 s at cruise | about 2 g | 2.0 |
+| Take-off roll, full throttle hands off | not a spec | 144 m to 22.6 m/s (half flaps), 162 m to 24.6 m/s (flaps up) |
 | Float in ground effect | not a spec | 50 m from 1.3 to 1.05 × flap stall |
 
-Solved: `cl_max` 1.79, `flap_cl` 0.48, `CD0` 0.068 (plus 0.01 gear), static thrust 1.81 kN, zero-thrust speed 164 m/s, pitch inertia 2,490 kg·m², brake friction 0.2. Deriving takes 0.3–0.45 s in Node.
+Solved: `cl_max` 1.79, `flap_cl` 0.47, `CD0` 0.068 (plus 0.01 gear), static thrust 1.81 kN, zero-thrust speed 164 m/s, pitch inertia 2,450 kg·m², `cm_stall` −1.0, `cd_stall` 4.9, `prop_wash` 0.26, main gear ω 9.0 rad/s, brake friction 0.2. Deriving takes about 0.45 s in Node.
 
-Yanked full back at idle from 25 m/s (Node, `step_plane`): the nose rises to 40°, the wing breaks past 21° angle of attack and runs on to 40° as the plane sinks, the nose falls through the horizon to −19° and it bottoms out 38 m below the top before it flies again, then repeats while the stick stays back. Let go after 6 s and it dives to −23° and levels out 81 m below the top. A firm touchdown bounces: the mains sit ahead of the centre of gravity, so the impact pitches the nose up (2.1 m/s down gives about 1.4 m/s back up), as on a real taildragger.
+Stalled from slow flight, full back stick held, the trainer mushes: nose a few degrees up, the wing just past its peak, about 4.5 m/s down, a small bob. Yanked full back at idle from 25 m/s instead (Node, `step_plane`), the zoom carries it further: the nose rises to 36°, the angle of attack overshoots to 33°, the nose drops to −32° and it loses 76 m in 20 s before it settles into the mush. A firm touchdown bounces off the bungee gear: the mains sit ahead of the centre of gravity, so the impact also pitches the nose up, as on a real taildragger.
 
 ### Flight and grading
 
@@ -96,7 +107,7 @@ Real scale. The span across the board's shorter side is `34 + 1.2 × min(h, 80) 
 | Phone upright, board 375 × 515 | 98 px | 67 | 55 | 55 | 55 | 43 | 35 |
 | Phone sideways, board 844 × 330 | 66 px | 55 | 55 | 55 | 55 | 43 | 35 |
 
-The ground comes into view at about 20 m on the way down, so the last of the final and the flare have the runway in sight. The camera looks 1.2 s ahead and keeps the ground at about a third of the clear height below the middle until the plane is higher than that. A tall board (height over 1.3 × width, a phone held upright) starts the span at 26 instead of 34 and keeps the ground 0.14 of the clear height below the middle, so on the apron the plane is bigger and sits above the bottom edge instead of on it. Pinch, the wheel and + − zoom on top. The first-flight hint sits under the HUD, beside the approach profile (under it on a tall board), clear of the plane, and names the pitch direction of the current Pitch setting.
+The ground comes into view at about 20 m on the way down, so the last of the final and the flare have the runway in sight. The camera eases at 6 a second along the view but at 2.9 vertically (the kit's `ease` with a `rate_y`), so the plane is seen to sink, float and balloon in the frame. A jolt on the wheels shakes the view (3 px per g over 1.3 g, dying away in about 0.1 s), and a separated wing buffets it (up to 1.6 px), so a touchdown and a stall are felt. The camera looks 1.2 s ahead and keeps the ground at about a third of the clear height below the middle until the plane is higher than that. A tall board (height over 1.3 × width, a phone held upright) starts the span at 26 instead of 34 and keeps the ground 0.14 of the clear height below the middle, so on the apron the plane is bigger and sits above the bottom edge instead of on it. Pinch, the wheel and + − zoom on top. The first-flight hint sits under the HUD, beside the approach profile (under it on a tall board), clear of the plane, and names the pitch direction of the current Pitch setting.
 
 The plane is drawn from its body points projected through pitch and heading, in the house style of the cars and boats: rounded fills in the player paint (corner cutting on a few written points), one `palette.edge` outline of 1.25 px (at least 3.5 cm) round the outside, `roof` for cowling and cheat line, `glass` windows, a `shadow` belly. Each part is a side outline swept across a lateral range (fuselage ±its half width, narrowing to the tail; each wing half from the root to its tip; tailplane, tyres), and the swept pieces of one part are wound one way and filled with nonzero, so side on they collapse to the profile and through the ground pivot the fuselage shows its width and the wing its span. Far wing, strut pair, gear leg and tyre draw before the fuselage and the near ones after. Elevator and flaps are drawn at their actual deflection, swept across their span; a lowered flap is dark (`ink`) and at least 7 px long so it reads when zoomed out, and the HUD flaps chip carries a gauge of the actual flap travel. The prop is a disc on the projected hub axes that blurs with spool (edge-on side on, round head on). Trees are a trunk and a crown of three circles (or a stacked conifer, one in three) drawn as one outlined shape with a shaded underside; the hangar is a corrugated shed with a door and an office annex; the windsock is an orange and light striped sock on a pole; clouds are domes filled as one path so overlaps don't darken. Hills are a screen-space backdrop (a real-scale hill would fill the view when zoomed in) drifting at 0.08 and 0.25 px per metre; with the ground below the view they sink 0.06 and 0.12 px for each pixel it is below the bottom edge, so a climb drops them away. The sky is a gradient in the world from a pale `horizon` at the ground to the `sky` colour at 700 m, so height shows as the sky deepening. Clouds come in four layers (`CloudLayer`), each with its own camera moving `depth` as far as the real one, sized by it too, so the layers pass at different speeds: far heaps and wisps (depth 0.3, 80–900 m) behind the far hills, mid ones (0.6, 50–500 m) between the hills, big heaps at 220–1000 m and low wisps every 20 m or so at 35–220 m beside the plane (depth 1), which stream past at its ground speed. The approach profile, top right, maps 3 km either side of the runway and 0–300 m into a small box with 3° glidepaths to both ends. The HUD chip "Runway" gives the distance to the near end of the runway ahead when airborne, round the wrap (`runway_ahead`).
 
@@ -105,7 +116,7 @@ The plane is drawn from its body points projected through pitch and heading, in 
 | Action | Keys | Touch | Mouse |
 |---|---|---|---|
 | Throttle | Shift / E up a notch, Ctrl / Q down (Idle, Quarter, Half, Cruise, Full) | the kit's `Lever`, left | |
-| Pitch | W/S or ↑/↓: the stick moves at 2.5 /s while held, springs back at 5 /s | the pitch pad, right: drag from where the finger lands, back to centre on `lostpointercapture` | vertical drag on the board, released on `lostpointercapture` |
+| Pitch | W/S or ↑/↓: the stick moves at 0.7 /s while held (`core/stick.ts`), so a tap is a nudge and a 1.5 s hold at cruise pulls about 2 g; it springs back to the trim at 5 /s. Every input, keys, pad and mouse, goes through an expo (`0.6 s³ + 0.4 s`): fine near the centre, full throw at the end | the pitch pad, right: drag from where the finger lands, back to centre on `lostpointercapture` | vertical drag on the board, released on `lostpointercapture` |
 | Trim | T: trims for the current angle of attack (`elevator_for`) | Trim button | |
 | Flaps | F down a notch, V up (Up, Half, Full) | Flaps ▲ ▼ | |
 | Brakes | B held: ramps to full over 0.8 s | Brake, held | |
@@ -116,7 +127,7 @@ Settings › Pitch: "Pilot", the default (W and ↑ push the stick forward, S an
 
 ### Sound
 
-`Sounds`: the engine (sawtooth and square through a low-pass, pitch and gain from spool), wind (looped noise through a band-pass, gain with airspeed²), the stall horn, a tyre chirp on each touchdown, a crash. Off in Settings.
+`Sounds`: the engine (sawtooth and square through a low-pass, gain from spool, pitch from spool × (0.85 + 0.3 × airspeed / cruise) like a fixed-pitch prop, so it rises in a dive and sags in a climb), wind (looped noise through a band-pass, gain with airspeed²), a low rumble with the wing's separation in the air (the buffet), the stall horn, a tyre chirp and a low thump with the sink on each touchdown, a crash. Off in Settings.
 
 ## Data
 

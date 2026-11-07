@@ -10,6 +10,8 @@ interface Engine {
   wind_gain: GainNode;
   horn: OscillatorNode;
   horn_gain: GainNode;
+  rumble_filter: BiquadFilterNode;
+  rumble_gain: GainNode;
 }
 
 export class Sounds {
@@ -60,6 +62,12 @@ export class Sounds {
     const wind_gain = audio.createGain();
     wind_gain.gain.value = 0;
     wind.connect(wind_filter).connect(wind_gain).connect(audio.destination);
+    const rumble_filter = audio.createBiquadFilter();
+    rumble_filter.type = "lowpass";
+    rumble_filter.frequency.value = 90;
+    const rumble_gain = audio.createGain();
+    rumble_gain.gain.value = 0;
+    wind.connect(rumble_filter).connect(rumble_gain).connect(audio.destination);
     const horn = audio.createOscillator();
     horn.type = "triangle";
     horn.frequency.value = 880;
@@ -70,17 +78,21 @@ export class Sounds {
     high.start();
     wind.start();
     horn.start();
-    return { low, high, filter, gain, wind, wind_filter, wind_gain, horn, horn_gain };
+    return { low, high, filter, gain, wind, wind_filter, wind_gain, horn, horn_gain, rumble_filter, rumble_gain };
   }
 
-  /** Every frame: the engine's spool (0 to 1), airspeed in m/s and whether the stall horn sounds. */
-  drone(spool: number, airspeed: number, stall: boolean) {
+  /**
+   * Every frame: the engine's spool (0 to 1), airspeed as a share of cruise, whether the stall horn sounds, how far the
+   * wing's flow has broken away (the buffet's rumble) and airspeed in m/s for the wind.
+   */
+  drone(spool: number, cruise_share: number, stall: boolean, buffet: number, airspeed: number) {
     const audio = this.engine ? this.context : this.audio();
     if (!audio) return;
     this.engine ??= this.build(audio);
     const e = this.engine;
     const now = audio.currentTime;
-    const rpm = 22 + spool * 30 + airspeed * 0.25;
+    // A fixed-pitch prop: the airflow drives it, so the note rises in a dive and sags in a climb.
+    const rpm = (22 + spool * 30) * (0.85 + 0.3 * Math.min(1.6, cruise_share));
     e.low.frequency.setTargetAtTime(rpm, now, 0.2);
     e.high.frequency.setTargetAtTime(rpm * 2, now, 0.2);
     e.filter.frequency.setTargetAtTime(300 + spool * 900, now, 0.2);
@@ -89,6 +101,7 @@ export class Sounds {
     e.wind_filter.frequency.setTargetAtTime(300 + wind * 1400, now, 0.3);
     e.wind_gain.gain.setTargetAtTime(VOLUME * 1.6 * wind * wind, now, 0.3);
     e.horn_gain.gain.setTargetAtTime(stall ? VOLUME * 0.7 : 0, now, 0.03);
+    e.rumble_gain.gain.setTargetAtTime(VOLUME * 6 * Math.min(1, buffet), now, 0.08);
   }
 
   chirp(sink: number) {
@@ -106,6 +119,23 @@ export class Sounds {
     gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.12 + share * 0.15);
     source.connect(filter).connect(gain).connect(audio.destination);
     source.start(at);
+  }
+
+  /** The gear taking the weight: a low thud, louder with the sink. */
+  thump(sink: number) {
+    const audio = this.audio();
+    if (!audio) return;
+    const share = Math.min(1, sink / 2.5);
+    const at = audio.currentTime;
+    const oscillator = audio.createOscillator();
+    oscillator.frequency.setValueAtTime(90, at);
+    oscillator.frequency.exponentialRampToValueAtTime(45, at + 0.18);
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(VOLUME * (1 + share * 5), at);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(at);
+    oscillator.stop(at + 0.25);
   }
 
   crash() {
@@ -148,7 +178,7 @@ export class Sounds {
     if (!this.engine || !this.context) return;
     const e = this.engine;
     const now = this.context.currentTime;
-    for (const gain of [e.gain, e.wind_gain, e.horn_gain]) gain.gain.setTargetAtTime(0, now, 0.05);
+    for (const gain of [e.gain, e.wind_gain, e.horn_gain, e.rumble_gain]) gain.gain.setTargetAtTime(0, now, 0.05);
     for (const node of [e.low, e.high, e.wind, e.horn]) node.stop(now + 0.3);
     this.engine = null;
   }

@@ -1,6 +1,7 @@
 import { SvelteSet } from "svelte/reactivity";
 import { clamp_notch } from "$kit/games/play2d/lever";
-import { elevator_for, air_of, type Coefficients, type Input, type Plane } from "./plane";
+import { elevator_for, air_of, wash_now, type Coefficients, type Input, type Plane } from "./plane";
+import { expo, key_step } from "./stick";
 
 export const THROTTLE = [0, 0.25, 0.5, 0.75, 1] as const;
 export const THROTTLE_NAMES = ["Idle", "Quarter", "Half", "Cruise", "Full"] as const;
@@ -19,9 +20,6 @@ export const THROTTLE_UP_KEYS = new Set(["ShiftLeft", "ShiftRight", "KeyE"]);
 export const THROTTLE_DOWN_KEYS = new Set(["ControlLeft", "ControlRight", "KeyQ"]);
 export const BRAKE_KEYS = new Set(["KeyB"]);
 
-/** Held keys move the stick at a hand's pace, so a tap is a nudge; let go, it springs back to the trim. */
-const STICK_RATE = 2.5;
-const STICK_RETURN = 5;
 const BRAKE_RATE = 1.2;
 
 export class Controls {
@@ -48,7 +46,7 @@ export class Controls {
   }
 
   get stick(): number {
-    return this.held_stick ?? this.key_stick;
+    return expo(this.held_stick ?? this.key_stick);
   }
 
   step_notch(by: number) {
@@ -65,7 +63,7 @@ export class Controls {
 
   /** Trim so the plane holds the angle of attack it has now, hands off. */
   trim_now(plane: Plane, c: Coefficients) {
-    this.trim = Math.max(-1, Math.min(1, elevator_for(air_of(plane, c).alpha, plane.flaps, c)));
+    this.trim = Math.max(-1, Math.min(1, elevator_for(air_of(plane, c).alpha, plane.flaps, c, wash_now(plane, c))));
   }
 
   private pressed(set: Set<string>): boolean {
@@ -79,8 +77,7 @@ export class Controls {
     const pull = this.mode() === PitchMode.GAME ? up : down;
     const push = this.mode() === PitchMode.GAME ? down : up;
     const goal = pull === push ? 0 : pull ? 1 : -1;
-    const rate = goal === 0 ? STICK_RETURN : Math.sign(goal) !== Math.sign(this.key_stick) && this.key_stick !== 0 ? STICK_RETURN : STICK_RATE;
-    this.key_stick = this.key_stick < goal ? Math.min(goal, this.key_stick + rate * dt) : Math.max(goal, this.key_stick - rate * dt);
+    this.key_stick = key_step(this.key_stick, goal, dt);
     const braking = this.held_brake || this.pressed(BRAKE_KEYS);
     this.brake = braking ? Math.min(1, this.brake + BRAKE_RATE * dt) : 0;
   }

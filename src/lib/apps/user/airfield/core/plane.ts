@@ -39,6 +39,13 @@ export interface PlaneSpec {
   pitch_rate: number;
   /** Metres from touchdown at 1.05 × flap stall to a stop: idle, full flaps, stick back, half brakes. */
   rollout: number;
+  /** Held full back at idle (`measure_stall_hold`): the pitch swing in degrees once the wing has stalled, and the sink in m/s. */
+  stall_bob: number;
+  stall_sink: number;
+  /** How far the main gear settles under the plane's weight, metres: the bungee's stiffness. */
+  gear_sag: number;
+  /** Ground speed where full throttle and half forward stick lift the tail: how much the prop wash blows over the tail. */
+  tail_up_speed: number;
   /** Fixed gear's drag coefficient, on top of the solved clean drag. */
   gear_drag: number;
   /** Full flaps' extra drag coefficient and pitching moment (nose down negative). */
@@ -78,6 +85,12 @@ export interface Coefficients {
   cm_elevator: number;
   cm_q: number;
   cm_stall: number;
+  /** Drag of the separated wing: `cd_stall × sin²α × separation`. */
+  cd_stall: number;
+  /** Dynamic pressure over the tail from the prop, per newton of thrust over the disc. */
+  prop_wash: number;
+  /** The main gear's natural frequency on the plane's mass, rad/s, from `gear_sag`. */
+  main_omega: number;
   brake: number;
 }
 
@@ -129,16 +142,19 @@ export interface Plane {
 
 const GROUND_TURN = 0.6;
 const GROUND_TURN_SPEED = 6;
-const PROP_WASH = 0.35;
 /** The lift curve is rounded over this many radians before its peak. */
 export const ROUND = 0.035;
 const STALL_BREAK = 0.06;
 const STALL_LOSS = 0.4;
 const CL_MIN = -1.1;
-const MAIN_OMEGA = 12;
 const TAIL_OMEGA = 22;
-const GEAR_DAMPING = 0.7;
-const DAMPING_RATIO = 0.55;
+/** Bungee gear: little damping, and only while the leg compresses, ramped in over the first part of the stroke so first contact has no spike. */
+const GEAR_DAMPING = 0.3;
+const GEAR_RAMP = 0.06;
+const TAIL_DAMPING = 0.7;
+/** Full back stick holds the wing this far past the lift curve's peak. */
+const HOLD_PAST_PEAK = (1 * Math.PI) / 180;
+const DAMPING_RATIO = 0.8;
 const CM_ALPHA = -1.2;
 export const DT = 1 / 120;
 
@@ -194,7 +210,7 @@ export function ground_effect(height: number, span: number): number {
 
 export function drag_coefficient(alpha: number, cl: number, flaps: number, ge: number, c: Coefficients): number {
   const s = c.spec;
-  return c.cd0 + s.gear_drag + s.flap_drag * flaps + c.k * ge * cl * cl + 1.2 * Math.sin(alpha) ** 2 * separation(alpha, c);
+  return c.cd0 + s.gear_drag + s.flap_drag * flaps + c.k * ge * cl * cl + c.cd_stall * Math.sin(alpha) ** 2 * separation(alpha, c);
 }
 
 export function thrust(spool: number, airspeed: number, c: Coefficients): number {
@@ -250,7 +266,7 @@ export function facing(plane: Pick<Plane, "yaw">): number {
 export function rest_pose(c: Coefficients): { h: number; pitch: number } {
   const { main, tail } = c.spec.gear;
   const pitch = Math.atan2(tail.z - main.z, main.x - tail.x);
-  const settle = (c.mass * G) / (c.mass * MAIN_OMEGA * MAIN_OMEGA);
+  const settle = G / (c.main_omega * c.main_omega);
   return { pitch, h: -point_at({ h: 0, pitch }, main).up - settle * 0.9 };
 }
 
@@ -273,9 +289,21 @@ export function create_plane(c: Coefficients, x: number, face = 1): Plane {
   };
 }
 
-/** The elevator that holds `alpha` with no pitch rate, propwash left out. */
-export function elevator_for(alpha: number, flaps: number, c: Coefficients): number {
-  return -(c.cm0 + c.cm_alpha * Math.sin(alpha) + c.spec.flap_pitch * flaps + c.cm_stall * separation(alpha, c)) / c.cm_elevator;
+/** The elevator that holds `alpha` with no pitch rate; `wash` is the tail's dynamic pressure over the wing's, the prop wash's share. */
+export function elevator_for(alpha: number, flaps: number, c: Coefficients, wash = 1): number {
+  return -(c.cm0 + c.cm_alpha * Math.sin(alpha) + c.spec.flap_pitch * flaps + c.cm_stall * separation(alpha, c)) / (c.cm_elevator * wash);
+}
+
+/** The tail's dynamic pressure over the wing's: 1 gliding, more with the prop blowing over it. */
+export function wash_ratio(qbar: number, T: number, c: Coefficients): number {
+  return qbar > 1 ? 1 + (c.prop_wash * Math.max(0, T)) / (Math.PI * c.spec.prop_radius ** 2) / qbar : 1;
+}
+
+/** The current flight's `wash_ratio`, for trimming. */
+export function wash_now(plane: Plane, c: Coefficients, env: Env = CALM): number {
+  const air = air_of(plane, c, env);
+  const along = air.u * Math.cos(plane.pitch) + air.w * Math.sin(plane.pitch);
+  return wash_ratio(0.5 * RHO * air.speed * air.speed, thrust(plane.spool, along, c), c);
 }
 
 /** Signed radians of turn left before the plane faces `face`, the short way round; a fresh half turn goes the positive way. */
@@ -285,11 +313,12 @@ export function turn_left(plane: Pick<Plane, "yaw">, face: number): number {
   return left <= -Math.PI + 1e-6 ? Math.PI : left;
 }
 
-function contact(plane: Plane, p: BodyPoint, k: number, damping: number, mu: number, u: number): { fs: number; fy: number; torque: number; on: boolean } {
+function contact(plane: Plane, p: BodyPoint, k: number, damping: number, mu: number, u: number, bungee: boolean): { fs: number; fy: number; torque: number; on: boolean } {
   const at = point_at(plane, p);
   if (at.height >= 0) return { fs: 0, fy: 0, torque: 0, on: false };
   const climb = plane.vy + plane.q * at.s;
-  const normal = Math.max(0, -k * at.height - damping * climb);
+  const damp = !bungee ? damping : climb < 0 ? damping * Math.min(1, -at.height / GEAR_RAMP) : 0;
+  const normal = Math.max(0, -k * at.height - damp * climb);
   const slide = u - plane.q * at.up;
   const fs = -mu * normal * Math.tanh(slide / 0.3);
   return { fs, fy: normal, torque: at.s * normal - at.up * fs, on: true };
@@ -318,7 +347,7 @@ export function step_plane(plane: Plane, input: Input, c: Coefficients, dt: numb
   let fs = T * Math.cos(plane.pitch) - D * ux - L * wy;
   let fy = T * Math.sin(plane.pitch) - D * wy + L * ux - c.mass * G;
 
-  const wash = qbar + (PROP_WASH * Math.max(0, T)) / (Math.PI * s.prop_radius ** 2);
+  const wash = qbar + (c.prop_wash * Math.max(0, T)) / (Math.PI * s.prop_radius ** 2);
   const sep = separation(air.alpha, c);
   let moment =
     qbar * s.wing_area * s.chord * (c.cm0 + c.cm_alpha * Math.sin(air.alpha) + s.flap_pitch * flaps + c.cm_stall * sep) +
@@ -326,12 +355,12 @@ export function step_plane(plane: Plane, input: Input, c: Coefficients, dt: numb
     0.25 * RHO * V * s.wing_area * s.chord * s.chord * c.cm_q * plane.q;
 
   const u = ground_speed(plane);
-  const main_k = c.mass * MAIN_OMEGA * MAIN_OMEGA;
+  const main_k = c.mass * c.main_omega * c.main_omega;
   const tail_arm = Math.hypot(s.gear.tail.x, s.gear.tail.z);
   const tail_mass = c.inertia / (tail_arm * tail_arm);
   const tail_k = tail_mass * TAIL_OMEGA * TAIL_OMEGA;
-  const main = contact(plane, s.gear.main, main_k, 2 * GEAR_DAMPING * Math.sqrt(main_k * c.mass), env.roll + c.brake * clamp(input.brake, 0, 1), u);
-  const tail = contact(plane, s.gear.tail, tail_k, 2 * GEAR_DAMPING * Math.sqrt(tail_k * tail_mass), env.roll * 2, u);
+  const main = contact(plane, s.gear.main, main_k, 2 * GEAR_DAMPING * Math.sqrt(main_k * c.mass), env.roll + c.brake * clamp(input.brake, 0, 1), u, true);
+  const tail = contact(plane, s.gear.tail, tail_k, 2 * TAIL_DAMPING * Math.sqrt(tail_k * tail_mass), env.roll * 2, u, false);
   fs += main.fs + tail.fs;
   fy += main.fy + tail.fy;
   moment += main.torque + tail.torque;
@@ -476,11 +505,17 @@ export function measure_level(c: Coefficients, throttle: number): number {
 
 export function level_flight(c: Coefficients, V: number, face = 1): { plane: Plane; throttle: number; trim: number } {
   const s = c.spec;
-  const cl = weight(c) / (0.5 * RHO * V * V * s.wing_area);
-  const alpha = alpha_for(cl, 0, c);
-  const pitch = alpha - (s.incidence * Math.PI) / 180;
-  const D = 0.5 * RHO * V * V * s.wing_area * drag_coefficient(alpha, cl, 0, 1, c);
-  const spool = D / Math.cos(pitch) / (c.thrust * (1 - (V * Math.cos(pitch)) / c.zero_thrust));
+  const qs = 0.5 * RHO * V * V * s.wing_area;
+  let T = 0;
+  let alpha = 0;
+  let pitch = 0;
+  for (let i = 0; i < 6; i++) {
+    const cl = (weight(c) - T * Math.sin(pitch)) / qs;
+    alpha = alpha_for(cl, 0, c);
+    pitch = alpha - (s.incidence * Math.PI) / 180;
+    T = (qs * drag_coefficient(alpha, cl, 0, 1, c)) / Math.cos(pitch);
+  }
+  const spool = T / (c.thrust * (1 - (V * Math.cos(pitch)) / c.zero_thrust));
   const throttle = clamp((spool - s.idle) / (1 - s.idle), 0, 1);
   const plane: Plane = {
     ...create_plane(c, 0, face),
@@ -489,7 +524,7 @@ export function level_flight(c: Coefficients, V: number, face = 1): { plane: Pla
     yaw: face > 0 ? 0 : Math.PI,
     pitch,
     spool,
-    elevator: elevator_for(alpha, 0, c),
+    elevator: elevator_for(alpha, 0, c, wash_ratio(0.5 * RHO * V * V, T, c)),
     main_on: false,
     tail_on: false,
   };
@@ -568,6 +603,85 @@ export function measure_float(c: Coefficients): number {
 }
 
 
+/** Settled at rest, then full throttle, half flaps, `stick` held: the ground speed once the tail wheel has been off for 0.3 s, 99 if it never is. */
+export function measure_tail_up(c: Coefficients, stick = -0.5): number {
+  let plane = create_plane(c, 0);
+  const input: Input = { throttle: 1, stick, trim: 0, flaps: 0.5, brake: 0, facing: 1 };
+  for (let t = 0; t < 2; t += DT) plane = step_plane(plane, { ...input, throttle: 0, stick: 0 }, c, DT);
+  let up = 0;
+  let speed = 0;
+  for (let t = 0; t < 30; t += DT) {
+    plane = step_plane(plane, input, c, DT);
+    if (airborne(plane)) break;
+    if (plane.tail_on) up = 0;
+    else if ((up += DT) === DT) speed = plane.vx;
+    if (up >= 0.3) return speed;
+  }
+  return 99;
+}
+
+/** Full back stick at idle for 25 s from trimmed level flight at 1.15 × stall: from 10 s on, the pitch swing (degrees), mean sink and top angle of attack. */
+export function measure_stall_hold(c: Coefficients): { bob: number; sink: number; alpha_max: number } {
+  let plane = level_flight(c, c.spec.stall_speed * 1.15).plane;
+  const input: Input = { throttle: 0, stick: 1, trim: 0, flaps: 0, brake: 0, facing: 1 };
+  let low = Infinity;
+  let high = -Infinity;
+  let alpha_max = -Infinity;
+  let sink = 0;
+  let n = 0;
+  for (let t = 0; t < 25; t += DT) {
+    plane = step_plane(plane, input, c, DT);
+    if (t < 10) continue;
+    low = Math.min(low, plane.pitch);
+    high = Math.max(high, plane.pitch);
+    alpha_max = Math.max(alpha_max, air_of(plane, c).alpha);
+    sink -= plane.vy;
+    n++;
+  }
+  return { bob: ((high - low) * 180) / Math.PI, sink: sink / n, alpha_max };
+}
+
+/** Kicked 3 m/s fast from trimmed level flight at the trim speed, hands off: the speed oscillation's period (s) and damping ratio. */
+export function measure_phugoid(c: Coefficients): { period: number; damping: number } {
+  const start = level_flight(c, c.spec.trim_speed);
+  let plane = { ...start.plane, vx: start.plane.vx + 3 };
+  const input: Input = { throttle: start.throttle, stick: 0, trim: start.trim, flaps: 0, brake: 0, facing: 1 };
+  const speeds: number[] = [];
+  for (let t = 0; t < 150; t += DT) {
+    plane = step_plane(plane, input, c, DT);
+    speeds.push(air_of(plane, c).speed);
+  }
+  const peaks: { t: number; v: number }[] = [];
+  for (let i = 1; i < speeds.length - 1; i++) if (i * DT > 1 && speeds[i] > speeds[i - 1] && speeds[i] >= speeds[i + 1]) peaks.push({ t: i * DT, v: speeds[i] });
+  const tail = speeds.slice(-Math.round(30 / DT));
+  const mean = tail.reduce((a, b) => a + b, 0) / tail.length;
+  if (peaks.length < 3) return { period: NaN, damping: NaN };
+  const decrement = Math.log((peaks[0].v - mean) / (peaks[1].v - mean));
+  return { period: (peaks[2].t - peaks[0].t) / 2, damping: decrement / Math.sqrt(4 * Math.PI ** 2 + decrement ** 2) };
+}
+
+/** A three-point touchdown at `sink` m/s, idle, full flaps, stick held back: the main gear's stroke (m), peak load factor and rebound (m). */
+export function measure_touchdown(c: Coefficients, sink: number): { stroke: number; peak_g: number; bounce: number } {
+  const rest = rest_pose(c);
+  const plane: Plane = { ...create_plane(c, 0), vx: 17, vy: -sink, pitch: rest.pitch, flaps: 1, elevator: 0.6, main_on: false, tail_on: false };
+  let at = { ...plane, h: plane.h - point_at(plane, c.spec.gear.main).height + 0.005 };
+  const input: Input = { throttle: 0, stick: 0.6, trim: 0, flaps: 1, brake: 0, facing: 1 };
+  let stroke = 0;
+  let peak = 0;
+  let bounce = 0;
+  let left = false;
+  for (let t = 0; t < 3; t += DT) {
+    const before = at.vy;
+    at = step_plane(at, input, c, DT);
+    const height = point_at(at, c.spec.gear.main).height;
+    stroke = Math.max(stroke, -height);
+    peak = Math.max(peak, 1 + (at.vy - before) / DT / G);
+    if (height > 0 && stroke > 0) left = true;
+    if (left) bounce = Math.max(bounce, height);
+  }
+  return { stroke, peak_g: peak, bounce };
+}
+
 function solve(measure: (x: number) => number, target: number, lo: number, hi: number, rounds = 40): number {
   for (let i = 0; i < rounds; i++) {
     const mid = (lo + hi) / 2;
@@ -600,6 +714,9 @@ function base(s: PlaneSpec): Coefficients {
     cm_elevator: 0.5,
     cm_q: 0,
     cm_stall: -0.2,
+    cd_stall: 1.2,
+    prop_wash: 0.35,
+    main_omega: Math.sqrt(G / s.gear_sag),
     brake: 0.3,
   };
 }
@@ -608,7 +725,7 @@ function pitch_axis(c: Coefficients): void {
   const s = c.spec;
   const alpha_trim = alpha_for((2 * c.mass * G) / (RHO * s.wing_area * s.trim_speed ** 2), 0, c);
   c.cm0 = -c.cm_alpha * Math.sin(alpha_trim);
-  const alpha_full = c.alpha_break + ROUND + 0.04;
+  const alpha_full = c.alpha_break + ROUND + HOLD_PAST_PEAK;
   c.cm_elevator = -(c.cm0 + c.cm_alpha * Math.sin(alpha_full) + c.cm_stall * separation(alpha_full, c));
   const V = s.trim_speed;
   const stiffness = -c.cm_alpha * 0.5 * RHO * V * V * s.wing_area * s.chord;
@@ -627,11 +744,29 @@ export function coefficients(spec: PlaneSpec): Coefficients {
     c.zero_thrust = solve(climb_for, spec.cruise, spec.cruise * 1.2, spec.cruise * 6, 24);
     climb_for(c.zero_thrust);
   }
-  pitch_axis(c);
-  c.inertia = solve((i) => -measure_pitch_rate({ ...c, inertia: i, ...with_damping(c, i) }), -spec.pitch_rate, spec.mass * (0.1 * spec.length) ** 2, spec.mass * (0.5 * spec.length) ** 2, 30);
-  Object.assign(c, with_damping(c, c.inertia));
+  const pitch = () => {
+    pitch_axis(c);
+    c.inertia = solve((i) => -measure_pitch_rate({ ...c, inertia: i, ...with_damping(c, i) }), -spec.pitch_rate, spec.mass * (0.1 * spec.length) ** 2, spec.mass * (0.5 * spec.length) ** 2, 30);
+    Object.assign(c, with_damping(c, c.inertia));
+  };
+  for (let round = 0; round < 4; round++) {
+    pitch();
+    c.prop_wash = solve((w) => -measure_tail_up({ ...c, prop_wash: w }), -spec.tail_up_speed, 0, 1.5, 16);
+    c.cd_stall = solve((cd) => measure_stall_hold({ ...c, cd_stall: cd }).sink, spec.stall_sink, 0, 16, 14);
+    Object.assign(c, with_stall(c, solve((st) => measure_stall_hold(with_stall(c, st)).bob, spec.stall_bob, -1.1, -0.4, 14)));
+  }
+  pitch();
   c.brake = solve((mu) => -measure_rollout({ ...c, brake: mu }), -spec.rollout, 0, 1.2, 30);
   return c;
+}
+
+/** `c` with the stall break `cm_stall` and the elevator re-solved, so full back stick still holds the same angle past the peak. */
+function with_stall(c: Coefficients, cm_stall: number): Coefficients {
+  const probe = { ...c, cm_stall };
+  const cm_q = probe.cm_q;
+  pitch_axis(probe);
+  probe.cm_q = cm_q;
+  return probe;
 }
 
 function with_damping(c: Coefficients, inertia: number): Pick<Coefficients, "cm_q"> {

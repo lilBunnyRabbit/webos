@@ -25,7 +25,7 @@
   import { draw_frame, PUFF_LIFE, type Puff, type Scenery } from "./core/draw";
   import { build_field, in_hangar, runway_ahead, surface_roll } from "./core/field";
   import { advance, CrashKind, create_flight, Grade, Status, stall_warning, wheel_height, type Flight, type Touchdown } from "./core/flight";
-  import { air_of, CALM, create_plane, facing, turn_left, type Env } from "./core/plane";
+  import { air_of, CALM, create_plane, facing, G, separation, turn_left, type Env } from "./core/plane";
   import { PLANE_IDS, plane_coefficients, PlaneId, SPECS } from "./core/planes";
   import { DEFAULT_SETTINGS, SETTINGS_FILE, settings_schema } from "./core/settings";
   import { Sounds } from "./core/sound";
@@ -37,6 +37,12 @@
   const settings_file = storage.file(SETTINGS_FILE, DEFAULT_SETTINGS, settings_schema);
   const KNOT = 1.943844;
   const LOOK_AHEAD = 1.2;
+  /** The camera follows height slower than distance, so the plane is seen to sink, float and balloon in the frame. */
+  const EASE_X = 6;
+  const EASE_Y = 2.9;
+  /** A jolt's shake in CSS pixels per g over 1 g, and how fast it dies away. */
+  const JOLT_PX = 3;
+  const JOLT_DECAY = 0.08;
   const BOUNDS = { x0: -1e6, x1: 1e6, y0: -1e6, y1: 6 };
   const PROFILE_WIDTH = 190;
   const MIN_CIRCUIT_PX = 55;
@@ -81,6 +87,7 @@
   let hud_height = $state(0);
 
   let camera: Camera | null = null;
+  let jolt = 0;
   let puffs: Puff[] = [];
   let touchdown_timer = 0;
 
@@ -191,14 +198,22 @@
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
     const target = target_camera();
-    camera = dt > 0 ? ease(camera, target, dt) : target;
+    camera = dt > 0 ? ease(camera, target, dt, EASE_X, EASE_Y) : target;
+    jolt *= Math.exp(-dt / JOLT_DECAY);
+    const buffet = flight.status === Status.FLYING ? separation(air_of(plane, c).alpha, c) * 1.6 : 0;
+    const time = performance.now() / 1000;
+    const shake_px = jolt + buffet;
+    const shake = {
+      x: (shake_px * Math.sin(time * 71) * 0.6) / camera.scale,
+      y: (shake_px * (Math.sin(time * 53) + 0.5 * Math.sin(time * 97))) / camera.scale,
+    };
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     draw_frame(ctx, {
       plane,
       c,
       field,
-      view: { ...camera, width: board_size.width, height: board_size.height, dpr: board_size.dpr },
+      view: { ...camera, x: camera.x + shake.x, y: camera.y + shake.y, width: board_size.width, height: board_size.height, dpr: board_size.dpr },
       palette,
       scenery,
       time: performance.now() / 1000,
@@ -218,12 +233,15 @@
     let next = flight;
     for (let i = 0; i < steps && next.status === Status.FLYING; i++) {
       controls.step(dt);
+      const before = next.plane.vy;
       next = advance(next, controls.read(), c, dt, env_at(next.plane.x));
+      if (next.plane.main_on || next.plane.tail_on) jolt = Math.max(jolt, Math.min(12, JOLT_PX * Math.max(0, (next.plane.vy - before) / dt / G - 0.3)));
     }
     const span = steps * dt;
     for (const puff of puffs) puff.age += span;
     puffs = puffs.filter((puff) => puff.age < PUFF_LIFE);
-    sounds.drone(next.plane.spool, air_of(next.plane, c).speed, stall_warning(next.plane, c));
+    const air_now = air_of(next.plane, c);
+    sounds.drone(next.plane.spool, air_now.speed / spec.cruise, stall_warning(next.plane, c), next.plane.main_on || next.plane.tail_on ? 0 : separation(air_now.alpha, c), air_now.speed);
     if (next === flight) return;
     const before = flight;
     flight = next;
@@ -239,6 +257,7 @@
 
   function touched(touchdown: Touchdown) {
     sounds.chirp(touchdown.sink);
+    sounds.thump(touchdown.sink);
     puffs.push({ x: touchdown.x, age: 0, size: Math.min(2, 0.5 + touchdown.sink) });
     shown_touchdown = touchdown;
     clearTimeout(touchdown_timer);

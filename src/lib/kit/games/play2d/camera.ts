@@ -89,12 +89,14 @@ export function fade(elapsed: number): number {
   return Math.max(0, Math.min(1, 1 - elapsed / FADE));
 }
 
-export function ease(current: Camera | null, target: Camera, dt: number): Camera {
+/** Eases toward `target` at `rate` per second; `rate_y` lets a game lag the vertical, so a plane is seen to sink and float. */
+export function ease(current: Camera | null, target: Camera, dt: number, rate = 6, rate_y = rate): Camera {
   if (!current) return target;
-  const k = 1 - Math.exp(-dt * 6);
+  const k = 1 - Math.exp(-dt * rate);
+  const k_y = 1 - Math.exp(-dt * rate_y);
   return {
     x: current.x + (target.x - current.x) * k,
-    y: current.y + (target.y - current.y) * k,
+    y: current.y + (target.y - current.y) * k_y,
     scale: current.scale + (target.scale - current.scale) * k,
   };
 }
