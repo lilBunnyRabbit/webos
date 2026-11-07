@@ -12,6 +12,7 @@
   import { type Palette } from "$kit/games/play2d/palette";
   import { veil } from "../../core/draw";
   import DriveFrame from "../../core/drive-frame.svelte";
+  import { with_stars } from "../../core/track";
   import { DriveInput, type Hold } from "../../core/drive-input.svelte";
   import GearStrip from "../../core/gear-strip.svelte";
   import { bounds_of, centroid } from "$kit/games/play2d/geometry";
@@ -396,7 +397,7 @@
     const scenario = state.round.scenario;
     if (state.round.course !== undefined) {
       const stars = data.value.extreme ?? {};
-      data.value.extreme = { ...stars, [state.round.course]: Math.max(stars[state.round.course] ?? 0, earned) };
+      data.value.extreme = with_stars(stars, state.round.course, earned);
       achievements.achieve("parking-extreme");
       achievements.progress("parking-extreme-all", Object.keys(data.value.extreme).filter((id) => COURSES.some((each) => each.id === id)).length);
     } else if (scenario === null) achievements.achieve("open-lot");
@@ -410,7 +411,7 @@
     }
     if (state.round.level !== undefined) {
       const at = state.round.level;
-      data.value.levels[at] = Math.max(data.value.levels[at] ?? 0, earned);
+      data.value.levels = with_stars(data.value.levels, at, earned);
       const done = Object.keys(data.value.levels).map(Number);
       achievements.progress("licensed", done.filter((level) => level <= LAP_LEVELS).length);
       achievements.progress("hardest-lap", done.filter((level) => level > LAP_LEVELS).length);

@@ -29,7 +29,7 @@
   import { RoundCard } from "$kit/components/play2d";
   import SettingsPanel from "../../core/settings-panel.svelte";
   import TrackPicker from "../../core/track-picker.svelte";
-  import { levels_done } from "../../core/track";
+  import { levels_done, with_stars } from "../../core/track";
   import { Sounds } from "../../core/sound";
   import { SpeedChip } from "$kit/components/play2d";
   import { body_centre, Gear, max_steer, without_creep } from "../../core/vehicle";
@@ -425,7 +425,7 @@
     if (pallets >= 3 && state.drops.every((drop) => Math.round(drop.score) >= PERFECT)) achievements.achieve("forklift-spotless");
     if (state.round.level !== undefined) {
       const at = state.round.level;
-      data.value.levels[at] = Math.max(data.value.levels[at] ?? 0, score);
+      data.value.levels = with_stars(data.value.levels, at, score);
       achievements.progress("forklift-levels", levels_done(data.value.levels));
     }
     if (state.round.daily) {
