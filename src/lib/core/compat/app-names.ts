@@ -1,6 +1,7 @@
 // The boot check runs before the app registry exists, so it carries the names it shows. A test keeps them equal to
 // each manifest's `name`.
 export const APP_NAMES: Record<string, string> = {
+  airfield: "Airfield",
   alibi: "Alibi",
   "api-client": "API Client",
   archive: "Archive",
