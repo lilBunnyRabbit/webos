@@ -140,6 +140,8 @@
   let flight = $state.raw<Flight>(untrack(() => create_flight(create_plane(plane_coefficients(PlaneId.TRAINER), field.start))));
   let ready = $state(false);
   let in_hangar_now = $state(false);
+  /** The hangar card was put away with Taxi out: it comes back once the plane has left the hangar. */
+  let hangar_away = $state(false);
   let shown_touchdown = $state.raw<Touchdown | null>(null);
   /** Where the winch drum is while it pulls, metres along the world; null with the cable off. */
   let winch_drum = $state<number | null>(null);
@@ -188,6 +190,7 @@
   const tall = $derived(board_size.height > board_size.width * 1.3);
   const to_runway = $derived(round ? (round.scene.clear ? null : strip_ahead(round.scene.course, round.scene.strip, plane.x, facing(plane))) : runway_ahead(field, plane.x, facing(plane)));
   const on_ground = $derived(on_ground_of(plane));
+  const hangar_card = $derived(in_hub && in_hangar_now && !hangar_away && !crashed && flight.status !== Status.PAUSED);
 
   $effect(() => {
     if (!settings_file.ready || ready) return;
@@ -254,7 +257,7 @@
   }
 
   function carded(): boolean {
-    return crashed || done || waiting || !!card || in_hangar_now;
+    return crashed || done || waiting || !!card || hangar_card;
   }
 
   function control_insets(): Insets {
@@ -432,6 +435,7 @@
     if (next.status === Status.DONE && before.status !== Status.DONE) finish();
     if (round) return;
     in_hangar_now = in_hangar(field, next.plane);
+    if (!in_hangar_now) hangar_away = false;
     if (next.flown && !settings_file.value.seen_hint) settings_file.value.seen_hint = true;
     const gate = at_gate(field, next.plane);
     if (!gate) dismissed_gate = null;
@@ -658,8 +662,14 @@
     return flight.status === Status.FLYING;
   }
 
+  function taxi_out() {
+    hangar_away = true;
+    focus_board();
+  }
+
   function primary_action() {
     if (card) return start_card();
+    if (hangar_card) return taxi_out();
     if (flight.status === Status.READY) return go();
     if (flight.status === Status.PAUSED) return resume();
     if (round && done && round.ref.kind === RoundKind.LEVEL) return next_level();
@@ -973,7 +983,7 @@
       {/if}
       <Button size="sm" variant="primary" onclick={resume}>Resume</Button>
     </BoardOverlay>
-  {:else if in_hub && in_hangar_now}
+  {:else if hangar_card}
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 basis-full">
         <p class="text-base font-semibold">Hangar</p>
@@ -981,14 +991,17 @@
       </div>
       <div class="grid basis-full grid-cols-2 gap-1.5" role="group" aria-label="Plane">
         {#each PLANE_IDS as each, i (each)}
-          <Button class="h-auto flex-col items-start gap-0 py-1.5 text-left whitespace-normal" variant={each === plane_id ? "primary" : "quiet"} aria-pressed={each === plane_id} onclick={() => pick_plane(each)}>
+          <Button class="h-auto min-h-11 flex-col items-start gap-0 py-1.5 text-left whitespace-normal pointer-coarse:h-auto" variant={each === plane_id ? "primary" : "quiet"} aria-pressed={each === plane_id} onclick={() => pick_plane(each)}>
             <span class="flex items-center gap-1.5 font-semibold"><span class="hidden font-mono text-2xs opacity-70 pointer-fine:inline">{i + 1}</span>{SPECS[each].name}</span>
-            <span class="text-2xs font-normal opacity-80">{BLURBS[each]}</span>
+            <span class="af-blurb text-2xs font-normal opacity-80">{BLURBS[each]}</span>
           </Button>
         {/each}
       </div>
+      <div class="ml-auto flex shrink-0">
+        <Button variant="primary" onclick={taxi_out}>Taxi out</Button>
+      </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="1–{PLANE_IDS.length}" text="pick" /><KeyHint key_name="D" text="turn round" /><KeyHint key_name="Shift" text="throttle" />
+        <KeyHint key_name="1–{PLANE_IDS.length}" text="pick" /><KeyHint key_name="Enter" text="taxi out" /><KeyHint key_name="D" text="turn round" /><KeyHint key_name="Shift" text="throttle" />
       </p>
     </RoundCard>
   {/if}
@@ -1010,7 +1023,7 @@
     {controls}
     {on_ground}
     pitch={settings.pitch}
-    controls_idle={crashed || done || waiting || !!card || flight.status === Status.PAUSED}
+    controls_idle={crashed || done || waiting || !!card || hangar_card || flight.status === Status.PAUSED}
     {engage}
     ontrim={trim}
     onkeydown={on_keydown}
@@ -1033,6 +1046,12 @@
 <style>
   :global(.af-pop) {
     animation: var(--animate-pop-in) 520ms both;
+  }
+
+  @container af-app (height < 30rem) {
+    .af-blurb {
+      display: none;
+    }
   }
 
   .af-stall {

@@ -1,6 +1,6 @@
 # ADR-098: Airfield, a side-view takeoff and landing sim
 **Date:** 2026-11-07
-**Status:** Accepted (wave 1 implemented 2026-11-07)
+**Status:** Implemented
 
 ## Context
 After Drive Hub (top-down cars, ADR-086 to ADR-088) and Harbour (top-down boats, ADR-096), the owner wants a 2D plane sim in the same style, seen from the side ([brainstorm](../brainstorm/2026-11-07_plane-sim.md)). Harbour's pattern works: feel-based specs solved into coefficients, graded contacts, a drivable hub with a picker, per-level stars, and an autopilot that proves every level and sets par. The play2d kit (`$kit/utils/play2d/`) already holds the shared 2D pieces.
@@ -107,3 +107,14 @@ From the weight-feel audit ([brainstorm](../brainstorm/2026-11-07_plane-sim.md),
 - **Every pitch input goes through an expo** (`0.6 s³ + 0.4 s`): keys, the touch pad and the mouse drag alike. Pad and mouse stay direct.
 - **The model** gains feel fields `stall_bob`, `stall_sink`, `gear_sag` and `tail_up_speed`, solved in `coefficients()`, and the trim includes the prop wash. To make a mush reachable with the 30 °/s pitch rate, the stall break (`cm_stall`) is the bob's lever and the short-period damping ratio went from 0.55 to 0.8; extra pitch damping once the flow separates, the audit's other lever, deepened the stall in this model and was left out.
 - **Camera** eases height slower than distance, through an optional `rate_y` on the kit's `ease`; Harbour and Drive Hub keep the default.
+
+## Revision 2026-11-07: waves 2 and 3 built
+The bush plane, the airliner, the glider, the weather, the levels, the autopilot proof, random and the daily are in, documented in [apps/airfield.md](../apps/airfield.md). What the build decided inside the ADR's scope:
+- **Generic gear.** The second wheel is a tail or a nose wheel by spec data (`gear.layout`); the step code has no airliner case. A nose-wheel plane's `tail_skid` marks a tail strike. The rest pose sinks each wheel by its own load, so a stiff nose wheel doesn't kick the nose up.
+- **Lever below idle.** Each plane's detents are data (`core/cockpit.ts`); the airliner's Spoilers and Reverse sit below Idle, the reverser only deploys on the ground, and the autobrake arms at touchdown and lets go when the throttle comes up or the plane is slow. The glider's lever is its airbrakes, resting at the top (in). The kit `Lever` already took per-plane labels and a resting notch.
+- **The hub runway is 2.4 km**, so the airliner can take off at home. Gates stand along the apron left of the hangar.
+- **Glider on the ground:** the winch drum stands beside the runway; Apron puts the glider in the hangar, and holding A/D (or ◀ ▶) has the ground crew walk it at 1.6 m/s, since it couldn't reach the gates otherwise.
+- **Terrain and obstacles** are part of a level's `Course`: a ground polyline per wrap, surfaces (wet runway, sand, water), solid box obstacles; the hub keeps its scenery decorative. Ridge lift comes from the wind over the ground's slope.
+- **Scoring details:** a takeoff's gentle star is never hearing the stall horn; a landing's is one touchdown, a kiss. A stall counts as a crash only between 2 and 20 m, so a full-stall touchdown isn't one. Stopping off the strip fails the round.
+- **Proof margins:** a slow test flies every level nudged six ways (start ±60 m, ±12 % height, ±1.5 m/s wind). The autopilot uses continuous controls where a player has detents.
+- **Stall bob** of the three new planes is set where the solver lands (11–15°), not by feel; with the trainer's porpoise from a full-aft yank at cruise, an open owner call.
