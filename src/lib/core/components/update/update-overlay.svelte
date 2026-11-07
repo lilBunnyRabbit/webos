@@ -39,7 +39,7 @@
     role="alertdialog"
     aria-modal="true"
     aria-label="Updating WebOS"
-    class="@container fixed inset-0 z-[10000] grid place-items-center bg-background-darkest p-4 text-foreground"
+    class="@container fixed inset-0 z-[10000] grid place-items-center bg-desktop p-4 text-foreground"
     transition:fade={{ duration: motion_reduced() ? 0 : 150 }}
   >
     <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--background-dark),transparent_70%)]"></div>

@@ -14,7 +14,7 @@ src/app.css  @theme inline { --color-background-dark: var(--background-dark); �
 Tailwind utilities  bg-background-dark · text-foreground/65 · border-error …
 ```
 
-1. `SettingsService.theme` is a `Record<ThemeToken, string>` holding 17 tokens. Keys are `snake_case` (`background_dark`).
+1. `SettingsService.theme` is a `Record<ThemeToken, string>` holding 18 tokens. Keys are `snake_case` (`background_dark`).
 2. An effect started in `SettingsService.init()` writes every token to `document.documentElement.style` as a **kebab-case** variable: `--${key.replaceAll("_", "-")}`, so `background_dark` becomes `--background-dark`. The same effect sets `color-scheme` (below). Nothing in CSS defines a default, so before the service inits, `var(--primary)` and the rest are unset.
 3. `app.css` maps each variable into a Tailwind colour under `@theme inline`. `inline` makes the utility reference `var(--primary)` directly, so a runtime change applies immediately with no rebuild.
 
@@ -42,8 +42,9 @@ After writing the variables, the token effect measures the applied `foreground` 
 | `accent` | `--accent` | `accent` | explicit | base colour |
 | `cottontail` | `--cottontail` | `cottontail` | explicit | from primary. Also the global `:focus-visible` outline colour |
 | `success` `warning` `error` `info` | same names | same names | explicit | from primary, fixed hues |
+| `desktop` | `--desktop` | `desktop` | `var(--background-darkest)` / `var(--background)` | `var(--background-darkest)` (`DEFAULT_DESKTOP`) |
 
-Types (`settings/type.ts`): `ThemeBaseToken` (the five base colours), `ThemeSurfaceToken` (the six ladder shades), `ThemeToken` (all 17), `ThemeBase`, `Theme`.
+Types (`settings/type.ts`): `ThemeBaseToken` (the five base colours), `ThemeSurfaceToken` (the six ladder shades), `ThemeToken` (all 18), `ThemeBase`, `Theme`.
 
 Plus one colour that isn't a theme token: `mark-ears`, fixed `oklch(0.949 0.0939 122.47)` in `app.css`, the same in every theme (logo only).
 
@@ -65,6 +66,17 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 
   The stored value is the expression, so editing `background` in Settings moves the whole ladder. "Dark" is always lower lightness and "light" always higher (2026-10-24, found by the ADR-068 judges). In the middle each step is 0.034; near black or white a step shrinks toward the end instead of passing it, so the ladder never turns back. The light side starts from at least 0.12, so on pure black the chrome, cards and menus still separate from the body (the dark side stays black: there's nothing darker). Before that a step past 0 or 1 reflected back (`abs()`), which made "lighter" shades darker than `background` on near-white presets; `merge_theme()` in `persistence.ts` swaps those old expressions (`legacy_surface()`) for the new ones when a saved theme loads.
 
+### The desktop
+
+`desktop` is what the frame paints: the desktop and phone home (`desktop-shell.svelte`, `desktop/wallpaper.svelte`, `mobile-shell.svelte`), `body`, the solo shell, the introduction, the update overlay, Settings' taskbar preview and the theme card's miniature (`bg-desktop`, or the value directly). It's a CSS colour like any token; the presets reference a ladder shade. Every theme but Brand Light uses `var(--background-darkest)`. Brand Light uses `var(--background)`: the brand's light ladder drops 0.1748 lightness below the page to a saturated tan, which painted the whole screen yellow, while the brand page sits on the cream page shade (ADR-024 revision 2026-11-07).
+
+Two things follow the desktop:
+
+- **Scrim:** `--overlay` is `color-mix(in oklch, var(--desktop) 60%, transparent)`, so the desktop's own colour veils what's behind a menu or dialog (darkest on most themes, cream on Brand Light).
+- **Wallpaper glow:** the grid, glow and tint presets fade `--glow` into the desktop. `wallpaper.svelte` sets it from `desktop_glow(theme.desktop)`, the ladder shade two above the desktop: `background-dark` over the default, `background-lighter` over Brand Light, `background-dark` when the desktop isn't a ladder shade.
+
+Shadows are still cast in `background-darkest`, not the desktop.
+
 ### Other `@theme` entries
 
 | Kind | Tokens | Notes |
@@ -80,15 +92,15 @@ Seven shades around `background`, darkest at the bottom of the stack. The brand 
 ### Base layer
 
 - `html`: `font-size: calc(100% * var(--text-scale, 1))` (Settings › Text & interface › Text size), Inter features `cv11`, `ss01`, antialiased.
-- `body`: `bg-background-darkest text-foreground font-sans text-sm overflow-hidden`. `#app` fills `100dvw × 100dvh`.
+- `body`: `bg-desktop text-foreground font-sans text-sm overflow-hidden`. `#app` fills `100dvw × 100dvh`.
 - `:focus-visible`: 2px `var(--cottontail)` outline, 2px offset.
-- `--overlay` on `html`: the shared scrim behind the start menu and every dialog, `background-darkest` at 60%.
+- `--overlay` on `html`: the shared scrim behind the start menu and every dialog, `desktop` at 60%.
 - `::selection`: solid `primary` with `background` text, the primary button pair. A translucent `primary` left the light text unreadable on light fields.
 - `h1`–`h3`: heading tracking, `text-wrap: balance`.
 - Every element: thin scrollbars, thumb `foreground` at 22% on a transparent track.
 - `prefers-reduced-motion: reduce`, and `html[data-motion="off"]` (Settings › Text & interface › Motion off): every animation and transition collapses to 1ms.
 
-The desktop shell's root grid (`desktop-shell.svelte`) and the wallpaper layer (`desktop/wallpaper.svelte`, under the desktop and the mobile home) paint `background-darkest`.
+The desktop shell's root grid (`desktop-shell.svelte`) and the wallpaper layer (`desktop/wallpaper.svelte`, under the desktop and the mobile home) paint `desktop`.
 
 ## `cn()` and `tv`
 
@@ -96,7 +108,7 @@ The desktop shell's root grid (`desktop-shell.svelte`) and the wallpaper layer (
 
 ## Palette disabled
 
-`@theme inline { --color-*: initial; … }` deletes Tailwind's default palette. `bg-red-500`, `text-white`, `bg-black` and the rest generate nothing. The brand rule "don't add colours" is enforced at build time. The only colours that compile are the 17 theme tokens plus `mark-ears`. Neutral shades come from opacity modifiers (`text-foreground/65`, `bg-foreground/8`) and the surface ladder.
+`@theme inline { --color-*: initial; … }` deletes Tailwind's default palette. `bg-red-500`, `text-white`, `bg-black` and the rest generate nothing. The brand rule "don't add colours" is enforced at build time. The only colours that compile are the 18 theme tokens plus `mark-ears`. Neutral shades come from opacity modifiers (`text-foreground/65`, `bg-foreground/8`) and the surface ladder.
 
 Hardcoded colours outside the token system, all deliberate:
 
@@ -114,8 +126,8 @@ Components that need a token outside a utility read the variable directly: in a 
 
 | Theme | How it's defined |
 |-------|------------------|
-| **Brand Dark** (`BRAND_DARK`) | 17 explicit OKLCH values. The default. |
-| **Brand Light** (`BRAND_LIGHT`) | 17 explicit OKLCH values. UI only, never for the icon or splash. |
+| **Brand Dark** (`BRAND_DARK`) | 17 explicit OKLCH values, `desktop` the darkest shade. The default. |
+| **Brand Light** (`BRAND_LIGHT`) | 17 explicit OKLCH values, `desktop` the page shade. UI only, never for the icon or splash. |
 | 22 user presets | `derive_theme({ background, foreground, primary, secondary, accent })`, except While True: written out, because its orange desktop and white windows can't come from one base. All base colours are OKLCH. Group `projects` (Speed Reader Light and Dark, While True) gets its own "Project themes" grid in Settings |
 
 `derive_theme()` spreads `derive_surfaces()` and follows the brand formula for the rest, leaving the derived tokens as live CSS expressions:
@@ -130,7 +142,7 @@ Because the stored value is the expression and not a resolved colour, editing `p
 
 **Older saves.** A save from before the ladder has no surface tokens. `merge_theme()` fills them from the brand palette whose `background` equals the saved one (Brand Dark or Brand Light), otherwise from `derive_surfaces()`. See [settings → Persistence](services/settings.md#persistence).
 
-**Previews.** Settings' theme cards draw each preset in its own colours. They re-declare `--background`, `--foreground`, `--primary`, `--secondary` and `--accent` on the miniature only (not the whole card, so the card's own label and ring stay in the active theme), so the derived expressions resolve against the preset rather than the active theme.
+**Previews.** Settings' theme cards draw each preset in its own colours. Their desktop is the preset's `desktop`. They re-declare `--background`, `--foreground`, `--primary`, `--secondary` and `--accent` on the miniature only (not the whole card, so the card's own label and ring stay in the active theme), so the derived expressions resolve against the preset rather than the active theme.
 
 The Settings app (Theme) applies a preset with `settings.theme = { ...preset.theme }` and edits single tokens on its Edit colours subpage: a text field and an `<input type="color">` per token, grouped Surfaces / Text and brand / States. The colour picker goes through native relative colour syntax (`settings/color.ts`): it shows `rgb(from <value> r g b)` as `#rrggbb` (out-of-gamut channels clipped), and a pick is stored as the computed result of `oklch(from <hex> l c h)`, read from a probe element. Stored values stay OKLCH. Picking a derived token replaces its live expression with a fixed colour, so that token stops following `primary` or `background`.
 

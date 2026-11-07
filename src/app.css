@@ -37,6 +37,8 @@
   --color-background-light: var(--background-light);
   --color-background-lighter: var(--background-lighter);
   --color-background-lightest: var(--background-lightest);
+  /* What the desktop and full-screen backdrops paint: the darkest shade, or the page in Brand Light. */
+  --color-desktop: var(--desktop);
 
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
@@ -125,7 +127,7 @@
 @layer base {
   html {
     /* The one scrim behind every floating layer (start menu, menus, dialogs). */
-    --overlay: color-mix(in oklch, var(--background-darkest) 60%, transparent);
+    --overlay: color-mix(in oklch, var(--desktop) 60%, transparent);
     /* Settings › Text & interface › Text size writes --text-scale. Everything is in rem, so the whole UI scales with it. */
     font-size: calc(100% * var(--text-scale, 1));
     font-feature-settings: "cv11", "ss01";
@@ -133,7 +135,7 @@
   }
 
   body {
-    @apply bg-background-darkest text-foreground font-sans text-sm overflow-hidden;
+    @apply bg-desktop text-foreground font-sans text-sm overflow-hidden;
   }
 
   #app {

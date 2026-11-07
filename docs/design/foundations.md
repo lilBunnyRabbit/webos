@@ -49,7 +49,7 @@ Each palette defines the brand's seven background shades. Brand Dark and Brand L
 
 | Shade | Utility | Where |
 |-------|---------|-------|
-| darkest | `bg-background-darkest` | Desktop, behind everything |
+| darkest | `bg-background-darkest` | The desktop on most themes (through `desktop`, below) |
 | darker | `bg-background-darker` | Recessed: inputs, media stages, inset lists in dialogs |
 | dark | `bg-background-dark` | Rarely; glows and gradients |
 | background | `bg-background` | Window content, the page an app draws on |
@@ -57,7 +57,9 @@ Each palette defines the brand's seven background shades. Brand Dark and Brand L
 | lighter | `bg-background-lighter` | Floating layers above windows: start menu, menus, toasts, dialogs, select pickers |
 | lightest | `bg-background-lightest` | Light palettes' fields (see below); specimens |
 
-**Scrim:** every floating layer that takes focus (start menu, menus, dialogs) sits on `--overlay`, the darkest shade at 60%. Centered questions also blur what's behind. Toasts don't use it: they don't take focus.
+**Desktop:** the frame behind everything (desktop, phone home, full-screen backdrops) paints `bg-desktop`, never a ladder shade directly. The `desktop` token is the darkest shade on every theme but Brand Light, which uses its page shade: the brand's light page is cream, and its lower shades are a saturated tan meant for small things, not the whole screen. The wallpaper glow is two shades above the desktop.
+
+**Scrim:** every floating layer that takes focus (start menu, menus, dialogs) sits on `--overlay`, the desktop colour at 60%. Centered questions also blur what's behind. Toasts don't use it: they don't take focus.
 
 **Three shades per window or panel, at most.** The desktop and dock are the frame around them and don't count. A typical app uses `background` + `background-light` (chrome, cards) + its fields.
 

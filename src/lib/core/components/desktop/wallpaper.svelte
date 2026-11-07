@@ -1,5 +1,5 @@
 <script lang="ts">
-  import kernel, { WallpaperPreset, type FilesService, type SettingsService, type Wallpaper, type WallpaperFit } from "$lib/core/api";
+  import kernel, { desktop_glow, WallpaperPreset, type FilesService, type SettingsService, type Wallpaper, type WallpaperFit } from "$lib/core/api";
   import { Platform } from "$lib/core/api/kernel/platform";
 
   /** `value` draws a given wallpaper instead of the current one (Settings' previews). */
@@ -40,7 +40,11 @@
 </script>
 
 <!-- A missing image file falls back to the glow, so the desktop never goes blank. -->
-<div class="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-background-darkest {class_name}" aria-hidden="true">
+<div
+  class="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-desktop {class_name}"
+  style:--glow={desktop_glow(settings.theme.desktop)}
+  aria-hidden="true"
+>
   {#if wallpaper.kind === "image" && url}
     <div
       class="absolute bg-center"
@@ -51,7 +55,7 @@
       style:filter={wallpaper.blur > 0 ? `blur(${wallpaper.blur}px)` : undefined}
     ></div>
     {#if wallpaper.dim > 0}
-      <div class="absolute inset-0 bg-background-darkest" style:opacity={wallpaper.dim}></div>
+      <div class="absolute inset-0 bg-desktop" style:opacity={wallpaper.dim}></div>
     {/if}
   {:else}
     <div class="preset absolute inset-0" data-preset={wallpaper.kind === "preset" ? wallpaper.preset : "glow"}></div>
@@ -68,12 +72,12 @@
   /* Presets are shades of one surface; tint adds a single brand colour fading into it, never a blend of two. */
   .preset[data-preset="grid"],
   .preset[data-preset="glow"] {
-    background: radial-gradient(ellipse 90% 70% at 50% -10%, var(--background-dark), transparent 70%);
+    background: radial-gradient(ellipse 90% 70% at 50% -10%, var(--glow), transparent 70%);
   }
 
   .preset[data-preset="tint"] {
     background:
       radial-gradient(ellipse 110% 85% at 90% 120%, color-mix(in oklch, var(--primary) 30%, transparent), transparent 70%),
-      radial-gradient(ellipse 90% 70% at 50% -10%, var(--background-dark), transparent 70%);
+      radial-gradient(ellipse 90% 70% at 50% -10%, var(--glow), transparent 70%);
   }
 </style>

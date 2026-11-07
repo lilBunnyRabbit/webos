@@ -2,6 +2,12 @@
 **Date:** 2026-10-11
 **Status:** Implemented (2026-10-11)
 
+> **Revision 2026-11-07: the desktop gets its own theme token** ([brainstorm](../brainstorm/2026-11-07_brand-light-desktop.md))
+> - The owner found Brand Light "too yellowish, using too much of the dark background". Its ladder already matched the brand, but the desktop, the full-screen shells and the scrim all painted `background-darkest`, and the brand's light ladder drops 0.1748 lightness below the page to a saturated tan (`#cab380`). The brand page itself sits on the cream page shade.
+> - **Decision (owner):** an 18th theme token, `desktop`, that every frame paints (`bg-desktop`: desktop, `body`, mobile and solo shells, intro, update overlay, Settings' taskbar preview, the theme card's miniature). It defaults to `var(--background-darkest)`, so every other preset and every saved theme looks the same; Brand Light sets `var(--background)`. The scrim is the desktop at 60%; the wallpaper glow is two ladder shades above the desktop (`desktop_glow()`). Settings › Edit colours lists it with the surfaces.
+> - Rejected: `light-dark()` on every frame (While True lost its orange desktop, Red & Black's desktop merged with its windows); retuning Brand Light's lower shades (no longer the brand's values, still tan).
+> - Shadows are still cast in `background-darkest` (decision 3), so Brand Light's window shadows stay a soft ochre.
+
 > **Revision 2026-10-11: after an independent review**
 > - **Text contrast (owner):** secondary text is `foreground/80` (passes AA at 11px). The brand's muted `/65` is kept for 13px+ captions and icons. The roughly 22 ad-hoc alphas collapse to 100 / 80 / 65 / 38.
 > - **Focus (owner):** cottontail stays the focus colour in every palette, a documented exception to the brand's dark-mode "badge ink only".

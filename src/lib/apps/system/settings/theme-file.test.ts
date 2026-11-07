@@ -6,11 +6,11 @@ const any_colour = () => true;
 const theme = derive_theme({ background: "oklch(0.2 0.02 250)", foreground: "oklch(0.92 0.01 70)", primary: "oklch(0.75 0.15 250)", secondary: "oklch(0.75 0.15 70)", accent: "oklch(0.75 0.15 160)" });
 
 describe("theme files", () => {
-  test("round-trips a theme with all 17 tokens", () => {
+  test("round-trips a theme with all 18 tokens", () => {
     const raw = serialize_theme_file({ name: "Night", theme });
     const data = JSON.parse(raw);
     expect(data).toMatchObject({ format: "webos-theme", version: 1, name: "Night" });
-    expect(Object.keys(data.theme)).toHaveLength(17);
+    expect(Object.keys(data.theme)).toHaveLength(18);
     expect(parse_theme_file(raw, any_colour)).toEqual({ ok: true, theme: { name: "Night", theme } });
   });
 
@@ -34,6 +34,12 @@ describe("theme files", () => {
     const { info: _, error: __, ...partial } = BRAND_LIGHT;
     const result = parse_theme_file(JSON.stringify({ format: "webos-theme", version: 1, name: "A", theme: partial }), any_colour);
     expect(result).toEqual({ ok: false, error: "The theme is missing error, info." });
+  });
+
+  test("a file from before the desktop colour gets the default one", () => {
+    const { desktop: _, ...old } = BRAND_DARK;
+    const result = parse_theme_file(JSON.stringify({ format: "webos-theme", version: 1, name: "A", theme: old }), any_colour);
+    expect(result.ok && result.theme.theme).toEqual(BRAND_DARK);
   });
 
   test("names values that aren't colours", () => {

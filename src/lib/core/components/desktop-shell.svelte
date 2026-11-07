@@ -29,7 +29,7 @@
 
 <div
   class={cn(
-    "grid h-dvh w-full overflow-hidden bg-background-darkest",
+    "grid h-dvh w-full overflow-hidden bg-desktop",
     ov(
       {
         top: "grid-cols-1 grid-rows-[auto_1fr]",

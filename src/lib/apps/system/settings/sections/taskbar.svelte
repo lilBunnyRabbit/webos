@@ -61,7 +61,7 @@
     <div class="grid place-items-center rounded-xl bg-background-darker p-6 ring-1 ring-foreground/8">
       <div
         class={cn(
-          "relative flex aspect-[16/10] w-full max-w-80 gap-1.5 rounded-lg bg-background-darkest p-1.5 ring-1 ring-foreground/12",
+          "relative flex aspect-[16/10] w-full max-w-80 gap-1.5 rounded-lg bg-desktop p-1.5 ring-1 ring-foreground/12",
           {
             bottom: "flex-col-reverse",
             top: "flex-col",

@@ -91,7 +91,9 @@ export type ThemeToken =
   | "success"
   | "warning"
   | "error"
-  | "info";
+  | "info"
+  /** What the desktop and every full-screen backdrop paint: `var(--background-darkest)` unless a theme says otherwise. */
+  | "desktop";
 
 export type ThemeBase = Record<ThemeBaseToken, string>;
 

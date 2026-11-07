@@ -29,7 +29,7 @@ export const SETTINGS: SettingEntry[] = [
   { id: "theme-presets", page: "theme", label: "Themes", keywords: ["brand dark", "brand light", "presets", "dark mode", "light mode"] },
   { id: "project-themes", page: "theme", label: "Project themes", keywords: ["speed reader", "while true"] },
   { id: "theme-create", page: "theme", sub: Subpage.CREATE, label: "Create a theme", keywords: ["generate", "random", "harmony", "vibrance", "contrast", "new theme"] },
-  { id: "theme-colours", page: "theme", sub: Subpage.COLOURS, label: "Edit colours", keywords: ["customise", "customize", "colors", "tokens", "oklch", "primary", "accent", "background"] },
+  { id: "theme-colours", page: "theme", sub: Subpage.COLOURS, label: "Edit colours", keywords: ["customise", "customize", "colors", "tokens", "oklch", "primary", "accent", "background", "desktop"] },
 
   page_entry("wallpaper", ["background", "desktop", "home screen"]),
   { id: "wallpaper-style", page: "wallpaper", label: "Wallpaper style", keywords: ["grid", "glow", "tint", "plain", "background"] },

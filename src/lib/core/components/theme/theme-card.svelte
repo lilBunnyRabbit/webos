@@ -27,7 +27,7 @@
     style:--secondary={theme.secondary}
     style:--accent={theme.accent}
     style:--background-darkest={theme.background_darkest}
-    style:background={theme.background_darkest}
+    style:background={theme.desktop}
   >
     <span class="absolute inset-x-[14%] top-[16%] bottom-[22%] overflow-hidden rounded-[5px] shadow-raised" style:background={theme.background}>
       <span class="flex h-[22%] items-center gap-[3px] px-[6%]" style:background={theme.background_light}>

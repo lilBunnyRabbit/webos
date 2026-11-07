@@ -236,6 +236,9 @@
             {/each}
           </div>
         </Section>
+        <Section title="Desktop" description="Behind every window, and the scrim under menus and dialogs at 60%. The darkest shade unless the theme picks another." flush>
+          {@render swatch("desktop")}
+        </Section>
         <Section title="Text and brand" description="Brand colours never touch each other: separate them with space or a surface." flush>
           <div class="grid grid-cols-2 gap-3 @xl:grid-cols-3">
             {#each BRAND as token (token)}{@render swatch(token)}{/each}

@@ -9,7 +9,7 @@ Key `settings` · Depends on: `files`, `notifications` · ADR: [ADR-002](../../a
 | `core/utils/font-loader.ts` | Shared with apps that render a chosen font themselves: Warren imports it in its own lazy chunk. Never on the boot path: SettingsService `import()`s it on the first non-default font. `fetch_faces()` downloads a built-in's faces with their descriptors; `sfnt_style()` reads weight (`OS/2` `usWeightClass`, or a variable font's `fvar` `wght` range) and italic (`OS/2` `fsSelection` bit 0 or `head` `macStyle` bit 1); `file_faces()` splits a `.ttc` with `split_collection()` (`core/utils/font-collection.ts`); `descriptors_of()` turns that into `FontFace` descriptors; `load_faces()` builds and loads the `FontFace`s |
 | `service.svelte.ts` | The class |
 | `persistence.ts` | `SETTINGS_PATH` (`/etc/settings.json`), `SETTINGS_VERSION`, `WALLPAPER_DIRECTORY_NAME` (`wallpaper`), `WALLPAPER_DIRECTORY` (`/var/lib/wallpaper`), `DEFAULT_WALLPAPER`, `DEFAULT_SPEECH` (`{ voice: null, rate: 1 }`), `SPEECH_RATE` (`{ min: 0.5, max: 2 }`), `PersistedSettings`, `parse_settings()`, `parse_wallpaper()`, `parse_live_options()`, `parse_appearance()`, `parse_analytics()`, `parse_speech()`, `serialize_settings()`, `take_legacy_settings()`, `take_v0_settings()`, sanitizing (`merge_theme`) |
-| `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `WHILE_TRUE`, `derive_surfaces()`, `derive_theme()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
+| `themes.ts` | `BRAND_DARK`, `BRAND_LIGHT`, `WHILE_TRUE`, `DEFAULT_DESKTOP`, `derive_surfaces()`, `derive_theme()`, `desktop_glow()`, `THEME_PRESETS`, `ThemePreset`, `ThemeGroup` |
 | `appearance.ts` | `DEFAULT_APPEARANCE`, `RADIUS_SCALE` (`sharp` 0.4, `default` 1, `round` 1.5), `SHADOW_STRENGTH` (`none` 0, `subtle` 0.5, `default` 1, `strong` 1.4), `TEXT_SCALE` (`s` 0.9375, `m` 1, `l` 1.0625) |
 | `taskbar.ts` | `with_pin()`, `without_pin()`: the quick launch list operations (ADR-042) |
 | `saved-themes.ts` | `find_saved()`, `with_saved()`, `without_saved()`, `renamed_saved()`: pure helpers over `saved_themes`, names compared trimmed and case-insensitive. Saving an existing name replaces it in place; renaming onto another saved name returns the list unchanged |
@@ -28,7 +28,7 @@ The API is eight plain reactive fields, which consumers assign to directly, plus
 
 | Member | Signature | Notes |
 |--------|-----------|-------|
-| `theme` | `theme: Theme` (`Record<ThemeToken, string>`) | 17 tokens (`snake_case` keys). Replace it wholesale (`settings.theme = { ...settings.theme, primary: v }`) or mutate a key. Both trigger the effects, because it's deep `$state`. |
+| `theme` | `theme: Theme` (`Record<ThemeToken, string>`) | 18 tokens (`snake_case` keys). Replace it wholesale (`settings.theme = { ...settings.theme, primary: v }`) or mutate a key. Both trigger the effects, because it's deep `$state`. |
 | `taskbar` | `taskbar: Taskbar` = `{ position: TaskbarPosition, pinned: AppId[], size: TaskbarSize, auto_hide: boolean, seconds: boolean }` | Read by `desktop-shell.svelte`, `taskbar.svelte`, `window-manager.svelte`, `taskbar-clock.svelte`. The Settings app and the `taskbar position|size|autohide|seconds` commands (AppsService) mutate `position`, `size`, `auto_hide` and `seconds` ([taskbar](../shell/taskbar.md#size), [auto-hide](../shell/taskbar.md#auto-hide), [clock](../shell/taskbar.md#clock)). `pinned` is the quick launch in order ([taskbar](../shell/taskbar.md#quick-launch)); assign `with_pin(pinned, id, index?)` / `without_pin(pinned, id)`. Written by the quick launch, the start menu, App Store, the window item menu, the `taskbar` commands (AppsService) and `apps.uninstall()`. |
 | `file_defaults` | `file_defaults: FileDefaults` (`Record<".ext", AppId>`) | Written by AppsService when the user picks "Always use" in Open-with. Read by `apps.open()`. The Settings app's Default apps page removes entries by reassigning the object. |
 | `wallpaper` | `wallpaper: Wallpaper` | `{ kind: "preset", preset: "grid" \| "glow" \| "tint" \| "plain" }` or `{ kind: "image", path, fit: "fill" \| "fit" \| "tile" \| "center", dim: 0–0.6, blur: 0–20 }`, or `{ kind: "live", id }` with an id from the live registry (ADR-057; desktop only, the phone draws the grid). Assign a preset or a live wallpaper, or spread the image to change fit, dim or blur. Drawn by `components/desktop/wallpaper.svelte` behind the desktop and the phone home ([desktop](../shell/desktop.md#wallpaper)) |
@@ -50,10 +50,12 @@ Exports from `themes.ts`, re-exported through `$lib/core/api`:
 
 | Export | Signature | Notes |
 |--------|-----------|-------|
-| `BRAND_DARK` | `Theme` | Default. All OKLCH literals, including the brand's exact surface ladder. |
-| `BRAND_LIGHT` | `Theme` | All OKLCH literals, including the brand's exact surface ladder. |
+| `BRAND_DARK` | `Theme` | Default. All OKLCH literals, including the brand's exact surface ladder; `desktop` is `DEFAULT_DESKTOP`. |
+| `BRAND_LIGHT` | `Theme` | All OKLCH literals, including the brand's exact surface ladder; `desktop` is `var(--background)`, the brand's cream page (2026-11-07). |
+| `DEFAULT_DESKTOP` | `"var(--background-darkest)"` | The `desktop` token of every theme but Brand Light: the presets, `derive_theme()`, and saves and `.webos-theme` files from before the token. |
+| `desktop_glow` | `(desktop: string) => string` | The wallpaper glow: the ladder shade two above `desktop` when it's a `var(--background…)` reference (`background-dark` for the default, `background-lighter` for Brand Light), else `var(--background-dark)`. |
 | `derive_surfaces` | `() => Record<ThemeSurfaceToken, string>` | The six ladder shades as `oklch(from var(--background) …)` at ±n·0.034 lightness, reflecting at 0 and 1 with `abs()` ([theming](../theming.md#the-surface-ladder)). Used by `derive_theme()` and for older saves. |
-| `derive_theme` | `(base: ThemeBase) => Theme` | Spreads `derive_surfaces()` and fills `tertiary`, `cottontail` and the four state tokens with relative-colour CSS that references `var(--primary)` / `var(--secondary)`. |
+| `derive_theme` | `(base: ThemeBase) => Theme` | Spreads `derive_surfaces()` and fills `tertiary`, `cottontail` and the four state tokens with relative-colour CSS that references `var(--primary)` / `var(--secondary)`; `desktop` is `DEFAULT_DESKTOP`. |
 | `THEME_PRESETS` | `ThemePreset[]` (`{ name, theme, group }`) | Brand Dark, Brand Light, then 19 `derive_theme()` presets in group `webos`; then group `projects`: Speed Reader Light, Speed Reader Dark and While True (`WHILE_TRUE`, written out like the brand themes: the style guide's `#ff9f58` as `background_darkest` (desktop), white and cream windows, `#090919` text and primary; neubrutalist in colour only, hard borders and offset shadows need ADR-015). All base colours are OKLCH. |
 | `TaskbarPosition` | const enum `top \| bottom \| left \| right` | From `type.ts`. |
 | `TaskbarSize` | const enum `small \| medium \| large` | From `type.ts`. The taskbar's `--taskbar-item`: 2rem, 2.5rem, 3rem. |
@@ -122,7 +124,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 - Missing file and no legacy key → `null` → in-memory defaults.
 - JSON parse error → `console.error("Failed to load settings:")` → defaults.
 - `version !== 1` → ignored, not migrated → defaults. The saver then overwrites the file with defaults on the first flush.
-- `theme` (`merge_theme`): starts from `BRAND_DARK`, overlaid with a surface ladder, then copies over only known token keys whose value is a `string`. Unknown keys are dropped. The ladder fills tokens a save predates: if the saved `background` equals Brand Dark's or Brand Light's, that palette's exact shades (and its other tokens) are the fallback; otherwise `derive_surfaces()`, so the ladder follows the saved background. Other missing tokens get the Brand Dark value. **Values are not validated as CSS.** A garbage string gets written to the variable as-is.
+- `theme` (`merge_theme`): starts from `BRAND_DARK`, overlaid with a surface ladder, then copies over only known token keys whose value is a `string`. Unknown keys are dropped. The ladder fills tokens a save predates: if the saved `background` equals Brand Dark's or Brand Light's, that palette's exact shades (and its other tokens) are the fallback; otherwise `derive_surfaces()`, so the ladder follows the saved background. Other missing tokens get the Brand Dark value, so a save from before `desktop` gets `DEFAULT_DESKTOP` (a Brand Light save gets Brand Light's cream). **Values are not validated as CSS.** A garbage string gets written to the variable as-is.
 - `taskbar.position`: must be one of `TaskbarPosition`, otherwise `bottom`.
 - `taskbar.pinned`: additive; strings only, deduplicated, else `[]`. Ids aren't checked against the registry; the quick launch skips unknown ones.
 - `taskbar.size`: additive; one of `TaskbarSize`, else `medium`.
@@ -140,7 +142,7 @@ Load and sanitize rules (`parse_settings` in `persistence.ts`):
 ## Behaviour & invariants
 
 - The theme is applied before mount: the token effect runs on the first flush after `init()`. Until then, `index.html` and `body` use the hardcoded Brand Dark `#17252c`. Because `init()` now waits for FilesService's OPFS bootstrap and a file read, the splash covers that wait.
-- Tokens are only ever set, never removed. A token missing from `theme` keeps its last value on `<html>`. That can't happen through the public flow, because load always fills all 17.
+- Tokens are only ever set, never removed. A token missing from `theme` keeps its last value on `<html>`. That can't happen through the public flow, because load always fills all 18.
 - Derived presets store strings like `oklch(from var(--primary) l 0.14 140)` as the token value. They resolve at use time in CSS, so editing `primary` live re-derives the states.
 - No cross-tab sync, and none possible through `storage` events now that the store is OPFS. Two tabs each write their own state, and the last write wins on reload.
 - The file isn't watched. Editing or deleting `/etc/settings.json` (File Explorer can delete it) takes effect on the next boot, and the next settings change in this tab overwrites it.
@@ -167,7 +169,7 @@ The UI font (`sans`) and the code font (`mono`) are chosen per role in `appearan
 
 ## Divergence from ADR
 
-- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018), `wallpaper` (ADR-011 revision), `taskbar.pinned` (ADR-042), `taskbar.size` / `taskbar.auto_hide` / `taskbar.seconds`, `saved_themes` and `appearance` (ADR-015 revisions) , `live_options` (ADR-057), `analytics` (ADR-070) and `speech` (ADR-074) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) were also added without a bump; `merge_theme` fills them for older saves.
+- ADR-002's revision note describes a localStorage blob `{ version: 1, theme, taskbar }`. The code stores it in `/etc/settings.json` (ADR-021, CONVENTIONS → Services) and adds `file_defaults` (ADR-018), `wallpaper` (ADR-011 revision), `taskbar.pinned` (ADR-042), `taskbar.size` / `taskbar.auto_hide` / `taskbar.seconds`, `saved_themes` and `appearance` (ADR-015 revisions) , `live_options` (ADR-057), `analytics` (ADR-070) and `speech` (ADR-074) without a version bump (noted in `persistence.ts`). The six surface tokens (ADR-024) and `desktop` (ADR-024 revision 2026-11-07) were also added without a bump; `merge_theme` fills them for older saves.
 
 ## Shell
 

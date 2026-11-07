@@ -69,7 +69,7 @@
 />
 
 <div
-  class="flex h-dvh w-full flex-col overflow-hidden bg-background-darkest pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] [touch-action:manipulation]"
+  class="flex h-dvh w-full flex-col overflow-hidden bg-desktop pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)] [touch-action:manipulation]"
 >
   <!-- The stage is the size container cards and pages measure against (100cqw / 100cqh). -->
   <main class="relative isolate min-h-0 flex-1 [container-type:size]" data-wallpaper-image={settings.wallpaper.kind === "image" ? "" : undefined}>

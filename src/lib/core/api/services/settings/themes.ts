@@ -1,5 +1,7 @@
 import type { Theme, ThemeBase, ThemeSurfaceToken } from "./type";
 
+export const DEFAULT_DESKTOP = "var(--background-darkest)";
+
 // Brand ladder: ±0.034 lightness per step around the seed, chroma scaled with lightness (brand palette values).
 export const BRAND_DARK: Theme = {
   background_lightest: "oklch(0.357 0.0326 230.47)",
@@ -19,6 +21,7 @@ export const BRAND_DARK: Theme = {
   warning: "oklch(0.745 0.1398 70)",
   error: "oklch(0.745 0.1398 30)",
   info: "oklch(0.745 0.1398 240)",
+  desktop: DEFAULT_DESKTOP,
 };
 
 // Brand rule: light is product UI only, never for the app icon, favicon or splash.
@@ -40,6 +43,8 @@ export const BRAND_LIGHT: Theme = {
   warning: "oklch(0.4761 0.1064 113.24)",
   error: "oklch(0.4743 0.1556 30)",
   info: "oklch(0.4829 0.1244 246.07)",
+  // The brand's light page is the cream background; its lower shades are for small things, not the whole screen.
+  desktop: "var(--background)",
 };
 
 // Neubrutalist, from the While True style guide: the orange is the desktop, windows are white, text is #090919. Written out because
@@ -62,6 +67,7 @@ export const WHILE_TRUE: Theme = {
   warning: "oklch(0.4761 0.1064 113.24)",
   error: "oklch(0.4743 0.1556 30)",
   info: "oklch(0.4829 0.1244 246.07)",
+  desktop: DEFAULT_DESKTOP,
 };
 
 const SURFACE_STEPS: Record<ThemeSurfaceToken, number> = {
@@ -101,6 +107,17 @@ export function surface_step(token: ThemeSurfaceToken): number {
   return SURFACE_STEPS[token];
 }
 
+const LADDER = ["darkest", "darker", "dark", "", "light", "lighter", "lightest"].map((step) => (step ? `var(--background-${step})` : "var(--background)"));
+
+/**
+ * The wallpaper glow: two shades above the desktop, so it lifts off whatever shade the desktop is (`background-dark`
+ * on the default darkest desktop). A desktop that isn't a ladder shade keeps `background-dark`.
+ */
+export function desktop_glow(desktop: string): string {
+  const index = LADDER.indexOf(desktop.trim());
+  return index < 0 ? "var(--background-dark)" : LADDER[Math.min(index + 2, LADDER.length - 1)];
+}
+
 // Mirrors the brand derivation (states at brand lightness, fixed hues) so presets never hand-pick extra colours.
 export function derive_theme(base: ThemeBase): Theme {
   return {
@@ -112,6 +129,7 @@ export function derive_theme(base: ThemeBase): Theme {
     warning: "oklch(from var(--primary) l 0.14 70)",
     error: "oklch(from var(--primary) l 0.14 30)",
     info: "oklch(from var(--primary) l 0.14 240)",
+    desktop: DEFAULT_DESKTOP,
   };
 }
 

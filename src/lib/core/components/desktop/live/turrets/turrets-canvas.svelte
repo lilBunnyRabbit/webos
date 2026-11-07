@@ -19,7 +19,7 @@
 
   let { context, options, layer }: Props = $props();
 
-  const TOKENS = ["foreground", "primary", "accent", "background_darkest"] as const;
+  const TOKENS = ["foreground", "primary", "accent", "desktop"] as const;
   /** Pews per frame at most; a frantic volley would otherwise stack six oscillators. */
   const MAX_PEWS = 3;
 
@@ -173,7 +173,7 @@
       ctx.lineWidth = 2;
       ctx.stroke(path);
       ctx.globalAlpha = 1;
-      ctx.fillStyle = colours.background_darkest;
+      ctx.fillStyle = colours.desktop;
       ctx.fill(path);
       ctx.restore();
       for (const above of windows.slice(Math.max(0, index - widgets.length + 1))) {

@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.8.1",
+    date: "2026-11-07",
+    title: "Brand Light desktop",
+    changes: [
+      {
+        kind: FIXED,
+        text: "The Brand Light theme's desktop is the brand's cream again instead of a dark yellow tan, and Edit colours lets you pick any theme's desktop colour.",
+      },
+    ],
+  },
+  {
     version: "4.8.0",
     date: "2026-11-07",
     title: "Airfield",

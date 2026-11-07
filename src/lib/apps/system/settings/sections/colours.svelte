@@ -8,8 +8,8 @@
   const GROUPS: { title: string; description: string; tokens: ThemeToken[] }[] = [
     {
       title: "Surfaces",
-      description: "The seven background shades, lightest first.",
-      tokens: ["background_lightest", "background_lighter", "background_light", "background", "background_dark", "background_darker", "background_darkest"],
+      description: "The seven background shades, lightest first, and the desktop behind the windows.",
+      tokens: ["background_lightest", "background_lighter", "background_light", "background", "background_dark", "background_darker", "background_darkest", "desktop"],
     },
     { title: "Text and brand", description: "Text, the brand colours and the focus ring.", tokens: ["foreground", "primary", "secondary", "tertiary", "accent", "cottontail"] },
     { title: "States", description: "Success, warnings, errors and info.", tokens: ["success", "warning", "error", "info"] },

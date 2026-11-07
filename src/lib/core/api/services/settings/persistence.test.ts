@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { DEFAULT_APPEARANCE } from "./appearance";
 import { DEFAULT_WALLPAPER, SETTINGS_VERSION, WALLPAPER_DIRECTORY, parse_analytics, parse_appearance, parse_live_options, parse_settings, parse_speech, parse_wallpaper } from "./persistence";
 import { DEFAULT_TURRETS_OPTIONS } from "$lib/core/components/desktop/live/turrets/options";
-import { derive_surfaces, legacy_surface } from "./themes";
+import { BRAND_LIGHT, DEFAULT_DESKTOP, derive_surfaces, desktop_glow, legacy_surface } from "./themes";
 
 describe("parse_appearance", () => {
   test("keeps valid values", () => {
@@ -120,6 +120,19 @@ describe("surface ladder migration", () => {
     expect(loaded.background_lightest).toBe(derived.background_lightest);
     expect(loaded.background_darkest).toBe(derived.background_darkest);
     expect(loaded.background_light).toBe("oklch(0.9 0 0)");
+  });
+
+  test("a save from before the desktop colour gets the default, or Brand Light's own", () => {
+    const load = (theme: object) => parse_settings(JSON.stringify({ version: SETTINGS_VERSION, theme }))!.theme.desktop;
+    expect(load({ background: "oklch(0.98 0.01 250)" })).toBe(DEFAULT_DESKTOP);
+    const { desktop: _, ...old_brand_light } = BRAND_LIGHT;
+    expect(load(old_brand_light)).toBe(BRAND_LIGHT.desktop);
+  });
+
+  test("the wallpaper glow sits two shades above the desktop", () => {
+    expect(desktop_glow(DEFAULT_DESKTOP)).toBe("var(--background-dark)");
+    expect(desktop_glow("var(--background)")).toBe("var(--background-lighter)");
+    expect(desktop_glow("oklch(0.7 0.1 50)")).toBe("var(--background-dark)");
   });
 });
 

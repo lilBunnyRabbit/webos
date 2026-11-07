@@ -170,7 +170,7 @@
   }}
 />
 
-<div role="region" aria-label="Introduction" class="fixed inset-0 flex flex-col overflow-y-auto bg-background-darkest text-foreground">
+<div role="region" aria-label="Introduction" class="fixed inset-0 flex flex-col overflow-y-auto bg-desktop text-foreground">
   <div class="pointer-events-none absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_top,var(--background-dark),transparent_70%)]"></div>
 
   <div class="relative flex items-center justify-between px-6 py-4">
