@@ -137,7 +137,7 @@ Move trailers round a freight yard with a yard shunter, the short tractor with a
 
 ## Hot Lap: the race track
 
-Three laps in the F1 car, in race trim (up to about 280 km/h), on one of three circuits: **Meadow** (fast sweepers and long straights), **Harbour** (a street circuit: right angles, a hairpin and a chicane between close walls) and **Ridge** (technical: esses and a double-apex right). Pick one at the top. The start card shows the whole track, its length, the par time and your best.
+Three laps in the F1 car, in race trim (up to about 280 km/h), on a ladder of twelve circuits. The first three are laid by hand: **Meadow** (fast sweepers and long straights), **Harbour** (a street circuit: right angles, a hairpin and a chicane between close walls) and **Ridge** (technical: esses and a double-apex right). Nine more follow, from Quarry to Summit, their corners tighter and the walls closer as they go. Two stars on a track open the next. **Random** builds a new circuit every time, with no ghost and no stars kept. Pick one at the top. The start card shows the whole track, its length, the par time, your best and your stars there.
 
 - **The lap.** You start on the grid just behind the chequered line. Crossing it starts lap 1; the clock stops each time you cross it again. The dashed lines across the track split each lap into three sectors.
 - **Grip.** The faster you go, the less the wheels turn: brake before a bend, turn in, and accelerate out. Flat out the view pulls back to show the track a few seconds ahead, and a ring marks your car. The dashed racing line (shown with **Guides** in settings) is the quickest way round.

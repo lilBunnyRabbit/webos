@@ -11,16 +11,20 @@ import {
   lap_stars,
   lap_text,
   LAPS,
+  LEVEL_COUNT,
   par_ms,
+  random_round,
   Status,
   THREE_STARS,
+  tracks_open,
   type GameState,
   type LapResult,
 } from "./game";
+import { generate_track } from "./generate";
 import { ghost_pose, quantise, record_frame } from "./ghost";
 import { A_LAT, SPEC } from "./spec";
 import { HALF_WIDTH, locate } from "./track";
-import { TRACK_IDS, TrackId } from "./tracks";
+import { CLASSIC_IDS, TRACK_IDS, TrackId } from "./tracks";
 
 const DT = 1 / 120;
 
@@ -118,7 +122,8 @@ describe("scoring", () => {
   });
 
   it("picks one of the tracks for the day", () => {
-    for (const seed of [0, 1, 2, 12345, 2 ** 31]) expect(TRACK_IDS).toContain(daily_track(seed));
+    for (const seed of [0, 1, 2, 12345, 2 ** 31]) expect(CLASSIC_IDS).toContain(daily_track(seed));
+    expect([0, 1, 2].map(daily_track)).toEqual(CLASSIC_IDS);
   });
 });
 
@@ -150,5 +155,26 @@ describe("turn view", () => {
     const back = unturn({ x: 0, y: -10 }, heading_up(0));
     expect(back.x).toBeCloseTo(10);
     expect(back.y).toBeCloseTo(0);
+  });
+});
+
+describe("the ladder", () => {
+  it("opens the next track at two stars, and keeps any track already starred open", () => {
+    expect(tracks_open({})).toBe(1);
+    expect(tracks_open({ 1: 1 })).toBe(1);
+    expect(tracks_open({ 1: 2 })).toBe(2);
+    expect(tracks_open({ 1: 3, 2: 2, 3: 1 })).toBe(3);
+    expect(tracks_open({ 1: 1, 3: 1 })).toBe(3);
+    expect(tracks_open({ [LEVEL_COUNT]: 3 })).toBe(LEVEL_COUNT);
+  });
+
+  it("generates the same circuit from the same seed", () => {
+    expect(generate_track(77, 0.5, "a", "A")).toEqual(generate_track(77, 0.5, "a", "A"));
+  });
+
+  it.each([3, 2027, 31337])("random track %i can be lapped clean", (seed) => {
+    const done = drive_session(create_game(random_round(seed)));
+    expect(done.laps.every((lap) => lap.clean)).toBe(true);
+    expect(best_lap(done.laps)).not.toBeNull();
   });
 });

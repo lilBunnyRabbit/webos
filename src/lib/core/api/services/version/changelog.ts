@@ -25,6 +25,11 @@ export const CHANGELOG: Release[] = [
         text: "Drive Hub Rodeo has 12 levels to earn stars on, bringing in tighter gates, longer slaloms, a three-point turn bay, bigger vehicles and a trailer.",
       },
       {
+        kind: IMPROVED,
+        apps: ["tight-spot"],
+        text: "Drive Hub Hot Lap has nine new circuits after the first three, each opening at two stars on the one before, and a random circuit to race any time.",
+      },
+      {
         kind: FIXED,
         apps: ["tight-spot"],
         text: "Drive Hub Airport's Ramp lead achievement counts the levels of all four jobs, not only the pushbacks.",

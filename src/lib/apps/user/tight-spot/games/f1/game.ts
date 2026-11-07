@@ -5,7 +5,9 @@ import { record_frame, type Ghost } from "./ghost";
 import { GRASS_SPEC, SPEC } from "./spec";
 import { racing_line } from "./line";
 import { locate, passes, progress, type Located, type Track } from "./track";
-import { TRACK_IDS, track_of, type TrackId } from "./tracks";
+import { CLASSIC_IDS, RANDOM, random_track, TRACK_IDS, track_of, type TrackId } from "./tracks";
+import { z } from "zod";
+import { levels_schema, open_through, type LevelStars } from "../../core/track";
 
 export const Status = {
   READY: "ready",
@@ -21,8 +23,36 @@ export const THREE_STARS = 1.08;
 export const TWO_STARS = 1.2;
 
 export interface Round {
-  track: TrackId;
+  track: TrackId | typeof RANDOM;
+  /** A random track's. */
+  seed?: number;
   daily?: string;
+}
+
+export const LEVEL_COUNT = TRACK_IDS.length;
+export const OPENS_AT = 2;
+
+export const data_schema = z.object({ levels: levels_schema });
+export type Data = z.infer<typeof data_schema>;
+export const EMPTY_DATA: Data = { levels: {} };
+
+/** Tracks open: the next after each with two stars or more, and any already starred (a ghost from before the ladder). */
+export function tracks_open(levels: LevelStars): number {
+  const passed = Object.entries(levels).filter(([, stars]) => stars >= OPENS_AT).map(([level]) => Number(level));
+  const starred = Object.keys(levels).map(Number).filter((level) => Number.isInteger(level) && level <= LEVEL_COUNT);
+  return Math.max(open_through(passed, LEVEL_COUNT), ...starred);
+}
+
+export function track_round(track: TrackId): Round {
+  return { track };
+}
+
+export function random_round(seed: number): Round {
+  return { track: RANDOM, seed };
+}
+
+export function track_of_round(round: Round): Track {
+  return round.track === RANDOM ? random_track(round.seed ?? 0) : track_of(round.track);
 }
 
 export interface Lap {
@@ -55,7 +85,7 @@ export interface GameState {
 }
 
 export function create_game(round: Round): GameState {
-  const track = track_of(round.track);
+  const track = track_of_round(round);
   const car = create_car(track.start, Gear.DRIVE, SPEC);
   return {
     round,
@@ -166,7 +196,7 @@ export function to_ghost(lap: LapResult): Ghost {
 }
 
 export function daily_track(seed: number): TrackId {
-  return TRACK_IDS[seed % TRACK_IDS.length];
+  return CLASSIC_IDS[seed % CLASSIC_IDS.length];
 }
 
 export function lap_time(state: Pick<GameState, "lap" | "ms">): number | null {

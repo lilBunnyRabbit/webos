@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { get_app_context } from "$lib/core/contexts/app";
+  import kernel, { type FilesService } from "$lib/core/api";
+  import { app_data_path, get_app_context, json_file, type JsonFile } from "$lib/core/contexts/app";
   import { daily_seed } from "$kit/games";
   import { cn } from "$lib/core/utils";
-  import { Badge, BoardOverlay, Button, IconButton, Select } from "$lib/core/components/ui";
+  import { random_seed } from "$lib/core/utils/random";
+  import { Badge, BoardOverlay, Button, IconButton } from "$lib/core/components/ui";
   import { ArrowCounterClockwise as ArrowCounterClockwiseIcon, Pause as PauseIcon, Play as PlayIcon, Star as StarIcon } from "phosphor-svelte";
   import { untrack } from "svelte";
   import { clamp_zoom, ease, fit_span, frame, OVERLAY_ASPECT, OVERLAY_GAP, view_span, type Camera, type Insets } from "$kit/games/play2d/camera";
@@ -18,6 +20,8 @@
   import { Sounds } from "../../core/sound";
   import { SpeedChip } from "$kit/components/play2d";
   import { body_centre, Gear, max_steer, top_speed } from "../../core/vehicle";
+  import TrackPicker from "../../core/track-picker.svelte";
+  import { levels_done, with_stars } from "../../core/track";
   import type { GameProps } from "../define";
   import { draw_scene } from "./draw";
   import {
@@ -27,25 +31,33 @@
     change_gear,
     create_game,
     daily_track,
+    data_schema,
+    EMPTY_DATA,
     lap_stars,
     lap_text,
     lap_time,
     LAPS,
+    LEVEL_COUNT,
+    OPENS_AT,
     par_ms,
+    random_round,
     set_status,
     split_delta,
     Status,
     to_ghost,
+    track_round,
+    tracks_open,
     type GameState,
     type LapResult,
     type Round,
   } from "./game";
   import { ghost_pose, ghost_schema, type Ghost } from "./ghost";
   import { SPEC } from "./spec";
-  import { track_id_schema, TRACK_IDS, track_name, TrackId } from "./tracks";
+  import { CLASSIC_IDS, RANDOM, track_id_schema, track_level, track_name, track_of, TRACK_IDS, TrackId } from "./tracks";
   import { ease_turn, heading_up, unturn } from "./turn";
+  import { z } from "zod";
 
-  const TRACK_OPTIONS = TRACK_IDS.map((value) => ({ value, label: track_name(value) }));
+  const RANDOM_OPTION = [{ value: RANDOM, label: "Random" }];
   // Slow, the view is a parking game's; flat out it pulls back only as far as keeps the car readable (about 30 px long
   // on a 600 px board, 20 px on a phone) and spends the look-ahead along the direction of travel, so the longer side
   // carries most of it. Speed is eased (PACE_RATE per second) so braking or lifting doesn't pump the zoom.
@@ -62,17 +74,15 @@
   const daily_day = untrack(() => daily_prop);
 
   const { app_id, window: win, storage, achievements } = get_app_context();
-  const ghosts: Record<TrackId, { value: Ghost | null }> = {
-    meadow: storage.file<Ghost | null>("f1/ghost-v2-meadow.json", null, ghost_schema.nullable()),
-    harbour: storage.file<Ghost | null>("f1/ghost-v2-harbour.json", null, ghost_schema.nullable()),
-    ridge: storage.file<Ghost | null>("f1/ghost-v2-ridge.json", null, ghost_schema.nullable()),
-  };
+  const files = $derived(kernel.service<FilesService>("files"));
+  const data = storage.file("f1.json", EMPTY_DATA, data_schema);
   const input = new DriveInput();
 
   let daily = $state<string | null>(daily_day ?? null);
-  let track = $state<TrackId>(track_id_schema.catch(TrackId.MEADOW).parse(untrack(() => prefs.value["f1.track"])));
+  let track = $state<TrackId | typeof RANDOM>(z.union([track_id_schema, z.literal(RANDOM)]).catch(TrackId.MEADOW).parse(untrack(() => prefs.value["f1.track"])));
 
   let game = $state.raw<GameState>(create_game(untrack(() => make_round())));
+  let ghost_file = $state.raw<JsonFile<Ghost | null> | null>(null);
   let new_best = $state(false);
   let board_size = $state({ width: 0, height: 0, dpr: 1 });
   let palette = $state.raw<Palette | null>(null);
@@ -90,7 +100,7 @@
   let pace = 0;
   let turn = 0;
   // The ghost a session races is the one saved when it started: beating it mid-session doesn't swap the car ahead.
-  let racing: Ghost | null = untrack(() => ghosts[game.round.track].value);
+  let racing: Ghost | null = null;
   const sounds = new Sounds(() => settings);
 
   const round = $derived(game.round);
@@ -101,7 +111,13 @@
   const can_pause = $derived(game.status === Status.READY || game.status === Status.DRIVING || game.status === Status.PAUSED);
   const play_label = $derived(game.status === Status.DRIVING ? "Pause (Esc)" : game.status === Status.PAUSED ? "Resume (Esc)" : "Start (Enter)");
   const par = $derived(par_ms(game.track));
-  const saved = $derived(ghosts[round.track].value);
+  const saved = $derived(ghost_file?.value ?? null);
+  const level = $derived(round.track === RANDOM ? null : track_level(round.track));
+  const open = $derived(Math.max(tracks_open(data.value.levels), level !== null && (round.daily || level <= CLASSIC_IDS.length) ? level : 1));
+  const track_stars = $derived(level === null ? 0 : (data.value.levels[level] ?? 0));
+  const next_open = $derived(level !== null && level < LEVEL_COUNT && tracks_open(data.value.levels) > level);
+  const name = $derived(round.track === RANDOM ? "Random" : track_name(round.track));
+  const go_on = $derived(!round.daily && (round.track === RANDOM || next_open));
   const session_best = $derived(best_lap(game.laps));
   const best_stars = $derived(session_best ? lap_stars(session_best, par) : 0);
   const side_card = $derived(board_size.height > 0 && board_size.width > board_size.height * 1.2);
@@ -113,8 +129,51 @@
 
   function make_round(): Round {
     if (daily) return { track: daily_track(daily_seed(daily, `${app_id}/${DAILY_MODE}`)), daily };
-    return { track };
+    return track === RANDOM ? random_round(random_seed()) : track_round(track);
   }
+
+  // Ghosts are a file per track, opened for the track on the board only.
+  const ghost_key = $derived(round.track);
+  $effect(() => {
+    const key = ghost_key;
+    if (key === RANDOM) {
+      ghost_file = null;
+      return;
+    }
+    const file = json_file<Ghost | null>(app_data_path(app_id, `f1/ghost-v2-${key}.json`), null, ghost_schema.nullable());
+    ghost_file = file;
+    return () => file.release();
+  });
+
+  // The saved track can be past what's open (a reset data file): it's clamped once the file is read. The first three
+  // were open to everyone before the ladder, so a saved one stays.
+  $effect(() => {
+    if (!data.ready || track === RANDOM || CLASSIC_IDS.includes(track) || track_level(track) <= tracks_open(data.value.levels)) return;
+    untrack(() => {
+      track = TRACK_IDS[tracks_open(data.value.levels) - 1];
+      prefs.value["f1.track"] = track;
+      if (game.status === Status.READY && !daily) load(make_round());
+    });
+  });
+
+  // Laps from before the ladder left ghosts on the first three tracks: their stars count, so those tracks stay open.
+  $effect(() => {
+    if (!data.ready) return;
+    untrack(() => {
+      for (const id of CLASSIC_IDS) {
+        const at = track_level(id);
+        if (data.value.levels[at]) continue;
+        void files
+          .get_file(app_data_path(app_id, `f1/ghost-v2-${id}.json`))
+          .then(async (file) => {
+            const ghost = file ? ghost_schema.safeParse(JSON.parse(await file.text())) : null;
+            if (!ghost?.success) return;
+            data.value.levels = with_stars(data.value.levels, at, lap_stars({ ms: ghost.data.ms, clean: true }, par_ms(track_of(id))));
+          })
+          .catch(() => {});
+      }
+    });
+  });
 
   function today(): string {
     const now = new Date();
@@ -268,20 +327,26 @@
 
   function finished(lap: LapResult, state: GameState) {
     const id = state.round.track;
+    const stars = lap_stars(lap, par_ms(state.track));
     if (lap.clean) {
       achievements.achieve("f1-first");
-      if (lap_stars(lap, par_ms(state.track)) === 3) achievements.achieve("f1-on-pace");
+      if (stars === 3) achievements.achieve("f1-on-pace");
       if (state.round.daily) {
         play.daily(state.round.daily, Math.round(lap.ms), undefined, DAILY_MODE);
         achievements.achieve("f1-daily");
       }
+      if (id !== RANDOM) {
+        data.value.levels = with_stars(data.value.levels, track_level(id), stars);
+        achievements.progress("f1-levels", levels_done(data.value.levels));
+        achievements.progress("f1-tracks", CLASSIC_IDS.filter((each) => data.value.levels[track_level(each)]).length);
+      }
     }
-    const old = ghosts[id].value;
+    const holder = id === RANDOM ? null : ghost_file;
+    const old = holder?.value ?? null;
     const improved = beats(old, lap);
     if (improved) {
-      ghosts[id].value = to_ghost(lap);
+      if (holder) holder.value = to_ghost(lap);
       if (old) achievements.achieve("f1-ghost");
-      achievements.progress("f1-tracks", TRACK_IDS.filter((each) => ghosts[each].value).length);
       new_best = true;
     }
     if (lap.clean) sounds.parked(improved);
@@ -315,7 +380,10 @@
 
   function primary_action() {
     if (game.status === Status.READY || game.status === Status.PAUSED) start();
-    else if (game.status === Status.DONE) retry();
+    else if (game.status === Status.DONE) {
+      if (go_on) next_track();
+      else retry();
+    }
   }
 
   function load(next: Round) {
@@ -325,8 +393,8 @@
     camera = null;
     pace = 0;
     turn = 0;
+    racing = next.track !== RANDOM && next.track === ghost_key ? saved : null;
     game = create_game(next);
-    racing = ghosts[next.track].value;
     focus_board();
   }
 
@@ -336,9 +404,14 @@
 
   function set_track(next: string) {
     daily = null;
-    track = track_id_schema.catch(TrackId.MEADOW).parse(next);
+    track = next === RANDOM ? RANDOM : track_id_schema.catch(TrackId.MEADOW).parse(next);
     prefs.value["f1.track"] = track;
     load(make_round());
+  }
+
+  function next_track() {
+    if (round.track === RANDOM || level === null) return set_track(RANDOM);
+    set_track(TRACK_IDS[level]);
   }
 
   function open_daily() {
@@ -446,7 +519,17 @@
 {#snippet toolbar()}
   {@render menu?.()}
   <!-- In the daily it shows the day's track; picking one leaves the daily. -->
-  <Select class="w-[7.5rem] min-w-0" size="sm" aria-label="Track" options={TRACK_OPTIONS} bind:value={() => round.track, set_track} />
+  <TrackPicker
+    class="w-[8.5rem] min-w-0 @md:w-44"
+    label="Track"
+    {open}
+    stars={(at) => data.value.levels[at] ?? 0}
+    name={(at) => `${at} · ${track_name(TRACK_IDS[at - 1])}`}
+    id={(at) => TRACK_IDS[at - 1]}
+    before={RANDOM_OPTION}
+    value={round.track}
+    onpick={set_track}
+  />
   {#if daily}<span class="truncate px-1 text-ui font-medium">Daily</span>{/if}
   <div class="flex-1"></div>
   {#if !daily}<Button size="sm" variant="quiet" class="hidden @lg:inline-flex" onclick={open_daily}>Daily</Button>{/if}
@@ -504,11 +587,19 @@
   {#if game.status === Status.READY}
     <RoundCard side={side_card} bind:width={card_size.width} bind:height={card_size.height}>
       <div class="min-w-0 flex-1 basis-52">
-        <p class="text-base font-semibold">{round.daily ? `Daily · ${track_name(round.track)}` : track_name(round.track)} · {LAPS} laps</p>
+        <p class="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold">
+          {round.daily ? `Daily · ${name}` : name} · {LAPS} laps
+          {#if track_stars}{@render star_row(track_stars, false)}{/if}
+        </p>
         <p class="text-ui text-foreground/80">Your best clean lap counts. A wall voids the lap; the grass slows you.</p>
         <p class="mt-0.5 font-mono text-2xs text-foreground/65 tabular-nums">
           {Math.round(game.track.length)} m · Par {lap_text(par)}{saved ? ` · Best ${lap_text(saved.ms)}` : ""}
         </p>
+        {#if level !== null && level < LEVEL_COUNT && !next_open}
+          <p class="text-2xs text-foreground/65">{OPENS_AT} stars here open {track_name(TRACK_IDS[level])}.</p>
+        {:else if round.track === RANDOM}
+          <p class="text-2xs text-foreground/65">A new circuit every time: no ghost, no stars kept.</p>
+        {/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
         {#if !daily}<Button variant="quiet" class="@lg:hidden" onclick={open_daily}>Daily</Button>{/if}
@@ -538,19 +629,25 @@
           {/each}
         </ol>
         <p class="font-mono text-2xs text-foreground/65 tabular-nums">Par {lap_text(par)}{saved ? ` · Best ${lap_text(saved.ms)}` : ""}</p>
+        {#if level !== null && level < LEVEL_COUNT && !round.daily}
+          <p class="text-2xs text-foreground/65">
+            {next_open ? `${track_name(TRACK_IDS[level])} is open.` : `${OPENS_AT} stars here open ${track_name(TRACK_IDS[level])}.`}
+          </p>
+        {/if}
       </div>
       <div class="ml-auto flex shrink-0 gap-2">
-        <Button variant="primary" onclick={retry}>Again</Button>
+        <Button variant={go_on ? "quiet" : "primary"} onclick={retry}>Again</Button>
+        {#if go_on}<Button variant="primary" onclick={next_track}>{round.track === RANDOM ? "New track" : "Next track"}</Button>{/if}
       </div>
       <p class="hidden basis-full flex-wrap items-center gap-x-2.5 gap-y-1 text-2xs text-foreground/65 pointer-fine:flex">
-        <KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="drives again" />
+        {#if go_on}<KeyHint key_name="Enter" text={round.track === RANDOM ? "new track" : "next track"} /><KeyHint key_name="R" text="again" />{:else}<KeyHint key_name="Enter" text="or" /><KeyHint key_name="R" text="drives again" />{/if}
       </p>
     </RoundCard>
   {/if}
 {/snippet}
 
 {#snippet status()}
-  <span>{track_name(round.track)}{round.daily ? " · daily" : ""}</span>
+  <span>{name}{round.daily ? " · daily" : ""}</span>
   <span class="tabular-nums">Lap {lap_number}/{LAPS}</span>
   <span class="tabular-nums">{live === null ? "–" : lap_text(live)}</span>
   <span class="tabular-nums pointer-coarse:hidden">Wheel {Math.abs(wheel_degrees)}°{wheel_degrees > 2 ? " R" : wheel_degrees < -2 ? " L" : ""}</span>

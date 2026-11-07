@@ -17,6 +17,9 @@ import parking, { COURSES as PARKING_COURSES, LEVELS as PARKING_LEVELS } from ".
 import shunter_game from "./shunter";
 import { LEVEL_COUNT as SHUNTER_COUNT } from "./shunter/levels";
 import { LEVELS as SHUNTER_LEVELS } from "./shunter/progress";
+import f1_game from "./f1";
+import { LEVEL_COUNT as F1_COUNT } from "./f1/game";
+import { LEVELS as F1_LEVELS } from "./f1/progress";
 import rodeo_game from "./rodeo";
 import { LEVEL_COUNT as RODEO_COUNT } from "./rodeo/game";
 import { LEVELS as RODEO_LEVELS } from "./rodeo/progress";
@@ -32,6 +35,7 @@ describe("progress", () => {
     expect(PARKING_COURSES).toBe(COURSES.length);
     expect(SHUNTER_LEVELS).toBe(SHUNTER_COUNT);
     expect(RODEO_LEVELS).toBe(RODEO_COUNT);
+    expect(F1_LEVELS).toBe(F1_COUNT);
   });
 
   test("stars come from the save as it is on disk, and a bad one counts as none", () => {
@@ -50,5 +54,6 @@ describe("progress", () => {
     expect(goal(mower_game, "mower-levels")).toBe(MOWER_COUNT);
     expect(goal(shunter_game, "shunter-levels")).toBe(SHUNTER_COUNT);
     expect(goal(rodeo_game, "rodeo-levels")).toBe(RODEO_COUNT);
+    expect(goal(f1_game, "f1-levels")).toBe(F1_COUNT);
   });
 });

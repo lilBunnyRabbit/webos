@@ -1,9 +1,28 @@
 import { z } from "zod";
+import { generate_track } from "./generate";
 import { build_track, type Piece, type Track, type TrackDef } from "./track";
 
-export const TrackId = { MEADOW: "meadow", HARBOUR: "harbour", RIDGE: "ridge" } as const;
+/** In ladder order: the three laid by hand, then the seeded ones, their corners tougher as they go. */
+export const TrackId = {
+  MEADOW: "meadow",
+  HARBOUR: "harbour",
+  RIDGE: "ridge",
+  QUARRY: "quarry",
+  ORCHARD: "orchard",
+  ESTUARY: "estuary",
+  MOORLAND: "moorland",
+  PINEWOOD: "pinewood",
+  VIADUCT: "viaduct",
+  SALTMARSH: "saltmarsh",
+  FOUNDRY: "foundry",
+  SUMMIT: "summit",
+} as const;
 export type TrackId = (typeof TrackId)[keyof typeof TrackId];
-export const track_id_schema = z.enum([TrackId.MEADOW, TrackId.HARBOUR, TrackId.RIDGE]);
+export const TRACK_IDS = Object.values(TrackId);
+export const track_id_schema = z.enum(TRACK_IDS as [TrackId, ...TrackId[]]);
+/** The daily's pool, pinned so a past day keeps its track. */
+export const CLASSIC_IDS: readonly TrackId[] = [TrackId.MEADOW, TrackId.HARBOUR, TrackId.RIDGE];
+export const RANDOM = "random";
 
 const S = (straight: number): Piece => ({ straight });
 const B = (radius: number, degrees: number): Piece => ({ radius, degrees });
@@ -72,19 +91,57 @@ export const TRACK_DEFS: readonly TrackDef[] = [
   },
 ];
 
+interface Seeded {
+  id: TrackId;
+  name: string;
+  seed: number;
+  difficulty: number;
+}
+
+// The seeds were picked so the autopilot laps each one clean at three-star pace (the tests hold it).
+export const SEEDED: readonly Seeded[] = [
+  { id: TrackId.QUARRY, name: "Quarry", seed: 4, difficulty: 0.1 },
+  { id: TrackId.ORCHARD, name: "Orchard", seed: 5, difficulty: 0.2 },
+  { id: TrackId.ESTUARY, name: "Estuary", seed: 6, difficulty: 0.3 },
+  { id: TrackId.MOORLAND, name: "Moorland", seed: 7, difficulty: 0.4 },
+  { id: TrackId.PINEWOOD, name: "Pinewood", seed: 8, difficulty: 0.5 },
+  { id: TrackId.VIADUCT, name: "Viaduct", seed: 9, difficulty: 0.62 },
+  { id: TrackId.SALTMARSH, name: "Saltmarsh", seed: 10, difficulty: 0.74 },
+  { id: TrackId.FOUNDRY, name: "Foundry", seed: 11, difficulty: 0.87 },
+  { id: TrackId.SUMMIT, name: "Summit", seed: 12, difficulty: 1 },
+];
+
+export function def_of(id: TrackId): TrackDef {
+  const hand = TRACK_DEFS.find((def) => def.id === id);
+  if (hand) return hand;
+  const seeded = SEEDED.find((each) => each.id === id) ?? SEEDED[0];
+  return generate_track(seeded.seed, seeded.difficulty, seeded.id, seeded.name);
+}
+
 const built = new Map<TrackId, Track>();
 
 export function track_of(id: TrackId): Track {
   let found = built.get(id);
   if (!found) {
-    found = build_track(TRACK_DEFS.find((def) => def.id === id) ?? TRACK_DEFS[0]);
+    found = build_track(def_of(id));
     built.set(id, found);
   }
   return found;
 }
 
-export const TRACK_IDS = TRACK_DEFS.map((def) => def.id as TrackId);
+export const RANDOM_DIFFICULTY = 0.5;
+let random_built: { seed: number; track: Track } | null = null;
+
+// Kept for the last seed only, so Again reuses the same track (and its racing line).
+export function random_track(seed: number): Track {
+  if (random_built?.seed !== seed) random_built = { seed, track: build_track(generate_track(seed, RANDOM_DIFFICULTY, RANDOM, "Random")) };
+  return random_built.track;
+}
 
 export function track_name(id: TrackId): string {
-  return TRACK_DEFS.find((def) => def.id === id)?.name ?? id;
+  return TRACK_DEFS.find((def) => def.id === id)?.name ?? SEEDED.find((each) => each.id === id)?.name ?? id;
+}
+
+export function track_level(id: TrackId): number {
+  return TRACK_IDS.indexOf(id) + 1;
 }
