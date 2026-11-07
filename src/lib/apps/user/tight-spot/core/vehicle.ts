@@ -638,6 +638,29 @@ const AIRLINER: TrailerSpec = {
 /** The tug pushing an airliner back: the Pushback game's rig, kept out of the garage. */
 export const PUSHBACK: VehicleSpec = { ...TUG, steer_time: 2.2, max_forward: 2.2, max_reverse: 1.2, accel: 0.9, brake: 3, hitches: [AIRLINER] };
 
+export const SHUNTER: VehicleSpec = {
+  ...TRUCK,
+  length: 5.7,
+  width: 2.55,
+  wheelbase: 2.9,
+  rear_overhang: 1,
+  turning_radius: 6.2,
+  steer_time: 1.2,
+  max_forward: 5.5,
+  max_reverse: 2.2,
+  accel: 1.4,
+  reverse_beeper: true,
+};
+
+// A link's `hitch` is where it sits on the body ahead: the shunter's fifth wheel 0.3 m ahead of its drive axle, its pintle at its tail.
+export const YARD_LINKS = {
+  semi: { ...SEMI_TRAILER, hitch: -0.3 },
+  lead: { ...LEAD_SEMI, hitch: -0.3 },
+  dolly: { ...CONVERTER_DOLLY, hitch: 1.05 },
+  converter: CONVERTER_DOLLY,
+  rear: REAR_SEMI,
+} as const satisfies Record<string, TrailerSpec>;
+
 // The second trailer hitches to the first one's tail, 0.4 m behind its box.
 const TRACTOR_TWO: VehicleSpec = {
   ...TRACTOR,
@@ -1025,6 +1048,7 @@ export const Vehicle = {
   DUMPER: "dumper",
   LADDER: "ladder",
   TELEHANDLER: "telehandler",
+  SHUNTER: "shunter",
 } as const;
 export type Vehicle = (typeof Vehicle)[keyof typeof Vehicle];
 
@@ -1073,6 +1097,7 @@ export const VEHICLES: Record<Vehicle, VehicleSpec> = {
   dumper: DUMP_TRUCK,
   ladder: LADDER_TRUCK,
   telehandler: TELEHANDLER,
+  shunter: SHUNTER,
 };
 
 export const VEHICLE_NAMES: Record<Vehicle, string> = {
@@ -1119,6 +1144,7 @@ export const VEHICLE_NAMES: Record<Vehicle, string> = {
   dumper: "Articulated dump truck",
   ladder: "Ladder truck",
   telehandler: "Telehandler",
+  shunter: "Yard shunter",
 };
 
 const coasting = new WeakMap<VehicleSpec, VehicleSpec>();
@@ -1664,6 +1690,109 @@ export function trailer_wheels(car: Placement, spec: VehicleSpec, index = 0): Ve
   const pose = trailer_pose(car, spec, index);
   const half = spec.hitches[index].track / 2;
   return [to_world(pose, { x: 0, y: -half }), to_world(pose, { x: 0, y: half })];
+}
+
+/** A chain standing on its own: its links, each one's heading, and where its front hinge (a kingpin, a drawbar's eye) stands. */
+export interface Unhooked {
+  hinge: Vec;
+  links: readonly TrailerSpec[];
+  trailers: Trailer[];
+}
+
+/** How close the chain's end has to come to a hinge to couple it, and how square to it. */
+export const COUPLE_REACH = 0.08;
+export const COUPLE_SQUARE = degrees(10);
+/** A dropped semi-trailer stands on its landing legs this far behind its kingpin: a shunter's chassis fits under the box ahead of them. */
+export const LANDING_LEGS = 2;
+
+const hitched = new WeakMap<VehicleSpec, Map<TrailerSpec, VehicleSpec>>();
+const unhitched = new WeakMap<VehicleSpec, VehicleSpec>();
+
+// Memoised both ways, so coupling and dropping the same links gives back the same spec objects the caches key on.
+function with_link(spec: VehicleSpec, link: TrailerSpec): VehicleSpec {
+  let links = hitched.get(spec);
+  if (!links) hitched.set(spec, (links = new Map()));
+  let found = links.get(link);
+  if (!found) {
+    found = { ...spec, hitches: [...spec.hitches, link] };
+    links.set(link, found);
+    unhitched.set(found, spec);
+  }
+  return found;
+}
+
+function without_last(spec: VehicleSpec): VehicleSpec {
+  return unhitched.get(spec) ?? { ...spec, hitches: spec.hitches.slice(0, -1) };
+}
+
+/** Where the chain's end would take `link`: its hitch on the vehicle, or on the last link towed. */
+export function coupler(car: Placement, spec: VehicleSpec, link: TrailerSpec): Vec {
+  const end = spec.hitches.length > 0 ? trailer_pose(car, spec, spec.hitches.length - 1) : car;
+  return to_world(end, { x: -link.hitch, y: 0 });
+}
+
+function chain_end_heading(car: Placement, spec: VehicleSpec): number {
+  const n = spec.hitches.length;
+  return n > 0 ? (car.trailers?.[n - 1]?.heading ?? car.heading - chain_rests(spec)[n - 1]) : car.heading;
+}
+
+export interface StandingRig {
+  car: Placement;
+  spec: VehicleSpec;
+}
+
+const standing = new WeakMap<Unhooked, StandingRig>();
+
+/** A stand-in vehicle the chain hangs behind where it stands, so the towed chain's functions serve it: `trailer_poses`, `trailer_corners`, drawing. */
+export function standing_rig(unit: Unhooked): StandingRig {
+  let found = standing.get(unit);
+  if (!found) {
+    const first = unit.links[0];
+    const heading = unit.trailers[0].heading + (first.rest ?? 0);
+    const car = { x: unit.hinge.x + Math.cos(heading) * first.hitch, y: unit.hinge.y + Math.sin(heading) * first.hitch, heading, trailers: unit.trailers };
+    standing.set(unit, (found = { car, spec: { ...HATCHBACK, hitches: [...unit.links] } }));
+  }
+  return found;
+}
+
+export interface Coupled {
+  car: Car;
+  spec: VehicleSpec;
+}
+
+/**
+ * Hooks a standing chain onto the end of the vehicle's: its first hinge within `COUPLE_REACH` of where the chain's end
+ * would take it and the hinge within `COUPLE_SQUARE` of its rest. The links keep their headings; the first one's hinge
+ * moves onto the coupler. Null when it isn't there.
+ */
+export function couple(car: Car, spec: VehicleSpec, unit: Unhooked): Coupled | null {
+  const first = unit.links[0];
+  if (!first) return null;
+  const at = coupler(car, spec, first);
+  if (Math.hypot(at.x - unit.hinge.x, at.y - unit.hinge.y) > COUPLE_REACH) return null;
+  const fold = wrap_angle(chain_end_heading(car, spec) - unit.trailers[0].heading - (first.rest ?? 0));
+  if (Math.abs(fold) > COUPLE_SQUARE) return null;
+  const rig = unit.links.reduce(with_link, spec);
+  const trailers = [...(car.trailers ?? []), ...unit.trailers.map((trailer) => ({ heading: trailer.heading, roll: [...trailer.roll] as [number, number] }))];
+  return { car: { ...car, trailers }, spec: rig };
+}
+
+export interface Dropped extends Coupled {
+  unit: Unhooked;
+}
+
+/** Unhooks the chain from hinge `from` back, left standing where it is; null when there is no link there. */
+export function drop(car: Car, spec: VehicleSpec, from = 0): Dropped | null {
+  if (from < 0 || from >= spec.hitches.length) return null;
+  const unit: Unhooked = {
+    hinge: hitch_point(car, spec, from),
+    links: spec.hitches.slice(from),
+    trailers: (car.trailers ?? rest_trailers(car.heading, spec)).slice(from),
+  };
+  let rest = spec;
+  while (rest.hitches.length > from) rest = without_last(rest);
+  const { trailers, ...solo } = car;
+  return { car: from === 0 ? solo : { ...solo, trailers: trailers?.slice(0, from) }, spec: rest, unit };
 }
 
 export function fork_corners(pose: Pose, spec: VehicleSpec): Vec[] | null {

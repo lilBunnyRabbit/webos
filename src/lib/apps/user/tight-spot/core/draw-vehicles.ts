@@ -9,8 +9,11 @@ import {
   Gear,
   hangs_ahead,
   hitch_point,
+  LANDING_LEGS,
   MOTORCYCLE,
   outline as rig_outline,
+  SHUNTER,
+  standing_rig,
   to_world,
   TRACTOR,
   trailer_corners,
@@ -18,8 +21,10 @@ import {
   trailer_wheels,
   Vehicle,
   wheels,
+  YARD_LINKS,
   type Car,
   type TrailerSpec,
+  type Unhooked,
   type VehicleSpec,
 } from "./vehicle";
 
@@ -77,6 +82,7 @@ const Style = {
   BOX_TRUCK: "box-truck",
   TUG: "tug",
   MACHINE: "machine",
+  SHUNTER: "shunter",
 } as const;
 type Style = (typeof Style)[keyof typeof Style];
 
@@ -148,6 +154,7 @@ const LOOKS: Record<Vehicle, Look> = {
   dumper: { style: Style.MACHINE },
   ladder: { style: Style.MACHINE },
   telehandler: { style: Style.MACHINE },
+  shunter: { style: Style.SHUNTER },
 };
 
 /** A semi-trailer sits on a fifth wheel and a drawbar trailer's body on its dolly: drawn over what they ride on. */
@@ -200,6 +207,7 @@ const CORNERS: Record<Style, number[]> = {
   "box-truck": [0.1, 0.35, 0.35, 0.1],
   tug: [0.2, 0.25, 0.25, 0.2],
   machine: [0.2, 0.2, 0.2, 0.2],
+  shunter: [0.15, 0.3, 0.3, 0.15],
 };
 
 // Taller vehicles throw a longer shadow: the sun is fixed, so the offset only grows with the roof.
@@ -232,6 +240,7 @@ const HEIGHT: Record<Style | Load, number> = {
   "box-truck": 1.9,
   tug: 0.8,
   machine: 1.5,
+  shunter: 2.1,
   box: 0.5,
   horse: 1.4,
   farm: 0.9,
@@ -259,6 +268,13 @@ function outline(ctx: CanvasRenderingContext2D, l: number, half: number, style: 
     ctx.roundRect(l / 2 - CAB_DEPTH, -half, CAB_DEPTH, half * 2, [0.1, 0.35, 0.35, 0.1]);
     ctx.roundRect(-l / 2, -0.55, l - CAB_DEPTH + 0.1, 1.1, 0.08);
     ctx.roundRect(-l / 2 + 0.15, -half + 0.08, 1.3, half * 2 - 0.16, 0.2);
+    return;
+  }
+  // A yard shunter's front is its one-seat cab and the engine beside it; behind is a bare chassis with the fifth wheel.
+  if (style === Style.SHUNTER) {
+    ctx.roundRect(l / 2 - SHUNTER_FRONT, -half, SHUNTER_FRONT, half * 2, [0.1, 0.3, 0.3, 0.1]);
+    ctx.roundRect(-l / 2, -0.55, l - SHUNTER_FRONT + 0.1, 1.1, 0.08);
+    ctx.roundRect(-l / 2 + 0.15, -half + 0.08, 1.75, half * 2 - 0.16, 0.2);
     return;
   }
   if (style === Style.GT) {
@@ -659,9 +675,33 @@ const PAINTERS: Record<Style, (ctx: CanvasRenderingContext2D, f: Frame) => void>
   gt: gt_top,
   motorcycle: () => {},
   machine: () => {},
+  shunter: (ctx, f) => shunter_top(ctx, f),
 };
 
 const CAB_DEPTH = 2.3;
+const SHUNTER_FRONT = 2.3;
+
+// The cab is glass nearly all round, the driver turned to watch the fifth wheel go under; the engine sits beside it.
+function shunter_top(ctx: CanvasRenderingContext2D, f: Frame) {
+  const { l, half, paint, palette } = f;
+  const back = l / 2 - SHUNTER_FRONT;
+  const cab = 1.45;
+  pill(ctx, back + 0.25, half - cab + 0.25 - 0.08, SHUNTER_FRONT - 0.4, cab - 0.25, 0.12, paint.roof);
+  seams(ctx, [0.5, 0.85, 1.2, 1.55].map((x) => [back + x, half - cab + 0.35, back + x, half - 0.2] as [number, number, number, number]), f.scale, palette);
+  const top = -half + 0.08;
+  pill(ctx, back + 0.12, top, SHUNTER_FRONT - 0.2, cab, 0.2, paint.glass);
+  pill(ctx, back + 0.35, top + 0.18, SHUNTER_FRONT - 0.65, cab - 0.36, 0.14, paint.roof);
+  beacon(ctx, back + 0.6, top + cab / 2, palette.warning, palette.warning_glow, 0.55, palette);
+  pill(ctx, back - 0.2, -0.5, 0.14, 1, 0.05, palette.ink);
+  const fifth = -l / 2 + SHUNTER.rear_overhang - YARD_LINKS.semi.hitch;
+  ctx.beginPath();
+  ctx.arc(fifth, 0, 0.62, 0, Math.PI * 2);
+  ctx.fillStyle = palette.ink;
+  ctx.fill();
+  pill(ctx, -l / 2 + 0.05, -0.09, fifth + l / 2 - 0.05, 0.18, 0.06, paint.roof);
+  for (const side of [-1, 1]) pill(ctx, fifth + 0.75, side * 0.78 - 0.14, 0.9, 0.28, 0.12, paint.glass);
+  pill(ctx, -l / 2 + 0.02, -0.3, 0.12, 0.6, 0.05, palette.ink);
+}
 
 // A long bonnet with its power bulge and vents, a low cabin swept back into a fastback, twin stripes and a wing on the tail.
 function gt_top(ctx: CanvasRenderingContext2D, f: Frame) {
@@ -1075,7 +1115,8 @@ function trailer(
   load: Load,
   lamps: Lamps,
   scale: number,
-  palette: Palette
+  palette: Palette,
+  paint: Paint = palette.player
 ) {
   const t = spec.hitches[index];
   const towed = car.trailers?.[index];
@@ -1084,7 +1125,6 @@ function trailer(
   const front = t.axle - t.drawbar;
   const centre = to_world(pose, { x: front - t.box_length / 2, y: 0 });
   const half = t.width / 2;
-  const paint = palette.player;
   const style = load === Load.CARAVAN ? Style.CARAVAN : load === Load.BUS ? Style.ARTIC : Style.VAN;
   if (load !== Load.DOLLY) shadow(ctx, centre, pose.heading, t.box_length, t.width, style, HEIGHT[load], palette);
 
@@ -1840,13 +1880,45 @@ export function player(
     fun({ ctx, car, spec, lamps, scale, palette, l: spec.length / 2, half: spec.width / 2, line: 1 / scale, height: HEIGHT[look.style] });
     return;
   }
-  const loads = look.loads ?? [];
+  const loads = look.loads ?? spec.hitches.map(coupled_load);
   const dim = { braking: false, reversing: false, lit: 0.6 };
   for (const i of draw_order(loads)) {
     if (i >= spec.hitches.length) continue;
     if (i >= 0) trailer(ctx, car, spec, i, loads[i], i === loads.length - 1 ? lamps : dim, scale, palette);
     else vehicle_body(ctx, car, spec, look, lamps, dim, scale, palette, time);
   }
+}
+
+// A vehicle whose chain changes as it couples (a yard shunter) draws each link by its shape: a box over its hinge rides like a semi.
+function coupled_load(link: TrailerSpec): Load {
+  return link.drawbar < 0 ? Load.SEMI : Load.DOLLY;
+}
+
+/**
+ * A chain left standing (`Unhooked`) in a parked paint: each link drawn as it is towed, a semi at the front down on its
+ * landing legs, the kingpin or the drawbar's eye marked where a vehicle couples it.
+ */
+export function standing_chain(ctx: CanvasRenderingContext2D, unit: Unhooked, paint: Paint, scale: number, palette: Palette) {
+  const rig = standing_rig(unit);
+  const car: Car = { ...rig.car, speed: 0, steer: 0, gear: Gear.PARK, throttle: 0, brake: 0, roll: [0, 0, 0, 0] };
+  const loads = unit.links.map(coupled_load);
+  const dim = { braking: false, reversing: false, lit: 0.6 };
+  const first = unit.links[0];
+  for (const i of draw_order(loads)) if (i >= 0) trailer(ctx, car, rig.spec, i, loads[i], dim, scale, palette, paint);
+  if (loads[0] === Load.SEMI) {
+    const pose = trailer_pose(car, rig.spec, 0);
+    for (const side of [-1, 1]) {
+      const at = to_world(pose, { x: first.axle - LANDING_LEGS, y: side * (first.width / 2 + 0.06) });
+      pill(ctx, at.x - 0.15, at.y - 0.09, 0.3, 0.18, 0.05, palette.ink);
+    }
+  }
+  ctx.beginPath();
+  ctx.arc(unit.hinge.x, unit.hinge.y, 0.13, 0, Math.PI * 2);
+  ctx.fillStyle = palette.ink;
+  ctx.fill();
+  ctx.strokeStyle = palette.tread;
+  ctx.lineWidth = 1.25 / scale;
+  ctx.stroke();
 }
 
 const BLINKER_INSET = 0.18;

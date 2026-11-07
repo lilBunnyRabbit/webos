@@ -40,8 +40,17 @@ import {
   VEHICLES,
   wheels,
   without_creep,
+  COUPLE_REACH,
+  couple,
+  coupler,
+  drop,
+  SHUNTER,
+  standing_rig,
+  trailer_corners,
+  YARD_LINKS,
   type Car,
   type Input,
+  type Unhooked,
   type VehicleSpec,
   type Wheel,
 } from "./vehicle";
@@ -876,5 +885,65 @@ describe("skid, frame, all-wheel and crab steer", () => {
       expect(step(a, input, 0, spec)).toBe(a);
       expect(step(a, input, -0.01, spec)).toBe(a);
     }
+  });
+});
+
+describe("coupling", () => {
+  const DEG = Math.PI / 180;
+  const semi = YARD_LINKS.semi;
+  // A semi standing heading east with its kingpin at the origin; the shunter faces away from it, its fifth wheel `gap` short.
+  const standing: Unhooked = { hinge: { x: 0, y: 0 }, links: [semi], trailers: [{ heading: 0, roll: [0, 0] }] };
+  function shunter_at(gap: number, side = 0, heading = 0): Car {
+    return create_car({ x: gap + Math.cos(heading) * semi.hitch, y: side + Math.sin(heading) * semi.hitch, heading }, Gear.REVERSE, SHUNTER);
+  }
+
+  test("couples within reach and square, the trailer kept where it stood", () => {
+    expect(coupler(shunter_at(0), SHUNTER, semi).x).toBeCloseTo(0, 9);
+    const coupled = couple(shunter_at(0.05), SHUNTER, standing)!;
+    expect(coupled.spec.hitches).toEqual([semi]);
+    const pose = trailer_pose(coupled.car, coupled.spec);
+    expect(pose.heading).toBe(0);
+    expect(Math.hypot(pose.x + semi.axle, pose.y)).toBeLessThan(COUPLE_REACH);
+  });
+
+  test("refuses a fifth wheel too far off or a trailer not square", () => {
+    expect(couple(shunter_at(0.12), SHUNTER, standing)).toBeNull();
+    expect(couple(shunter_at(0, 0.1), SHUNTER, standing)).toBeNull();
+    expect(couple(shunter_at(0, 0, 14 * DEG), SHUNTER, standing)).toBeNull();
+    expect(couple(shunter_at(0, 0, 8 * DEG), SHUNTER, standing)).not.toBeNull();
+  });
+
+  test("a coupled rig tows exactly as one built with the trailer", () => {
+    const built: VehicleSpec = { ...SHUNTER, hitches: [semi] };
+    const coupled = couple(shunter_at(0), SHUNTER, standing)!;
+    const input = { steer: 0.6, throttle: 0.4, brake: 0 };
+    const a = run({ ...coupled.car, gear: Gear.DRIVE }, input, 4, coupled.spec);
+    const b = run({ ...create_car(coupled.car, Gear.DRIVE, built), trailers: coupled.car.trailers }, input, 4, built);
+    expect(a).toEqual(b);
+  });
+
+  test("dropping leaves the chain standing where it was, and the same specs come back", () => {
+    const first = couple(shunter_at(0), SHUNTER, standing)!;
+    const towed = run({ ...first.car, gear: Gear.DRIVE }, { steer: 0.5, throttle: 0.4, brake: 0 }, 3, first.spec);
+    const dropped = drop(towed, first.spec)!;
+    expect(dropped.spec).toBe(SHUNTER);
+    expect(dropped.car.trailers).toBeUndefined();
+    const rig = standing_rig(dropped.unit);
+    expect(trailer_corners(rig.car, rig.spec)).toEqual(trailer_corners(towed, first.spec));
+    expect(couple(dropped.car, dropped.spec, dropped.unit)!.spec).toBe(first.spec);
+    expect(drop(dropped.car, dropped.spec)).toBeNull();
+  });
+
+  test("a chain couples onto a chain's end and drops from any hinge", () => {
+    const lead = couple(shunter_at(0), SHUNTER, { ...standing, links: [YARD_LINKS.lead] })!;
+    const eye = coupler(lead.car, lead.spec, YARD_LINKS.converter);
+    const straight = { heading: 0, roll: [0, 0] as [number, number] };
+    const tail: Unhooked = { hinge: eye, links: [YARD_LINKS.converter, YARD_LINKS.rear], trailers: [straight, straight] };
+    const double = couple(lead.car, lead.spec, tail)!;
+    expect(double.spec.hitches).toEqual([YARD_LINKS.lead, YARD_LINKS.converter, YARD_LINKS.rear]);
+    const split = drop(double.car, double.spec, 1)!;
+    expect(split.spec).toBe(lead.spec);
+    expect(split.unit.links).toEqual(tail.links);
+    expect(split.unit.hinge.x).toBeCloseTo(eye.x, 9);
   });
 });
