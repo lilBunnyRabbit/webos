@@ -26,6 +26,8 @@ export interface Scene {
   slope: number;
   /** The engines' share of their thrust: 0 deadstick, 0.5 one engine out. */
   power: number;
+  /** Metres a landing round must fly off the ground before its landing counts: a circuit can't be won with a hop. */
+  min_air: number;
 }
 
 /** A stall below this height is a crash in a round (ADR-098, Scoring). */
@@ -103,7 +105,7 @@ export function step_round(state: RoundState, input: Input, c: Coefficients, dt:
     const past = local(scene.course, plane.x) >= scene.clear.x;
     return past && wheel_height(plane, c, env) >= scene.clear.height ? { ...next, flight: { ...flight, status: Status.DONE } } : next;
   }
-  const stopped = !airborne(plane) && Math.abs(ground_speed(plane)) < STOP_SPEED && flight.landings > 0;
+  const stopped = !airborne(plane) && Math.abs(ground_speed(plane)) < STOP_SPEED && flight.landings > 0 && flight.air_distance >= scene.min_air;
   const held = stopped ? state.held + dt : 0;
   if (held < STOP_HOLD) return { ...next, held };
   if (!wheels_on(scene, scene.strip, plane, c)) return fail({ ...next, held }, Failure.OFF_STRIP);

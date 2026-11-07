@@ -42,6 +42,8 @@ export interface Flight {
   status: Status;
   time: number;
   air_time: number;
+  /** Metres flown with every wheel off the ground, all told. */
+  air_distance: number;
   touchdown: Touchdown | null;
   landings: number;
   crash: { kind: CrashKind; sink: number } | null;
@@ -66,7 +68,7 @@ const AUTOBRAKE_OFF_SPEED = 2;
 const STALL_GRACE = 2;
 
 export function create_flight(plane: Plane, status: Status = Status.FLYING): Flight {
-  return { plane, status, time: 0, air_time: 0, touchdown: null, landings: 0, crash: null, flown: false, autobrake: false, tail_strike: false, warned: false, stalled: false };
+  return { plane, status, time: 0, air_time: 0, air_distance: 0, touchdown: null, landings: 0, crash: null, flown: false, autobrake: false, tail_strike: false, warned: false, stalled: false };
 }
 
 /** Within 3° of the lift curve's peak and off the ground: the horn sounds. */
@@ -125,6 +127,7 @@ export function advance(flight: Flight, input: Input, c: Coefficients, dt: numbe
     plane,
     time: flight.time + dt,
     air_time,
+    air_distance: flight.air_distance + (up ? Math.abs(ground_speed(plane)) * dt : 0),
     touchdown,
     landings: flight.landings + (landed ? 1 : 0),
     flown: flight.flown || air_time >= LANDING_AIR_TIME,

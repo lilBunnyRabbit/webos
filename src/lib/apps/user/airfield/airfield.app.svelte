@@ -20,7 +20,7 @@
   import { at_gate, build_field, in_hangar, runway_ahead, surface_roll, WRAP, type Gate, type GateId } from "./core/field";
   import { advance, CrashKind, create_flight, Grade, Status, stall_warning, wheel_height, type Flight, type Touchdown } from "./core/flight";
   import { track } from "./core/levels";
-  import { air_of, create_plane, Engine, facing, G, GearLayout, ground_speed, separation, turn_left, type Env, type Plane } from "./core/plane";
+  import { air_of, create_plane, Engine, facing, G, GearLayout, GROUND_TURN_SPEED, ground_speed, separation, turn_left, type Env, type Plane } from "./core/plane";
   import { PLANE_IDS, plane_coefficients, PlaneId, SPECS } from "./core/planes";
   import { better, DEFAULT_PROGRESS, levels_done, PROGRESS_FILE, progress_schema } from "./core/progress";
   import { Failure, powered, result, round_env, start_plane, step_round, type Result, type Scene } from "./core/round";
@@ -190,6 +190,8 @@
   const tall = $derived(board_size.height > board_size.width * 1.3);
   const to_runway = $derived(round ? (round.scene.clear ? null : strip_ahead(round.scene.course, round.scene.strip, plane.x, facing(plane))) : runway_ahead(field, plane.x, facing(plane)));
   const on_ground = $derived(on_ground_of(plane));
+  /** The facing only takes below taxi speed, where the ground pivot works; faster, a pending turn would fire at the next landing. */
+  const can_turn = $derived(on_ground && Math.abs(ground_speed(plane)) < GROUND_TURN_SPEED);
   const hangar_card = $derived(in_hub && in_hangar_now && !hangar_away && !crashed && flight.status !== Status.PAUSED);
 
   $effect(() => {
@@ -298,7 +300,9 @@
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== height) canvas.height = height;
     const target = target_camera();
-    camera = dt > 0 ? ease(camera, target, dt, EASE_X, EASE_Y) : target;
+    // A still frame while paused keeps the eased view: snapping to the target would jump, and jump back on resume.
+    const held_view = camera && (flight.status === Status.PAUSED || flight.status === Status.FLYING) ? { ...camera, scale: target.scale } : target;
+    camera = dt > 0 ? ease(camera, target, dt, EASE_X, EASE_Y) : held_view;
     jolt *= Math.exp(-dt / JOLT_DECAY);
     const buffet = flight.status === Status.FLYING ? separation(air_of(plane, c, env).alpha, c) * 1.6 : 0;
     const time = performance.now() / 1000;
@@ -414,6 +418,7 @@
         }
         next = advance(next, controls.read(), c, dt, at);
       }
+      if (!on_ground_of(next.plane) && controls.facing !== facing(next.plane)) controls.facing = facing(next.plane);
       if (on_ground_of(next.plane)) jolt = Math.max(jolt, Math.min(12, JOLT_PX * Math.max(0, (next.plane.vy - before) / dt / G - 0.3)));
     }
     const span = steps * dt;
@@ -745,7 +750,7 @@
       controls.keys.add(code);
     } else if (LEFT_KEYS.has(code) || RIGHT_KEYS.has(code)) {
       event.preventDefault();
-      if (on_ground) controls.facing = LEFT_KEYS.has(code) ? -1 : 1;
+      if (can_turn) controls.facing = LEFT_KEYS.has(code) ? -1 : 1;
       controls.keys.add(code);
     } else if ((code === "KeyF" || code === "KeyV") && !event.repeat) {
       event.preventDefault();
@@ -1021,7 +1026,7 @@
   <AirfieldFrame
     label="Airfield. W and S pitch, Shift and Control the throttle, F and V the flaps, B brakes, A and D turn round on the ground, Escape pauses."
     {controls}
-    {on_ground}
+    on_ground={can_turn}
     pitch={settings.pitch}
     controls_idle={crashed || done || waiting || !!card || hangar_card || flight.status === Status.PAUSED}
     {engage}

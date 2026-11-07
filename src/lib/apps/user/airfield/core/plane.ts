@@ -177,7 +177,7 @@ export interface Plane {
 }
 
 const GROUND_TURN = 0.6;
-const GROUND_TURN_SPEED = 6;
+export const GROUND_TURN_SPEED = 6;
 /** The lift curve is rounded over this many radians before its peak. */
 export const ROUND = 0.035;
 const STALL_BREAK = 0.06;

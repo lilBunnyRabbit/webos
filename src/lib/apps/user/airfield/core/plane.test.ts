@@ -12,6 +12,7 @@ import {
   level_flight,
   lift_coefficient,
   measure_climb,
+  measure_float,
   measure_glide,
   measure_level,
   measure_phugoid,
@@ -60,9 +61,10 @@ describe.each(PLANE_IDS)("%s meets its feel numbers", (id) => {
   });
 });
 
-test("the trainer's gear and phugoid", () => {
+test("the trainer's gear, phugoid and float", () => {
   const c = plane_coefficients(PlaneId.TRAINER);
   expect(measure_touchdown(c, 2.2).peak_g).toBeLessThanOrEqual(3.5);
+  near(measure_float(c), 50, 0.1);
   const phugoid = measure_phugoid(c);
   near(phugoid.period, 16, 0.15);
   expect(phugoid.damping).toBeGreaterThanOrEqual(0.05);

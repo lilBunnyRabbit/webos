@@ -100,7 +100,7 @@ The world wraps (ADR-098 revision): `WRAP` is 8 km in the hub; the plane's `x` g
 
 A round is a `Scene` (`core/round.ts`): a `Course`, a start (on the ground at rest, or in the air at a height, speed, flap and lever notch), a goal, the strip, a takeoff's clear point, the autopilot's glidepath and the engines' `power` share. The `Course` (`core/course.ts`) is one line that repeats every `wrap` metres: the ground as a polyline (hills, mesas, ramps from `levels.ts`, the highest at each point), surfaces (asphalt, wet, grass, dirt, sand, water), strips and obstacles (trees, hedges, houses, masts: solid boxes). Rounds start Ready (the card, plane frozen) and fly on Fly, Enter or any control.
 
-- **Landing done:** stopped (under 0.5 m/s for 1 s, after a landing) with both wheels on the strip; stopped elsewhere fails (`OFF_STRIP`).
+- **Landing done:** stopped (under 0.5 m/s for 1 s, after a landing) with both wheels on the strip, and at least the scene's `min_air` flown off the ground (`Flight.air_distance`; 4 km for the Circuit, which starts on its own runway, so a hop doesn't finish it); stopped elsewhere fails (`OFF_STRIP`).
 - **Takeoff done:** past the clear point at least its height up, airborne; a tail strike or a stall fails it.
 - **Stars:** done, gentle (a landing: one touchdown, a kiss; a takeoff: the stall horn never sounded), under par.
 
@@ -152,7 +152,7 @@ In a round the ground is the course's polyline, filled grass and earth; strips a
 | Trim | T: trims for the current angle of attack | Trim button | |
 | Flaps | F down a notch, V up | Flaps ▲ ▼ | |
 | Brakes | B held: ramps to full over 0.8 s | Brake, held | |
-| Turn round (ground only) | A/← face left, D/→ face right; held, they walk the glider | ◀ ▶, held to walk the glider | |
+| Turn round (ground, below taxi speed) | A/← face left, D/→ face right, taken only below 6 m/s (the facing resets to the heading off the ground); held, they walk the glider | ◀ ▶, held to walk the glider | |
 | Winch (glider, hub) | L launches and releases | Winch launch / Release | |
 | Rounds | Enter starts, flies, next level or tries again; R restarts; Esc pauses or closes a card | the card's buttons, Pause | |
 | Other | Esc pause, R apron (hub), + − zoom | | wheel zoom |

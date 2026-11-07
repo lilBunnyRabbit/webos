@@ -90,7 +90,7 @@ export interface Level {
   build: () => Scene;
 }
 
-const land = (course: Course, start: Start, target: Strip, slope: number, power = 1): Scene => ({ course, start, goal: Goal.LAND, strip: target, clear: null, slope, power });
+const land = (course: Course, start: Start, target: Strip, slope: number, power = 1, min_air = 0): Scene => ({ course, start, goal: Goal.LAND, strip: target, clear: null, slope, power, min_air });
 
 const T = PlaneId.TRAINER;
 const B = PlaneId.STOL;
@@ -115,7 +115,7 @@ export const LEVELS: readonly Level[] = [
     brief: "Take off, fly on round the world and land back on the runway you left. It's 5 km round.",
     build: () => {
       const target = strip(200, 700);
-      return land(course({ wrap: 5000, strips: [target], features: [hill(2500, 1400, 90)] }), rest(240), target, 4);
+      return land(course({ wrap: 5000, strips: [target], features: [hill(2500, 1400, 90)] }), rest(240), target, 4, 1, 4000);
     },
   },
   {
@@ -157,7 +157,7 @@ export const LEVELS: readonly Level[] = [
     build: () => {
       const start = strip(100, 150, SurfaceKind.GRASS);
       const c = course({ wrap: 6000, strips: [start], obstacles: [trees(360, 400, 15)] });
-      return { course: c, start: rest(110), goal: Goal.TAKEOFF, strip: start, clear: { x: 450, height: 25 }, slope: 6, power: 1 };
+      return { course: c, start: rest(110), goal: Goal.TAKEOFF, strip: start, clear: { x: 450, height: 25 }, slope: 6, power: 1, min_air: 0 };
     },
   },
   {
@@ -242,7 +242,7 @@ export const LEVELS: readonly Level[] = [
     build: () => {
       const start = strip(300, 4000);
       const c = course({ wrap: 20000, strips: [start], obstacles: [{ x0: 7400, x1: 7420, top: 30, kind: ObstacleKind.MAST }] });
-      return { course: c, start: rest(320, 2), goal: Goal.TAKEOFF, strip: start, clear: { x: 7500, height: 40 }, slope: 3, power: 0.5 };
+      return { course: c, start: rest(320, 2), goal: Goal.TAKEOFF, strip: start, clear: { x: 7500, height: 40 }, slope: 3, power: 0.5, min_air: 0 };
     },
   },
   {
