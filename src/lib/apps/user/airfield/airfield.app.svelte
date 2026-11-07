@@ -18,9 +18,9 @@
   import { work_out_chart, type ChartJob } from "./core/chart-job";
   import { ground_at, strip_ahead } from "./core/course";
   import { at_gate, build_field, in_hangar, runway_ahead, surface_roll, WRAP, type Gate, type GateId } from "./core/field";
-  import { advance, CrashKind, create_flight, Grade, Status, stall_warning, wheel_height, type Flight, type Touchdown } from "./core/flight";
+  import { advance, buffet, CrashKind, create_flight, Grade, Status, stall_warning, wheel_height, type Flight, type Touchdown } from "./core/flight";
   import { track } from "./core/levels";
-  import { air_of, create_plane, Engine, facing, G, GearLayout, GROUND_TURN_SPEED, ground_speed, separation, turn_left, type Env, type Plane } from "./core/plane";
+  import { air_of, create_plane, Engine, facing, G, GearLayout, GROUND_TURN_SPEED, ground_speed, turn_left, type Env, type Plane } from "./core/plane";
   import { PLANE_IDS, plane_coefficients, PlaneId, SPECS } from "./core/planes";
   import { better, DEFAULT_PROGRESS, levels_done, PROGRESS_FILE, progress_schema } from "./core/progress";
   import { Failure, powered, result, round_env, start_plane, step_round, type Result, type Scene } from "./core/round";
@@ -159,6 +159,7 @@
   let right_box = $state({ width: 0, height: 0 });
   let stage_rect = $state<DOMRectReadOnly>();
   let hud_height = $state(0);
+  let overlay_height = $state(0);
 
   let camera: Camera | null = null;
   let jolt = 0;
@@ -304,9 +305,8 @@
     const held_view = camera && (flight.status === Status.PAUSED || flight.status === Status.FLYING) ? { ...camera, scale: target.scale } : target;
     camera = dt > 0 ? ease(camera, target, dt, EASE_X, EASE_Y) : held_view;
     jolt *= Math.exp(-dt / JOLT_DECAY);
-    const buffet = flight.status === Status.FLYING ? separation(air_of(plane, c, env).alpha, c) * 1.6 : 0;
     const time = performance.now() / 1000;
-    const shake_px = jolt + buffet;
+    const shake_px = jolt + (flight.status === Status.FLYING ? buffet(plane, c, env) * 1.6 : 0);
     const shake = {
       x: (shake_px * Math.sin(time * 71) * 0.6) / camera.scale,
       y: (shake_px * (Math.sin(time * 53) + 0.5 * Math.sin(time * 97))) / camera.scale,
@@ -426,7 +426,7 @@
     puffs = puffs.filter((puff) => puff.age < PUFF_LIFE);
     const env_now = env_for(next.plane, next.time);
     const air_now = air_of(next.plane, c, env_now);
-    sounds.drone(round?.scene.power === 0 ? Engine.NONE : spec.engine, next.plane.spool, air_now.speed / spec.cruise, stall_warning(next.plane, c, env_now), on_ground_of(next.plane) ? 0 : separation(air_now.alpha, c), air_now.speed);
+    sounds.drone(round?.scene.power === 0 ? Engine.NONE : spec.engine, next.plane.spool, air_now.speed / spec.cruise, stall_warning(next.plane, c, env_now), buffet(next.plane, c, env_now), air_now.speed);
     if (next === flight) return;
     const before = flight;
     flight = next;
@@ -792,56 +792,69 @@
   </span>
 {/snippet}
 
-{#snippet chip(text: string, tone: string = "text-foreground/80")}
-  <div class={cn("rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", tone)} aria-hidden="true">{text}</div>
+{#snippet chip(text: string, tone: string = "text-foreground/80", chars: number = 0)}
+  <div
+    class={cn("rounded-md bg-background/85 px-1.5 py-0.5 text-right font-mono text-ui tabular-nums backdrop-blur-[2px]", tone)}
+    style:min-width={chars ? `calc(${chars}ch + 0.75rem)` : undefined}
+    aria-hidden="true"
+  >
+    {text}
+  </div>
 {/snippet}
 
 {#snippet overlay()}
-  <div bind:clientHeight={hud_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right="{profile_shown ? profile_width + 16 : 8}px">
-    <div class="flex max-w-full flex-wrap items-center gap-1.5">
-      <IconButton
-        size="sm"
-        class="pointer-events-auto bg-background/85 backdrop-blur-[2px] @md:hidden pointer-coarse:size-11"
-        label={flying ? "Pause" : "Resume"}
-        disabled={!flying && flight.status !== Status.PAUSED}
-        onclick={toggle_pause}
-      >
-        {#if flying}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
-      </IconButton>
-      <div
-        class={cn(
-          "rounded-md bg-background/85 px-1.5 py-0.5 text-ui font-medium backdrop-blur-[2px]",
-          controls.notch > cockpit.idle ? "text-primary" : controls.notch < cockpit.idle ? "text-warning" : "text-foreground/80"
-        )}
-        aria-hidden="true"
-      >
-        {controls.detent.name}
-      </div>
-      <SpeedChip speed={air.speed} unit="kn" />
-      {@render chip(`${Math.round(altitude)} m`)}
-      {@render chip(`${plane.vy >= 0 ? "▲" : "▼"} ${Math.abs(plane.vy).toFixed(1)} m/s`, plane.vy < -3 && altitude < 30 ? "text-warning" : "text-foreground/80")}
-      {#if round && !waiting}
-        <div class="rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]" aria-hidden="true">
-          {clock}{#if par}&nbsp;<span class="text-foreground/65">/ {format_time(par)}</span>{/if}
+  <div bind:clientHeight={overlay_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right="{profile_shown ? profile_width + 16 : 8}px">
+    <!-- Only the instruments, each held at its widest, set the camera's top inset: a chip coming and going below them moved the view. -->
+    <div bind:clientHeight={hud_height} class="flex max-w-full flex-col items-start gap-1.5">
+      <div class="flex max-w-full flex-wrap items-center gap-1.5">
+        <IconButton
+          size="sm"
+          class="pointer-events-auto bg-background/85 backdrop-blur-[2px] @md:hidden pointer-coarse:size-11"
+          label={flying ? "Pause" : "Resume"}
+          disabled={!flying && flight.status !== Status.PAUSED}
+          onclick={toggle_pause}
+        >
+          {#if flying}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
+        </IconButton>
+        <div
+          class={cn(
+            "grid rounded-md bg-background/85 px-1.5 py-0.5 text-ui font-medium backdrop-blur-[2px]",
+            controls.notch > cockpit.idle ? "text-primary" : controls.notch < cockpit.idle ? "text-warning" : "text-foreground/80"
+          )}
+          aria-hidden="true"
+        >
+          {#each cockpit.detents as detent, i (detent.name)}
+            <span class={cn("[grid-area:1/1]", i !== controls.notch && "invisible")}>{detent.name}</span>
+          {/each}
         </div>
-      {/if}
+        <SpeedChip speed={air.speed} unit="kn" class="min-w-[calc(8ch+0.75rem)] text-right" />
+        {@render chip(`${Math.round(altitude)} m`, undefined, 6)}
+        {@render chip(`${plane.vy >= 0 ? "▲" : "▼"} ${Math.abs(plane.vy).toFixed(1)} m/s`, plane.vy < -3 && altitude < 30 ? "text-warning" : "text-foreground/80", 10)}
+        {#if round}
+          <div class={cn("rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", waiting && "invisible")} aria-hidden="true">
+            {clock}{#if par}&nbsp;<span class="text-foreground/65">/ {format_time(par)}</span>{/if}
+          </div>
+        {/if}
+      </div>
+      <div class="flex max-w-full flex-wrap items-center gap-1.5" aria-hidden="true">
+        {#if cockpit.flaps.length > 1}
+          <div class={cn("flex items-center gap-1.5 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", controls.flap_notch > 0 ? "text-primary" : "text-foreground/80")}>
+            <span>Flaps <span class="inline-block min-w-[4ch]">{controls.flap_name}</span></span>
+            <span class="relative h-3 w-2.5 overflow-hidden rounded-xs bg-foreground/15">
+              <span class="absolute inset-x-0 top-0 bg-primary" style:height="{plane.flaps * 100}%"></span>
+              <span class="absolute inset-x-0 top-1/2 h-px bg-background/70"></span>
+            </span>
+          </div>
+        {/if}
+        {@render chip(`Trim ${controls.trim >= 0 ? "+" : "−"}${Math.round(Math.abs(controls.trim) * 100)}`, undefined, 9)}
+      </div>
     </div>
     <div class="flex max-w-full flex-wrap items-center gap-1.5" aria-hidden="true">
-      {#if cockpit.flaps.length > 1}
-        <div class={cn("flex items-center gap-1.5 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", controls.flap_notch > 0 ? "text-primary" : "text-foreground/80")}>
-          <span>Flaps {controls.flap_name}</span>
-          <span class="relative h-3 w-2.5 overflow-hidden rounded-xs bg-foreground/15">
-            <span class="absolute inset-x-0 top-0 bg-primary" style:height="{plane.flaps * 100}%"></span>
-            <span class="absolute inset-x-0 top-1/2 h-px bg-background/70"></span>
-          </span>
-        </div>
-      {/if}
       {#if plane.spoilers > 0.03}{@render chip(`${spec.engine === Engine.NONE ? "Airbrakes" : "Spoilers"} ${Math.round(plane.spoilers * 100)}%`, "text-warning")}{/if}
       {#if plane.reverser > 0.03}{@render chip(`Reverse ${Math.round(plane.reverser * 100)}%`, "text-warning")}{/if}
       {#if flight.autobrake}{@render chip("Autobrake", "text-warning")}{/if}
       {#if Math.abs(env.wind) >= 0.5}{@render chip(`${wind_along < 0 ? "Head" : "Tail"} ${Math.round(Math.abs(env.wind) * KNOT)} kn ${env.wind > 0 ? "▶" : "◀"}`, wind_along > 2 && altitude < 60 ? "text-warning" : "text-foreground/80")}{/if}
       {#if Math.abs(env.updraft) >= 0.4 && !on_ground}{@render chip(`${env.updraft > 0 ? "Lift" : "Sink"} ${Math.abs(env.updraft).toFixed(1)} m/s`, env.updraft > 0 ? "text-success" : "text-warning")}{/if}
-      {@render chip(`Trim ${controls.trim >= 0 ? "+" : "−"}${Math.round(Math.abs(controls.trim) * 100)}`)}
       {#if controls.brake > 0}{@render chip(`Brakes ${Math.round(controls.brake * 100)}%`, "text-warning")}{/if}
       {#if turning}{@render chip(`Turning ${controls.facing > 0 ? "▶" : "◀"}`, "text-primary")}{/if}
       {#if to_runway !== null && altitude > 3}{@render chip(`Runway ${to_runway >= 1000 ? `${(to_runway / 1000).toFixed(1)} km` : `${Math.round(to_runway / 10) * 10} m`}`)}{/if}
@@ -873,7 +886,7 @@
   {#if in_hub && !settings.seen_hint && flying && !in_hangar_now && !card}
     <p
       class="pointer-events-none absolute left-2 mx-auto max-w-84 rounded-md bg-background/85 px-2 py-1 text-center text-ui text-foreground/80 backdrop-blur-[2px]"
-      style:top="{hud_height + 16 + (profile_shown && tall ? profile_width * 0.36 + 8 : 0)}px"
+      style:top="{overlay_height + 16 + (profile_shown && tall ? profile_width * 0.36 + 8 : 0)}px"
       style:right="{profile_shown && !tall ? profile_width + 16 : 8}px"
     >
       <span class="pointer-fine:hidden">{HINTS[fly_id].touch} Drag the pad on the right {settings.pitch === PitchMode.PILOT ? "down" : "up"} to raise the nose.</span>

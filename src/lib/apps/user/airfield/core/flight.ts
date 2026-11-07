@@ -76,6 +76,11 @@ export function stall_warning(plane: Plane, c: Coefficients, env: Env = CALM): b
   return airborne(plane) && air_of(plane, c, env).alpha > c.alpha_break + ROUND - 0.05;
 }
 
+// Only off the ground: a taildragger at rest sits past the stall angle in still air, and the view shook on the apron.
+export function buffet(plane: Plane, c: Coefficients, env: Env = CALM): number {
+  return airborne(plane) ? separation(air_of(plane, c, env).alpha, c) : 0;
+}
+
 export function wheel_height(plane: Plane, c: Coefficients, env: Env = CALM): number {
   const { main, aux } = c.spec.gear;
   return Math.max(0, Math.min(clearance(plane, main, env).height, clearance(plane, aux, env).height));

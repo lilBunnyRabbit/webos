@@ -7,11 +7,16 @@ export const CHANGELOG: Release[] = [
   {
     version: "4.8.1",
     date: "2026-11-07",
-    title: "Brand Light desktop",
+    title: "Brand Light desktop and a steady Airfield",
     changes: [
       {
         kind: FIXED,
         text: "The Brand Light theme's desktop is the brand's cream again instead of a dark yellow tan, and Edit colours lets you pick any theme's desktop colour.",
+      },
+      {
+        kind: FIXED,
+        apps: ["airfield"],
+        text: "Airfield no longer shakes while the plane stands on its wheels, and the view stays put when wind, brake or runway readouts come and go.",
       },
     ],
   },

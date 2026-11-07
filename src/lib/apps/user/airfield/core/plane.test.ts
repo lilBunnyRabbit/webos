@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { advance, create_flight, CrashKind, Status } from "./flight";
+import { advance, buffet, create_flight, CrashKind, Status } from "./flight";
 import {
   airborne,
   CALM,
@@ -185,4 +185,10 @@ describe("the other planes", () => {
     expect(flight.status).toBe(Status.FLYING);
     expect(flight.plane.h).toBeGreaterThan(300);
   });
+});
+
+test.each(PLANE_IDS)("the %s doesn't buffet standing on its wheels, in a gust or not", (id) => {
+  const c = plane_coefficients(id);
+  const plane = create_plane(c, 0);
+  for (const wind of [0, 1, -2]) expect(buffet(plane, c, { ...CALM, wind })).toBe(0);
 });
