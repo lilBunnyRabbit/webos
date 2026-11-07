@@ -351,7 +351,9 @@ function draw_plane(ctx: CanvasRenderingContext2D, f: Frame) {
   ctx.closePath();
   ctx.fillStyle = paint.roof;
   ctx.fill();
-  line(ctx, plane, { x: -0.45, z: 1.26 }, hinged({ x: -0.45, z: 1.26 }, 0.42, flap), thick * 0.9, paint.roof);
+  // Drawn longer than the real 0.42 m chord when zoomed out and dark once lowered (the body is the accent colour), so the setting reads at circuit height.
+  const flap_length = Math.max(0.42, hair(view, 6));
+  line(ctx, plane, { x: -0.45, z: 1.26 }, hinged({ x: -0.45, z: 1.26 }, flap_length, flap), thick * 1.5, plane.flaps > 0.02 ? palette.ink : paint.roof);
   const wheel = project(plane, { x: 0.35, z: -0.7 });
   ellipse(ctx, wheel.x, wheel.y, 0.3 * Math.max(side, 0.35), 0.3, palette.ink);
   ellipse(ctx, wheel.x, wheel.y, 0.11 * Math.max(side, 0.35), 0.11, palette.steel);

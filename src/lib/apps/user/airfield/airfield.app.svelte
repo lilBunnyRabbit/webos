@@ -396,7 +396,13 @@
       {@render chip(`${plane.vy >= 0 ? "▲" : "▼"} ${Math.abs(plane.vy).toFixed(1)} m/s`, plane.vy < -3 && altitude < 30 ? "text-warning" : "text-foreground/80")}
     </div>
     <div class="flex max-w-full flex-wrap items-center gap-1.5" aria-hidden="true">
-      {@render chip(`Flaps ${FLAP_NAMES[controls.flap_notch]}`, controls.flap_notch > 0 ? "text-primary" : "text-foreground/80")}
+      <div class={cn("flex items-center gap-1.5 rounded-md bg-background/85 px-1.5 py-0.5 font-mono text-ui tabular-nums backdrop-blur-[2px]", controls.flap_notch > 0 ? "text-primary" : "text-foreground/80")}>
+        <span>Flaps {FLAP_NAMES[controls.flap_notch]}</span>
+        <span class="relative h-3 w-2.5 overflow-hidden rounded-xs bg-foreground/15">
+          <span class="absolute inset-x-0 top-0 bg-primary" style:height="{plane.flaps * 100}%"></span>
+          <span class="absolute inset-x-0 top-1/2 h-px bg-background/70"></span>
+        </span>
+      </div>
       {@render chip(`Trim ${controls.trim >= 0 ? "+" : "−"}${Math.round(Math.abs(controls.trim) * 100)}`)}
       {#if controls.brake > 0}{@render chip(`Brakes ${Math.round(controls.brake * 100)}%`, "text-warning")}{/if}
       {#if turning}{@render chip(`Turning ${controls.facing > 0 ? "▶" : "◀"}`, "text-primary")}{/if}
