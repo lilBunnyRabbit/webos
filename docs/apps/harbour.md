@@ -12,7 +12,7 @@ A top-down boat docking sim. A hub harbour you sail around with the real physics
 | World | `core/world.ts` (`Scene`, `Solid`, `Berth`, `SceneBuilder`, `alongside`, `box`), `core/levels.ts` (two layout builders, the 8 levels, `random_scene`), `core/hub.ts` (hub harbour, gates, shed, `crossed`) |
 | Round | `core/contact.ts` (fender contacts, `grade`), `core/round.ts` (`advance`, docked rule, `lie`, `result`), `core/progress.ts` (files and bests) |
 | Proof | `core/planner.ts` (hybrid A* over forward arcs), `core/autopilot.ts` (`prove`, `sail`, `par_of`), `core/rounds.ts` (`RoundRef`, `chart`, the daily), `core/chart.worker.ts` + `core/chart-job.ts` |
-| Screen | `harbour.app.svelte` (hub and round state, loop, camera, cards), `frame.svelte` (toolbar, board, touch controls), `lever.svelte`, `settings-panel.svelte`, `core/draw.ts`, `core/helm.svelte.ts` (lever notch, wheel, keys), `core/sound.ts` |
+| Screen | `harbour.app.svelte` (hub and round state, loop, camera, cards), `frame.svelte` (toolbar, board, touch controls; the kit's `Lever` with the boat's detents from `core/lever.ts`), `settings-panel.svelte`, `core/draw.ts`, `core/helm.svelte.ts` (lever notch, wheel, keys), `core/sound.ts` |
 
 ## The boat model
 

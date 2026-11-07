@@ -4,13 +4,12 @@
   import { cn } from "$lib/core/utils";
   import { IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
-  import { SteeringWheel } from "$kit/components/play2d";
+  import { Lever, SteeringWheel } from "$kit/components/play2d";
   import { clamp_zoom } from "$kit/games/play2d/camera";
   import { read_palette, type Palette } from "$kit/games/play2d/palette";
   import type { Snippet } from "svelte";
   import type { Helm } from "./core/helm.svelte";
-  import { DETENTS, NEUTRAL, ThrottleMode } from "./core/lever";
-  import Lever from "./lever.svelte";
+  import { DETENT_NAMES, DETENTS, LEVER_ENDS, LEVER_LABELS, NEUTRAL, ThrottleMode } from "./core/lever";
 
   interface Box {
     width: number;
@@ -211,7 +210,7 @@
         </div>
       {/if}
       <div bind:clientWidth={lever_box.width} bind:clientHeight={lever_box.height} class={cn("hb-lever-box hidden touch-none items-end justify-end select-none pointer-coarse:flex", controls_idle && "hb-idle")}>
-        <Lever class="hb-lever-size hb-face rounded-xl p-1.5" notch={helm.shown} onchange={set_lever} springs={throttle === ThrottleMode.HOLD} onletgo={let_go} />
+        <Lever class="hb-lever-size hb-face rounded-xl p-1.5" notch={helm.shown} labels={LEVER_LABELS} names={DETENT_NAMES} neutral={NEUTRAL} ends={LEVER_ENDS} onchange={set_lever} springs={throttle === ThrottleMode.HOLD} onletgo={let_go} />
       </div>
     </div>
   </div>

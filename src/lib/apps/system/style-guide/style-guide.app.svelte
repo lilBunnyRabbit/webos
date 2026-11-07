@@ -56,7 +56,7 @@
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
   import { DropZone, type SourceFile } from "$kit/components/drop-zone";
-  import { KeyHint, SpeedChip, SteeringWheel } from "$kit/components/play2d";
+  import { KeyHint, Lever, SpeedChip, SteeringWheel } from "$kit/components/play2d";
   import { QuadFrame } from "$kit/components/quad-frame";
   import type { Quad } from "$kit/utils/perspective";
   import { SwipeCompare } from "$kit/components/swipe-compare";
@@ -150,6 +150,12 @@
   let trim = $state({ start: 0.2, end: 1.8 });
   let wave_selection = $state<Span | null>({ start: 0.8, end: 1.1 });
   let wheel = $state(0.2);
+  let lever = $state(2);
+  const LEVER_DEMO = {
+    labels: ["Full", "Half", "N", "Half", "Full"],
+    names: ["Full astern", "Half astern", "Neutral", "Half ahead", "Full ahead"],
+    ends: { top: "Ahead", bottom: "Astern" },
+  };
 
   const apps = $derived(kernel.service<AppsService>("apps"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
@@ -514,11 +520,12 @@
         </Section>
         <Section
           title="Top-down game HUD"
-          description="The play2d pieces from $kit: a steering wheel you drag round by the rim (it holds its angle, the hub centres it), the speed chip in km/h or knots, and key hints. Drive Hub's games and Harbour use them, with the round card for start and result."
+          description="The play2d pieces from $kit: a steering wheel you drag round by the rim (it holds its angle, the hub centres it), a lever of detents, the speed chip in km/h or knots, and key hints. Drive Hub's games and Harbour use them, with the round card for start and result."
           flush
         >
           <div class="flex flex-wrap items-center gap-4">
             <SteeringWheel class="w-32" value={wheel} onchange={(value) => (wheel = value)} oncentre={() => (wheel = 0)} />
+            <Lever class="h-40" notch={lever} labels={LEVER_DEMO.labels} names={LEVER_DEMO.names} neutral={2} ends={LEVER_DEMO.ends} onchange={(notch) => (lever = notch)} />
             <div class="flex flex-col items-start gap-2">
               <SpeedChip speed={4.2} />
               <SpeedChip speed={1.2} unit="kn" />
