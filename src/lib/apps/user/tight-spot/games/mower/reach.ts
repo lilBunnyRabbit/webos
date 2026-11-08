@@ -26,7 +26,7 @@ function key(pose: Pose): number {
   return (ix * 2048 + iy) * HEADINGS + turn;
 }
 
-function in_the_way(garden: Garden, body: VehicleSpec, every: boolean) {
+export function in_the_way(garden: Garden, body: VehicleSpec, every: boolean) {
   const near = obstacles(garden);
   const beds = garden.beds.map((shape) => ({ shape, box: bounds_of(shape) }));
   return (pose: Placement) => {

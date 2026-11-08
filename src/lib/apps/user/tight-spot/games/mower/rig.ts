@@ -48,7 +48,7 @@ export const RIGS: Record<RigKind, Rig> = {
     towed: true,
     span: 24,
     pass: 2.7,
-    speed: 3.2,
+    speed: 3,
     turn: 9,
     around: 12,
     leave: 8,

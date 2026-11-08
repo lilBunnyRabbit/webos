@@ -173,6 +173,10 @@ export class LawnLayer {
   }
 
   private paint_masks(cut: Grid["marks"]["cut"], lawn: Lawn) {
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
     for (let run = this.run; run < cut.length; run++) {
       const { shade, shapes, axis } = cut[run];
       if (axis === Axis.NONE) continue;
@@ -182,17 +186,32 @@ export class LawnLayer {
       mask.globalCompositeOperation = shade === Cut.DARK ? "source-over" : "destination-out";
       mask.fillStyle = lawn.dark;
       mask.beginPath();
-      for (let i = run === this.run ? this.painted : 0; i < shapes.length; i++) trace(mask, shapes[i]);
+      for (let i = run === this.run ? this.painted : 0; i < shapes.length; i++) {
+        trace(mask, shapes[i]);
+        for (const p of shapes[i]) {
+          x0 = Math.min(x0, p.x);
+          y0 = Math.min(y0, p.y);
+          x1 = Math.max(x1, p.x);
+          y1 = Math.max(y1, p.y);
+        }
+      }
       mask.fill();
       mask.restore();
     }
+    if (x0 > x1) return;
+    // Only where the masks just changed: recombining the whole overlay is three passes over up to 8 M pixels a frame.
+    const left = Math.max(0, Math.floor(x0 * this.ppm) - 2);
+    const top = Math.max(0, Math.floor(y0 * this.ppm) - 2);
+    const width = Math.min(this.overlay.width, Math.ceil(x1 * this.ppm) + 2) - left;
+    const height = Math.min(this.overlay.height, Math.ceil(y1 * this.ppm) + 2) - top;
+    if (width <= 0 || height <= 0) return;
     const out = this.overlay.getContext("2d")!;
     out.save();
     out.setTransform(1, 0, 0, 1, 0, 0);
-    out.globalCompositeOperation = "copy";
-    out.drawImage(this.masks[0], 0, 0);
+    out.clearRect(left, top, width, height);
+    out.drawImage(this.masks[0], left, top, width, height, left, top, width, height);
     out.globalCompositeOperation = "xor";
-    out.drawImage(this.masks[1], 0, 0);
+    out.drawImage(this.masks[1], left, top, width, height, left, top, width, height);
     out.restore();
   }
 

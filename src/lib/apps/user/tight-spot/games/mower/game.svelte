@@ -52,6 +52,7 @@
     overlap,
     OVERLAP_LIMIT,
     pattern_name,
+    pattern_short,
     pattern_of,
     PATTERN_SHARE,
     percent,
@@ -128,6 +129,7 @@
   const spec = $derived(rig.spec);
   const pattern = $derived(pattern_of(round));
   const pattern_text = $derived(pattern ? pattern_name(pattern) : "");
+  const pattern_short_text = $derived(pattern ? pattern_short(pattern) : "");
   const laid = $derived(pattern ? pattern_share(game.grid, pattern) : 0);
   const notes = $derived(twist_notes(round));
   const name = $derived(level_name(round));
@@ -603,7 +605,9 @@
               <span class="absolute inset-y-0 left-0 rounded-full bg-success" style:width="{Math.min(100, (mown / FINISH) * 100)}%"></span>
             </span>
             {#if pattern}
-              <span class={cn(laid >= PATTERN_SHARE ? "text-success" : "text-foreground/65")}>{pattern_text} {Math.floor(laid * 100)}%</span>
+              <span class={cn(laid >= PATTERN_SHARE ? "text-success" : "text-foreground/65")}
+                ><span class="hidden @lg:inline">{pattern_text}</span><span class="@lg:hidden">{pattern_short_text}</span> {Math.floor(laid * 100)}%</span
+              >
             {:else}
               <span class={cn(lapped > OVERLAP_LIMIT ? "text-warning" : "text-foreground/65")}>overlap {Math.round(lapped * 100)}%</span>
             {/if}

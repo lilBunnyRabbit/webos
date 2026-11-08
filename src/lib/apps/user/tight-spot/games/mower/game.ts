@@ -7,10 +7,10 @@ import { better, keep_best, levels_schema, unlocked as open_levels, with_stars, 
 import { bodies, create_car, Gear, hitch_point, jackknifed, shift, step, type Car, type Input, type VehicleSpec } from "../../core/vehicle";
 import { axis_of, BED_COST, CELL, coverage, create_grid, Cut, Ground, mark_cut, mow, overlap, Pattern, pattern_share, stripe, trample, type Grid, type Tally } from "./coverage";
 import { deck_centre, swept } from "./deck";
-import { BankKind, build_garden, type Garden, type Grounds } from "./garden";
+import { BankKind, build_garden, type Bank, type Garden, type Grounds } from "./garden";
 import { flood, flood_towed } from "./reach";
 import { cutter, RigKind, RIGS, type Rig } from "./rig";
-import { across_bank, BANK_TOLERANCE } from "./slope";
+import { across_bank, BANK_TOLERANCE, slant } from "./slope";
 
 export const Mode = { LAWNS: "lawns", LEVELS: "levels" } as const;
 export type Mode = (typeof Mode)[keyof typeof Mode];
@@ -264,9 +264,19 @@ export function par_time(garden: Garden, coverable: number, rig: Rig = RIGS.mowe
           : once / Math.max(garden.width, garden.height);
   const islands = garden.beds.filter((bed) => !touches_hedge(bed, garden)).length;
   const around = garden.trees.length + islands + (garden.pond ? 1 : 0);
-  const turns = Math.max(0, rows - 1) + garden.banks.length * 2;
+  const axes = pattern === Pattern.EAST_WEST ? [0] : pattern === Pattern.NORTH_SOUTH ? [Math.PI / 2] : [];
+  const turns = Math.max(0, rows - 1) + garden.banks.reduce((sum, bank) => sum + bank_turns(bank, axes, rig.pass), 0);
   const seconds = (run / rig.speed + turns * rig.turn + around * rig.around + rig.leave) * 1.25;
   return Math.ceil(seconds / 5) * 5000;
+}
+
+// Rows free to run down the fall line (no pattern, or a checkerboard, mown both ways anyway) pay two turns to line up;
+// stripes across the fall line leave the bank to its own short passes down the slope, a turn each.
+function bank_turns(bank: Bank, axes: readonly number[], pass: number): number {
+  if (axes.every((axis) => slant(axis, bank.fall) <= BANK_TOLERANCE)) return 2;
+  const across = { x: -Math.sin(bank.fall), y: Math.cos(bank.fall) };
+  const spread = bank.shape.map((p) => p.x * across.x + p.y * across.y);
+  return 2 + (Math.max(...spread) - Math.min(...spread)) / pass;
 }
 
 function touches_hedge(bed: readonly Vec[], garden: Garden): boolean {
@@ -298,6 +308,16 @@ const PATTERN_NAMES: Record<Pattern, string> = {
 
 export function pattern_name(pattern: Pattern): string {
   return PATTERN_NAMES[pattern];
+}
+
+const PATTERN_SHORT: Record<Pattern, string> = {
+  "east-west": "E–W",
+  "north-south": "N–S",
+  checker: "both",
+};
+
+export function pattern_short(pattern: Pattern): string {
+  return PATTERN_SHORT[pattern];
 }
 
 /** The start card's lines for what a level brings, the star it asks for first. */
