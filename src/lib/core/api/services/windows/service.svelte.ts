@@ -330,6 +330,7 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
       this.focus(id);
     } else {
       const was_focused = this.is_focused(id);
+      instance.flags.delete(WindowFlag.IMMERSIVE);
       instance.flags.add(WindowFlag.MINIMIZED);
       if (was_focused) this.focus_next();
     }
@@ -348,7 +349,10 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
 
     const visible = Object.values(this.index).filter((instance) => !instance.flags.has(WindowFlag.MINIMIZED));
     if (visible.length === 0) return false;
-    for (const instance of visible) instance.flags.add(WindowFlag.MINIMIZED);
+    for (const instance of visible) {
+      instance.flags.delete(WindowFlag.IMMERSIVE);
+      instance.flags.add(WindowFlag.MINIMIZED);
+    }
     this.focus_next();
     this.peeked = visible.map((instance) => instance.id);
     return true;

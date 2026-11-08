@@ -63,9 +63,9 @@ interface RunShortcut {       // apps, until they can register commands
 On every `keydown`, in order:
 
 1. Skip if `defaultPrevented` (a local handler took it), `isComposing` (IME), or suspended.
-2. Skip if a system dialog is open (`dialogs.system.length > 0`): it's modal.
+2. Skip if a system dialog is open (`dialogs.system.length > 0`): it's modal. F11 is still `preventDefault`ed there (and nothing runs), so the browser's own fullscreen never starts behind the dialog (ADR-101).
 3. `event_keys(event, mac)`; skip a lone modifier.
-4. In a text field (`input`, `textarea`, `select`, contenteditable), only combinations with `mod`, `ctrl`, `alt` or `meta` fire, so typing is never eaten.
+4. In a text field (`input`, `textarea`, `select`, contenteditable), only combinations with `mod`, `ctrl`, `alt` or `meta` fire, so typing is never eaten. F11 is the exception: it types nothing, and left to the browser its own fullscreen would stack under the page's (ADR-101).
 5. Candidates with these keys, newest first. A shortcut for the focused window wins over a global one, except while that window's guide shows (`WindowFlag.GUIDE`, ADR-085): then its window-scoped shortcuts are skipped, so the app doesn't act behind the guide, and only global ones (F1 among them) match. A command shortcut must have `shell.available(command)`, a run shortcut `when()`.
 6. `preventDefault()` synchronously, then `run()` or `shell.execute(command)` (async; a failure becomes an error toast).
 7. No match, the apps' commands not loaded yet, and a candidate's command unknown to the shell (an app's, like `quno q`): `preventDefault()`, await `shell.load()`, then pick again and fire the match, if any ([shell](shell.md#lazy-parts)).
@@ -83,7 +83,7 @@ Each is a command line; what it does, and whether it exists on this platform, is
 | `window.pop` | Alt+Shift+P | `win pop` ([extract](extract.md)); desktop only, available while Picture-in-Picture exists and a window is open | ✓ | |
 | `window.reopen` | Alt+Shift+T | `win reopen` (session); available while something was closed | ✓ | ✓ |
 | `window.guide` | F1 | `win guide`: shows or hides the focused window's app guide (ADR-085). A bare F-key, so it doesn't fire inside a text field | ✓ | ✓ |
-| `window.immersive` | F11 | `win immersive`: the focused window full screen without the bars, or back (ADR-101). The key press is the gesture the browser's own fullscreen needs | ✓ | ✓ |
+| `window.immersive` | F11 | `win immersive`: the focused window full screen without the bars, or back (ADR-101). The key press is the gesture the browser's own fullscreen needs. Claimed with `preventDefault` everywhere, text fields and system dialogs included, so Chrome's F11 fullscreen doesn't run as well. Whether Chrome honours that `preventDefault` for F11 is untested: automated key events (Playwright, CDP) reach the page but never Chrome's own shortcuts, so it needs a check by hand | ✓ | ✓ |
 | `desktop.show` | Alt+Shift+D | `win desktop` | Show desktop; again brings the windows back | Go home |
 | `window.maximize` | Alt+Shift+↑ | `win maximize` | ✓ | — |
 | `window.gather` | Alt+Shift+G | `win gather` | ✓ | — |

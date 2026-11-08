@@ -44,12 +44,20 @@ export abstract class BaseWindowsService {
     for (const instance of Object.values(this.index)) instance.flags.delete(WindowFlag.IMMERSIVE);
   }
 
+  // An app's own element (a visualizer, a video) can go fullscreen on top of the page's; only an empty stack means the
+  // browser left ours.
   private on_fullscreen_change = () => {
-    const now = document.fullscreenElement === document.documentElement;
-    if (this.page_fullscreen && !now) this.leave_all_immersive();
-    // A request that lands after its window already left immersive (or closed) has nothing left to show.
-    else if (now && !this.any_immersive()) exit_page_fullscreen();
-    this.page_fullscreen = now;
+    const top = document.fullscreenElement;
+    if (top === null) {
+      if (this.page_fullscreen) this.leave_all_immersive();
+      this.page_fullscreen = false;
+      return;
+    }
+    if (top !== document.documentElement) return;
+    this.page_fullscreen = true;
+    // A request that lands after its window already left immersive (or closed), or the page coming back to the top
+    // after an element left, with nothing immersive left to show.
+    if (!this.any_immersive()) exit_page_fullscreen();
   };
 
   public toggle_guide(id: WindowId): boolean {

@@ -56,6 +56,7 @@ export class MobileWindowsService extends BaseWindowsService implements IMobileW
   }
 
   private insert(app: AppInstance, flags: Iterable<WindowFlag>): WindowId {
+    this.leave_immersive_on_screen();
     const id = uuid();
     this.index[id] = {
       id,

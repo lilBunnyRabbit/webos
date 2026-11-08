@@ -154,6 +154,52 @@ describe("WindowsService.set_immersive (ADR-101)", () => {
       windows.destroy();
     }
   });
+
+  test("an app's own element fullscreen on top neither leaves immersive nor loses the page's fullscreen", async () => {
+    const windows = new WindowsService();
+    windows.init();
+    const stage = document.createElement("div");
+    const button = document.createElement("button");
+    button.textContent = "Stage full screen";
+    button.onclick = () => void stage.requestFullscreen();
+    document.body.append(stage, button);
+    try {
+      const a = windows.open(app("a"));
+      await enter_by_click(windows, a);
+
+      await userEvent.click(button);
+      await vi.waitFor(() => expect(document.fullscreenElement).toBe(stage));
+      expect(immersive(windows, a)).toBe(true);
+      await document.exitFullscreen();
+      await vi.waitFor(() => expect(document.fullscreenElement).toBe(document.documentElement));
+      expect(immersive(windows, a)).toBe(true);
+
+      await userEvent.click(button);
+      await vi.waitFor(() => expect(document.fullscreenElement).toBe(stage));
+      windows.set_immersive(a, false);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(document.fullscreenElement).toBe(stage);
+      await document.exitFullscreen();
+      await vi.waitFor(() => expect(document.fullscreenElement).toBeNull());
+    } finally {
+      stage.remove();
+      button.remove();
+      windows.destroy();
+    }
+  });
+
+  test("minimizing, or showing the desktop, leaves immersive", () => {
+    const windows = new WindowsService();
+    const a = windows.open(app("a"));
+    windows.set_immersive(a, true);
+    windows.toggle_minimize(a);
+    expect(immersive(windows, a)).toBe(false);
+
+    windows.toggle_minimize(a);
+    windows.set_immersive(a, true);
+    windows.toggle_desktop();
+    expect(immersive(windows, a)).toBe(false);
+  });
 });
 
 describe("win immersive", () => {

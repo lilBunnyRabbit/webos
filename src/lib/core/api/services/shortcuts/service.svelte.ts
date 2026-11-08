@@ -105,12 +105,16 @@ export class ShortcutsService implements IShortcutsService {
   private on_keydown = (event: KeyboardEvent) => {
     // Local handlers (a focused row, a menu) run first and claim their keys with preventDefault.
     if (event.defaultPrevented || event.isComposing || this.suspends > 0) return;
-    // A system dialog is modal: nothing behind it reacts to keys.
-    if (this.dialogs_service.system.length > 0) return;
-
     const keys = event_keys(event, this.mac);
     if (!keys) return;
-    if (is_editable(event.target) && !has_command_modifier(keys)) return;
+    // F11 types nothing, and left to the browser its own fullscreen stacks under ours (ADR-101): always claimed.
+    const browser_key = keys === "f11";
+    // A system dialog is modal: nothing behind it reacts to keys.
+    if (this.dialogs_service.system.length > 0) {
+      if (browser_key) event.preventDefault();
+      return;
+    }
+    if (is_editable(event.target) && !has_command_modifier(keys) && !browser_key) return;
 
     const focused = this.windows_service.get_focused();
     // The guide covers the app, so the app's own keys wait until it's closed; OS keys (F1 among them) still work.

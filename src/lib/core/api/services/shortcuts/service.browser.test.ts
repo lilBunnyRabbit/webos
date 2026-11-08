@@ -191,6 +191,24 @@ describe("ShortcutsService", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  test("F11 is always claimed: it runs from a text field, and behind a system dialog it only stops the browser's own", async () => {
+    const kernel = await boot();
+    const shortcuts = kernel.service<ShortcutsService>("shortcuts");
+    const run = vi.fn();
+    shortcuts.register({ id: "test.f11", keys: "f11", label: "", category: ShortcutCategory.APP, run });
+
+    const input = document.createElement("input");
+    document.body.append(input);
+    expect(press("F11", {}, input).defaultPrevented).toBe(true);
+    input.remove();
+    expect(run).toHaveBeenCalledTimes(1);
+
+    system_dialogs = [{} as DialogEntry];
+    expect(press("F11").defaultPrevented).toBe(true);
+    expect(run).toHaveBeenCalledTimes(1);
+    system_dialogs = [];
+  });
+
   test("suspend stops dispatch until every suspend has resumed", async () => {
     const kernel = await boot();
     const shortcuts = kernel.service<ShortcutsService>("shortcuts");

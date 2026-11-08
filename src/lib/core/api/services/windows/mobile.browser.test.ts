@@ -15,6 +15,15 @@ function app(id: string, flags: WindowFlag[] = []): AppInstance {
 }
 
 describe("MobileWindowsService", () => {
+  test("a window opening over an immersive app takes it out of immersive (ADR-101)", () => {
+    const windows = new MobileWindowsService();
+    const a = windows.open(app("a"));
+    windows.set_immersive(a, true);
+    const b = windows.open(app("b"));
+    expect(windows.get_focused()).toBe(b);
+    expect(windows.get(a)?.flags.has(WindowFlag.IMMERSIVE)).toBe(false);
+  });
+
   test("opening puts the app on screen, home leaves it running", () => {
     const windows = new MobileWindowsService();
     const a = windows.open(app("a"));
