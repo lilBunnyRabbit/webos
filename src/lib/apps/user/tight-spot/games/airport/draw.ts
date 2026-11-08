@@ -80,6 +80,37 @@ function taxi_path(ctx: CanvasRenderingContext2D, apron: Apron, offset: number) 
   ctx.lineTo(bend.centre.x + bend.side * r, bend.end);
 }
 
+// A turn that would land past the bend's start meets the curve instead: tangent to the stand's line and the circle,
+// drawn in the bend's frame so a mirrored apron needs no second case.
+function lead_in(ctx: CanvasRenderingContext2D, apron: Apron, x: number, top: number) {
+  const r = apron.lead_radius;
+  const { centreline, bend } = apron;
+  ctx.save();
+  let u = x;
+  if (bend) {
+    ctx.translate(bend.centre.x, 0);
+    ctx.scale(bend.side, 1);
+    u = (x - bend.centre.x) * bend.side;
+  }
+  const turns = [-1, 1].flatMap((way) => {
+    const cx = u + way * r;
+    if (!bend || cx <= 0) return [{ cx, cy: centreline - r, end: Math.PI / 2, way }];
+    const reach = bend.radius + r;
+    if (cx >= reach) return [];
+    const cy = bend.centre.y - Math.sqrt(reach * reach - cx * cx);
+    return [{ cx, cy, end: Math.atan2(bend.centre.y - cy, -cx), way }];
+  });
+  ctx.beginPath();
+  ctx.moveTo(u, top);
+  ctx.lineTo(u, Math.max(...turns.map((turn) => turn.cy)));
+  for (const turn of turns) {
+    ctx.moveTo(u, turn.cy);
+    ctx.arc(turn.cx, turn.cy, r, turn.way < 0 ? 0 : Math.PI, turn.end, turn.way > 0);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function ground(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, palette: Palette) {
   const { bounds, centreline } = apron;
   ctx.fillStyle = palette.floor;
@@ -105,7 +136,6 @@ function ground(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, pale
   ctx.lineJoin = "round";
   taxi_path(ctx, apron, 0);
   ctx.stroke();
-  const r = apron.lead_radius;
   for (const stand of apron.stands) {
     const { x, y } = stand.at;
     if (stand.remote) {
@@ -122,13 +152,7 @@ function ground(ctx: CanvasRenderingContext2D, apron: Apron, scale: number, pale
       continue;
     }
     ctx.globalAlpha = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(x, y - 3);
-    ctx.lineTo(x, centreline - r);
-    ctx.arc(x + r, centreline - r, r, Math.PI, Math.PI / 2, true);
-    ctx.moveTo(x, centreline - r);
-    ctx.arc(x - r, centreline - r, r, 0, Math.PI / 2);
-    ctx.stroke();
+    lead_in(ctx, apron, x, y - 3);
     ctx.beginPath();
     ctx.moveTo(x - 1.5, y);
     ctx.lineTo(x + 1.5, y);

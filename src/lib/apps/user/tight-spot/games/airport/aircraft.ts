@@ -196,13 +196,10 @@ export const WIDEBODY: Airframe = {
 
 export const AIRFRAMES: Record<Fleet, Airframe> = { narrow: NARROWBODY, wide: WIDEBODY };
 
-export const AIRLINER = NARROWBODY.link;
 export const NOSE_GEAR = NARROWBODY.nose_gear;
 export const NOSE = NARROWBODY.nose;
 export const TAIL = NARROWBODY.tail;
 export const SPAN = NARROWBODY.span;
-export const SHAPES = NARROWBODY.shapes;
-export const HEIGHT = NARROWBODY.height;
 
 export function grow(shape: readonly Vec[], margin: number): Vec[] {
   if (margin <= 0) return [...shape];

@@ -170,7 +170,8 @@
   );
 
   function stored_level(which: Job): number {
-    return Math.min(LEVEL_COUNTS[which], level_schema.parse(prefs.value[`airport.level.${which}`]));
+    const stored = Math.min(LEVEL_COUNTS[which], level_schema.parse(prefs.value[`airport.level.${which}`]));
+    return save.ready ? Math.min(stored, unlocked(job_levels(save.value, which), which)) : stored;
   }
 
   function moves_text(count: number): string {
@@ -437,6 +438,7 @@
     daily = null;
     job = next;
     level = stored_level(next);
+    prefs.value[`airport.level.${next}`] = level;
     prefs.value["airport.job"] = next;
     load(make_round());
   }

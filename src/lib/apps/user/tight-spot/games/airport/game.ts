@@ -22,7 +22,7 @@ import {
   type VehicleSpec,
 } from "../../core/vehicle";
 import { AIRFRAMES, AircraftPart, aircraft_parts, Fleet, grow, is_high, nose_gear, WIDEBODY, type Airframe } from "./aircraft";
-import { build_apron, facing, my_stand, Part, type Apron } from "./apron";
+import { build_apron, facing, my_stand, Part, type Apron, type Bend } from "./apron";
 import { build_baggage, build_tow, remote_stand } from "./ramp";
 import { BAGGAGE, judge_train, PARALLEL, train_done } from "./train";
 
@@ -54,7 +54,6 @@ export const Status = {
 export type Status = (typeof Status)[keyof typeof Status];
 
 export const SPEC: VehicleSpec = PUSHBACK;
-export const STEERING_LIMIT = SPEC.hitches[0].max_angle;
 /** The tug towing an aircraft nose first: the same tug and aircraft on an ordinary towbar off its back, 1 m clear of the nose. */
 export const TOW: VehicleSpec = {
   ...PUSHBACK,
@@ -78,8 +77,8 @@ const HEAVY_TUG: VehicleSpec = {
   accel: 0.6,
   brake: 2.4,
 };
-export const WIDE_PUSH: VehicleSpec = { ...HEAVY_TUG, hitches: [WIDEBODY.link] };
-export const WIDE_TOW: VehicleSpec = {
+const WIDE_PUSH: VehicleSpec = { ...HEAVY_TUG, hitches: [WIDEBODY.link] };
+const WIDE_TOW: VehicleSpec = {
   ...HEAVY_TUG,
   max_forward: 2,
   hitches: [{ ...WIDEBODY.link, hitch: 8.7, rest: 0 }],
@@ -381,8 +380,21 @@ export function to_mark(state: GameState): number {
     const judged = judge_train(state.car, state.apron.train!.mark, state.apron.train!.heading);
     return Math.hypot(judged.along, judged.across);
   }
-  const { x, y } = nose_gear(aircraft_pose(state.car, state.spec), state.apron.airframe);
-  return Math.hypot(x - state.apron.stop.x, y - state.apron.stop.y);
+  const { apron } = state;
+  const gear = nose_gear(aircraft_pose(state.car, state.spec), apron.airframe);
+  if (!apron.bend) return Math.hypot(gear.x - apron.stop.x, gear.y - apron.stop.y);
+  const from = station(apron, apron.bend, gear);
+  return Math.abs(station(apron, apron.bend, apron.stop).along - from.along) + from.off;
+}
+
+// Along the taxiway from the bend's start (the straight run before it negative), and off it: to_mark adds the two, so
+// from the stand it never reads under the straight line.
+function station(apron: Apron, bend: Bend, p: Vec): { along: number; off: number } {
+  const u = (p.x - bend.centre.x) * bend.side;
+  const dy = p.y - bend.centre.y;
+  if (u <= 0) return { along: u, off: Math.abs(p.y - apron.centreline) };
+  if (dy >= 0) return { along: (bend.radius * Math.PI) / 2 + dy, off: Math.abs(u - bend.radius) };
+  return { along: bend.radius * Math.atan2(u, -dy), off: Math.abs(Math.hypot(u, dy) - bend.radius) };
 }
 
 export interface Par {
@@ -474,7 +486,7 @@ export function level_round(level: number, job: Job = Job.PUSHBACK): Round {
   };
 }
 
-export function level_tag(round: Pick<Round, "fleet" | "corner">): string | null {
+function level_tag(round: Pick<Round, "fleet" | "corner">): string | null {
   const tags = [round.fleet === Fleet.WIDE ? "widebody" : null, round.corner ? "corner" : null].filter(Boolean);
   return tags.length ? tags.join(", ") : null;
 }

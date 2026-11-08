@@ -29,6 +29,7 @@ import {
   STEERING,
   stop_hint,
   TOW,
+  to_mark,
   type GameState,
 } from "./game";
 import { BAGGAGE, middle_cart } from "./train";
@@ -74,6 +75,14 @@ describe("apron", () => {
       for (const part of goal) for (const solid of apron.solids) expect(overlaps(part, solid.shape)).toBe(false);
     }
   });
+});
+
+test("round a corner, the distance to the mark is along the taxiway", () => {
+  const state = create_game(level_round(15));
+  const gear = nose_gear(aircraft_pose(state.car));
+  const straight = Math.hypot(gear.x - state.apron.stop.x, gear.y - state.apron.stop.y);
+  expect(to_mark(state)).toBeGreaterThan(straight + 5);
+  expect(to_mark({ ...state, car: at_mark(state, 3) })).toBeCloseTo(3, 6);
 });
 
 describe("judging", () => {
