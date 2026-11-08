@@ -3,9 +3,10 @@ import type { Insets } from "$kit/games/play2d/camera";
 import { begin_frame, type View } from "$kit/games/play2d/canvas";
 import type { Palette } from "$kit/games/play2d/palette";
 import { hash } from "$kit/games/play2d/seed";
-import { Paint, type ShipArt } from "./art";
+import type { ShipArt } from "./art";
 import { BodyId } from "./bodies";
-import { Steering, world_point, type BodyPoint, type Coefficients, type Ship } from "./lander";
+import { paint_ship } from "./draw-ship";
+import { Steering, world_point, type Coefficients, type Ship } from "./lander";
 import { CargoKind } from "./mission";
 import { ground_at, type Pad, type Terrain } from "./world";
 
@@ -25,6 +26,8 @@ export interface BodyScenery {
 export interface Scenery {
   bodies: Record<BodyId, BodyScenery>;
   foil: string;
+  flame: string;
+  flame_glow: string;
   shadow: string;
   dust: string;
 }
@@ -74,6 +77,8 @@ export function read_scenery(probe: HTMLElement): Scenery {
       },
     },
     foil: mix("var(--warning)", 70, "var(--foreground)"),
+    flame: mix("var(--warning)", 70, "var(--error)"),
+    flame_glow: token(`color-mix(in oklab, ${rust} 45%, transparent)`),
     shadow: token("color-mix(in oklch, var(--background-darkest) 45%, transparent)"),
     dust: token("color-mix(in oklch, var(--foreground) 55%, transparent)"),
   };
@@ -143,12 +148,6 @@ function ellipse(ctx: CanvasRenderingContext2D, x: number, y: number, rx: number
   ctx.ellipse(x, y, Math.max(rx, 0.01), Math.max(ry, 0.01), 0, 0, Math.PI * 2);
   ctx.fillStyle = colour;
   ctx.fill();
-}
-
-function outline(ctx: CanvasRenderingContext2D, points: readonly BodyPoint[]) {
-  ctx.beginPath();
-  points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.z) : ctx.lineTo(p.x, p.z)));
-  ctx.closePath();
 }
 
 function solid(ctx: CanvasRenderingContext2D, colour: string, edge: number, edge_colour: string) {
@@ -393,96 +392,28 @@ function waiting(ctx: CanvasRenderingContext2D, f: Frame) {
   }
 }
 
-function flame(ctx: CanvasRenderingContext2D, f: Frame, at: BodyPoint, width: number, length: number, i: number) {
-  if (length < 0.05) return;
-  const flicker = 1 + 0.12 * Math.sin(f.time * 47 + i * 2.1) + 0.06 * Math.sin(f.time * 91 + i);
-  const l = length * flicker;
-  ctx.beginPath();
-  ctx.moveTo(at.x - width / 2, at.z);
-  ctx.quadraticCurveTo(at.x - width * 0.45, at.z - l * 0.45, at.x, at.z - l);
-  ctx.quadraticCurveTo(at.x + width * 0.45, at.z - l * 0.45, at.x + width / 2, at.z);
-  ctx.closePath();
-  ctx.fillStyle = f.palette.warning_glow;
-  ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(at.x - width * 0.3, at.z);
-  ctx.quadraticCurveTo(at.x - width * 0.22, at.z - l * 0.3, at.x, at.z - l * 0.6);
-  ctx.quadraticCurveTo(at.x + width * 0.22, at.z - l * 0.3, at.x + width * 0.3, at.z);
-  ctx.closePath();
-  ctx.fillStyle = f.palette.glow;
-  ctx.fill();
-}
-
 function draw_ship(ctx: CanvasRenderingContext2D, f: Frame) {
-  const { ship, art, palette, view, c } = f;
-  const paint = palette.player;
-  const edge = Math.max(0.035, hair(view, 1.25));
-  const fills: Record<Paint, string> = {
-    [Paint.BODY]: paint.body,
-    [Paint.ROOF]: paint.roof,
-    [Paint.GLASS]: paint.glass,
-    [Paint.STEEL]: palette.steel,
-    [Paint.INK]: palette.ink,
-    [Paint.FOIL]: f.scenery.foil,
-  };
+  const { ship, art, palette, view, c, scenery } = f;
   ctx.save();
   ctx.translate(ship.x, -ship.y);
   ctx.rotate(-ship.angle);
   ctx.scale(1, -1);
-
   const split = c.spec.steering === Steering.SPLIT ? ship.turning * c.split : 0;
-  art.bells.forEach(({ bell }, i) => {
-    const share = 1 + split * bell.side;
-    flame(ctx, f, bell.at, bell.width * 0.9, ship.spool * share * (2.2 + 4 * ship.spool) * Math.sqrt(art.pad / 0.75), i);
-  });
-  if (c.spec.steering === Steering.RCS && Math.abs(ship.turning) > 0.1) {
-    for (const quad of art.rcs) {
-      const up = Math.sign(quad.x) === Math.sign(ship.turning) ? -1 : 1;
-      const l = 0.5 + 0.5 * Math.abs(ship.turning);
-      ctx.beginPath();
-      ctx.moveTo(quad.x - 0.14, quad.z);
-      ctx.lineTo(quad.x, quad.z + up * l);
-      ctx.lineTo(quad.x + 0.14, quad.z);
-      ctx.closePath();
-      ctx.fillStyle = palette.glow;
-      ctx.fill();
+  const reach = Math.sqrt(art.pad / 0.75);
+  paint_ship(
+    ctx,
+    art,
+    { palette, foil: scenery.foil, flame: scenery.flame, flame_glow: scenery.flame_glow, edge: Math.max(0.035, hair(view, 1.25)), time: f.time },
+    {
+      stroke: ship.stroke,
+      flames: art.bells.map(({ bell }) => ship.spool * (1 + split * bell.side) * (2.2 + 4 * ship.spool) * reach),
+      rcs: c.spec.steering === Steering.RCS ? ship.turning : 0,
+      crew: f.carrying === CargoKind.CREW,
     }
-  }
-
-  const rod = Math.max(0.12, hair(view, 1.8));
-  art.legs.forEach((leg, i) => {
-    const sunk = ship.stroke[i] ?? 0;
-    const foot = { x: leg.foot.x, z: leg.foot.z + sunk };
-    ctx.lineCap = "round";
-    ctx.lineWidth = rod;
-    ctx.strokeStyle = palette.ink;
-    ctx.beginPath();
-    ctx.moveTo(leg.hip.x, leg.hip.z);
-    ctx.lineTo(foot.x, foot.z + 0.15);
-    ctx.moveTo(leg.brace.x, leg.brace.z);
-    ctx.lineTo(foot.x + (leg.hip.x - foot.x) * 0.35, foot.z + 0.15 + (leg.hip.z - foot.z) * 0.35);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.ellipse(foot.x, foot.z + 0.12, art.pad, 0.16, 0, 0, Math.PI * 2);
-    solid(ctx, palette.steel, edge, palette.edge);
-  });
-  for (const { shape } of art.bells) {
-    outline(ctx, shape);
-    solid(ctx, palette.steel, edge, palette.edge);
-  }
-  for (const part of art.parts) {
-    outline(ctx, part.shape);
-    solid(ctx, fills[part.paint], edge, palette.edge);
-  }
-  for (const quad of art.rcs) {
-    ctx.beginPath();
-    ctx.roundRect(quad.x - 0.22, quad.z - 0.22, 0.44, 0.44, 0.08);
-    solid(ctx, palette.steel, edge, palette.edge);
-  }
+  );
   if (f.carrying === CargoKind.CRATE) {
-    const low = Math.min(...c.spec.hull.map((p) => p.z));
     ctx.scale(1, -1);
-    crate(ctx, f, 0, -low + 1.05, 2.2, 1.0);
+    crate(ctx, f, 0, -art.sling + 1.05, 2.2, 1.0);
   }
   ctx.restore();
 }

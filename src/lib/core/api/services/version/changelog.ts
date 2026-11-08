@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.10.2",
+    date: "2026-11-08",
+    title: "Lunar Lander ships redrawn",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["lunar-lander"],
+        text: "Lunar Lander's three ships are redrawn in the style of the other games, with outlines, sprung legs, proper engine bells and a fuller flame, and the hangar shows each ship next to its name.",
+      },
+    ],
+  },
+  {
     version: "4.10.1",
     date: "2026-11-08",
     title: "Room for app names",

@@ -31,6 +31,7 @@
   import { ground_at } from "./core/world";
   import LanderFrame from "./frame.svelte";
   import SettingsPanel from "./settings-panel.svelte";
+  import ShipThumb from "./ship-thumb.svelte";
 
   const { daily: daily_prop }: { daily?: string } = $props();
 
@@ -63,9 +64,9 @@
   const PROFILE_WIDTH = 190;
   const MIDDLE_ROW = 64;
   const BLURBS: Record<ShipId, string> = {
-    [ShipId.LANDER]: "Main engine and RCS thrusters. Turns at 30°/s, forgiving legs.",
-    [ShipId.PODS]: "Two engines, no thrusters: it turns by pushing one pod harder, only under power.",
-    [ShipId.SHUTTLE]: "12 t lifter. Slow to spool, slow to turn, long legs, a deep tank.",
+    [ShipId.LANDER]: "Main engine and thrusters, soft legs.",
+    [ShipId.PODS]: "Turns by splitting its thrust.",
+    [ShipId.SHUTTLE]: "12 t lifter, slow to turn.",
   };
   const CRASH_TITLES: Record<CrashKind, string> = {
     [CrashKind.HARD]: "Came down too hard",
@@ -941,19 +942,22 @@
         <p class="text-base font-semibold">Hangar</p>
         <p class="text-ui text-foreground/80">Pick a ship and a body for free flight. Missions {missions_done(progress.value.bests)} of {MISSIONS.length} flown.</p>
       </div>
-      <div class={cn("grid basis-full gap-1.5", side_card && board_size.height >= 480 ? "grid-cols-1" : "grid-cols-3")} role="group" aria-label="Ship">
+      <div class="flex min-w-0 basis-full flex-col gap-1" role="group" aria-label="Ship">
         {#each SHIP_IDS as each, i (each)}
           {@const open = unlocked.includes(each)}
           {@const from = MISSIONS.find((mission) => mission.ship === each)}
           <Button
-            class="h-auto min-h-11 flex-col items-start gap-0 py-1.5 text-left whitespace-normal pointer-coarse:h-auto"
+            class="h-auto min-h-11 w-full min-w-0 justify-start gap-2.5 px-1.5 py-1 text-left whitespace-normal pointer-coarse:h-auto"
             variant={each === ship_id ? "primary" : "quiet"}
             aria-pressed={each === ship_id}
             disabled={!open}
             onclick={() => pick_ship(each)}
           >
-            <span class="flex items-center gap-1.5 font-semibold"><span class="hidden font-mono text-2xs opacity-70 pointer-fine:inline">{i + 1}</span>{SPECS[each].name}</span>
-            <span class={cn("ll-blurb text-2xs font-normal opacity-80", side_card && board_size.height < 480 && "hidden")}>{open ? BLURBS[each] : `Unlocks with mission ${from?.n}.`}</span>
+            {#if palette && scenery}<ShipThumb art={ART[each]} {palette} {scenery} />{/if}
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="flex items-center gap-1.5 font-semibold"><span class="hidden font-mono text-2xs opacity-70 pointer-fine:inline">{i + 1}</span>{SPECS[each].name}</span>
+              <span class={cn("ll-blurb truncate text-2xs font-normal opacity-80", side_card && board_size.height < 480 && "hidden")}>{open ? BLURBS[each] : `Unlocks with mission ${from?.n}.`}</span>
+            </span>
           </Button>
         {/each}
       </div>
