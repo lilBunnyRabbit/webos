@@ -24,6 +24,7 @@ Roadmap block 3. ADR-006 is implemented for the service and toasts only. `Notifi
 - **`ui.overlay` gets `NOTIFICATIONS`** (chosen, extends ADR-028). One overlay at a time, a shortcut can open it, mobile Back closes it. The tray popover mirrors it both ways, like the start menu.
 - Local popover state: no shortcut, and two popovers rely on the auto stack.
 - On mobile, `NOTIFICATIONS` opens the switcher (scrolled to the list). One screen, two ways in.
+- **Later (2026-11-08 visual pass):** the list above the cards pushed them down and was clipped at a third of the screen. The switcher now keeps it behind a bell chip with the count; `NOTIFICATIONS` shows the list full height in place of the cards, "‹ Apps" goes back. Back from the list closes the switcher rather than returning to the cards.
 
 ### 4. Read
 - **Opening the panel reads everything** (chosen). The badge means "new since you last looked". `mark_read(id)` stays unused.

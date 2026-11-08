@@ -19,6 +19,10 @@ export const CHANGELOG: Release[] = [
         apps: ["video-tools"],
         text: "Searching for duplicate frames, remove pauses or timelapse now finds Video Tools' Skip pauses.",
       },
+      {
+        kind: FIXED,
+        text: "On phones, the open apps view keeps its cards centred and uncluttered: notifications sit behind a bell button at the top, and Close all moved up there as a small button.",
+      },
     ],
   },
   {

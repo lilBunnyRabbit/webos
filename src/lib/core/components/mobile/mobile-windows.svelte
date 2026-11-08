@@ -1,11 +1,28 @@
 <script lang="ts">
-  import kernel, { type AppsService, type BackgroundService, type MobileWindowsService, type NotificationsService, type WindowId } from "$lib/core/api";
+  import kernel, {
+    UiOverlay,
+    type AppsService,
+    type BackgroundService,
+    type MobileWindowsService,
+    type NotificationsService,
+    type TasksService,
+    type UiService,
+    type WindowId,
+  } from "$lib/core/api";
   import { cn } from "$lib/core/utils";
-  import { Cards as CardsIcon, X as XIcon } from "phosphor-svelte";
+  import {
+    ArrowsClockwise as UpdateIcon,
+    BellSimple as BellIcon,
+    CaretLeft as CaretLeftIcon,
+    Cards as CardsIcon,
+    DownloadSimple as InstallIcon,
+    X as XIcon,
+  } from "phosphor-svelte";
   import { Button, IconButton } from "../ui";
   import NotificationList from "../notifications/notification-list.svelte";
   import MobileWindow from "./mobile-window.svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
+  import { untrack } from "svelte";
   import { can_update } from "../apps/app-actions";
   import AppExperimental from "../apps/app-experimental.svelte";
 
@@ -17,14 +34,27 @@
   const recent = $derived(windows.recent());
   const rank = $derived(new Map(recent.map((id, index) => [id, index])));
   const focused = $derived(windows.get_focused());
-  /** The notification center sits above the cards (ADR-006 revision), only when there's something in it, or an app runs in the background. */
-  const center = $derived(
-    switcher &&
-      (kernel.service<NotificationsService>("notifications").all.length > 0 || kernel.service<BackgroundService>("background").list().length > 0)
+  const ui = $derived(kernel.service<UiService>("ui"));
+  const notifications = $derived(kernel.service<NotificationsService>("notifications"));
+  /** Anything for the notification center: notifications, background tasks, apps running in the background. */
+  const pending = $derived(
+    notifications.all.length > 0 || kernel.service<BackgroundService>("background").list().length > 0 || kernel.service<TasksService>("tasks").active_count > 0
   );
+  /** The `notifications` overlay shows the full list in place of the cards; the switcher keeps it behind a chip. */
+  const listing = $derived(switcher && ui.overlay === UiOverlay.NOTIFICATIONS);
 
-  /** Cards are the live windows at this scale: no screenshots, the app keeps running inside. Smaller under notifications. */
-  const scale = $derived(center ? 0.55 : 0.66);
+  // The switcher is the notification center (ADR-006 revision): open counts as looked at, even with the list behind its
+  // chip, so the toasts would only repeat it.
+  $effect(() => {
+    if (!switcher || (notifications.unread_count === 0 && notifications.toasts.length === 0)) return;
+    untrack(() => {
+      notifications.mark_all_read();
+      for (const toast of notifications.toasts) notifications.hide_toast(toast.id);
+    });
+  });
+
+  /** Cards are the live windows at this scale: no screenshots, the app keeps running inside. */
+  const SCALE = 0.66;
   /** A card flicked up past this many px closes its app. */
   const CLOSE_DISTANCE = 96;
 
@@ -90,20 +120,41 @@
     return () => windows.set_container(null);
   }}
   class={cn("absolute inset-0 flex flex-col", switcher ? "bg-(--overlay) backdrop-blur-xl" : "pointer-events-none")}
-  style:--card-scale={scale}
+  style:--card-scale={SCALE}
 >
-  {#if center}
-    <NotificationList
-      tasks
-      class="max-h-[32cqh] shrink-0 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)]"
-      item_class="bg-background-lighter shadow-raised"
-    />
+  {#if listing}
+    <div class="flex min-h-0 flex-1 flex-col px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-3">
+      <div class="flex h-10 shrink-0 items-center">
+        <Button size="sm" variant="quiet" class="-ml-2" onclick={() => view_transition(() => ui.open(UiOverlay.SWITCHER))}>
+          <CaretLeftIcon weight="bold" />Apps
+        </Button>
+      </div>
+      <NotificationList tasks class="min-h-0 flex-1" item_class="bg-background-lighter shadow-raised" />
+    </div>
+  {:else if switcher && (list.length > 0 || pending)}
+    <div class="flex h-10 shrink-0 items-center justify-between gap-2 px-4 mt-[calc(env(safe-area-inset-top)+0.75rem)]">
+      {#if pending}
+        <Button
+          size="sm"
+          class="rounded-full"
+          aria-label={notifications.all.length === 1 ? "1 notification" : `${notifications.all.length} notifications`}
+          onclick={() => view_transition(() => ui.open(UiOverlay.NOTIFICATIONS))}
+        >
+          <BellIcon weight="bold" />
+          {#if notifications.all.length > 0}{notifications.all.length}{/if}
+        </Button>
+      {:else}
+        <span></span>
+      {/if}
+      {#if list.length > 0}<Button size="sm" variant="quiet" class="-mr-2" onclick={close_all}>Close all</Button>{/if}
+    </div>
   {/if}
 
 <div
   class={cn(
     "min-h-0 flex-1",
-    switcher ? "flex snap-x snap-mandatory items-center gap-4 overflow-x-auto overscroll-x-contain px-[calc((1-var(--card-scale))*50cqw)] [scrollbar-width:none]" : "relative"
+    switcher ? "flex snap-x snap-mandatory items-center gap-4 overflow-x-auto overscroll-x-contain px-[calc((1-var(--card-scale))*50cqw)] [scrollbar-width:none]" : "relative",
+    listing && "hidden"
   )}
   aria-label={switcher ? "Running apps" : undefined}
 >
@@ -112,20 +163,26 @@
     {@const on_screen = focused === id}
     {#if instance}
       <div
-        class={cn(switcher ? "flex shrink-0 snap-center flex-col gap-2" : cn("absolute inset-0", on_screen ? "pointer-events-auto" : "hidden"))}
+        class={cn(switcher ? "flex w-[calc(100cqw*var(--card-scale))] shrink-0 snap-center flex-col gap-1.5" : cn("absolute inset-0", on_screen ? "pointer-events-auto" : "hidden"))}
         style:order={switcher ? rank.get(id) : undefined}
       >
         {#if switcher}
-          <div class="flex h-8 items-center gap-2 px-1 select-none">
+          <div class="flex h-11 items-center gap-2 pl-1 select-none">
             <instance.app.manifest.icon class="size-5 shrink-0" weight="duotone" />
-            <span class="min-w-0 flex-1 truncate text-ui font-medium">{instance.title ?? instance.app.manifest.name}</span>
-            <AppExperimental app_id={instance.app.id} />
+            <span class="flex min-w-0 flex-1 flex-col items-start gap-0.5">
+              <span class="max-w-full truncate text-ui font-medium">{instance.title ?? instance.app.manifest.name}</span>
+              <AppExperimental app_id={instance.app.id} />
+            </span>
             {#if instance.dirty}<span class="size-2 shrink-0 rounded-full bg-primary" role="img" aria-label="Unsaved changes"></span>{/if}
             {#if can_update(instance.app.id)}
-              <Button size="sm" pressed aria-label="Update {instance.app.manifest.name}" onclick={() => void apps.restart(instance.app.id)}>Update</Button>
+              <IconButton label="Update {instance.app.manifest.name}" size="sm" pressed onclick={() => void apps.restart(instance.app.id)}>
+                <UpdateIcon weight="bold" />
+              </IconButton>
             {/if}
             {#if !apps.is_installed(instance.app.id)}
-              <Button size="sm" pressed aria-label="Install {instance.app.manifest.name}" onclick={() => apps.install(instance.app.id)}>Install</Button>
+              <IconButton label="Install {instance.app.manifest.name}" size="sm" pressed onclick={() => apps.install(instance.app.id)}>
+                <InstallIcon weight="bold" />
+              </IconButton>
             {/if}
             <IconButton label="Close {instance.app.manifest.name}" size="sm" onclick={() => close(id)}>
               <XIcon weight="bold" />
@@ -172,16 +229,12 @@
 </div>
 
   {#if switcher}
-    {#if list.length === 0}
+    {#if list.length === 0 && !listing}
       <div class="pointer-events-none absolute inset-0 grid place-items-center select-none">
         <div class="flex flex-col items-center gap-3 text-foreground/65">
           <CardsIcon class="size-10" weight="duotone" />
           <p class="text-sm font-medium">No running apps</p>
         </div>
-      </div>
-    {:else}
-      <div class="flex shrink-0 justify-center pb-4">
-        <Button onclick={close_all}>Close all</Button>
       </div>
     {/if}
   {/if}

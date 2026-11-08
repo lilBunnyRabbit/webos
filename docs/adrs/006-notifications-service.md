@@ -2,6 +2,8 @@
 **Date:** 2026-01-31
 **Status:** Implemented
 
+> **Revision 2026-11-08: mobile list collapsed** (visual pass). The switcher no longer lists notifications above the cards: a bell chip with the count in its top row opens them, and `ui.overlay === "notifications"` shows the list full height in place of the cards ("‹ Apps" goes back). Opening the switcher still counts as reading them. [Mobile shell](../system/shell/mobile.md#windows-and-switcher).
+
 > **Revision 2026-10-12: notification center** (owner, [brainstorm](../brainstorm/2026-10-12_notification-center.md))
 > - Desktop: the taskbar clock becomes the tray button (bell + unread badge + clock). It opens the center as a popover anchored to the dock. No tray-item registry.
 > - Mobile: the center is a list at the top of the running-apps switcher; the Cards button shows an unread dot.
