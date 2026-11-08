@@ -27,7 +27,7 @@
   import { daily_ref, mission_ref, round_brief, round_key, round_title, RoundKind, scene_of, type Chart, type RoundRef } from "./core/rounds";
   import { SHIP_IDS, ship_coefficients, ShipId, SPECS } from "./core/ships";
   import { Sounds } from "./core/sound";
-  import { clamp_view_zoom, view_span } from "./core/view";
+  import { camera_height, clamp_view_zoom, ease_span, view_span, type SpanEase } from "./core/view";
   import { ground_at } from "./core/world";
   import LanderFrame from "./frame.svelte";
   import SettingsPanel from "./settings-panel.svelte";
@@ -124,6 +124,7 @@
   let overlay_height = $state(0);
 
   let camera: Camera | null = null;
+  let span_ease: SpanEase | null = null;
   let jolt = 0;
   let puffs: Puff[] = [];
   let touchdown_timer = 0;
@@ -246,12 +247,15 @@
     return { ...insets, right: right_box.width + OVERLAY_GAP, bottom: Math.max(card_bottom, MIDDLE_ROW), left: Math.max(card_left, left_box.width + OVERLAY_GAP) };
   }
 
-  function target_camera(): Camera {
+  function target_camera(dt: number, live: boolean): Camera {
     const insets = control_insets();
     const side = Math.max(1, Math.min(board_size.width, board_size.height));
     const clear = Math.max(1, board_size.height - insets.top - insets.bottom);
     const size = Math.max(...spec.hull.map((p) => Math.abs(p.x))) * 2;
-    const span = view_span({ height, side, clear, size, tall });
+    const low = Math.min(...spec.feet.map((p) => p.z));
+    const target = view_span({ height: camera_height(ship.y, ground_at(terrain, ship.x), low), side, clear, size, tall });
+    span_ease = live ? ease_span(span_ease, target, dt) : { span: target, chasing: false };
+    const span = span_ease.span;
     const scale = side / (span / zoom);
     const high = clear / scale;
     const reach = span / zoom / 3;
@@ -285,7 +289,7 @@
     const h = Math.round(board_size.height * board_size.dpr);
     if (canvas.width !== width) canvas.width = width;
     if (canvas.height !== h) canvas.height = h;
-    const target = target_camera();
+    const target = target_camera(dt, !!camera);
     // A still frame while paused keeps the eased view: snapping to the target would jump, and jump back on resume.
     const held_view = camera && (flight.status === Status.PAUSED || flight.status === Status.FLYING) ? { ...camera, scale: target.scale } : target;
     camera = dt > 0 ? ease(camera, target, dt, EASE_X, EASE_Y) : held_view;

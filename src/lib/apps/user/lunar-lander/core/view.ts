@@ -41,3 +41,31 @@ export function view_span({ height, side, clear, size, tall }: SpanInput): numbe
   const floor = (side * size) / ship_pixels(side, height);
   return Math.min(520 * k, floor, Math.max(grown, fit));
 }
+
+/**
+ * The height the camera frames: the centre of mass over the ground, less the legs' reach as built. Not the feet's height
+ * now: a turn swings one foot down, and the view breathed with every turn.
+ */
+export function camera_height(ship_y: number, ground: number, lowest_foot: number): number {
+  return Math.max(0, ship_y + lowest_foot - ground);
+}
+
+export interface SpanEase {
+  span: number;
+  chasing: boolean;
+}
+
+const SPAN_BAND = 0.06;
+const SPAN_RATE = 1.2;
+
+/**
+ * Zoom follows the span slowly and only past a band: a hover bobbing a metre, or a climb rate that wobbles, leaves the
+ * view still. Once outside the band it eases all the way to the target, then rests again.
+ */
+export function ease_span(current: SpanEase | null, target: number, dt: number): SpanEase {
+  if (!current || dt <= 0) return current ?? { span: target, chasing: false };
+  const off = Math.abs(Math.log(target / current.span));
+  const chasing = current.chasing ? off > 0.01 : off > SPAN_BAND;
+  if (!chasing) return { span: current.span, chasing: false };
+  return { span: current.span * Math.exp(Math.log(target / current.span) * (1 - Math.exp(-dt * SPAN_RATE))), chasing: true };
+}

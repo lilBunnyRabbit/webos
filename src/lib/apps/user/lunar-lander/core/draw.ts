@@ -165,7 +165,7 @@ const SKY_TOP = 600;
 
 function sky(ctx: CanvasRenderingContext2D, f: Frame, box: Box) {
   const s = f.scenery.bodies[f.body];
-  const base = -ground_at(f.terrain, f.view.x);
+  const base = -horizon(f.terrain);
   const gradient = ctx.createLinearGradient(0, base, 0, base - SKY_TOP);
   gradient.addColorStop(0, s.sky_low);
   gradient.addColorStop(1, s.sky_high);
@@ -201,12 +201,27 @@ function stars(ctx: CanvasRenderingContext2D, f: Frame) {
 }
 
 /** Ridges far off on the horizon, in screen pixels, sliding past at `drift` pixels a metre flown and sinking out of sight as the ship climbs. */
+const horizons = new WeakMap<Terrain, number>();
+
+/** The area's horizon: its middle ground height, not the ground under the view, which made the ridges jump over every hill. */
+function horizon(t: Terrain): number {
+  let level = horizons.get(t);
+  if (level === undefined) {
+    const inside = t.ground.filter(([x]) => x >= t.x0 && x <= t.x1).map(([, y]) => y).sort((a, b) => a - b);
+    level = inside[Math.floor(inside.length / 2)] ?? 0;
+    horizons.set(t, level);
+  }
+  return level;
+}
+
 function ridges(ctx: CanvasRenderingContext2D, f: Frame, drift: number, sink: number, cell: number, height: number, colour: string, seed: number) {
   const { view } = f;
-  const ground = view.height / 2 + (-ground_at(f.terrain, view.x) - view.y) * view.scale;
+  const ground = view.height / 2 + (-horizon(f.terrain) - view.y) * view.scale;
   if (ground < 0) return;
   const base = (ground > view.height ? view.height + (ground - view.height) * sink : ground) + 1;
-  if (base - height > view.height) return;
+  // Fades out as the horizon drops below the board, instead of the band popping off the bottom edge.
+  const fade = Math.max(0, Math.min(1, 1 - (ground - view.height) / (view.height * 0.6)));
+  if (base - height > view.height || fade <= 0) return;
   const shift = -view.x * drift;
   const from = Math.floor(-shift / cell) - 1;
   const to = Math.ceil((view.width - shift) / cell) + 1;
@@ -226,6 +241,7 @@ function ridges(ctx: CanvasRenderingContext2D, f: Frame, drift: number, sink: nu
   ctx.lineTo(from * cell + shift, view.height + 2);
   ctx.closePath();
   ctx.fillStyle = colour;
+  ctx.globalAlpha = fade;
   ctx.fill();
   ctx.restore();
 }

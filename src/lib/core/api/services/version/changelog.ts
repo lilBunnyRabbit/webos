@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.12.1",
+    date: "2026-11-08",
+    title: "A steady Lunar Lander view",
+    changes: [
+      {
+        kind: FIXED,
+        apps: ["lunar-lander"],
+        text: "Lunar Lander's view no longer zooms in and out as the ship turns or bobs, and the hills on the horizon stay put instead of jumping.",
+      },
+    ],
+  },
+  {
     version: "4.12.0",
     date: "2026-11-08",
     title: "Full screen windows",
