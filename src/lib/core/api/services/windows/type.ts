@@ -137,6 +137,15 @@ export interface WindowsService extends IService {
   toggle_guide(id: WindowId): boolean;
 
   /**
+   * Full screen without the bars (ADR-101): the `immersive` flag, never saved in the session. On mobile the nav bar
+   * hides while the window is on screen; on desktop it fills the window area with no title bar, and leaving restores
+   * its frame. Entering also asks the browser for fullscreen on the page when it can (it needs a user gesture), and the
+   * browser leaving fullscreen leaves immersive. A popped-out window can't enter it.
+   * @returns `true` if the window is now immersive
+   */
+  set_immersive(id: WindowId, on: boolean): boolean;
+
+  /**
    * Toggles the maximized state of a window.
    * @param id - The window ID to toggle
    * @returns `true` if the window is now maximized, `false` if it's now unmaximized or didn't exist
@@ -231,6 +240,8 @@ export const WindowFlag = {
   DEBUG: "debug",
   /** The app's guide covers the content (ADR-085). Transient: the session keeps only minimized and maximized. */
   GUIDE: "guide",
+  /** Full screen without the bars (ADR-101). Transient like the guide. */
+  IMMERSIVE: "immersive",
 } as const;
 export type WindowFlag = (typeof WindowFlag)[keyof typeof WindowFlag];
 

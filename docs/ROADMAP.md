@@ -132,6 +132,7 @@ Agreed with the owner on 2026-10-12 ([brainstorm](brainstorm/2026-10-12_roadmap-
 - [x] Window placement: remembered frame per app, cascade from the app's frontmost window, centred first open (replaces plain cascading)
 - [x] Reopen last closed window (Alt+Shift+T; Ctrl+Shift+T is the browser's)
 - [x] Taskbar clock / date-time display
+- [x] Immersive windows: full screen without the title bar, nav bar or browser bars; exit button with `--immersive-inset-*`, F11 / `win immersive`, window menus, play2d games' ⤢ (2026-11-08, [ADR-101](adrs/101-immersive-windows.md), [brainstorm](brainstorm/2026-11-08_immersive-windows.md))
 
 ### Window API Expansion
 - **Brainstorm:** [2026-01-31 Window API & Actions](brainstorm/2026-01-31_window-api-actions.md)

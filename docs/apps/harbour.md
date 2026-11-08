@@ -12,7 +12,7 @@ A top-down boat docking sim. A hub harbour you sail around with the real physics
 | World | `core/world.ts` (`Scene`, `Solid`, `Berth`, `SceneBuilder`, `alongside`, `box`), `core/levels.ts` (two layout builders, the 8 levels, `random_scene`), `core/hub.ts` (hub harbour, gates, shed, `crossed`) |
 | Round | `core/contact.ts` (fender contacts, `grade`), `core/round.ts` (`advance`, docked rule, `lie`, `result`), `core/progress.ts` (files; bests keep a Perfect on top of the kit's `better`) |
 | Proof | `core/planner.ts` (hybrid A* over forward arcs), `core/autopilot.ts` (`prove`, `sail`), `core/rounds.ts` (the boat's `RoundRef`, `chart`, the daily, on `$kit/games/play2d/rounds`), `core/chart.worker.ts` (the kit's `serve_chart`; `work_out_chart` from `$kit/games/play2d/chart-job`) |
-| Screen | `harbour.app.svelte` (hub and round state, loop, camera, cards), `frame.svelte` (toolbar, board, touch controls; the kit's `Lever` with the boat's detents from `core/lever.ts`), `settings-panel.svelte`, `core/draw.ts`, `core/helm.svelte.ts` (lever notch, wheel, keys), `core/sound.ts` (on the kit's `GameSounds`) |
+| Screen | `harbour.app.svelte` (hub and round state, loop, camera, cards), `frame.svelte` (toolbar ending in the kit's ⤢ `FullScreenButton` and dropped while the window is immersive, ADR-101; the HUD row clears the exit button through the window's `--immersive-inset-*`, and its height is the camera's top inset; board, touch controls; the kit's `Lever` with the boat's detents from `core/lever.ts`), `settings-panel.svelte`, `core/draw.ts`, `core/helm.svelte.ts` (lever notch, wheel, keys), `core/sound.ts` (on the kit's `GameSounds`) |
 
 ## The boat model
 

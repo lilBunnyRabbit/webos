@@ -43,6 +43,8 @@ Built by `create_window_handle(id)`. Every member calls `kernel.service<WindowsS
 | `minimize()` | `void` | Minimizes if not already minimized |
 | `maximize()` | `void` | Un-minimizes first if minimized, then maximizes if not maximized |
 | `on_back(handler)` | `() => void` (disposer) | Claims the mobile nav bar's Back (ADR-003 revision 2026-10-12). `handler` returns `true` when it handled back. Handlers stack per window, newest first: `windows.add_back_handler(id, handler)`. Use `$effect(() => window.on_back(...))`. Desktop never calls it |
+| `immersive` | `boolean` getter | Has the `immersive` flag: full screen without the bars (ADR-101, [window](../shell/window.md#immersive)). Hide your own toolbar while it's `true`; keep controls out of the exit button's corner, `--immersive-inset-top` × `--immersive-inset-right` on the window element (`0px` when off). `false` once the window is gone |
+| `set_immersive(on)` | `void` | `windows.set_immersive(id, on)`. Call it from a click or key: the browser's fullscreen needs the gesture, and without it only the WebOS bars hide. A popped-out window ignores it. The play2d kit's `FullScreenButton` calls it |
 | `restore()` | `void` | If minimized: un-minimize only (a minimized-and-maximized window comes back maximized). Else if maximized: un-maximize. Else nothing |
 
 All controls are idempotent; the service's `toggle_*` calls are wrapped so the handle never toggles the wrong way.

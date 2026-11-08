@@ -2,7 +2,7 @@ import { view_transition } from "$lib/core/utils/view-transition";
 import { window_transition } from "$lib/core/components/window/window-transition.svelte";
 import { ShellError, type CommandContext, type Completion, type Value } from "../shell/type";
 import { is_tagged } from "../shell/values";
-import { is_desktop, is_mobile, short_id, type WindowValue } from "./shell";
+import { is_desktop, is_mobile, short_id, type ImmersiveMode, type WindowValue } from "./shell";
 import { WindowFlag, type DesktopWindowsService, type SnapZone, type WindowId, type WindowsService } from "./type";
 
 /** Newest first, minimized ones included: they're still running. */
@@ -95,6 +95,14 @@ export async function guide(windows: WindowsService, context: CommandContext<{ i
     bring(windows, id);
     windows.toggle_guide(id);
   }
+}
+
+export function immersive(windows: WindowsService, args: { mode: ImmersiveMode; id?: string }) {
+  const id = args.id ? find(windows, args.id) : windows.get_focused();
+  if (!id) throw new ShellError("no window is focused");
+  const on = args.mode === "toggle" ? !windows.get(id)?.flags.has(WindowFlag.IMMERSIVE) : args.mode === "on";
+  if (on && !windows.set_immersive(id, true)) throw new ShellError("a popped-out window can't go full screen");
+  if (!on) windows.set_immersive(id, false);
 }
 
 // From home nothing is focused, so the newest window is the one to bring back.

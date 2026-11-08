@@ -12,7 +12,7 @@
     with_pin,
     without_pin,
   } from "$lib/core/api";
-  import { ArrowCircleUp as ArrowCircleUpIcon, ArrowSquareIn as ArrowSquareInIcon, PictureInPicture as PictureInPictureIcon, PushPinSimple as PushPinSimpleIcon, PushPinSimpleSlash as PushPinSimpleSlashIcon, X as XIcon } from "phosphor-svelte";
+  import { ArrowCircleUp as ArrowCircleUpIcon, ArrowSquareIn as ArrowSquareInIcon, ArrowsOutSimple as ArrowsOutSimpleIcon, PictureInPicture as PictureInPictureIcon, PushPinSimple as PushPinSimpleIcon, PushPinSimpleSlash as PushPinSimpleSlashIcon, X as XIcon } from "phosphor-svelte";
   import { cn } from "$lib/core/utils";
   import type { Position } from "$lib/core/utils/type";
   import { flushSync } from "svelte";
@@ -143,9 +143,10 @@
             { separator: true },
             ...(out
               ? [{ id: "back", label: "Bring back", icon: ArrowSquareInIcon }]
-              : extract?.supported
-                ? [{ id: "pop", label: "Pop out", icon: PictureInPictureIcon, disabled: single.dirty }]
-                : []),
+              : [
+                  { id: "immersive", label: "Full screen", icon: ArrowsOutSimpleIcon, shortcut: "F11" },
+                  ...(extract?.supported ? [{ id: "pop", label: "Pop out", icon: PictureInPictureIcon, disabled: single.dirty }] : []),
+                ]),
             { id: "close", label: "Close window", icon: XIcon },
           ]
         : [
@@ -162,6 +163,7 @@
     else if (choice === INSTALL_ITEM.id) apps.install(app.id);
     else if (choice === UPDATE_ITEM.id) void apps.restart(app.id);
     else if (choice === "back") void extract?.bring_back();
+    else if (choice === "immersive" && single) windows.set_immersive(single.id, true);
     else if (choice === "pop" && single) void extract?.pop(single.id);
     else if (choice === "close" && single) void windows.close(single.id);
     else if (choice === "close-all") for (const instance of group) void windows.close(instance.id);

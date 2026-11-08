@@ -15,7 +15,7 @@ A side-view takeoff and landing sim at real scale. Four planes, each solved from
 | Rounds | `core/course.ts` (a level's world: ground line, surfaces, strips, obstacles, weather, `course_env`), `core/levels.ts` (the 20 levels and `random_scene`), `core/round.ts` (`Scene`, `step_round`, goals, `result`), `core/rounds.ts` (the plane's `RoundRef`, `chart`, the daily, on `$kit/games/play2d/rounds`), `core/progress.ts` (the kit's schema and `better`) |
 | Proof | `core/autopilot.ts` (`autopilot`, `fly`), `core/chart.worker.ts` (the kit's `serve_chart`; `work_out_chart` from `$kit/games/play2d/chart-job`) |
 | Cockpit | `core/cockpit.ts` (each plane's lever detents and flap notches), `core/controls.svelte.ts` (lever notch, trim, flaps, facing, brake ramp, stick from keys, pad or mouse, the crew walk), `pitch-pad.svelte`, the kit's `Lever` |
-| Screen | `airfield.app.svelte` (loop, camera, HUD, cards, rounds), `frame.svelte` (toolbar, board, touch controls, mouse drag, pinch), `core/draw.ts`, `core/art.ts` (each plane's drawing), `core/sound.ts` (on the kit's `GameSounds`), `settings-panel.svelte` |
+| Screen | `airfield.app.svelte` (loop, camera, HUD, cards, rounds), `frame.svelte` (toolbar ending in the kit's ⤢ `FullScreenButton` and dropped while the window is immersive, ADR-101; board, touch controls, mouse drag, pinch). Full screen: the HUD keeps clear of the exit button (`min-h` and `right` from the window's `--immersive-inset-*`), so the camera's top inset and the profile under the HUD move down with it, `core/draw.ts`, `core/art.ts` (each plane's drawing), `core/sound.ts` (on the kit's `GameSounds`), `settings-panel.svelte` |
 
 ## How it works
 

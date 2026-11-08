@@ -3,6 +3,7 @@
     UiOverlay,
     type AppsService,
     type BackgroundService,
+    type DialogsService,
     type MobileWindowsService,
     type NotificationsService,
     type TasksService,
@@ -12,6 +13,7 @@
   import { cn } from "$lib/core/utils";
   import {
     ArrowsClockwise as UpdateIcon,
+    ArrowsOutSimple as ArrowsOutSimpleIcon,
     BellSimple as BellIcon,
     CaretLeft as CaretLeftIcon,
     Cards as CardsIcon,
@@ -23,6 +25,8 @@
   import MobileWindow from "./mobile-window.svelte";
   import { view_transition } from "$lib/core/utils/view-transition";
   import { untrack } from "svelte";
+  import { long_press } from "$lib/core/utils/long-press";
+  import type { Position } from "$lib/core/utils/type";
   import { can_update } from "../apps/app-actions";
   import AppExperimental from "../apps/app-experimental.svelte";
 
@@ -35,6 +39,7 @@
   const rank = $derived(new Map(recent.map((id, index) => [id, index])));
   const focused = $derived(windows.get_focused());
   const ui = $derived(kernel.service<UiService>("ui"));
+  const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   /** Anything for the notification center: notifications, background tasks, apps running in the background. */
   const pending = $derived(
@@ -79,6 +84,24 @@
       return;
     }
     view_transition(() => void windows.close_all());
+  }
+
+  // The release that opened it must not also open the app.
+  async function card_menu(id: WindowId, point: Position) {
+    swipe = null;
+    const name = windows.get(id)?.app.manifest.name ?? "app";
+    const choice = await dialogs.menu(
+      [
+        { id: "immersive", label: "Full screen", icon: ArrowsOutSimpleIcon },
+        { separator: true },
+        { id: "close", label: `Close ${name}`, icon: XIcon },
+      ],
+      { anchor: point }
+    );
+    if (choice === "immersive") {
+      onpick(id);
+      windows.set_immersive(id, true);
+    } else if (choice === "close") close(id);
   }
 
   function on_pointer_down(event: PointerEvent, id: WindowId) {
@@ -208,8 +231,9 @@
           </div>
 
           {#if switcher}
-            <!-- Tap opens, a flick up closes, sideways scrolls the row (native, hence pan-x). -->
+            <!-- Tap opens, a flick up closes, a long press opens its menu, sideways scrolls the row (native, hence pan-x). -->
             <button
+              {@attach long_press({ on_menu: (point) => void card_menu(id, point) })}
               class="absolute inset-0 touch-pan-x"
               aria-label="Open {instance.app.manifest.name}"
               onpointerdown={(event) => on_pointer_down(event, id)}

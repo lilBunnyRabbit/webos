@@ -363,6 +363,7 @@ const window_handle_members: Members<
   | "confirm"
   | "focus"
   | "id"
+  | "immersive"
   | "is_focused"
   | "is_maximized"
   | "is_minimized"
@@ -377,6 +378,7 @@ const window_handle_members: Members<
   | "request"
   | "restore"
   | "set_dirty"
+  | "set_immersive"
   | "set_title"
 > = true;
 

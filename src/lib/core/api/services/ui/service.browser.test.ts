@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
-import type { AppInstance, Kernel, WindowsService } from "$lib/core/api";
+import { WindowFlag, type AppInstance, type Kernel, type WindowsService } from "$lib/core/api";
 import { boot_test_kernel } from "../../kernel/test-kernel";
 import { DialogsService } from "../dialogs/service.svelte";
 import { WindowsService as DesktopWindows } from "../windows/service.svelte";
@@ -78,6 +78,30 @@ describe("UiService.back", () => {
     expect(windows(kernel).get_focused()).not.toBeNull();
     expect(ui(kernel).back()).toBe(true);
     await vi.waitFor(() => expect(windows(kernel).get_focused()).toBeNull());
+  });
+
+  test("mobile: an immersive app leaves full screen first, then goes home (ADR-101)", async () => {
+    const kernel = await boot("mobile");
+    const id = windows(kernel).open(app("example"));
+    const app_back = vi.fn(() => false);
+    windows(kernel).add_back_handler(id, app_back);
+    windows(kernel).set_immersive(id, true);
+
+    expect(ui(kernel).back()).toBe(true);
+    expect(windows(kernel).get(id)?.flags.has(WindowFlag.IMMERSIVE)).toBe(false);
+    expect(windows(kernel).get_focused()).toBe(id);
+    expect(app_back).not.toHaveBeenCalled();
+
+    expect(ui(kernel).back()).toBe(true);
+    await vi.waitFor(() => expect(windows(kernel).get_focused()).toBeNull());
+  });
+
+  test("mobile: going home leaves immersive", async () => {
+    const kernel = await boot("mobile");
+    const id = windows(kernel).open(app("example"));
+    windows(kernel).set_immersive(id, true);
+    (windows(kernel) as MobileWindowsService).go_home();
+    expect(windows(kernel).get(id)?.flags.has(WindowFlag.IMMERSIVE)).toBe(false);
   });
 
   test("mobile solo: no home to go to", async () => {

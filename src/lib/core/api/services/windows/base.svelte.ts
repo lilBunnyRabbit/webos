@@ -12,6 +12,45 @@ export abstract class BaseWindowsService {
 
   abstract get(id: WindowId): WindowInstance | null;
   abstract focus(id: WindowId): boolean;
+  protected abstract bring_forward(id: WindowId): void;
+
+  protected can_immerse(_id: WindowId): boolean {
+    return true;
+  }
+
+  /** The page was in fullscreen at the last `fullscreenchange`, so leaving it is the browser leaving ours. */
+  private page_fullscreen = false;
+  private stop_fullscreen_sync: (() => void) | null = null;
+
+  public set_immersive(id: WindowId, on: boolean): boolean {
+    const instance = this.get(id);
+    if (!instance) return false;
+    if (on && !this.can_immerse(id)) return instance.flags.has(WindowFlag.IMMERSIVE);
+    if (on) {
+      instance.flags.add(WindowFlag.IMMERSIVE);
+      this.bring_forward(id);
+      request_page_fullscreen();
+    } else {
+      instance.flags.delete(WindowFlag.IMMERSIVE);
+    }
+    return on;
+  }
+
+  protected any_immersive(): boolean {
+    return Object.values(this.index).some((instance) => instance.flags.has(WindowFlag.IMMERSIVE));
+  }
+
+  private leave_all_immersive(): void {
+    for (const instance of Object.values(this.index)) instance.flags.delete(WindowFlag.IMMERSIVE);
+  }
+
+  private on_fullscreen_change = () => {
+    const now = document.fullscreenElement === document.documentElement;
+    if (this.page_fullscreen && !now) this.leave_all_immersive();
+    // A request that lands after its window already left immersive (or closed) has nothing left to show.
+    else if (now && !this.any_immersive()) exit_page_fullscreen();
+    this.page_fullscreen = now;
+  };
 
   public toggle_guide(id: WindowId): boolean {
     const instance = this.get(id);
@@ -35,9 +74,10 @@ export abstract class BaseWindowsService {
     };
   }
 
-  /** The guide sits above the app, so it closes before any of the app's own handlers run. */
+  /** The guide sits above the app, so it closes first; then immersive, before any of the app's own handlers run. */
   public back(id: WindowId): boolean {
     if (this.get(id)?.flags.has(WindowFlag.GUIDE)) return (this.toggle_guide(id), true);
+    if (this.get(id)?.flags.has(WindowFlag.IMMERSIVE)) return (this.set_immersive(id, false), true);
     const handlers = [...(this.back_handlers.get(id) ?? [])].reverse();
     return handlers.some((handler) => handler());
   }
@@ -74,10 +114,30 @@ export abstract class BaseWindowsService {
   init(): void {
     window.addEventListener("beforeunload", this.on_before_unload);
     document.addEventListener("visibilitychange", this.on_visibility_change);
+    document.addEventListener("fullscreenchange", this.on_fullscreen_change);
+    // Leaving immersive, or closing the last immersive window, hands the browser's bars back.
+    this.stop_fullscreen_sync = $effect.root(() => {
+      $effect(() => {
+        if (!this.any_immersive()) exit_page_fullscreen();
+      });
+    });
   }
 
   destroy(): void {
     window.removeEventListener("beforeunload", this.on_before_unload);
     document.removeEventListener("visibilitychange", this.on_visibility_change);
+    document.removeEventListener("fullscreenchange", this.on_fullscreen_change);
+    this.stop_fullscreen_sync?.();
+    this.stop_fullscreen_sync = null;
   }
+}
+
+/** The whole page, so dialogs, menus and toasts still show. Missing (iPhone) or refused (no gesture): only our bars hide. */
+function request_page_fullscreen(): void {
+  if (!document.fullscreenEnabled || document.fullscreenElement) return;
+  document.documentElement.requestFullscreen().catch(() => {});
+}
+
+function exit_page_fullscreen(): void {
+  if (document.fullscreenElement === document.documentElement) document.exitFullscreen().catch(() => {});
 }

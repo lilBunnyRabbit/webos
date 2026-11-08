@@ -1,6 +1,6 @@
 # Window
 
-Source: `src/lib/core/components/window/` · Services: [windows](../services/windows.md) · ADRs: [ADR-003](../../adrs/003-app-context.md) (app context), [ADR-014](../../adrs/014-window-enhancements.md) (accepted), [ADR-024](../../adrs/024-design-system.md) (chrome), [ADR-085](../../adrs/085-app-guides.md) (guide) · Design: [docs/design/shell.md](../../design/shell.md#windows)
+Source: `src/lib/core/components/window/` · Services: [windows](../services/windows.md) · ADRs: [ADR-003](../../adrs/003-app-context.md) (app context), [ADR-014](../../adrs/014-window-enhancements.md) (accepted), [ADR-024](../../adrs/024-design-system.md) (chrome), [ADR-085](../../adrs/085-app-guides.md) (guide), [ADR-101](../../adrs/101-immersive-windows.md) (immersive) · Design: [docs/design/shell.md](../../design/shell.md#windows)
 
 | File | Role |
 |------|------|
@@ -10,6 +10,8 @@ Source: `src/lib/core/components/window/` · Services: [windows](../services/win
 | `window-sheets.svelte` | Renders this window's dialog sheets over its content (ADR-025) |
 | `window-guide.svelte` | The app's guide over the content while `WindowFlag.GUIDE` is set (ADR-085). Lazy: each host imports it the first time a guide shows. Desktop, mobile, solo and popped-out windows all render it ([Guide](#guide)) |
 | `load-guide.ts` | `load_guide(window_id)`: the hosts' `import()` of `window-guide.svelte`. On a failed import it turns the window's guide flag off and notifies, then resolves `null` ([Guide](#guide)) |
+| `window-immersive-exit.svelte` | The exit button an immersive window shows in its top-right corner; every host renders it ([Immersive](#immersive)) |
+| `window-immersive.ts` | `immersive_insets(on)`: the classes that set `--immersive-inset-top` / `--immersive-inset-right` on a host's window element |
 | `window.handler.svelte.ts` | `WindowGeometryHandler`: drag, resize, snap detection, `get_snap_position()` |
 | `window-transition.svelte.ts` | `window_transition(ids, change)`: `view_transition()` that names unfocused windows for its duration; `transition_named(id)` |
 
@@ -27,7 +29,7 @@ One `<Window id>` per entry in `windows.list()`, rendered by the [window manager
 `window.svelte` derives one `rect` (`left`, `top`, `width`, `height` as CSS strings) with this precedence:
 
 1. **Drag/resize active**: `move.start.left/top` + `move.width/height`, with `transform: translate3d(dx, dy, 0)` for the movement. During a drag only the transform changes, which keeps it cheap.
-2. **Maximized**: `0, 0, 100%, 100%`.
+2. **Maximized or immersive**: `0, 0, 100%, 100%`.
 3. **Snapped**: `WindowGeometryHandler.get_snap_position(zone)`, which is CSS `calc()` percentages of the container with an 8px gap (`SNAP_PADDING`).
 4. Otherwise `instance.bounds` in px.
 
@@ -39,7 +41,8 @@ Visual states (all theme tokens):
 |-------|-------|
 | unfocused | `rounded-xl bg-background`, `ring-1 ring-foreground/8`, `shadow-window` |
 | focused (`windows.is_focused(id)`) | `ring-foreground/16`, `shadow-window-focused`. The box-shadow transitions over 200ms |
-| maximized (and not mid-gesture) | `rounded-none shadow-none ring-0` |
+| maximized or immersive (and not mid-gesture) | `rounded-none shadow-none ring-0` |
+| immersive | No titlebar row (the grid is `1fr`), no resize handles, no snap preview; the exit button over the content ([Immersive](#immersive)) |
 | snapped | Same as normal; only the geometry differs |
 | minimized | `hidden` (`display: none`, the app stays mounted) |
 | popped out | `hidden`, and the content area renders neither `WindowContent` nor `WindowSheets`: the app is mounted in the mini window instead, through `window-mini.svelte` ([extract](../services/extract.md#mounting)) |
@@ -134,6 +137,14 @@ ADR-085. While the window has `WindowFlag.GUIDE`, the host (`window.svelte`, `mo
 - **Keys:** while a window's guide shows, ShortcutsService skips that window's own (window-scoped) shortcuts, so a game's F2 or H doesn't act behind it; global shortcuts, F1 among them, still run ([shortcuts](../services/shortcuts.md)).
 - **Focus:** the overlay takes focus when it mounts, unless focus is already inside it.
 
+## Immersive
+
+ADR-101 ([windows](../services/windows.md#immersive)). While the instance has `WindowFlag.IMMERSIVE`, `window.svelte` renders it like a maximized window with the titlebar row left out: the content fills the window area, there are no resize handles and no drag. The stored `bounds`, `snap_zone` and `MAXIMIZED` flag aren't touched, so leaving puts the window back exactly where it was. The taskbar stays.
+
+- **Exit button:** `window-immersive-exit.svelte`, rendered in the content area after the app (and the guide) and before the sheets, so a sheet covers it. A quiet kit `IconButton` (`md`: 32px, 40px on touch) with Phosphor `ArrowsInSimple`, `absolute top-2 right-2 z-10`, `rounded-full`, `bg-background/55`, `backdrop-blur-sm`, a `foreground/10` ring; labelled "Leave full screen"; calls `windows.set_immersive(id, false)`. Desktop, mobile (`mobile-window.svelte`) and solo (`solo-window.svelte`) hosts render it; the mini window never shows an immersive window.
+- **Insets:** each host puts `immersive_insets(on)` on its `data-window-id` element: `--immersive-inset-top` and `--immersive-inset-right` are the button's offset plus its size (2.5rem, 3rem on `pointer: coarse`), `0px` when not immersive, so an app can write `calc(… + var(--immersive-inset-right))` unconditionally. The kit `Toolbar` adds the right one to its padding; the play2d HUDs clear it too ([components](../../design/components.md#app-kit)). Keep the two in step with the button's classes.
+- **Ways in:** the titlebar's right-click menu, the taskbar item's menu, F11 / `win immersive`, an app's own button (`window.set_immersive(true)`, the play2d `FullScreenButton`). **Ways out:** the button, F11 again, Esc (the browser leaves fullscreen), back.
+
 ## User interactions
 
 | Input | Target | Result |
@@ -146,6 +157,7 @@ ADR-085. While the window has `WindowFlag.GUIDE`, the host (`window.svelte`, `mo
 | `focusin` | Anything inside the frame gets DOM focus (Tab, programmatic) | Focus (raise) |
 | Click | Titlebar buttons | See the titlebar table |
 | Keyboard | — | The frame takes DOM focus when the window comes to the front. Window shortcuts are the shortcuts service's; no keyboard move/resize. |
+| Right-click | Titlebar (not its buttons) | Its menu (`dialogs.menu` at the pointer): Full screen (F11, `windows.set_immersive`), Minimize, Maximize or Restore, Close. Minimize and maximize run in a view transition; Close goes through the guard |
 | Double-click | Titlebar (not its buttons) | `windows.toggle_maximize(id)` in a view transition: maximize, or restore a maximized window. On a snapped window it maximizes; the next double-click restores to the snapped spot. The maximize button is the accessible path. |
 
 ## Platform APIs

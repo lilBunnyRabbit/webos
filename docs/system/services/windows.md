@@ -1,6 +1,6 @@
 # WindowsService
 
-Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (placement, frames), [ADR-016](../../adrs/016-mobile-support.md), [ADR-023](../../adrs/023-session-persistence.md) (`restore`), [ADR-085](../../adrs/085-app-guides.md) (`guide` flag) · Source: `src/lib/core/api/services/windows/` · Inspector: `inspector.svelte` (ADR-020)
+Key `windows` · Depends on: none · ADR: [ADR-014](../../adrs/014-window-enhancements.md) (placement, frames), [ADR-016](../../adrs/016-mobile-support.md), [ADR-023](../../adrs/023-session-persistence.md) (`restore`), [ADR-085](../../adrs/085-app-guides.md) (`guide` flag), [ADR-101](../../adrs/101-immersive-windows.md) (`immersive` flag) · Source: `src/lib/core/api/services/windows/` · Inspector: `inspector.svelte` (ADR-020)
 
 ## Purpose
 
@@ -11,7 +11,7 @@ The service doesn't know about app lifecycles. A window is just a record holding
 | File | Contents |
 |------|----------|
 | `type.ts` | `WindowsService` interface (JSDoc reference for the repo), `WindowInstance`, `WindowFlag`, `SnapZone`, `WindowConstraints`, `WindowOptions`, `WindowSnapshot`, `WindowFrames`, `RestoreResult` |
-| `base.svelte.ts` | `BaseWindowsService`, the abstract class both implementations extend: the window index, back handlers, the close guard, `set_title`, `set_dirty`, `has_dirty`, `page_hidden` and the `beforeunload` / `visibilitychange` listeners (`init()` / `destroy()`) |
+| `base.svelte.ts` | `BaseWindowsService`, the abstract class both implementations extend: the window index, back handlers, the close guard, `set_title`, `set_dirty`, `has_dirty`, `page_hidden`, `set_immersive` with the page's browser fullscreen, and the `beforeunload` / `visibilitychange` / `fullscreenchange` listeners (`init()` / `destroy()`) |
 | `service.svelte.ts` | Desktop implementation |
 | `mobile.svelte.ts` | Mobile implementation, see [Mobile](#mobile) |
 | `close-guard.ts` | `CloseGuard`: close prompt and per-window save for the dirty path |
@@ -38,7 +38,7 @@ interface WindowInstance {
 
 | Concept | Values | Notes |
 |---------|--------|-------|
-| `WindowFlag` | `minimized`, `maximized`, `debug`, `guide` | `debug` makes the window render its debug children (bounds + drag state JSON). Only the `example` user app sets it. `guide` shows the app's guide over the content (ADR-085, [window](../shell/window.md#guide)); transient like `debug`: the session keeps only `minimized` and `maximized` (`SESSION_FLAGS`). |
+| `WindowFlag` | `minimized`, `maximized`, `debug`, `guide`, `immersive` | `debug` makes the window render its debug children (bounds + drag state JSON). Only the `example` user app sets it. `guide` shows the app's guide over the content (ADR-085, [window](../shell/window.md#guide)); transient like `debug`: the session keeps only `minimized` and `maximized` (`SESSION_FLAGS`). `immersive` is full screen without the bars (ADR-101, [Immersive](#immersive)), transient too. |
 | `SnapZone` | `top`, `bottom`, `left`, `right`, `top-left`, `top-right`, `bottom-left`, `bottom-right` | Halves and quarters of the container. The geometry is CSS, computed in the shell (`WindowGeometryHandler.get_snap_position`). |
 | `WindowOptions` | `{ constraints?, flags?, snap_zone? }` | Comes from the manifest's `defaults` (ADR-001). That's the only way to influence a new window. |
 
@@ -84,10 +84,11 @@ The class `WindowsService` implements `DesktopWindowsService`. On mobile, `init.
 | `get_focused` | `() => WindowId \| null` | Linear scan with `is_focused`. Used by [DialogsService](dialogs.md) to anchor dialogs. |
 | `snap` | `(id, zone \| null) => boolean` | Sets `snap_zone`. The `win snap` command (and through it the Alt+Shift snap keys) calls it; the drag handler writes `instance.snap_zone` directly. |
 | `add_back_handler` | `(id, handler: () => boolean) => () => void` | Registers a back handler (the window handle's `on_back`). A plain per-window array, newest last; the disposer removes that handler. `close()` drops the window's handlers. Both implementations |
-| `back` | `(id) => boolean` | Closes the window's guide first when it shows (ADR-085; it sits above the app, so it wins whatever order handlers registered in); otherwise runs the handlers newest first until one returns `true`. `UiService.back()` calls it on both platforms, after closing dialogs and sheets ([ui](ui.md)) |
+| `back` | `(id) => boolean` | Closes the window's guide first when it shows (ADR-085; it sits above the app, so it wins whatever order handlers registered in); then leaves immersive (ADR-101); otherwise runs the handlers newest first until one returns `true`. `UiService.back()` calls it on both platforms, after closing dialogs and sheets ([ui](ui.md)) |
 | `toggle_maximize` | `(id) => boolean` | Adding the flag also focuses. Removing it doesn't. Returns the new state (`false` for a missing id too). |
 | `toggle_minimize` | `(id) => boolean` | Removing the flag also focuses. Minimizing the focused window hands focus to the next one (see below). Returns the new state. |
 | `toggle_guide` | `(id) => boolean` | Toggles `WindowFlag.GUIDE` (ADR-085). Showing it also focuses (on mobile: puts the app on screen); it doesn't un-minimize, so `win guide` brings the window back first. Returns the new state (`false` for a missing id too). In `BaseWindowsService`, so both implementations share it. The titlebar and nav bar button, F1 (`win guide`), `app guide` and AppsService's first open call it |
+| `set_immersive` | `(id, on) => boolean` | Adds or removes `WindowFlag.IMMERSIVE` ([Immersive](#immersive)). Entering brings the window forward (desktop: un-minimizes too) and asks the browser for fullscreen on the page. `false` for a missing id; a popped-out window (desktop, [extract](extract.md)) refuses and keeps its state. In `BaseWindowsService`. The window handle's `set_immersive`, `win immersive` (F11), the title bar and taskbar menus, the switcher card menu and the exit button call it |
 | `name`, `description`, `to_string()` | IService | `to_string()` lists `id: app name`. |
 
 Not on the interface: private `index: Record<WindowId, WindowInstance>` (`$state`), private `max_order: number` (`$state`), `reset_state()`.
@@ -101,7 +102,7 @@ Not on the interface: private `index: Record<WindowId, WindowInstance>` (`$state
 
 ## Lifecycle
 
-`init()` adds the `beforeunload` guard (ADR-029) and the `visibilitychange` listener behind `page_hidden`; `destroy()` removes both. The constructor reads `window.innerWidth/innerHeight` for the initial container.
+`init()` adds the `beforeunload` guard (ADR-029), the `visibilitychange` listener behind `page_hidden`, the `fullscreenchange` listener and an `$effect.root` that exits the page's fullscreen once no window is immersive ([Immersive](#immersive)); `destroy()` removes them. The constructor reads `window.innerWidth/innerHeight` for the initial container.
 
 ## Persistence
 
@@ -143,6 +144,18 @@ Size is then clamped to the manifest's `constraints` and capped at the container
 
 **Who mutates instances directly.** The service doesn't own every write. `WindowGeometryHandler` (`components/window/window.handler.svelte.ts`) writes `instance.bounds`, `instance.snap_zone` and `instance.flags.delete(MAXIMIZED)` itself, without going through `snap()` or `toggle_maximize()`. Swapping in a different WindowsService (ADR-016) would have to keep returning mutable proxies from `get()`.
 
+### Immersive
+
+ADR-101 ([brainstorm](../../brainstorm/2026-11-08_immersive-windows.md)). Full screen without the bars, per window, never saved: the session snapshot keeps only `minimized` and `maximized`, so a restored window comes back with its bars (a restore has no gesture to ask for fullscreen with).
+
+- **State.** `WindowFlag.IMMERSIVE` on the instance, set and cleared by `set_immersive(id, on)` in `BaseWindowsService`. The window handle reads it as `immersive`. What it looks like is the shells' job: desktop renders the window over the whole window area with no title bar ([window](../shell/window.md#immersive)), mobile hides the nav bar ([mobile](../shell/mobile.md#immersive)), solo hides its header ([solo](../shell/solo.md)); all three draw the exit button and publish its box.
+- **Browser fullscreen.** Entering calls `document.documentElement.requestFullscreen()` when `document.fullscreenEnabled` and nothing else is in fullscreen (Music Visualizer's stage is). It's the whole page, so dialogs, menus and toasts still show. It needs user activation, so it works from a click, a key (F11) or a command typed in the terminal or palette; a refusal is swallowed and only the WebOS bars hide. iPhone Safari has no element fullscreen: the same. Entries: `fullscreen` in [compat](../compat.md).
+- **Leaving fullscreen leaves immersive.** The `fullscreenchange` listener remembers whether the page itself was fullscreen; when it was and isn't any more (Esc, the system back on Android, the browser's own UI), every window leaves immersive. A fullscreen that lands after its window already left immersive or closed is exited at once.
+- **Leaving immersive leaves fullscreen.** An effect exits the page's fullscreen whenever no window is immersive: the exit button, `win immersive off`, back, closing the window.
+- **Back** (`back(id)`, so the nav bar and the browser's back through `UiService.back()`): the guide first, then immersive, then the app's own handlers.
+- **Mobile:** the app leaving the screen leaves immersive: `focus` of another window and `go_home` clear the flag on the window that was on screen, like a phone app sent to the background.
+- **Desktop:** several windows may be immersive at once (each covers the window area; the frontmost shows). Popping a window out ([extract](extract.md)) clears it first, and a popped-out window can't enter (`can_immerse`).
+
 ### Restore
 
 ```ts
@@ -169,6 +182,7 @@ Then `focus_next()`: the topmost non-minimized window gets the highest order, so
 - `open(app)`: new record on top, `snap_zone: null`, `constraints: {}`, `bounds` = the container's size at `0,0`. Manifest `flags` are kept except `minimized` / `maximized`.
 - `restore()`: inserts in order like desktop, drops `minimized` / `maximized`, ignores saved geometry, then **goes home**: restored apps wait in the switcher, like a phone after a restart.
 - `close(id)`: closing the on-screen app goes home rather than surfacing another one.
+- Another app coming on screen, or home, takes the on-screen app out of immersive ([Immersive](#immersive)).
 - `toggle_maximize()` → always `false`, does nothing. `toggle_minimize(id)`: on-screen → home (`true`); background → focus it (`false`). The window handle's `is_minimized` / `is_maximized` therefore always read `false`.
 - `container` is `{ element }` only; `set_container(element)` stores the stage element (`mobile-windows.svelte`), which dialogs anchor to.
 - `frames` / `load_frames` are held but never recorded or used, so a phone visit saves the desktop's frames back unchanged.
@@ -180,7 +194,7 @@ ADR-014's 2026-10-12 revision records the code: remembered frames instead of pla
 
 ## Shell
 
-Contributes `win list|close|focus|minimize|guide|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`, bodies, the completer and `open` in the lazy `windows/shell-run.ts`). Both implementations call the same `windows_shell(this)`; the shape decides (`is_desktop` / `is_mobile`), and on mobile `win minimize` and `win desktop` describe themselves as "Go home". `win close` takes `--all` (`-a`); `win close|minimize|maximize|guide` take window ids or piped windows, the focused one by default; `win guide` brings each window back (un-minimizes, focuses) and toggles its guide (ADR-085; F1 runs it, [shortcuts](shortcuts.md)); `win snap <zone|none> [id]` snaps, the same zone again unsnaps. See [shell](shell.md#contributions).
+Contributes `win list|close|focus|minimize|guide|immersive|previous|cycle|desktop`, plus `maximize|snap|gather` from the desktop service, the `window` completer and value type (`windows/shell.ts`, bodies, the completer and `open` in the lazy `windows/shell-run.ts`). Both implementations call the same `windows_shell(this)`; the shape decides (`is_desktop` / `is_mobile`), and on mobile `win minimize` and `win desktop` describe themselves as "Go home". `win close` takes `--all` (`-a`); `win close|minimize|maximize|guide` take window ids or piped windows, the focused one by default; `win guide` brings each window back (un-minimizes, focuses) and toggles its guide (ADR-085; F1 runs it, [shortcuts](shortcuts.md)); `win snap <zone|none> [id]` snaps, the same zone again unsnaps; `win immersive [toggle|on|off] [id]` (toggle and the focused window by default) sets full screen without the bars (ADR-101; F11 runs it), and fails with "a popped-out window can't go full screen". See [shell](shell.md#contributions).
 
 ## Known gaps
 

@@ -804,9 +804,9 @@
 {/snippet}
 
 {#snippet overlay()}
-  <div bind:clientHeight={overlay_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right="{profile_shown ? profile_width + 16 : 8}px">
+  <div bind:clientHeight={overlay_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right={profile_shown ? `${profile_width + 16}px` : "calc(8px + var(--immersive-inset-right, 0px))"}>
     <!-- Only the instruments, each held at its widest, set the camera's top inset: a chip coming and going below them moved the view. -->
-    <div bind:clientHeight={hud_height} class="flex max-w-full flex-col items-start gap-1.5">
+    <div bind:clientHeight={hud_height} class="flex min-h-(--immersive-inset-top,0px) max-w-full flex-col items-start gap-1.5">
       <div class="flex max-w-full flex-wrap items-center gap-1.5">
         <IconButton
           size="sm"

@@ -116,6 +116,8 @@ export interface Frame {
   insets: Insets;
   puffs: readonly Puff[];
   profile: boolean;
+  /** How far the profile strip moves down to clear an immersive window's exit button, px. */
+  notch: number;
   gates: GateSign[];
   hangar: { x0: number; x1: number; height: number; label: string } | null;
   /** What waits on each pad: a crate or crew to pick up. */
@@ -459,7 +461,7 @@ function profile(ctx: CanvasRenderingContext2D, f: Frame) {
   const w = Math.min(190, view.width * 0.42);
   const h = w * 0.36;
   const x0 = view.width - w - 8;
-  const y0 = 8;
+  const y0 = 8 + f.notch;
   const left = terrain.x0;
   const right = terrain.x1;
   const inside = terrain.ground.filter(([x]) => x >= left && x <= right);

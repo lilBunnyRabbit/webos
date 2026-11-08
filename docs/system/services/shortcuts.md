@@ -83,6 +83,7 @@ Each is a command line; what it does, and whether it exists on this platform, is
 | `window.pop` | Alt+Shift+P | `win pop` ([extract](extract.md)); desktop only, available while Picture-in-Picture exists and a window is open | ✓ | |
 | `window.reopen` | Alt+Shift+T | `win reopen` (session); available while something was closed | ✓ | ✓ |
 | `window.guide` | F1 | `win guide`: shows or hides the focused window's app guide (ADR-085). A bare F-key, so it doesn't fire inside a text field | ✓ | ✓ |
+| `window.immersive` | F11 | `win immersive`: the focused window full screen without the bars, or back (ADR-101). The key press is the gesture the browser's own fullscreen needs | ✓ | ✓ |
 | `desktop.show` | Alt+Shift+D | `win desktop` | Show desktop; again brings the windows back | Go home |
 | `window.maximize` | Alt+Shift+↑ | `win maximize` | ✓ | — |
 | `window.gather` | Alt+Shift+G | `win gather` | ✓ | — |

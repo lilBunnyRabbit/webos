@@ -16,7 +16,7 @@ solo-shell.svelte        flex column, h-dvh, safe-area insets left/right
 └─ DialogsHost           dropdown on desktop, sheet on mobile
 ```
 
-The header pads the top safe area. Touch makes it 52 px tall (`pointer-coarse:h-13`).
+The header pads the top safe area. Touch makes it 52 px tall (`pointer-coarse:h-13`). It's gone while the window is immersive (ADR-101): `solo-window.svelte` then draws the exit button and sets the inset variables like the other hosts ([window](window.md#immersive)).
 
 ## Interactions
 

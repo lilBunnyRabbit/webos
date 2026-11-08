@@ -24,6 +24,9 @@ export const short_id = (id: WindowId) => id.slice(0, 8);
 export const is_desktop = (windows: WindowsService): windows is DesktopWindowsService => "snap" in windows;
 export const is_mobile = (windows: WindowsService): windows is MobileWindowsService => "go_home" in windows;
 
+export const IMMERSIVE_MODES = ["toggle", "on", "off"] as const;
+export type ImmersiveMode = (typeof IMMERSIVE_MODES)[number];
+
 const logic = () => import("./shell-run");
 
 export function windows_shell(windows: WindowsService): ShellContribution {
@@ -76,6 +79,14 @@ export function windows_shell(windows: WindowsService): ShellContribution {
       positional: ["ids"],
       available: any_open,
       run: async (context) => (await logic()).guide(windows, context),
+    }),
+    define_command({
+      id: "win immersive",
+      description: "Full screen without the bars: on, off, or toggle",
+      args: z.object({ mode: z.enum(IMMERSIVE_MODES).default("toggle"), id: arg.window().optional() }),
+      positional: ["mode", "id"],
+      available: any_open,
+      run: async ({ args }) => (await logic()).immersive(windows, args),
     }),
     define_command({
       id: "win previous",

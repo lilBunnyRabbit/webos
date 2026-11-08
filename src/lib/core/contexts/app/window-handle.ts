@@ -31,6 +31,12 @@ export function create_window_handle(id: WindowId): WindowHandle {
     get bounds() {
       return windows().get(id)?.bounds ?? NO_BOUNDS;
     },
+    get immersive() {
+      return has(WindowFlag.IMMERSIVE);
+    },
+    set_immersive(on) {
+      windows().set_immersive(id, on);
+    },
 
     focus() {
       windows().focus(id);

@@ -11,7 +11,7 @@
   import type { DriveInput, Hold } from "./drive-input.svelte";
   import { SteeringMode, WheelMode, type DriveSettings } from "./settings.svelte";
   import { Signal } from "./signal";
-  import { SteeringWheel } from "$kit/components/play2d";
+  import { FullScreenButton, SteeringWheel } from "$kit/components/play2d";
 
   interface Box {
     width: number;
@@ -233,10 +233,13 @@
 <svelte:window onkeydown={on_window_keydown} onkeyup={on_keyup} onblur={onrelease} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={root} class="ts-root grid h-full grid-rows-[auto_1fr_auto] [container:ts-app/size]" {onkeydown}>
-  <Toolbar class="ts-toolbar">
-    {@render toolbar()}
-  </Toolbar>
+<div bind:this={root} class={cn("ts-root grid h-full [container:ts-app/size]", win.immersive ? "grid-rows-[1fr_auto]" : "grid-rows-[auto_1fr_auto]")} {onkeydown}>
+  {#if !win.immersive}
+    <Toolbar class="ts-toolbar">
+      {@render toolbar()}
+      <FullScreenButton />
+    </Toolbar>
+  {/if}
 
   <div bind:contentRect={stage_rect} class="ts-stage min-h-0 p-2 [container:ts-stage/size] @md:p-3">
     <div class="ts-layout h-full">

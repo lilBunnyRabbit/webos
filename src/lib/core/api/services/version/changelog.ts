@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.12.0",
+    date: "2026-11-08",
+    title: "Full screen windows",
+    changes: [
+      {
+        kind: NEW,
+        text: "Any window can go full screen, without the title bar, the phone's navigation bar or the browser's bars: press F11, pick Full screen from the window's menu or the ⤢ button in Lunar Lander, Airfield, Harbour and Drive Hub, and leave with the small button in the corner, Esc or back.",
+      },
+    ],
+  },
+  {
     version: "4.11.0",
     date: "2026-11-08",
     title: "MP4 clips",

@@ -1,4 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
+import { userEvent } from "vitest/browser";
+import { bind } from "../shell/parse";
+import { tokenize } from "../shell/tokenize";
+import { windows_shell } from "./shell";
+import { immersive as immersive_command } from "./shell-run";
 import type { AppInstance } from "../apps/type";
 import { WindowsService } from "./service.svelte";
 import { WindowFlag, type WindowId } from "./type";
@@ -84,5 +89,94 @@ describe("WindowsService.toggle_guide (ADR-085)", () => {
     expect(windows.toggle_guide(a)).toBe(false);
     expect(windows.get(a)?.flags.has(WindowFlag.GUIDE)).toBe(false);
     expect(windows.toggle_guide("missing")).toBe(false);
+  });
+});
+
+describe("WindowsService.set_immersive (ADR-101)", () => {
+  const immersive = (windows: WindowsService, id: WindowId) => windows.get(id)?.flags.has(WindowFlag.IMMERSIVE);
+
+  async function enter_by_click(windows: WindowsService, id: WindowId) {
+    const button = document.createElement("button");
+    button.textContent = "Full screen";
+    button.onclick = () => windows.set_immersive(id, true);
+    document.body.append(button);
+    try {
+      await userEvent.click(button);
+      await vi.waitFor(() => expect(document.fullscreenElement).toBe(document.documentElement));
+    } finally {
+      button.remove();
+    }
+  }
+
+  test("enters on a minimized window by bringing it back; back leaves it before the app's handlers; the session never keeps it", () => {
+    const windows = new WindowsService();
+    const a = windows.open(app("a"));
+    windows.open(app("b"));
+    windows.toggle_minimize(a);
+    const app_back = vi.fn(() => true);
+    windows.add_back_handler(a, app_back);
+
+    expect(windows.set_immersive(a, true)).toBe(true);
+    expect(immersive(windows, a)).toBe(true);
+    expect(minimized(windows, a)).toBe(false);
+    expect(windows.get_focused()).toBe(a);
+    expect(snapshot_window(windows.get(a)!).flags).toEqual([]);
+
+    expect(windows.back(a)).toBe(true);
+    expect(immersive(windows, a)).toBe(false);
+    expect(app_back).not.toHaveBeenCalled();
+    expect(windows.set_immersive("missing", true)).toBe(false);
+  });
+
+  test("the browser leaving fullscreen leaves immersive", async () => {
+    const windows = new WindowsService();
+    windows.init();
+    try {
+      const a = windows.open(app("a"));
+      await enter_by_click(windows, a);
+      expect(immersive(windows, a)).toBe(true);
+      await document.exitFullscreen();
+      await vi.waitFor(() => expect(immersive(windows, a)).toBe(false));
+    } finally {
+      windows.destroy();
+    }
+  });
+
+  test("closing the last immersive window hands fullscreen back", async () => {
+    const windows = new WindowsService();
+    windows.init();
+    try {
+      const a = windows.open(app("a"));
+      await enter_by_click(windows, a);
+      windows.force_close(a);
+      await vi.waitFor(() => expect(document.fullscreenElement).toBeNull());
+    } finally {
+      windows.destroy();
+    }
+  });
+});
+
+describe("win immersive", () => {
+  const command = (windows: WindowsService) => windows_shell(windows).commands?.find((each) => each.id === "win immersive")!;
+
+  test("mode then window, toggle by default", () => {
+    const windows = new WindowsService();
+    expect(bind(command(windows), tokenize(""))).toEqual({ mode: "toggle" });
+    expect(bind(command(windows), tokenize("off 1a2b3c4d"))).toEqual({ mode: "off", id: "1a2b3c4d" });
+    expect(() => bind(command(windows), tokenize("sideways"))).toThrow();
+  });
+
+  test("toggles the focused window, or the one named", () => {
+    const windows = new WindowsService();
+    const a = windows.open(app("a"));
+    const b = windows.open(app("b"));
+
+    immersive_command(windows, { mode: "toggle" });
+    expect(windows.get(b)?.flags.has(WindowFlag.IMMERSIVE)).toBe(true);
+    immersive_command(windows, { mode: "toggle" });
+    expect(windows.get(b)?.flags.has(WindowFlag.IMMERSIVE)).toBe(false);
+    immersive_command(windows, { mode: "on", id: a.slice(0, 8) });
+    expect(windows.get(a)?.flags.has(WindowFlag.IMMERSIVE)).toBe(true);
+    expect(windows.get_focused()).toBe(a);
   });
 });

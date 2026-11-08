@@ -8,6 +8,9 @@
   import WindowContent from "../window/window-content.svelte";
   import WindowSheets from "../window/window-sheets.svelte";
   import { load_guide } from "../window/load-guide";
+  import WindowImmersiveExit from "../window/window-immersive-exit.svelte";
+  import { immersive_insets } from "../window/window-immersive";
+  import { cn } from "$lib/core/utils";
 
   let { id }: { id: WindowId } = $props();
 
@@ -16,6 +19,7 @@
   const instance = $derived(windows.get(id)!);
   const has_sheets = $derived(dialogs.for_window(id).length > 0);
   const has_guide = $derived(instance.flags.has(WindowFlag.GUIDE));
+  const is_immersive = $derived(instance.flags.has(WindowFlag.IMMERSIVE));
 
   // Same as the desktop window: set once, here, so the window's sheets get the context too.
   untrack(() => {
@@ -31,7 +35,7 @@
 </script>
 
 <!-- No chrome: the app fills the screen below the device's own status bar. -->
-<div data-window-id={id} class="flex h-full w-full flex-col bg-background pt-[env(safe-area-inset-top)]">
+<div data-window-id={id} class={cn("flex h-full w-full flex-col bg-background pt-[env(safe-area-inset-top)]", immersive_insets(is_immersive))}>
   <div class="relative min-h-0 flex-1 overflow-hidden [container-type:size]">
     <div class="contents" inert={has_sheets || has_guide}>
       <WindowContent window_id={id} zoom={1} />
@@ -41,6 +45,7 @@
         {#if WindowGuide}<div class="contents" inert={has_sheets}><WindowGuide window_id={id} /></div>{/if}
       {/await}
     {/if}
+    {#if is_immersive}<WindowImmersiveExit window_id={id} />{/if}
     <WindowSheets window_id={id} />
   </div>
 </div>

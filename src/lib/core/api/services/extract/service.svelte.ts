@@ -101,6 +101,7 @@ export class ExtractService implements IExtractService {
     pip.addEventListener("pagehide", () => {
       if (this.pip === pip) this.release();
     });
+    this.windows_service.set_immersive(id, false);
     this.current = id;
     this.document = pip.document;
     return true;

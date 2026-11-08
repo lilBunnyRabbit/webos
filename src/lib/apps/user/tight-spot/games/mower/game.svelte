@@ -580,7 +580,7 @@
 
 {#snippet overlay()}
   {#if game.status !== Status.READY}
-    <div bind:clientHeight={hud_height} class="pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between gap-1.5">
+    <div bind:clientHeight={hud_height} class="pointer-events-none absolute top-2 right-[calc(0.5rem+var(--immersive-inset-right,0px))] left-2 min-h-(--immersive-inset-top,0px) flex items-start justify-between gap-1.5">
       <div class="flex min-w-0 flex-col items-start gap-1.5">
         <div class="flex items-center gap-1.5">
           <IconButton

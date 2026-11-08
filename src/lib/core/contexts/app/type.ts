@@ -23,8 +23,16 @@ export interface WindowHandle {
   /** Not minimized (mobile: on screen) and the tab isn't hidden. Pause loops and timers on false (ADR-035). */
   readonly is_visible: boolean;
   readonly bounds: Readonly<Bounds>;
+  /**
+   * Full screen without the bars (ADR-101): no title bar or nav bar, and the browser's own fullscreen where it allows.
+   * Hide your own toolbar while it's `true`, and keep controls out of the exit button's corner: its box is
+   * `--immersive-inset-top` and `--immersive-inset-right` on the window element (0 when not immersive).
+   */
+  readonly immersive: boolean;
 
   focus(): void;
+  /** Enters or leaves immersive. Call it from a click or key press, or the browser refuses its fullscreen. */
+  set_immersive(on: boolean): void;
   /** Asks first when the window has unsaved changes (ADR-029). An app that just saved calls `set_dirty(false)` first. */
   close(): void;
   /** Shows a document title instead of the app name (titlebar, taskbar tooltip, switcher). `null` restores it. */

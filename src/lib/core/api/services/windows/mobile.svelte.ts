@@ -136,12 +136,25 @@ export class MobileWindowsService extends BaseWindowsService implements IMobileW
   public focus(id: WindowId): boolean {
     const instance = this.get(id);
     if (!instance || instance.order === this.max_order) return false;
+    this.leave_immersive_on_screen();
     instance.order = ++this.max_order;
     return true;
   }
 
+  protected bring_forward(id: WindowId): void {
+    this.focus(id);
+  }
+
   public go_home(): void {
-    if (this.get_focused() !== null) this.max_order++;
+    if (this.get_focused() === null) return;
+    this.leave_immersive_on_screen();
+    this.max_order++;
+  }
+
+  // Like a phone: an app that leaves the screen leaves full screen, so home and the next app get their bars back.
+  private leave_immersive_on_screen(): void {
+    const on_screen = this.get_focused();
+    if (on_screen) this.set_immersive(on_screen, false);
   }
 
   public get(id: WindowId): WindowInstance | null {

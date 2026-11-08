@@ -48,6 +48,7 @@
 </script>
 
 <div class="flex h-dvh w-full flex-col overflow-hidden bg-desktop pr-[env(safe-area-inset-right)] pl-[env(safe-area-inset-left)]">
+  {#if !instance?.flags.has(WindowFlag.IMMERSIVE)}
   <header class="flex shrink-0 items-center gap-2 border-b border-foreground/10 bg-background px-3 pt-[env(safe-area-inset-top)]">
     <div class="flex h-11 min-w-0 flex-1 items-center gap-2 pointer-coarse:h-13">
       {#if manifest}
@@ -71,6 +72,7 @@
       <ArrowSquareOutIcon weight="bold" />
     </a>
   </header>
+  {/if}
 
   <main class="relative isolate min-h-0 flex-1">
     {#if current}

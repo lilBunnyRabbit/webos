@@ -34,7 +34,7 @@ Registered only on desktop (`platform_services` in `kernel/init.ts`). Phones hav
 4. Any window already out is released and its PiP window closed (Chrome closes it itself, not every build does).
 5. Mirror the tab into the new document: `<html>` and `<body>` attributes (the theme's inline custom properties, `color-scheme`), and a clone of every `<style>` and stylesheet `<link>` in `<head>`. Two `MutationObserver`s keep following: `<html>` attributes (theme changes) and `<head>` children (lazy apps add stylesheets later).
 6. `pagehide` on the PiP window releases it, if it's still the current one.
-7. Sets `current` and `document`.
+7. Takes the window out of immersive (ADR-101; its frame hides while it's out, and `set_immersive` refuses a popped-out window), then sets `current` and `document`.
 
 ### Mounting
 

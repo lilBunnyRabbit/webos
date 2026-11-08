@@ -30,6 +30,8 @@
   const layer = $derived(ui.overlay);
   /** The switcher hosts the notification center, so either overlay opens it (ADR-006 revision). */
   const switcher = $derived(layer === UiOverlay.SWITCHER || layer === UiOverlay.NOTIFICATIONS);
+  /** The app on screen fills it, nav bar and all (ADR-101); back and the exit button bring the bar back. */
+  const immersive = $derived(!switcher && !!focused && !!windows.get(focused)?.flags.has(WindowFlag.IMMERSIVE));
   const unread = $derived(kernel.service<NotificationsService>("notifications").unread_count > 0);
 
   // An app coming on screen (launched from the list, a file opened, a card picked) closes whatever was over it.
@@ -85,6 +87,7 @@
     <ToastArea from="top" class="absolute inset-x-0 top-0 z-20 items-center justify-start pt-[calc(env(safe-area-inset-top)+0.5rem)]" />
   </main>
 
+  {#if !immersive}
   <NavBar
     {running}
     {unread}
@@ -95,6 +98,7 @@
     onrecents={recents}
     onguide={() => focused && windows.toggle_guide(focused)}
   />
+  {/if}
 </div>
 
 <DialogsHost anchored="sheet" />

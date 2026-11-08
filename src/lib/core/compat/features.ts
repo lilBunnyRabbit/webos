@@ -555,7 +555,7 @@ export const FEATURES: Feature[] = [
   {
     id: "fullscreen",
     name: "Fullscreen",
-    lost: "Fullscreen visuals. iPhones have none.",
+    lost: "Full screen windows keep the browser's own bars, and visuals can't fill the screen. iPhones have none.",
     level: Level.COSMETIC,
     apps: ["music-visualizer"],
     min: min("71", "64", "16.4"),

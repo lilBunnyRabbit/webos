@@ -2,7 +2,7 @@
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
   import { Badge, BoardOverlay, Button, IconButton, Segmented, Spinner } from "$lib/core/components/ui";
-  import { KeyHint, RoundCard } from "$kit/components/play2d";
+  import { ImmersiveNotch, KeyHint, RoundCard } from "$kit/components/play2d";
   import { daily_seed, format_time, track_play } from "$kit/games";
   import { report_error } from "$kit/utils/report-error";
   import { ease, frame, OVERLAY_ASPECT, OVERLAY_GAP, type Camera, type Insets } from "$kit/games/play2d/camera";
@@ -119,6 +119,8 @@
   let right_box = $state({ width: 0, height: 0 });
   let stage_rect = $state<DOMRectReadOnly>();
   let hud_height = $state(0);
+  /** The immersive exit button's corner (ADR-101): the profile strip moves down under it. */
+  let notch = $state({ top: 0, right: 0 });
   let overlay_height = $state(0);
 
   let camera: Camera | null = null;
@@ -239,7 +241,7 @@
     const up = carded();
     const card_bottom = up && !side_card ? Math.min(card_size.height + 16, board_size.height * 0.6) : 0;
     const card_left = up && side_card ? Math.min(card_size.width + 16, board_size.width * 0.6) : 0;
-    const insets = { top: Math.max(hud_height, profile_shown ? profile_width * 0.36 : 0) + 8, right: 0, bottom: card_bottom, left: card_left };
+    const insets = { top: Math.max(hud_height, profile_shown ? profile_width * 0.36 + notch.top : 0) + 8, right: 0, bottom: card_bottom, left: card_left };
     if (!sideways()) return insets;
     return { ...insets, right: right_box.width + OVERLAY_GAP, bottom: Math.max(card_bottom, MIDDLE_ROW), left: Math.max(card_left, left_box.width + OVERLAY_GAP) };
   }
@@ -306,6 +308,7 @@
       insets: control_insets(),
       puffs,
       profile: profile_shown,
+      notch: notch.top,
       gates: in_base ? base.gates.map((gate) => ({ pad: gate.pad, label: gate_label(gate.id), stars: stars_for(gate.id), locked: typeof gate.id === "number" && !is_open(progress.value.bests, gate.id), daily: gate.id === RoundKind.DAILY })) : [],
       hangar: in_base ? { ...base.hangar, label: "HANGAR" } : null,
       waiting: waiting_cargo(),
@@ -709,7 +712,7 @@
     <RocketIcon weight="bold" class="size-4 shrink-0 text-primary" />
     <span class="truncate">{round ? round_title(round.ref) : "Lunar Lander"}</span>
   </span>
-  <Badge class="hidden @sm:inline-flex">{spec.name} · {body.name}</Badge>
+  <Badge class="hidden @md:inline-flex">{spec.name} · {body.name}</Badge>
   <div class="flex-1"></div>
   {#if round}<Button size="sm" variant="quiet" onclick={to_hub}>Base</Button>{:else}<Button size="sm" variant="quiet" onclick={to_base}>Hangar</Button>{/if}
   <SettingsPanel
@@ -753,9 +756,10 @@
 {/snippet}
 
 {#snippet overlay()}
-  <div bind:clientHeight={overlay_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right="{profile_shown ? profile_width + 16 : 8}px">
+  <div bind:clientHeight={overlay_height} class="pointer-events-none absolute top-2 left-2 flex flex-col items-start gap-1.5" style:right="{profile_shown ? profile_width + 16 : 8 + notch.right}px">
+    <ImmersiveNotch bind:top={notch.top} bind:right={notch.right} />
     <!-- Only the instruments, each held at its widest, set the camera's top inset: a chip coming and going below them moved the view. -->
-    <div bind:clientHeight={hud_height} class="flex max-w-full flex-wrap items-center gap-1.5">
+    <div bind:clientHeight={hud_height} class={cn("flex max-w-full flex-wrap items-center gap-1.5", !profile_shown && "min-h-(--immersive-inset-top,0px)")}>
       <IconButton
         size="sm"
         class="pointer-events-auto bg-background/85 backdrop-blur-[2px] @md:hidden pointer-coarse:size-11"
@@ -816,7 +820,7 @@
   {#if in_base && !settings.seen_hint && flying && !on_hangar && !card}
     <p
       class="pointer-events-none absolute left-2 mx-auto max-w-84 rounded-md bg-background/85 px-2 py-1 text-center text-ui text-foreground/80 backdrop-blur-[2px]"
-      style:top="{overlay_height + 16 + (profile_shown && tall ? profile_width * 0.36 + 8 : 0)}px"
+      style:top="{overlay_height + 16 + (profile_shown && tall ? profile_width * 0.36 + 8 + notch.top : 0)}px"
       style:right="{profile_shown && !tall ? profile_width + 16 : 8}px"
     >
       <span class="pointer-fine:hidden">Push the lever to Rise to lift off, Hover holds you still. The arrows on the right turn the ship; land on a pad to open its mission.</span>

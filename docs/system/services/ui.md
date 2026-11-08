@@ -24,7 +24,7 @@ The shell's overlay state, so a service or a shell command (shortcuts, the Termi
 1. An overlay is open: close it (in a view transition).
 2. A system dialog or menu is on top (`dialogs.system`): resolve it `null` if it's dismissible. A non-dismissible one (Restore, the introduction) swallows back.
 3. The focused window has a sheet (`dialogs.for_window`): the same.
-4. The focused window's app claims it (`windows.back(id)`, its `on_back` handlers).
+4. The focused window takes it (`windows.back(id)`): its guide closes, else it leaves immersive (ADR-101), else its app's `on_back` handlers run.
 5. Mobile: `go_home()` in a view transition. Desktop and a solo tab (no home there): `false`.
 
 Sheets come before the app's own back, so an app can't navigate behind its sheet.

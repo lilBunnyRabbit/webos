@@ -162,9 +162,14 @@ export class WindowsService extends BaseWindowsService implements DesktopWindows
     return true;
   }
 
-  private bring_forward(id: WindowId): void {
+  protected bring_forward(id: WindowId): void {
     if (this.get(id)?.flags.has(WindowFlag.MINIMIZED)) this.toggle_minimize(id);
     this.focus(id);
+  }
+
+  // The frame is hidden while the app runs in the mini window (ADR-043), so there's nothing to make full screen.
+  protected can_immerse(id: WindowId): boolean {
+    return (this.kernel?.services.get("extract") as ExtractService | undefined)?.current !== id;
   }
 
   public exists(id: WindowId): boolean {

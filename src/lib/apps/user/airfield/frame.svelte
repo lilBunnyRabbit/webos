@@ -4,7 +4,7 @@
   import { cn } from "$lib/core/utils";
   import { Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
-  import { Lever } from "$kit/components/play2d";
+  import { FullScreenButton, Lever } from "$kit/components/play2d";
   import { clamp_zoom } from "$kit/games/play2d/camera";
   import { read_palette, type Palette } from "$kit/games/play2d/palette";
   import type { Snippet } from "svelte";
@@ -197,10 +197,13 @@
 <svelte:window onkeydown={on_window_keydown} onkeyup={on_keyup} onblur={onrelease} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={root} class="af-root grid h-full grid-rows-[auto_1fr_auto] [container:af-app/size]" {onkeydown}>
-  <Toolbar class="af-toolbar">
-    {@render toolbar()}
-  </Toolbar>
+<div bind:this={root} class={cn("af-root grid h-full [container:af-app/size]", win.immersive ? "grid-rows-[1fr_auto]" : "grid-rows-[auto_1fr_auto]")} {onkeydown}>
+  {#if !win.immersive}
+    <Toolbar class="af-toolbar">
+      {@render toolbar()}
+      <FullScreenButton />
+    </Toolbar>
+  {/if}
 
   <div bind:contentRect={stage_rect} class="af-stage min-h-0 p-2 [container:af-stage/size] @md:p-3">
     <div class="af-layout h-full">
