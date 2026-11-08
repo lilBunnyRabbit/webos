@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { daily_seed } from "$kit/games";
 import { create_game, daily_round, level_round, sailing_round, type Round } from "./game";
-import { par_of } from "./plan";
+import { par_of, reversals } from "./plan";
 import { prove } from "./prove";
 
 const ROUNDS: [string, Round][] = [
@@ -27,6 +27,10 @@ describe("sailings can be loaded from the quay, lean and level", () => {
       const proof = prove(deck);
       expect(proof.fault).toBeNull();
       expect(par_of(proof.plan!, deck.queue.length).ms % 5000).toBe(0);
+      // Up the ramp and across the upper deck to any of its lanes is one forward sweep.
+      deck.plan.forEach((slot, i) => {
+        if (slot.lane >= deck.lanes) expect(reversals(proof.plan!.legs[i].moves)).toBe(0);
+      });
     });
   }
 });

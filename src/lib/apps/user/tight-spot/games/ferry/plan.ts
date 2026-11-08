@@ -1,7 +1,7 @@
 import { inside_convex } from "$kit/games/play2d/collision";
 import { angle_between } from "$kit/games/play2d/geometry";
 import { collide, obstacles, type Obstacles } from "../../core/obstacles";
-import { drive, inflate, plan, type Move } from "../../core/planner";
+import { drive, inflate, plan, type Move, type PlanOptions, type PlanResult } from "../../core/planner";
 import type { Portal } from "../../core/scene";
 import { body_centre, headings, jackknifed, VEHICLES, type Placement, type VehicleSpec } from "../../core/vehicle";
 import { lane_centre, on_upper, solids_for, type Cargo, type Deck, type Slot } from "./deck";
@@ -12,6 +12,7 @@ const LINE = 0.05;
 const REACH = 8;
 const STAGE = 4;
 const EXPANSIONS = 80_000;
+const SWEEP_EXPANSIONS = 300_000;
 const STEERING = [-1, -0.6, -0.25, -0.08, 0, 0.08, 0.25, 0.6, 1];
 const SWITCH = 8;
 const LINED_UP = (1 * Math.PI) / 180;
@@ -60,6 +61,11 @@ function squared(pose: Placement, spec: VehicleSpec): boolean {
   return headings(pose, spec).every((heading) => angle_between(heading, 0) <= TRAILER_LINED_UP);
 }
 
+/** Up the internal ramp and across the upper deck a driver sweeps in one go, so a forward search goes first: one that may back up finds a shunt sooner. */
+function sweep(from: Placement, to: Placement, near: Obstacles, options: PlanOptions): PlanResult | null {
+  return plan(from, to, near, { ...options, directions: [1], max_expansions: SWEEP_EXPANSIONS }) ?? plan(from, to, near, options);
+}
+
 function in_mouth(pose: Placement, portals: readonly Portal[]): boolean {
   return portals.some((portal) => inside_convex(pose, portal.mouth));
 }
@@ -85,7 +91,8 @@ function into_lane(deck: Deck, near: Obstacles, stowed: readonly Stowed[], from:
   };
   const arrive = (pose: Placement) => lined_up(pose) && straight(pose, stopped, hits, spec) !== null;
   const stage = { x: slot.pose.x - STAGE, y: slot.pose.y, heading: 0 };
-  const found = plan(from, stage, near, { spec, arrive, blocked, max_expansions: EXPANSIONS, steering: STEERING, switch_cost: SWITCH });
+  const options = { spec, arrive, blocked, max_expansions: EXPANSIONS, steering: STEERING, switch_cost: SWITCH };
+  const found = on_upper(deck, from.y) ? sweep(from, stage, near, options) : plan(from, stage, near, options);
   if (!found) return null;
   const last = found.path[found.path.length - 1];
   const run = straight(last, stopped, hits, spec)!;
@@ -103,7 +110,7 @@ function up_the_ramp(deck: Deck, near: Obstacles, from: Placement, spec: Vehicle
   const arrive = (pose: Placement) =>
     angle_between(pose.heading, 0) <= RAMP_LINED_UP && Math.abs(pose.y - upper.lane) <= RAMP_SIDE && pose.x < upper.top - 0.2 && pose.x > upper.foot - 3 && straight(pose, over, hits, spec, deck.portals, CLIMB) !== null;
   const stage = { x: upper.foot - RAMP_STAGE, y: upper.lane, heading: 0 };
-  const found = plan(from, stage, near, { spec, arrive, blocked, max_expansions: EXPANSIONS, steering: STEERING, switch_cost: SWITCH });
+  const found = sweep(from, stage, near, { spec, arrive, blocked, max_expansions: EXPANSIONS, steering: STEERING, switch_cost: SWITCH });
   if (!found) return null;
   const last = found.path[found.path.length - 1];
   const run = straight(last, over, hits, spec, deck.portals, CLIMB)!;

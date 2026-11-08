@@ -61,8 +61,8 @@ const SWING = 4;
 /** Kept clear past the top on the main deck and behind it on the upper: a van's reach past its reference point, and room. */
 const RISE_AHEAD = 5.5;
 const RISE_BEHIND = 2.5;
-/** On the upper deck, from the top of the ramp to where its lanes start: room to swing across to the port lanes. */
-const UPPER_APRON = 9;
+/** On the upper deck, from the top of the ramp to where its lanes start: a van coming off the ramp reaches the port-most lane in one forward sweep (18 m still needed a shunt on four lanes of 3.4 m). */
+const UPPER_APRON = 21;
 const DECK_GAP = 7;
 const MOUTH = 0.5;
 const BAR = 0.3;
