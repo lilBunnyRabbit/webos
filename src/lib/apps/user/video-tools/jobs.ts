@@ -34,6 +34,9 @@ import { OutputClock, PauseFilter, skip_size, skip_threshold, to_grey } from "./
 
 export const VIDEOS = "/home/Videos";
 
+/** The frame rate clips are encoded at: the encoder's bitrate and the H.264 level are set for it. */
+const CLIP_FPS = 30;
+
 const files = () => kernel.service<FilesService>("files");
 const child_path = (folder: string, name: string) => `${folder === "/" ? "" : folder}/${name}`;
 
@@ -168,7 +171,7 @@ function clip_steps(
     async run(task) {
       context.signal.throwIfAborted();
       const setup = {
-        video: { ...size, bitrate: video_bitrate(size, settings.quality), framerate: 30 },
+        video: { ...size, bitrate: video_bitrate(size, settings.quality, CLIP_FPS), framerate: CLIP_FPS },
         audio: audio ? { channels: Math.min(2, audio.numberOfChannels) } : undefined,
       };
       const encoder = mp4 ? await Mp4Encoder.create(setup) : await WebmEncoder.create(setup);
@@ -182,6 +185,7 @@ function clip_steps(
         const keep = settings.skip === undefined ? null : pause_filter(source.size, settings.skip);
         const clock = new OutputClock(range.from);
         let kept = 0;
+        let next_slot = 0;
         const started = performance.now();
         const result = await capture({
           file: source.file,
@@ -190,6 +194,13 @@ function clip_steps(
           on_frame(video, time) {
             task.progress((time - range.from) / (range.to - range.from));
             context.message(progress_line(range, time, started));
+            // A 60 fps source would outrun the level and bitrate set for CLIP_FPS. A frame left out never reaches the
+            // clock, so the frame before it lasts until the next one and the length stays the same.
+            if (mp4) {
+              const slot = Math.floor((time - range.from) * CLIP_FPS + 1e-6);
+              if (slot < next_slot) return;
+              next_slot = slot + 1;
+            }
             const at = clock.place(time, keep?.(video) ?? true);
             if (at === null) return;
             kept++;
@@ -201,7 +212,10 @@ function clip_steps(
         const length = clock.end(result.end);
         task.log(keep ? `${kept} of ${result.frames} frames kept` : `${result.frames} frames`);
         if (keep) out.length = { source: result.end - range.from, output: length };
-        out.blob = await encoder.finish(length * 1000);
+        out.blob =
+          encoder instanceof Mp4Encoder
+            ? await encoder.finish(length * 1000, context.signal)
+            : await encoder.finish(length * 1000);
       } finally {
         encoder.close();
       }

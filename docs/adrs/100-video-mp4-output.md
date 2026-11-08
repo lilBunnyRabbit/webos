@@ -29,3 +29,8 @@ Video Tools saves clips as WebM through a hand-written muxer (`kit/utils/video/w
 - **AAC check** runs twice: the panel probes `AudioEncoder.isConfigSupported` when MP4 is picked and warns before saving; the job checks again and saves silent with a note in the saved panel and the toast.
 - **Compat:** no new entry. `VideoEncoder` and `AudioEncoder` already have theirs (`video-encoder`, `audio-encoder`, both listing video-tools). Whether H.264 or AAC is encodable is per codec and only answered asynchronously, which the start-up probes can't do; the app reports it instead.
 - Internal rename: the clip output is `Output.CLIP` (was `Output.WEBM`), with `format` beside it.
+
+## Revision 2026-11-08: review fixes
+- **30 fps cap for MP4.** Capture delivers the source's own rate, so a 1080p60 video overran the level (4.0) and the bitrate set for 30 fps. Videos don't report their frame rate without a demuxer, so instead of probing it the MP4 path takes frames on a 1/30 s slot grid; skipped frames never reach the output clock, so the length holds. WebM is unchanged.
+- **Memory.** The encoder hands its chunks over at `finish()` and drops them, the mux loop drops each packet once added, and mediabunny writes through a `StreamTarget` into parts that become the Blob, instead of a `BufferTarget` copied into a Blob. Cancel is checked between packets and cancels the output.
+- If configuring the audio encoder throws, the video encoder is closed.

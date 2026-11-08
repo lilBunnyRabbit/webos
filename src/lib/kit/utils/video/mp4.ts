@@ -64,28 +64,37 @@ export class Mp4Encoder {
   static async create(setup: Mp4EncoderSetup): Promise<Mp4Encoder> {
     const out = new Mp4Encoder();
     const config = await pick_avc_config(setup.video);
-    out.video_encoder = new VideoEncoder({
-      output: (chunk, metadata) => {
-        out.video_config ??= metadata?.decoderConfig;
-        out.video.push(out.copy(chunk));
-      },
-      error: out.fail,
-    });
-    out.video_encoder.addEventListener("dequeue", () => {
-      if (out.video_encoder!.encodeQueueSize < MAX_QUEUE) out.release();
-    });
-    out.video_encoder.configure(config);
-    if (setup.audio) {
-      out.audio_encoder = new AudioEncoder({
-        output: (chunk, metadata) => {
-          out.audio_config ??= metadata?.decoderConfig;
-          out.audio.push(out.copy(chunk));
-        },
-        error: out.fail,
-      });
-      out.audio_encoder.configure(aac_config(setup.audio.channels));
+    try {
+      out.start(config, setup.audio);
+    } catch (error) {
+      out.close();
+      throw error;
     }
     return out;
+  }
+
+  private start(config: VideoEncoderConfig, audio: Mp4EncoderSetup["audio"]) {
+    this.video_encoder = new VideoEncoder({
+      output: (chunk, metadata) => {
+        this.video_config ??= metadata?.decoderConfig;
+        this.video.push(this.copy(chunk));
+      },
+      error: this.fail,
+    });
+    this.video_encoder.addEventListener("dequeue", () => {
+      if (this.video_encoder!.encodeQueueSize < MAX_QUEUE) this.release();
+    });
+    this.video_encoder.configure(config);
+    if (audio) {
+      this.audio_encoder = new AudioEncoder({
+        output: (chunk, metadata) => {
+          this.audio_config ??= metadata?.decoderConfig;
+          this.audio.push(this.copy(chunk));
+        },
+        error: this.fail,
+      });
+      this.audio_encoder.configure(aac_config(audio.channels));
+    }
   }
 
   private fail = (error: DOMException) => {
@@ -137,17 +146,21 @@ export class Mp4Encoder {
     return new Promise((resolve) => this.waiting.push(resolve));
   }
 
-  async finish(duration_ms: number): Promise<Blob> {
+  async finish(duration_ms: number, signal?: AbortSignal): Promise<Blob> {
     this.check();
     await Promise.all([this.video_encoder?.flush(), this.audio_encoder?.flush()]);
     this.check();
     this.close();
+    // The muxer takes the chunks over: the encoder keeps no reference to them.
+    const video = this.video.splice(0);
+    const audio = this.audio.splice(0);
     return mux_mp4({
-      video: this.video,
+      video,
       video_config: this.video_config,
-      audio: this.audio_config ? this.audio : [],
+      audio: this.audio_config ? audio : [],
       audio_config: this.audio_config,
       end_us: duration_ms * 1000,
+      signal,
     });
   }
 
@@ -164,12 +177,14 @@ interface Mp4Input {
   audio: Mp4Chunk[];
   audio_config: AudioDecoderConfig | undefined;
   end_us: number;
+  signal?: AbortSignal;
 }
 
 async function mux_mp4(input: Mp4Input): Promise<Blob> {
   if (!input.video.length || !input.video_config) throw new Error("No video frames were encoded");
   const media = await import("mediabunny");
-  const target = new media.BufferTarget();
+  const file = new FileParts();
+  const target = new media.StreamTarget(new WritableStream({ write: (chunk) => file.write(chunk.position, chunk.data) }));
   const output = new media.Output({ format: new media.Mp4OutputFormat({ fastStart: "in-memory" }), target });
   const video = new media.EncodedVideoPacketSource("avc");
   output.addVideoTrack(video);
@@ -182,14 +197,22 @@ async function mux_mp4(input: Mp4Input): Promise<Blob> {
     const next = input.video[index + 1]?.timestamp_us ?? Math.max(input.end_us, chunk.timestamp_us + 1);
     return { ...chunk, duration_us: next - chunk.timestamp_us };
   });
-  const packets = [
+  const packets: ({ chunk: Mp4Chunk; track: "video" | "audio" } | null)[] = [
     ...frames.map((chunk) => ({ chunk, track: "video" as const })),
     ...input.audio.map((chunk) => ({ chunk, track: "audio" as const })),
   ].sort((a, b) => a.chunk.timestamp_us - b.chunk.timestamp_us);
+  input.video.length = 0;
+  input.audio.length = 0;
 
   let first_video = true;
   let first_audio = true;
-  for (const { chunk, track } of packets) {
+  for (let index = 0; index < packets.length; index++) {
+    if (input.signal?.aborted) {
+      await output.cancel();
+      input.signal.throwIfAborted();
+    }
+    const { chunk, track } = packets[index]!;
+    packets[index] = null;
     const packet = new media.EncodedPacket(
       chunk.data,
       chunk.key ? "key" : "delta",
@@ -205,5 +228,27 @@ async function mux_mp4(input: Mp4Input): Promise<Blob> {
     }
   }
   await output.finalize();
-  return new Blob([target.buffer!], { type: "video/mp4" });
+  return file.blob("video/mp4");
+}
+
+/** The file mediabunny writes, as the chunks it hands over; a write over earlier bytes patches them. */
+class FileParts {
+  private parts: { position: number; data: Uint8Array<ArrayBuffer> }[] = [];
+  private end = 0;
+  private patched = false;
+
+  write(position: number, data: Uint8Array<ArrayBuffer>) {
+    if (position !== this.end) this.patched = true;
+    this.parts.push({ position, data });
+    this.end = Math.max(this.end, position + data.byteLength);
+  }
+
+  blob(type: string): Blob {
+    const { parts } = this;
+    this.parts = [];
+    if (!this.patched) return new Blob(parts.map((part) => part.data), { type });
+    const whole = new Uint8Array(this.end);
+    for (const part of parts) whole.set(part.data, part.position);
+    return new Blob([whole], { type });
+  }
 }

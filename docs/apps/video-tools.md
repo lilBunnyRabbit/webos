@@ -23,6 +23,7 @@ Each captured frame goes to the format's encoder (`WebmEncoder` or `Mp4Encoder`,
 **WebM:** VP9, else VP8, and Opus. The hand-written muxer (`kit/utils/video/webm.ts`) writes the WebM with a Duration, so other players see the length.
 
 **MP4** (`kit/utils/video/mp4.ts`): H.264 and AAC through WebCodecs, muxed by [mediabunny](https://mediabunny.dev).
+- *Frame rate.* An MP4 is encoded at 30 fps at most: capture hands over every frame the source has (60 for a 60 fps video), so frames are taken on a 1/30 s slot grid, as GIF does with its own rate. A frame left out never reaches the output clock, so the frame before it lasts until the next one and the clip keeps its length. The level and the bitrate are set for 30 fps, so they hold. WebM takes every frame, as before.
 - *Codec string.* `avc_level` picks the smallest H.264 level whose frame size and macroblock rate at 30 fps hold the output (ITU-T H.264 Table A-1): 1280 × 720 is 3.1, 1920 × 1080 is 4.0, 3840 × 2160 is 5.1. `pick_avc_config` then tries High, Main and Constrained Baseline (`avc1.6400LL`, `4d00LL`, `42e0LL`) through `isConfigSupported`, with `avc: { format: "avc" }` so the encoder hands back an avcC description, and fails with "This browser can't encode H.264 video at W × H" when none fits.
 - *Sound.* AAC-LC (`mp4a.40.2`, 128 kb/s). When `AudioEncoder.isConfigSupported` says no, the clip is saved silent: the panel warns as soon as MP4 is picked, and the saved panel and the toast carry "Saved without sound: this browser can't encode AAC".
 - *Muxing.* The encoder keeps every chunk and the first decoder config of each track. `finish()` is the only place that imports mediabunny (`await import("mediabunny")`), so a WebM save, the app's first paint and boot never load it. It adds video and audio packets interleaved by timestamp to an `Output` with `Mp4OutputFormat({ fastStart: "in-memory" })` (moov before mdat, so a player starts before the whole file is read). Realtime H.264 has no B-frames, so decode order is presentation order; each frame lasts until the next one and the last until the end of the part (or the output clock's end), so the MP4's duration is the WebM's.
@@ -84,7 +85,7 @@ The Skip pauses switch itself isn't remembered; format and size are. Props: `{ p
 - At 1920 px and above, a single typed character is about the size of a blinking caret at 160 px, so typing is kept every few characters, not every one.
 - A clock or a busy notification area can keep frames at high sensitivity; the slider is the remedy. Skipping by sound (keep narration, skip only silent still parts) isn't built.
 - The default was tuned on drawn footage, not on real recordings; real screen recordings with grain or a video playing in a corner keep more.
-- An MP4 is built in memory: every encoded chunk is kept until `finish()`, as for WebM.
+- Both formats are built in memory. The WebM muxer holds every chunk until it writes the file. For an MP4 the encoder hands its chunks to mediabunny in `finish()` and keeps no reference, mediabunny holds them until `finalize()` writes the file through a `StreamTarget`, and the written parts become the Blob; at the end that is about twice the clip's size for a moment. Cancel is checked between packets while muxing.
 - H.264 gets the VP9 bitrate table, so an MP4 at the same quality is a little softer or larger than the WebM.
 - No H.265, no .mov.
 
