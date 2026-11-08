@@ -6,7 +6,7 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 export const CHANGELOG: Release[] = [
   {
     version: "4.10.0",
-    date: "2026-11-07",
+    date: "2026-11-08",
     title: "Drive Hub progress and Lunar Lander rebuilt",
     changes: [
       {
