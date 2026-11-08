@@ -12,16 +12,19 @@ import { base_name, parent_path } from "$lib/core/api/services/files/path";
 import { error_message, format_bytes } from "$lib/core/utils";
 import { capture } from "$kit/utils/video/capture";
 import { audio_slices, decode_audio, WebmEncoder } from "$kit/utils/video/encode";
+import { can_encode_aac, Mp4Encoder } from "$kit/utils/video/mp4";
 import { gif_local_frame, gif_start, GIF_TRAILER } from "./gif";
 import {
-  even_size,
+  ClipFormat,
   format_eta,
   format_time,
   gif_playback_rate,
   gif_size,
   Output,
   output_name,
+  scaled_size,
   video_bitrate,
+  type OutputSize,
   type Range,
   type Size,
 } from "$kit/utils/video/plan";
@@ -48,7 +51,13 @@ interface SkipSetting {
 }
 
 export type ClipSettings =
-  | ({ output: typeof Output.WEBM; quality: Quality; audio: boolean } & SkipSetting)
+  | ({
+      output: typeof Output.CLIP;
+      format: ClipFormat;
+      size: OutputSize;
+      quality: Quality;
+      audio: boolean;
+    } & SkipSetting)
   | ({ output: typeof Output.GIF; fps: number; width: number; dither: boolean } & SkipSetting)
   | { output: typeof Output.AUDIO };
 
@@ -68,6 +77,8 @@ export interface ClipResult {
   size: number;
   /** Seconds of the source part and of the output, when pauses were skipped. */
   length?: { source: number; output: number };
+  /** Something the user should know about the file, like an MP4 saved without its sound. */
+  note?: string;
 }
 
 export type ClipOutcome = { ok: true; result: ClipResult } | { ok: false; cancelled: boolean; error: string };
@@ -86,7 +97,8 @@ async function write(blob: Blob, run: ClipRun): Promise<ClipResult> {
   if (!directory) throw new Error(`${folder}: no such folder`);
   const handle = await files().create_file(
     directory,
-    run.target?.name ?? output_name(run.source.name, run.settings.output),
+    run.target?.name ??
+      output_name(run.source.name, run.settings.output, run.settings.output === Output.CLIP ? run.settings.format : undefined),
     { content: blob }
   );
   return { path: child_path(folder, handle.name), size: blob.size };
@@ -116,6 +128,7 @@ function pause_filter(source: Size, sensitivity: number): (picture: CanvasImageS
 interface Built {
   blob: Blob | null;
   length?: ClipResult["length"];
+  note?: string;
 }
 
 interface Step {
@@ -123,14 +136,15 @@ interface Step {
   run: (task: { progress: (value: number) => void; log: (text: string) => void }) => Promise<void>;
 }
 
-function webm_steps(
+function clip_steps(
   run: ClipRun,
   context: TaskContext,
   out: Built,
-  settings: { quality: Quality; audio: boolean } & SkipSetting
+  settings: { format: ClipFormat; size: OutputSize; quality: Quality; audio: boolean } & SkipSetting
 ): Step[] {
   const { range, source } = run;
-  const size = even_size(source.size);
+  const size = scaled_size(source.size, settings.size);
+  const mp4 = settings.format === ClipFormat.MP4;
   let audio: AudioBuffer | null = null;
   const steps: Step[] = [];
   if (settings.audio && settings.skip === undefined) {
@@ -141,6 +155,11 @@ function webm_steps(
         context.message("Reading the sound");
         audio = await decode_audio(source.file);
         task.log(audio ? `${audio.numberOfChannels} ch · ${format_time(audio.duration)}` : "No audio track");
+        if (audio && mp4 && !(await can_encode_aac(Math.min(2, audio.numberOfChannels)))) {
+          audio = null;
+          out.note = "Saved without sound: this browser can't encode AAC";
+          task.log(out.note);
+        }
       },
     });
   }
@@ -148,15 +167,18 @@ function webm_steps(
     name: "Encode video",
     async run(task) {
       context.signal.throwIfAborted();
-      const encoder = await WebmEncoder.create({
+      const setup = {
         video: { ...size, bitrate: video_bitrate(size, settings.quality), framerate: 30 },
         audio: audio ? { channels: Math.min(2, audio.numberOfChannels) } : undefined,
-      });
+      };
+      const encoder = mp4 ? await Mp4Encoder.create(setup) : await WebmEncoder.create(setup);
+      task.log(`${mp4 ? "MP4, H.264" : "WebM"} · ${size.width} × ${size.height}`);
       try {
         if (audio) for (const data of audio_slices(audio, range.from, range.to)) encoder.encode_audio(data);
         const resize = size.width !== source.size.width || size.height !== source.size.height;
         const canvas = resize ? new OffscreenCanvas(size.width, size.height) : null;
         const draw = canvas?.getContext("2d");
+        if (draw) draw.imageSmoothingQuality = "high";
         const keep = settings.skip === undefined ? null : pause_filter(source.size, settings.skip);
         const clock = new OutputClock(range.from);
         let kept = 0;
@@ -281,11 +303,12 @@ function audio_steps(run: ClipRun, context: TaskContext, out: Built): Step[] {
 function done_message(result: ClipResult): string {
   const parts = [result.path, format_bytes(result.size)];
   if (result.length) parts.push(`${format_time(result.length.source, 1)} → ${format_time(result.length.output, 1)}`);
+  if (result.note) parts.push(result.note);
   return parts.join(" · ");
 }
 
-const TITLES: Record<Output, string> = { webm: "Trimming", gif: "Making a GIF of", audio: "Extracting the sound of" };
-const DONE: Record<Output, string> = { webm: "Clip saved", gif: "GIF saved", audio: "Sound saved" };
+const TITLES: Record<Output, string> = { clip: "Trimming", gif: "Making a GIF of", audio: "Extracting the sound of" };
+const DONE: Record<Output, string> = { clip: "Clip saved", gif: "GIF saved", audio: "Sound saved" };
 
 export async function export_clip(run: ClipRun): Promise<ClipOutcome> {
   const { settings } = run;
@@ -295,8 +318,8 @@ export async function export_clip(run: ClipRun): Promise<ClipOutcome> {
     (context) => {
       const out: Built = { blob: null };
       const steps =
-        settings.output === Output.WEBM
-          ? webm_steps(run, context, out, settings)
+        settings.output === Output.CLIP
+          ? clip_steps(run, context, out, settings)
           : settings.output === Output.GIF
             ? gif_steps(run, context, out, settings)
             : audio_steps(run, context, out);
@@ -314,7 +337,7 @@ export async function export_clip(run: ClipRun): Promise<ClipOutcome> {
           async execute() {
             context.signal.throwIfAborted();
             context.message(`Writing ${format_bytes(out.blob!.size)}`);
-            result = { ...(await write(out.blob!, run)), length: out.length };
+            result = { ...(await write(out.blob!, run)), length: out.length, note: out.note };
             this.logger.info(`${result.path} · ${format_bytes(result.size)}`);
           },
         }),

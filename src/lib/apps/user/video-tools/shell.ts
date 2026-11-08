@@ -12,7 +12,17 @@ import {
 import { probe_video } from "$kit/utils/video/capture";
 import { export_clip, type ClipSettings, type ClipSource } from "./jobs";
 import { is_video_name, type Quality } from "./kinds";
-import { clamp_range, format_time, Output, output_extension, output_name, parse_time, type Range } from "$kit/utils/video/plan";
+import {
+  clamp_range,
+  ClipFormat,
+  format_time,
+  Output,
+  output_extension,
+  output_name,
+  parse_time,
+  type OutputSize,
+  type Range,
+} from "$kit/utils/video/plan";
 
 const APP_ID = "video-tools";
 
@@ -54,9 +64,18 @@ function range_of(args: ClipArgs, duration: number): Range {
   return range;
 }
 
-async function target_of(source: string, output: Output, out: string | undefined, cwd: string, elevated: boolean) {
+async function target_of(
+  source: string,
+  settings: ClipSettings,
+  out: string | undefined,
+  cwd: string,
+  elevated: boolean
+) {
+  const { output } = settings;
+  const format = settings.output === Output.CLIP ? settings.format : ClipFormat.WEBM;
+  const extension = output_extension(output, format);
   let folder = parent_path(source);
-  let name = output_name(base_name(source), output);
+  let name = output_name(base_name(source), output, format);
   if (out !== undefined) {
     const typed = resolve_path(cwd, out);
     if (await files().get_directory(typed)) folder = typed;
@@ -64,9 +83,7 @@ async function target_of(source: string, output: Output, out: string | undefined
       folder = parent_path(typed);
       if (!(await files().get_directory(folder))) throw new ShellError(`${folder}: no such folder`);
       name =
-        file_extension(typed).toLowerCase() === output_extension(output)
-          ? base_name(typed)
-          : `${base_name(typed)}${output_extension(output)}`;
+        file_extension(typed).toLowerCase() === extension ? base_name(typed) : `${base_name(typed)}${extension}`;
     }
   }
   assert_writable(child_path(folder, name), elevated);
@@ -78,15 +95,18 @@ async function run_clip(context: CommandContext<ClipArgs>, settings: ClipSetting
   const path = resolve_path(session.cwd, args.path);
   const source = await source_at(path);
   const range = range_of(args, source.duration);
-  const target = await target_of(path, settings.output, args.out, session.cwd, elevated);
+  const target = await target_of(path, settings, args.out, session.cwd, elevated);
   const outcome = await export_clip({ app_id: APP_ID, source, range, settings, target, signal });
   if (!outcome.ok) throw new ShellError(outcome.cancelled ? "stopped" : outcome.error);
   const file = await files().get_file(outcome.result.path);
   return file_value(outcome.result.path, "file", file?.size ?? null, file?.lastModified ?? null);
 }
 
-export function trim(context: CommandContext<ClipArgs & { quality: Quality; mute: boolean }>): Promise<FileValue> {
-  return run_clip(context, { output: Output.WEBM, quality: context.args.quality, audio: !context.args.mute });
+export function trim(
+  context: CommandContext<ClipArgs & { quality: Quality; mute: boolean; format: ClipFormat; size: OutputSize }>
+): Promise<FileValue> {
+  const { quality, mute, format, size } = context.args;
+  return run_clip(context, { output: Output.CLIP, format, size, quality, audio: !mute });
 }
 
 export function gif(

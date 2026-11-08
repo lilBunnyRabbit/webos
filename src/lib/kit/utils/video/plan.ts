@@ -4,8 +4,17 @@ export const Quality = { LOW: "low", MEDIUM: "medium", HIGH: "high" } as const;
 export type Quality = (typeof Quality)[keyof typeof Quality];
 export const QUALITIES = Object.values(Quality) as [Quality, ...Quality[]];
 
-export const Output = { WEBM: "webm", GIF: "gif", AUDIO: "audio" } as const;
+export const Output = { CLIP: "clip", GIF: "gif", AUDIO: "audio" } as const;
 export type Output = (typeof Output)[keyof typeof Output];
+
+export const ClipFormat = { WEBM: "webm", MP4: "mp4" } as const;
+export type ClipFormat = (typeof ClipFormat)[keyof typeof ClipFormat];
+export const CLIP_FORMATS = Object.values(ClipFormat) as [ClipFormat, ...ClipFormat[]];
+
+/** Output size by the short side: `1080` is 1920 × 1080 for a landscape video and 1080 × 1920 for a portrait one. */
+export const OutputSize = { ORIGINAL: "original", P1080: "1080", P720: "720", P480: "480" } as const;
+export type OutputSize = (typeof OutputSize)[keyof typeof OutputSize];
+export const OUTPUT_SIZES = Object.values(OutputSize) as [OutputSize, ...OutputSize[]];
 
 const BITS_PER_PIXEL: Record<Quality, number> = { low: 0.04, medium: 0.08, high: 0.16 };
 const MIN_BITRATE = 250_000;
@@ -31,9 +40,61 @@ export function video_bitrate(size: Size, quality: Quality, framerate = 30): num
   return Math.max(MIN_BITRATE, Math.round(size.width * size.height * framerate * BITS_PER_PIXEL[quality]));
 }
 
-/** VP8 and VP9 want even sides. */
+/** VP8, VP9 and H.264 want even sides. */
 export function even_size({ width, height }: Size): Size {
   return { width: Math.max(2, width - (width % 2)), height: Math.max(2, height - (height % 2)) };
+}
+
+/** Scaled to `target` by the short side, aspect kept, both sides even; never larger than the source. */
+export function scaled_size(source: Size, target: OutputSize): Size {
+  const short = Math.min(source.width, source.height);
+  if (target === OutputSize.ORIGINAL || Number(target) >= short) return even_size(source);
+  const scale = Number(target) / short;
+  const even = (side: number) => Math.max(2, Math.round((side * scale) / 2) * 2);
+  return { width: even(source.width), height: even(source.height) };
+}
+
+/** The sizes worth offering for a source: Original plus every smaller one. */
+export function size_choices(source: Size): OutputSize[] {
+  const short = Math.min(source.width, source.height);
+  return OUTPUT_SIZES.filter((size) => size === OutputSize.ORIGINAL || Number(size) < short);
+}
+
+// H.264 levels (ITU-T H.264 Table A-1): frame size and rate in 16 × 16 macroblocks, and the level_idc byte.
+const AVC_LEVELS = [
+  { frame: 1620, rate: 40_500, idc: 0x1e },
+  { frame: 3600, rate: 108_000, idc: 0x1f },
+  { frame: 5120, rate: 216_000, idc: 0x20 },
+  { frame: 8192, rate: 245_760, idc: 0x28 },
+  { frame: 8704, rate: 522_240, idc: 0x2a },
+  { frame: 22_080, rate: 589_824, idc: 0x32 },
+  { frame: 36_864, rate: 983_040, idc: 0x33 },
+  { frame: 36_864, rate: 2_073_600, idc: 0x34 },
+  { frame: 139_264, rate: 4_177_920, idc: 0x3c },
+  { frame: 139_264, rate: 8_355_840, idc: 0x3d },
+  { frame: 139_264, rate: 16_711_680, idc: 0x3e },
+] as const;
+
+/** The smallest H.264 level that holds this size and frame rate; `null` past level 6.2. */
+export function avc_level(size: Size, framerate: number): number | null {
+  const across = Math.ceil(size.width / 16);
+  const down = Math.ceil(size.height / 16);
+  const frame = across * down;
+  const level = AVC_LEVELS.find(
+    (entry) =>
+      frame <= entry.frame &&
+      frame * framerate <= entry.rate &&
+      // Neither side may pass √(8 × max frame size) macroblocks.
+      Math.max(across, down) ** 2 <= 8 * entry.frame
+  );
+  return level?.idc ?? null;
+}
+
+/** High, Main, then Constrained Baseline: the profile_idc and constraint bytes of an `avc1.PPCCLL` codec string. */
+export const AVC_PROFILES = ["6400", "4d00", "42e0"] as const;
+
+export function avc_codec(profile: (typeof AVC_PROFILES)[number], level: number): string {
+  return `avc1.${profile}${level.toString(16).padStart(2, "0")}`;
 }
 
 export function gif_size(source: Size, width: number): Size {
@@ -80,14 +141,16 @@ export function parse_time(text: string): number | null {
   return Number.isFinite(value) ? value : null;
 }
 
-export function output_name(source: string, output: Output): string {
+export function output_name(source: string, output: Output, format: ClipFormat = ClipFormat.WEBM): string {
   const stem = file_stem(source);
   if (output === Output.GIF) return `${stem}.gif`;
-  return `${stem}-${output === Output.AUDIO ? "audio" : "clip"}.webm`;
+  if (output === Output.AUDIO) return `${stem}-audio.webm`;
+  return `${stem}-clip.${format}`;
 }
 
-export function output_extension(output: Output): string {
-  return output === Output.GIF ? ".gif" : ".webm";
+export function output_extension(output: Output, format: ClipFormat = ClipFormat.WEBM): string {
+  if (output === Output.GIF) return ".gif";
+  return output === Output.CLIP ? `.${format}` : ".webm";
 }
 
 export function format_eta(seconds: number): string {

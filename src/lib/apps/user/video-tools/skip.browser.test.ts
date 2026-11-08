@@ -7,7 +7,8 @@ import { TasksService } from "$lib/core/api/services/tasks/service.svelte";
 import { probe_video } from "$kit/utils/video/capture";
 import { WebmEncoder } from "$kit/utils/video/encode";
 import { FIXTURE_FPS } from "$kit/utils/video/fixtures";
-import { Output } from "$kit/utils/video/plan";
+import { ClipFormat, Output, OutputSize } from "$kit/utils/video/plan";
+import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 import { export_clip, type ClipSettings } from "./jobs";
 import { SKIP_SENSITIVITY } from "./skip";
 
@@ -113,13 +114,32 @@ const gif = (skip?: number): ClipSettings => ({ output: Output.GIF, fps: 30, wid
 test("a clip that skips pauses drops a still stretch but keeps the motion around it", async () => {
   // 1 s of a window dragged across, 2 s of an idle editor, 1 s of changes again.
   const file = await footage(120, (i) => (i < 30 || i >= 90 ? { ...idle(i), block: (i % 30) * 36 } : idle(i)));
-  const result = await run(file, { output: Output.WEBM, quality: "medium", audio: true, skip: SKIP_SENSITIVITY.DEFAULT }, 4);
+  const result = await run(
+    file,
+    { output: Output.CLIP, format: ClipFormat.WEBM, size: OutputSize.ORIGINAL, quality: "medium", audio: true, skip: SKIP_SENSITIVITY.DEFAULT },
+    4
+  );
   expect(result.length!.source).toBeCloseTo(4, 1);
   expect(result.length!.output).toBeGreaterThan(1.8);
   expect(result.length!.output).toBeLessThan(2.4);
   const info = await probe_video(result.file);
   expect(info).toMatchObject({ width: WIDTH, height: HEIGHT });
   expect(info.duration).toBeCloseTo(result.length!.output, 1);
+});
+
+test("an MP4 that skips pauses and is scaled down runs on the same output clock", async () => {
+  const file = await footage(90, (i) => (i < 30 || i >= 60 ? { ...STILL, block: (i % 30) * 36 } : STILL));
+  const result = await run(
+    file,
+    { output: Output.CLIP, format: ClipFormat.MP4, size: OutputSize.P480, quality: "low", audio: false, skip: SKIP_SENSITIVITY.DEFAULT },
+    3
+  );
+  const input = new Input({ source: new BlobSource(result.file), formats: ALL_FORMATS });
+  const video = (await input.getPrimaryVideoTrack())!;
+  expect({ width: video.displayWidth, height: video.displayHeight }).toEqual({ width: 854, height: 480 });
+  expect(await input.computeDuration()).toBeCloseTo(result.length!.output, 1);
+  expect(result.length!.output).toBeLessThan(2.4);
+  input.dispose();
 });
 
 test("a GIF that skips pauses writes no frames for the still part and times the rest on the output clock", async () => {

@@ -33,3 +33,6 @@ lax asked for timelapses and screen recordings without the pauses: frames that l
 - **Downscaling** uses `imageSmoothingQuality = "high"`: with the default, a 12× shrink samples too few source pixels, and a thin caret or text stroke changes nothing in the small picture.
 - **Typing plays faster than it was typed.** The frames between keystrokes are still too, so each kept keystroke lasts one frame time. That follows from "cut fully" and is left as decided.
 - The skip is an optional `skip` (the sensitivity) on Video Tools' Clip and GIF export settings. The shell commands don't pass it.
+
+## Revision 2026-11-08: MP4 and size
+- Clip can now be saved as MP4 (H.264, AAC) and scaled down ([ADR-100](./100-video-mp4-output.md)). Skip pauses works with both formats on the same `OutputClock`. `settings.json` is version 2: `format` and `size` beside `skip_sensitivity`; a version 1 file reads as WebM at the original size. `video trim` gains `--format` and `--size`, still without skipping.

@@ -5,6 +5,23 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.11.0",
+    date: "2026-11-08",
+    title: "MP4 clips",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["video-tools"],
+        text: "Video Tools saves clips as MP4 too, which play on phones and in messaging apps, and can make them smaller at 1080p, 720p or 480p; both choices are remembered.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["video-tools"],
+        text: "Searching for duplicate frames, remove pauses or timelapse now finds Video Tools' Skip pauses.",
+      },
+    ],
+  },
+  {
     version: "4.10.2",
     date: "2026-11-08",
     title: "Lunar Lander ships redrawn",

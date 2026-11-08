@@ -2,6 +2,7 @@ import { arg } from "$lib/core/api/services/shell/arg";
 import { define_command } from "$lib/core/api/services/shell/define";
 import type { ShellSession } from "$lib/core/api/services/shell/type";
 import { z } from "zod";
+import { CLIP_FORMATS, ClipFormat, OUTPUT_SIZES, OutputSize } from "$kit/utils/video/plan";
 import { GIF_FPS, GIF_WIDTH, QUALITIES, Quality } from "./kinds";
 import type { ShellContribution } from "$lib/core/api/services/shell/type";
 
@@ -27,11 +28,13 @@ export default {
     define_command({
       ...shared,
       id: "video trim",
-      description: "Save part of a video as a WebM clip next to it, in about the part's length",
+      description: "Save part of a video as a WebM or MP4 clip next to it, in about the part's length",
       args: z.object({
         ...clip,
         quality: z.enum(QUALITIES).default(Quality.MEDIUM),
         mute: z.boolean().default(false),
+        format: z.enum(CLIP_FORMATS).default(ClipFormat.WEBM).describe("webm (VP9 + Opus) or mp4 (H.264 + AAC)"),
+        size: z.enum(OUTPUT_SIZES).default(OutputSize.ORIGINAL).describe("Short side in pixels; never upscaled"),
       }),
       short: { out: "o", quality: "q" },
       run: async (context) => (await logic()).trim(context),

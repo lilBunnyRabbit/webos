@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  avc_codec,
+  avc_level,
+  ClipFormat,
+  OutputSize,
+  output_extension,
   Quality,
+  scaled_size,
+  size_choices,
   clamp_range,
   estimate_gif_bytes,
   even_size,
@@ -58,9 +65,36 @@ describe("plan", () => {
   });
 
   it("names outputs after the source", () => {
-    expect(output_name("trip.mp4", Output.WEBM)).toBe("trip-clip.webm");
+    expect(output_name("trip.mp4", Output.CLIP)).toBe("trip-clip.webm");
     expect(output_name("trip.mp4", Output.GIF)).toBe("trip.gif");
     expect(output_name("trip.mp4", Output.AUDIO)).toBe("trip-audio.webm");
+    expect(output_name("trip.webm", Output.CLIP, ClipFormat.MP4)).toBe("trip-clip.mp4");
+    expect(output_extension(Output.CLIP, ClipFormat.MP4)).toBe(".mp4");
+    expect(output_extension(Output.AUDIO, ClipFormat.MP4)).toBe(".webm");
+  });
+
+  it("scales by the short side, keeps the aspect, evens the sides and never upscales", () => {
+    expect(scaled_size({ width: 1920, height: 1080 }, OutputSize.P720)).toEqual({ width: 1280, height: 720 });
+    expect(scaled_size({ width: 1080, height: 1920 }, OutputSize.P480)).toEqual({ width: 480, height: 854 });
+    expect(scaled_size({ width: 2560, height: 1080 }, OutputSize.P480)).toEqual({ width: 1138, height: 480 });
+    expect(scaled_size({ width: 1281, height: 721 }, OutputSize.P1080)).toEqual({ width: 1280, height: 720 });
+    expect(scaled_size({ width: 1281, height: 721 }, OutputSize.ORIGINAL)).toEqual({ width: 1280, height: 720 });
+    expect(size_choices({ width: 1280, height: 720 })).toEqual([OutputSize.ORIGINAL, OutputSize.P480]);
+    expect(size_choices({ width: 3840, height: 2160 })).toEqual([
+      OutputSize.ORIGINAL,
+      OutputSize.P1080,
+      OutputSize.P720,
+      OutputSize.P480,
+    ]);
+  });
+
+  it("picks the smallest H.264 level for the size", () => {
+    expect(avc_level({ width: 640, height: 480 }, 30)).toBe(0x1e);
+    expect(avc_level({ width: 1280, height: 720 }, 30)).toBe(0x1f);
+    expect(avc_level({ width: 1920, height: 1080 }, 30)).toBe(0x28);
+    expect(avc_level({ width: 3840, height: 2160 }, 30)).toBe(0x33);
+    expect(avc_level({ width: 20_000, height: 20_000 }, 30)).toBeNull();
+    expect(avc_codec("6400", 0x28)).toBe("avc1.640028");
   });
 
   it("words the time left", () => {

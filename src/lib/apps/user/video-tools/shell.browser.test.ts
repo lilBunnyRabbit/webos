@@ -8,7 +8,10 @@ import type { CommandContext } from "$lib/core/api/services/shell/type";
 import { probe_video } from "$kit/utils/video/capture";
 import { decode_audio } from "$kit/utils/video/encode";
 import { make_video } from "$kit/utils/video/fixtures";
+import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 import { audio, gif, trim } from "./shell";
+
+const WEBM = { format: "webm" as const, size: "original" as const };
 
 let files: FilesService;
 let notifications: NotificationsService;
@@ -68,7 +71,7 @@ async function gif_frames(path: string) {
 test("video trim writes a playable clip of the part, with sound, next to the video", async () => {
   await seed("clip.webm", await make_video(3, { audio: true }));
   const value = await trim(
-    context({ path: "clip.webm", from: "0.5", to: "2", quality: "medium" as const, mute: false })
+    context({ path: "clip.webm", from: "0.5", to: "2", quality: "medium" as const, mute: false, ...WEBM })
   );
   expect(value.path).toBe("/home/clip-clip.webm");
   const file = (await files.get_file(value.path))!;
@@ -78,9 +81,28 @@ test("video trim writes a playable clip of the part, with sound, next to the vid
   expect((await decode_audio(file))!.duration).toBeCloseTo(1.5, 1);
 });
 
+test("video trim --format mp4 --size 480 writes an H.264 + AAC MP4 scaled by the short side", async () => {
+  await seed("wide.webm", await make_video(1.5, { width: 1280, height: 720, audio: true }));
+  const value = await trim(
+    context({ path: "wide.webm", to: "1", quality: "low" as const, mute: false, format: "mp4" as const, size: "480" as const })
+  );
+  expect(value.path).toBe("/home/wide-clip.mp4");
+  const file = (await files.get_file(value.path))!;
+  const head = new TextDecoder().decode(new Uint8Array(await file.slice(4, 8).arrayBuffer()));
+  expect(head).toBe("ftyp");
+  const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
+  expect((await input.getFormat()).name).toBe("MP4");
+  const video = (await input.getPrimaryVideoTrack())!;
+  expect(video.codec).toBe("avc");
+  expect({ width: video.displayWidth, height: video.displayHeight }).toEqual({ width: 854, height: 480 });
+  expect((await input.getPrimaryAudioTrack())?.codec).toBe("aac");
+  expect(await input.computeDuration()).toBeCloseTo(1, 1);
+  input.dispose();
+});
+
 test("video trim --mute leaves the sound out and -o names the file", async () => {
   await seed("clip.webm", await make_video(1, { audio: true }));
-  const value = await trim(context({ path: "clip.webm", quality: "low" as const, mute: true, out: "short" }));
+  const value = await trim(context({ path: "clip.webm", quality: "low" as const, mute: true, ...WEBM, out: "short" }));
   expect(value.path).toBe("/home/short.webm");
   expect(await decode_audio((await files.get_file(value.path))!)).toBeNull();
 });
@@ -117,12 +139,12 @@ test("bad times and non-videos fail with a message", async () => {
   await seed("clip.webm", await make_video(0.5));
   await seed("note.txt", new Blob(["hi"]));
   await expect(
-    trim(context({ path: "clip.webm", from: "soon", quality: "low" as const, mute: false }))
+    trim(context({ path: "clip.webm", from: "soon", quality: "low" as const, mute: false, ...WEBM }))
   ).rejects.toThrow("--from soon");
-  await expect(trim(context({ path: "clip.webm", from: "3", quality: "low" as const, mute: false }))).rejects.toThrow(
+  await expect(trim(context({ path: "clip.webm", from: "3", quality: "low" as const, mute: false, ...WEBM }))).rejects.toThrow(
     "nothing between"
   );
-  await expect(trim(context({ path: "note.txt", quality: "low" as const, mute: false }))).rejects.toThrow(
+  await expect(trim(context({ path: "note.txt", quality: "low" as const, mute: false, ...WEBM }))).rejects.toThrow(
     "not a video"
   );
 });
@@ -130,7 +152,7 @@ test("bad times and non-videos fail with a message", async () => {
 test("Ctrl+C stops a trim and writes nothing", async () => {
   await seed("clip.webm", await make_video(3));
   const controller = new AbortController();
-  const run = trim(context({ path: "clip.webm", quality: "low" as const, mute: true }, controller.signal));
+  const run = trim(context({ path: "clip.webm", quality: "low" as const, mute: true, ...WEBM }, controller.signal));
   setTimeout(() => controller.abort(), 400);
   await expect(run).rejects.toThrow("stopped");
   expect(await files.get_file("/home/clip-clip.webm")).toBeNull();

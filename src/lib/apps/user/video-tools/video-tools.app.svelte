@@ -21,17 +21,22 @@
   } from "phosphor-svelte";
   import { onDestroy, untrack } from "svelte";
   import { probe_video, type VideoInfo } from "$kit/utils/video/capture";
+  import { can_encode_aac } from "$kit/utils/video/mp4";
   import { export_clip, type ClipResult, type ClipSettings, type ClipSource } from "./jobs";
   import { GIF_FPS, GIF_WIDTH, Quality, VIDEO_ACCEPT, is_video_name } from "./kinds";
   import {
     GIF_LARGE_BYTES,
     GIF_LONG_FRAMES,
     GIF_WIDTHS,
+    ClipFormat,
     Output,
+    OutputSize,
     estimate_gif_bytes,
     format_time,
     gif_frame_count,
     gif_size,
+    scaled_size,
+    size_choices,
   } from "$kit/utils/video/plan";
   import EmptyArt from "./empty-art.svelte";
   import Scrubber from "./scrubber.svelte";
@@ -63,7 +68,7 @@
   let from = $state(0);
   let to = $state(0);
 
-  let output = $state<Output>(Output.WEBM);
+  let output = $state<Output>(Output.CLIP);
   let quality = $state<Quality>(Quality.MEDIUM);
   let keep_audio = $state(true);
   let fps = $state<number>(GIF_FPS.DEFAULT);
@@ -75,10 +80,15 @@
   let result = $state.raw<(ClipResult & { url: string; output: Output }) | null>(null);
 
   const OUTPUTS = [
-    { value: Output.WEBM, label: "Clip" },
+    { value: Output.CLIP, label: "Clip" },
     { value: Output.GIF, label: "GIF" },
     { value: Output.AUDIO, label: "Sound" },
   ];
+  const FORMAT_OPTIONS = [
+    { value: ClipFormat.WEBM, label: "WebM" },
+    { value: ClipFormat.MP4, label: "MP4" },
+  ];
+  const SIZE_LABELS: Record<OutputSize, string> = { original: "Original", 1080: "1080p", 720: "720p", 480: "480p" };
   const QUALITY_OPTIONS = [
     { value: Quality.LOW, label: "Low" },
     { value: Quality.MEDIUM, label: "Medium" },
@@ -86,6 +96,20 @@
   ];
 
   const length = $derived(Math.max(0, to - from));
+  const size_options = $derived(
+    loaded ? size_choices(loaded).map((size) => ({ value: size, label: SIZE_LABELS[size] })) : []
+  );
+  // A remembered size larger than this video reads as Original, without overwriting the remembered one.
+  const clip_size = $derived(
+    size_options.some((option) => option.value === prefs.value.size) ? prefs.value.size : OutputSize.ORIGINAL
+  );
+  const clip_dimensions = $derived(loaded ? scaled_size(loaded, clip_size) : null);
+  const mp4 = $derived(prefs.value.format === ClipFormat.MP4);
+  let aac = $state<boolean | null>(null);
+  $effect(() => {
+    if (mp4 && aac === null) void can_encode_aac().then((supported) => (aac = supported));
+  });
+  const sound = $derived(keep_audio && !skip && !(mp4 && aac === false));
   const width_options = $derived.by(() => {
     const full = loaded?.width ?? GIF_WIDTH.DEFAULT;
     const sizes = [...GIF_WIDTHS.filter((size) => size < full), full];
@@ -247,7 +271,7 @@
     const skipping = skip ? { skip: prefs.value.skip_sensitivity } : {};
     if (output === Output.GIF) return { output, fps, width: Number(width_value), dither, ...skipping };
     if (output === Output.AUDIO) return { output };
-    return { output, quality, audio: keep_audio && !skip, ...skipping };
+    return { output, format: prefs.value.format, size: clip_size, quality, audio: keep_audio && !skip, ...skipping };
   }
 
   async function save() {
@@ -357,7 +381,7 @@
   {:else if !loaded}
     <EmptyState
       title="Cut a clip, a GIF or the sound"
-      description="Trims a video to a WebM clip, turns part of it into a GIF, or saves its sound, all on this device."
+      description="Trims a video to a WebM or MP4 clip, turns part of it into a GIF, or saves its sound, all on this device."
       steps={["Open a video", "Set the start and end", "Save it as a clip, GIF or sound"]}
       hint="Or drop a video anywhere here, or paste one."
     >
@@ -424,7 +448,24 @@
         <div class="flex flex-col gap-2">
           {@render heading("Save as")}
           <Segmented label="Save as" options={OUTPUTS} bind:value={output} class="w-full *:flex-1" />
-          {#if output === Output.WEBM}
+          {#if output === Output.CLIP}
+            <label class="flex items-center justify-between gap-2 text-ui">
+              Format
+              <Segmented size="sm" label="Format" options={FORMAT_OPTIONS} bind:value={prefs.value.format} />
+            </label>
+            <label class="flex items-center justify-between gap-2 text-ui">
+              Size
+              <Select
+                size="sm"
+                class="w-auto"
+                options={size_options}
+                bind:value={() => clip_size, (next: OutputSize) => (prefs.value.size = next)}
+                aria-label="Size"
+              />
+            </label>
+            {#if clip_dimensions}
+              {@render row("Output", `${clip_dimensions.width} × ${clip_dimensions.height}`)}
+            {/if}
             <label class="flex items-center justify-between gap-2 text-ui">
               Quality
               <Segmented size="sm" label="Quality" options={QUALITY_OPTIONS} bind:value={quality} />
@@ -436,8 +477,12 @@
             </label>
             {#if skip}
               <p class="px-0.5 text-2xs text-foreground/65">Skipping pauses removes the sound.</p>
+            {:else if mp4 && aac === false && keep_audio}
+              <p class="flex gap-1.5 px-0.5 text-2xs text-warning"><WarningIcon class="mt-px size-3.5 shrink-0" weight="bold" />This browser can't encode AAC sound, so the MP4 is saved silent.</p>
             {/if}
-            <p class="px-0.5 text-2xs text-foreground/65">WebM with VP9 video{keep_audio && !skip ? " and Opus sound" : ""}. Saving plays the part through once, so it takes about as long as the part.</p>
+            <p class="px-0.5 text-2xs text-foreground/65">
+              {mp4 ? "MP4 with H.264 video" : "WebM with VP9 video"}{sound ? (mp4 ? " and AAC sound" : " and Opus sound") : ""}{mp4 ? ", which plays almost anywhere" : ""}. Saving plays the part through once, so it takes about as long as the part.
+            </p>
           {:else if output === Output.GIF && gif}
             <label class="flex items-center gap-2 text-ui">
               <span class="w-16 shrink-0">Frames</span>
@@ -478,13 +523,16 @@
             {@render heading("Saved")}
             {#if result.output === Output.GIF}
               <img src={result.url} alt="The saved GIF" class="checker max-h-48 w-full rounded-xs object-contain ring-1 ring-foreground/10" />
-            {:else if result.output === Output.WEBM}
+            {:else if result.output === Output.CLIP}
               <!-- svelte-ignore a11y_media_has_caption -->
               <video src={result.url} controls class="max-h-48 w-full rounded-xs bg-background-darkest"></video>
             {:else}
               <audio src={result.url} controls class="w-full"></audio>
             {/if}
             <p class="truncate px-0.5 text-ui" title={result.path}>{base_name(result.path)} · <span class="font-mono text-2xs">{format_bytes(result.size)}</span></p>
+            {#if result.note}
+              <p class="flex gap-1.5 px-0.5 text-2xs text-warning"><WarningIcon class="mt-px size-3.5 shrink-0" weight="bold" />{result.note}</p>
+            {/if}
             {#if result.length}
               {@render row("Pauses skipped", `${format_time(result.length.source, 1)} → ${format_time(result.length.output, 1)}`)}
             {/if}

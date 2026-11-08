@@ -11,7 +11,7 @@ export default [
   {
     icon: ScissorsIcon,
     title: "Trim",
-    text: "Mark in and out points frame by frame and save just that part as a WebM clip, sound included.",
+    text: "Mark in and out points frame by frame and save just that part as a WebM or MP4 clip, sound included, at its own size or smaller.",
   },
   {
     icon: GifIcon,
@@ -27,6 +27,6 @@ export default [
   {
     icon: TerminalIcon,
     title: "From the terminal",
-    text: "video trim and video gif do the same from the Terminal and hand back the file.",
+    text: "video trim and video gif do the same from the Terminal and hand back the file; video trim --format mp4 saves an MP4.",
   },
 ] satisfies AppHighlight[];
