@@ -30,6 +30,8 @@
     <AppProgress app_id={manifest.id} />
     <AppBadge app_id={manifest.id} />
   </span>
-  <span data-wallpaper-label={wallpaper ? "" : undefined} class="truncate text-xl tracking-tight">{manifest.name}</span>
-  {@render children?.()}
+  <span class="flex min-w-0 flex-col items-start gap-0.5">
+    <span data-wallpaper-label={wallpaper ? "" : undefined} class="max-w-full truncate text-xl tracking-tight">{manifest.name}</span>
+    {@render children?.()}
+  </span>
 </button>

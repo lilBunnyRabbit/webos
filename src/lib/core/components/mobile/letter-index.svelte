@@ -5,14 +5,14 @@
   import type { Position } from "$lib/core/utils/type";
   import { HOLD_MS } from "$lib/core/utils/long-press";
   import { motion_ms } from "$lib/core/utils/motion";
-  import { MagnifyingGlass as MagnifyingGlassIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
+  import { DownloadSimple as DownloadSimpleIcon, MagnifyingGlass as MagnifyingGlassIcon, SquaresFour as SquaresFourIcon } from "phosphor-svelte";
   import { fade } from "svelte/transition";
   import { flushSync, untrack } from "svelte";
   import AppRow from "../apps/app-row.svelte";
   import ExperimentalBadge from "../apps/experimental-badge.svelte";
   import { app_menu } from "../apps/app-actions";
   import { SentenceSearch } from "../apps/sentence-search.svelte";
-  import { Button, IconButton, Input } from "../ui";
+  import { IconButton, Input } from "../ui";
   import { autoscroll_step, clamp_offset, drop_index, shift_of, type Slot } from "./home-drag";
   import { home_gesture } from "./home-gesture";
 
@@ -290,7 +290,7 @@
       {#if app.experimental}<ExperimentalBadge />{/if}
     </AppRow>
     {#if !apps.is_installed(app.id)}
-      <Button size="sm" pressed class="shrink-0" aria-label="Install {app.name}" onclick={() => apps.install(app.id)}>Install</Button>
+      <IconButton label="Install {app.name}" class="shrink-0" onclick={() => apps.install(app.id)}><DownloadSimpleIcon weight="bold" /></IconButton>
     {/if}
   </li>
 {/snippet}

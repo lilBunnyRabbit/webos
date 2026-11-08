@@ -5,6 +5,17 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.10.1",
+    date: "2026-11-08",
+    title: "Room for app names",
+    changes: [
+      {
+        kind: FIXED,
+        text: "On a phone, All apps shows an app's full name: the Experimental tag sits under it and Install is a small download button. The App Store list puts the tag under the name too.",
+      },
+    ],
+  },
+  {
     version: "4.10.0",
     date: "2026-11-08",
     title: "Drive Hub progress and Lunar Lander rebuilt",

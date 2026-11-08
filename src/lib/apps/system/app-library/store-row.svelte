@@ -30,9 +30,9 @@
       <button type="button" class="row-open block min-w-0 truncate text-left text-ui font-semibold after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none" onclick={() => onselect(manifest)}>
         {manifest.name}
       </button>
-      {#if manifest.experimental}<ExperimentalBadge />{/if}
     </div>
     <div class="line-clamp-2 text-2xs text-pretty text-foreground/80">
+      {#if manifest.experimental}<ExperimentalBadge class="mr-1 align-middle" />{/if}
       {#if detail}{@render detail()}{:else}{category_label(manifest)}{#if manifest.description}<span class="hidden @md:inline">{` · ${manifest.description}`}</span>{/if}{/if}
     </div>
   </div>
