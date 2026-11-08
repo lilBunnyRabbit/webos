@@ -5,7 +5,7 @@
   import { KeyHint, RoundCard } from "$kit/components/play2d";
   import { daily_seed, format_time, track_play } from "$kit/games";
   import { report_error } from "$kit/utils/report-error";
-  import { clamp_zoom, ease, frame, OVERLAY_ASPECT, OVERLAY_GAP, type Camera, type Insets } from "$kit/games/play2d/camera";
+  import { ease, frame, OVERLAY_ASPECT, OVERLAY_GAP, type Camera, type Insets } from "$kit/games/play2d/camera";
   import { work_out_chart, type ChartJob } from "$kit/games/play2d/chart-job";
   import { frame_loop } from "$kit/games/play2d/loop";
   import { wrap_angle } from "$kit/games/play2d/geometry";
@@ -27,6 +27,7 @@
   import { daily_ref, mission_ref, round_brief, round_key, round_title, RoundKind, scene_of, type Chart, type RoundRef } from "./core/rounds";
   import { SHIP_IDS, ship_coefficients, ShipId, SPECS } from "./core/ships";
   import { Sounds } from "./core/sound";
+  import { clamp_view_zoom, view_span } from "./core/view";
   import { ground_at } from "./core/world";
   import LanderFrame from "./frame.svelte";
   import SettingsPanel from "./settings-panel.svelte";
@@ -246,19 +247,16 @@
     const insets = control_insets();
     const side = Math.max(1, Math.min(board_size.width, board_size.height));
     const clear = Math.max(1, board_size.height - insets.top - insets.bottom);
-    const width = Math.max(...spec.hull.map((p) => Math.abs(p.x))) * 2;
-    // A bigger ship gets a wider view at every height, so the shuttle sits in frame like the lander does.
-    const k = Math.max(1, width / 9);
-    const grown = (tall ? 24 : 30) * k + 0.9 * Math.min(height, 80) + 0.4 * Math.max(0, height - 80);
-    // The ground under the ship stays in sight up to a good height: a lander's pilot reads the gap to it.
-    const fit = ((height + 14 * k) * side) / (0.7 * clear);
-    const span = Math.min(520 * k, Math.max(grown, fit));
+    const size = Math.max(...spec.hull.map((p) => Math.abs(p.x))) * 2;
+    const span = view_span({ height, side, clear, size, tall });
     const scale = side / (span / zoom);
     const high = clear / scale;
-    const reach = span / 3;
+    const reach = span / zoom / 3;
     const ahead = Math.max(-reach, Math.min(reach, ship.vx * LOOK_AHEAD));
     const under = ground_at(terrain, ship.x);
-    const centre = Math.max(under + 0.36 * high, ship.y - 0.36 * high);
+    // The eased camera trails a steady climb or fall by speed / rate; leading by that keeps a fast ship in the frame when zoomed in.
+    const led = ship.y + ship.vy / EASE_Y;
+    const centre = Math.max(under + 0.36 * high, led - 0.2 * high);
     return frame(BOUNDS, { x: ship.x + ahead, y: -centre }, board_size.width, board_size.height, zoom, insets, span);
   }
 
@@ -679,7 +677,7 @@
     }
     if (code === "Equal" || code === "NumpadAdd" || code === "Minus" || code === "NumpadSubtract") {
       event.preventDefault();
-      zoom = clamp_zoom(zoom * (code === "Equal" || code === "NumpadAdd" ? 1.2 : 1 / 1.2));
+      zoom = clamp_view_zoom(zoom * (code === "Equal" || code === "NumpadAdd" ? 1.2 : 1 / 1.2));
       return;
     }
     if (code === "KeyR" && !event.repeat) {

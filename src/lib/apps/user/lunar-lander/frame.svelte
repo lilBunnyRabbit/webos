@@ -5,12 +5,12 @@
   import { Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { ArrowArcLeft as TurnLeftIcon, ArrowArcRight as TurnRightIcon } from "phosphor-svelte";
   import { Lever } from "$kit/components/play2d";
-  import { clamp_zoom } from "$kit/games/play2d/camera";
   import { read_palette, type Palette } from "$kit/games/play2d/palette";
   import type { Snippet } from "svelte";
   import type { Controls } from "./core/controls.svelte";
   import { read_scenery, type Scenery } from "./core/draw";
   import { HOVER_NOTCH } from "./core/lever";
+  import { clamp_view_zoom } from "./core/view";
 
   interface Box {
     width: number;
@@ -112,7 +112,7 @@
 
   function on_wheel(event: WheelEvent) {
     event.preventDefault();
-    zoom = clamp_zoom(zoom * Math.exp(-event.deltaY * 0.0015));
+    zoom = clamp_view_zoom(zoom * Math.exp(-event.deltaY * 0.0015));
   }
 
   function on_board_pointerdown(event: PointerEvent) {
@@ -129,7 +129,7 @@
     pinch.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pinch.size !== 2 || !pinch_start) return;
     const [a, b] = [...pinch.values()];
-    zoom = clamp_zoom((pinch_start.zoom * Math.hypot(a.x - b.x, a.y - b.y)) / Math.max(1, pinch_start.distance));
+    zoom = clamp_view_zoom((pinch_start.zoom * Math.hypot(a.x - b.x, a.y - b.y)) / Math.max(1, pinch_start.distance));
   }
 
   function on_board_pointerend(event: PointerEvent) {

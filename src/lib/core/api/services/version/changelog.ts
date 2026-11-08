@@ -13,6 +13,11 @@ export const CHANGELOG: Release[] = [
         kind: FIXED,
         text: "On a phone, All apps shows an app's full name: the Experimental tag sits under it and Install is a small download button. The App Store list puts the tag under the name too.",
       },
+      {
+        kind: FIXED,
+        apps: ["lunar-lander"],
+        text: "Lunar Lander keeps your ship big enough to read high above the ground, and pinch or + zooms in much closer.",
+      },
     ],
   },
   {
