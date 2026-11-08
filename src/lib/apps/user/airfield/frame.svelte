@@ -198,6 +198,11 @@
   function trim() {
     if (engage()) ontrim();
   }
+
+  // A pointer press would leave Space, Enter and the lever's arrows on the control; keyboard users tab there on purpose.
+  function hand_back() {
+    board?.focus({ preventScroll: true });
+  }
 </script>
 
 <svelte:window onkeydown={on_window_keydown} onkeyup={on_keyup} onblur={onrelease} />
@@ -231,7 +236,7 @@
         {@render overlay()}
       </div>
 
-      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} class={cn("af-left touch-none items-end select-none", shown ? "flex" : "hidden", controls_idle && "af-idle")}>
+      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} onpointerup={hand_back} class={cn("af-left touch-none items-end select-none", shown ? "flex" : "hidden", controls_idle && "af-idle")}>
         <Lever
           class="af-lever-size af-face rounded-xl p-1.5"
           notch={controls.notch}
@@ -242,7 +247,7 @@
           onchange={set_lever}
         />
       </div>
-      <div class={cn("af-middle touch-none grid-cols-2 gap-1.5 select-none", shown ? "grid" : "hidden", controls_idle && "af-idle")}>
+      <div onpointerup={hand_back} class={cn("af-middle touch-none grid-cols-2 gap-1.5 select-none", shown ? "grid" : "hidden", controls_idle && "af-idle")}>
         <Button class="af-face h-9 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(-1)} aria-label="Flaps up">Flaps ▲</Button>
         <Button class="af-face h-9 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(1)} aria-label="Flaps down">Flaps ▼</Button>
         <span class="af-flaps-label af-face col-span-2 rounded-md px-1 text-center text-2xs font-medium text-foreground/80">Flaps {controls.flap_name}</span>
@@ -262,7 +267,7 @@
           oncontextmenu={(event) => event.preventDefault()}>Brake</Button
         >
       </div>
-      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} class={cn("af-right touch-none items-end justify-end select-none", shown ? "flex" : "hidden", controls_idle && "af-idle")}>
+      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} onpointerup={hand_back} class={cn("af-right touch-none items-end justify-end select-none", shown ? "flex" : "hidden", controls_idle && "af-idle")}>
         <PitchPad class="af-pad-size af-face" value={controls.held_stick} pilot={pitch === PitchMode.PILOT} onchange={set_pad} onengage={engage} />
       </div>
     </div>

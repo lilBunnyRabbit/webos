@@ -157,6 +157,11 @@
     if (controls.held_turn === to) controls.held_turn = 0;
   }
 
+  // A pointer press would leave Space, Enter and the lever's arrows on the control; keyboard users tab there on purpose.
+  function hand_back() {
+    board?.focus({ preventScroll: true });
+  }
+
   function hold_burn(event: PointerEvent) {
     if (!engage()) return;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -194,7 +199,7 @@
         {@render overlay()}
       </div>
 
-      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} class={cn("ll-left touch-none items-end select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
+      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} onpointerup={hand_back} class={cn("ll-left touch-none items-end select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
         <Lever
           class="ll-lever-size ll-face rounded-xl p-1.5"
           notch={controls.notch}
@@ -204,7 +209,7 @@
           onchange={set_lever}
         />
       </div>
-      <div class={cn("ll-middle touch-none select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
+      <div onpointerup={hand_back} class={cn("ll-middle touch-none select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
         <Button
           class="ll-face h-11 w-full rounded-xl pointer-coarse:h-14"
           variant={controls.held_burn ? "primary" : "secondary"}
@@ -214,7 +219,7 @@
           oncontextmenu={(event) => event.preventDefault()}>Burn</Button
         >
       </div>
-      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} class={cn("ll-right touch-none items-end justify-end gap-2 select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
+      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} onpointerup={hand_back} class={cn("ll-right touch-none items-end justify-end gap-2 select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
         <IconButton
           class="ll-face ll-turn rounded-xl"
           variant={controls.held_turn < 0 ? "primary" : "secondary"}
