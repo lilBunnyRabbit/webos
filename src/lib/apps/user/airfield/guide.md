@@ -16,6 +16,7 @@ A small airfield seen from the side, at real scale: the hangar and the apron on 
 - **A** and **D** (or **←** **→**) turn round on the ground, below taxi speed. In the air the plane flies the way it faces.
 - Settings › **Pitch › Up is up** makes W raise the nose instead.
 - On a touch screen: the lever on the left, the pitch pad on the right (drag down to pull the nose up), flaps, brakes, turn and trim between them.
+- Settings › **On-screen controls**: **Auto** shows them on a touch screen, **Always** on any screen (they work with the mouse too), **Never** hides them even on a touch screen.
 - **Esc** pauses, **R** puts you back on the apron (in a level: restarts), the scroll wheel, a pinch or **+** **−** zoom.
 
 ## The planes

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
+  import { OnScreen } from "$kit/games/play2d/onscreen";
   import { Badge, BoardOverlay, Button, IconButton, Spinner } from "$lib/core/components/ui";
   import { KeyHint, RoundCard, SpeedChip } from "$kit/components/play2d";
   import { daily_seed, format_time, track_play } from "$kit/games";
@@ -774,7 +775,16 @@
   <Badge class="hidden @sm:inline-flex">{spec.name}</Badge>
   <div class="flex-1"></div>
   {#if round}<Button size="sm" variant="quiet" onclick={to_hub}>Airfield</Button>{:else}<Button size="sm" variant="quiet" onclick={to_apron}>Apron</Button>{/if}
-  <SettingsPanel sound={settings.sound} pitch={settings.pitch} onsound={set_sound} onpitch={set_pitch} onfocus={focus_board} bind:panel={settings_panel} />
+  <SettingsPanel
+    sound={settings.sound}
+    pitch={settings.pitch}
+    onscreen={settings.onscreen}
+    onsound={set_sound}
+    onpitch={set_pitch}
+    ononscreen={(mode) => (settings_file.value.onscreen = mode)}
+    onfocus={focus_board}
+    bind:panel={settings_panel}
+  />
   <IconButton size="sm" class="hidden @md:inline-flex" label={flying ? "Pause (Esc)" : "Resume (Esc)"} disabled={!flying && flight.status !== Status.PAUSED} onclick={toggle_pause}>
     {#if flying}<PauseIcon weight="bold" />{:else}<PlayIcon weight="bold" />{/if}
   </IconButton>
@@ -890,8 +900,8 @@
       style:top="{overlay_height + 16 + (profile_shown && tall ? profile_width * 0.36 + 8 : 0)}px"
       style:right="{profile_shown && !tall ? profile_width + 16 : 8}px"
     >
-      <span class="pointer-fine:hidden">{HINTS[fly_id].touch} Drag the pad on the right {settings.pitch === PitchMode.PILOT ? "down" : "up"} to raise the nose.</span>
-      <span class="hidden pointer-fine:inline">{HINTS[fly_id].keys} {settings.pitch === PitchMode.PILOT ? "S" : "W"} raises the nose; A and D turn round on the ground.</span>
+      <span class={cn("pointer-fine:hidden", settings.onscreen === OnScreen.NEVER && "hidden")}>{HINTS[fly_id].touch} Drag the pad on the right {settings.pitch === PitchMode.PILOT ? "down" : "up"} to raise the nose.</span>
+      <span class={cn("hidden pointer-fine:inline", settings.onscreen === OnScreen.NEVER && "inline")}>{HINTS[fly_id].keys} {settings.pitch === PitchMode.PILOT ? "S" : "W"} raises the nose; A and D turn round on the ground.</span>
     </p>
   {/if}
 
@@ -1042,6 +1052,7 @@
     {controls}
     on_ground={can_turn}
     pitch={settings.pitch}
+    onscreen={settings.onscreen}
     controls_idle={crashed || done || waiting || !!card || hangar_card || flight.status === Status.PAUSED}
     {engage}
     ontrim={trim}

@@ -15,7 +15,7 @@ A side-view takeoff and landing sim at real scale. Four planes, each solved from
 | Rounds | `core/course.ts` (a level's world: ground line, surfaces, strips, obstacles, weather, `course_env`), `core/levels.ts` (the 20 levels and `random_scene`), `core/round.ts` (`Scene`, `step_round`, goals, `result`), `core/rounds.ts` (the plane's `RoundRef`, `chart`, the daily, on `$kit/games/play2d/rounds`), `core/progress.ts` (the kit's schema and `better`) |
 | Proof | `core/autopilot.ts` (`autopilot`, `fly`), `core/chart.worker.ts` (the kit's `serve_chart`; `work_out_chart` from `$kit/games/play2d/chart-job`) |
 | Cockpit | `core/cockpit.ts` (each plane's lever detents and flap notches), `core/controls.svelte.ts` (lever notch, trim, flaps, facing, brake ramp, stick from keys, pad or mouse, the crew walk), `pitch-pad.svelte`, the kit's `Lever` |
-| Screen | `airfield.app.svelte` (loop, camera, HUD, cards, rounds), `frame.svelte` (toolbar ending in the kit's ⤢ `FullScreenButton` and dropped while the window is immersive, ADR-101; board, touch controls, mouse drag, pinch). Full screen: the HUD keeps clear of the exit button (`min-h` and `right` from the window's `--immersive-inset-*`), so the camera's top inset and the profile under the HUD move down with it, `core/draw.ts`, `core/art.ts` (each plane's drawing), `core/sound.ts` (on the kit's `GameSounds`), `settings-panel.svelte` |
+| Screen | `airfield.app.svelte` (loop, camera, HUD, cards, rounds), `frame.svelte` (toolbar ending in the kit's ⤢ `FullScreenButton` and dropped while the window is immersive, ADR-101; board, on-screen controls, mouse drag, pinch). Full screen: the HUD keeps clear of the exit button (`min-h` and `right` from the window's `--immersive-inset-*`), so the camera's top inset and the profile under the HUD move down with it, `core/draw.ts`, `core/art.ts` (each plane's drawing), `core/sound.ts` (on the kit's `GameSounds`), `settings-panel.svelte` |
 
 ## How it works
 
@@ -145,7 +145,7 @@ In a round the ground is the course's polyline, filled grass and earth; strips a
 
 ### Controls
 
-| Action | Keys | Touch | Mouse |
+| Action | Keys | On-screen (touch, or the mouse with Always) | Mouse |
 |---|---|---|---|
 | Lever | Shift / E up a notch, Ctrl / Q down (per plane: see Cockpit) | the kit's `Lever`, left | |
 | Pitch | W/S or ↑/↓: the stick moves at 0.7 /s while held, springs back to the trim at 5 /s; every input goes through an expo (`0.6 s³ + 0.4 s`) | the pitch pad, right, back to centre on `lostpointercapture` | vertical drag on the board |
@@ -157,7 +157,7 @@ In a round the ground is the course's polyline, filled grass and earth; strips a
 | Rounds | Enter starts, flies, next level or tries again; R restarts; Esc pauses or closes a card | the card's buttons, Pause | |
 | Other | Esc pause, R apron (hub), + − zoom | | wheel zoom |
 
-Settings › Pitch: "Pilot" (default) or "Up is up". The first-flight hint is per plane (lift-off speed, the airliner's pull to rotate, the glider's winch and airbrakes). The window pauses when it loses focus.
+Settings › Pitch: "Pilot" (default) or "Up is up". Settings › On-screen controls (`onscreen` in `settings.json`, the kit's `OnScreen` from `$kit/games/play2d/onscreen`): Auto (default; shown while the primary pointer is coarse, a `MediaQuery` in `frame.svelte`), Always (shown on desktop too, driven by the mouse through the same pointer events, sized smaller for a fine pointer: 36 px buttons and knob, a 9.5 rem lever and pad, 10 rem when floating) or Never (hidden even on a touch screen, so a touchscreen laptop flies on keys). Shown controls take the touch layout: a row under the board, or floating over its sides when the stage is wider than `OVERLAY_ASPECT`, and the camera's insets follow the measured boxes either way, so they never cover the plane or the HUD. A file from before the setting reads as Auto. With Never the first-flight hint gives the keys on any screen. The first-flight hint is per plane (lift-off speed, the airliner's pull to rotate, the glider's winch and airbrakes). The window pauses when it loses focus.
 
 ### Sound
 

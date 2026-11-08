@@ -1,5 +1,6 @@
 import { best_schema, progress_schema_of } from "$kit/games/play2d/progress";
 import { z } from "zod";
+import { ONSCREEN_MODES, OnScreen } from "$kit/games/play2d/onscreen";
 import { BODY_IDS, BodyId } from "./bodies";
 import { MISSIONS } from "./missions";
 import { SHIP_IDS, ShipId } from "./ships";
@@ -22,11 +23,12 @@ export const settings_schema = z.object({
   wind: z.boolean().catch(false),
   infinite_fuel: z.boolean().catch(false),
   sound: z.boolean().catch(true),
+  onscreen: z.enum(ONSCREEN_MODES).catch(OnScreen.AUTO),
   seen_hint: z.boolean().catch(false),
 });
 export type Settings = z.infer<typeof settings_schema>;
 
-export const DEFAULT_SETTINGS: Settings = { ship: ShipId.LANDER, body: BodyId.MOON, air: true, wind: false, infinite_fuel: false, sound: true, seen_hint: false };
+export const DEFAULT_SETTINGS: Settings = { ship: ShipId.LANDER, body: BodyId.MOON, air: true, wind: false, infinite_fuel: false, sound: true, onscreen: OnScreen.AUTO, seen_hint: false };
 
 /** The arcade game's `storage.json`, read once: its landings and the ships it had landed carry on into Frequent flyer and Fleet pilot. */
 export const LEGACY_FILE = "storage.json";

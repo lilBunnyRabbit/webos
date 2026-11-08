@@ -16,7 +16,7 @@ A side-view lander sim at real scale, in the Harbour and Airfield pattern. Three
 | Proof | `core/autopilot.ts` (`autopilot`, `fly`), `core/chart.worker.ts` (the kit's `serve_chart`) |
 | Base | `core/base.ts` (`build_base`: the hangar pad, the gates, free-flight air and wind) |
 | Controls | `core/lever.ts` (the detents round the hover throttle), `core/controls.svelte.ts` (lever notch, turn and burn from keys or touch), the kit's `Lever` |
-| Screen | `lunar-lander.app.svelte` (loop, camera, HUD, cards, missions), `frame.svelte` (toolbar, board, touch controls, pinch), `core/draw.ts`, `core/art.ts` (each ship's drawing as data), `core/draw-ship.ts` (`paint_ship`, shared by the board and the hangar's `ship-thumb.svelte`), `core/sound.ts` (on the kit's `GameSounds`), `settings-panel.svelte` |
+| Screen | `lunar-lander.app.svelte` (loop, camera, HUD, cards, missions), `frame.svelte` (toolbar, board, on-screen controls, pinch), `core/draw.ts`, `core/art.ts` (each ship's drawing as data), `core/draw-ship.ts` (`paint_ship`, shared by the board and the hangar's `ship-thumb.svelte`), `core/sound.ts` (on the kit's `GameSounds`), `settings-panel.svelte` |
 
 ## How it works
 
@@ -100,7 +100,7 @@ Free flight follows the settings: Air (the body's own air; off is a vacuum), Win
 
 ### Controls
 
-| Action | Keys | Touch |
+| Action | Keys | On-screen (touch, or the mouse with Always) |
 |---|---|---|
 | Lever | W, ↑ or Shift up a notch; S, ↓ or Ctrl down | the kit's `Lever`, left |
 | Full burn | Space, held | Burn, held |
@@ -109,6 +109,8 @@ Free flight follows the settings: Air (the body's own air; off is a vacuum), Win
 | Other | R hangar (base), + − or the wheel zoom (0.4 to 8 ×), 1–3 pick a ship in the hangar | pinch zoom |
 
 The lever's detents (`lever.ts`), bottom to top: Off, Low (0.5 h), Sink (0.8 h), **Hover** (h), Rise (h + 0.35 (1 − h)), Full, where h is the throttle that hovers the ship as it is now (body and cargo), so the notches move when cargo comes on. The `Lever`'s neutral is Hover: above it the thumb is primary, below it warning. The window pauses when it loses focus.
+
+Settings › On-screen controls (`onscreen` in `settings.json`, the kit's `OnScreen` from `$kit/games/play2d/onscreen`): Auto (default; shown while the primary pointer is coarse, a `MediaQuery` in `frame.svelte`), Always (shown on desktop too, driven by the mouse through the same pointer events and `lostpointercapture`, sized smaller for a fine pointer: a 44 px Burn, 56 × 72 px turn buttons, a 9.5 rem lever, 10 rem when floating) or Never (hidden even on a touch screen). Shown controls take the touch layout, a row under the board or floating over its sides past `OVERLAY_ASPECT`, and the camera's insets follow their measured boxes. A file from before the setting reads as Auto. With Never the first-flight hint gives the keys on any screen.
 
 ### Camera and drawing
 

@@ -5,8 +5,10 @@
   import { Button, IconButton, StatusBar, Toolbar } from "$lib/core/components/ui";
   import { ArrowArcLeft as TurnLeftIcon, ArrowArcRight as TurnRightIcon } from "phosphor-svelte";
   import { FullScreenButton, Lever } from "$kit/components/play2d";
+  import { controls_shown, type OnScreen } from "$kit/games/play2d/onscreen";
   import { read_palette, type Palette } from "$kit/games/play2d/palette";
   import type { Snippet } from "svelte";
+  import { MediaQuery } from "svelte/reactivity";
   import type { Controls } from "./core/controls.svelte";
   import { read_scenery, type Scenery } from "./core/draw";
   import { HOVER_NOTCH } from "./core/lever";
@@ -20,6 +22,7 @@
   interface Props {
     label: string;
     controls: Controls;
+    onscreen: OnScreen;
     /** Held sideways the touch controls float over the board; hidden while a card is up so it stays in sight. */
     controls_idle: boolean;
     /** The pods turn by splitting their thrust, so the buttons say so. */
@@ -45,6 +48,7 @@
   let {
     label,
     controls,
+    onscreen,
     controls_idle,
     split,
     engage,
@@ -67,6 +71,8 @@
   const system = $derived(kernel.service<SettingsService>("settings"));
   const { window: win } = get_app_context();
   let root: HTMLDivElement | undefined = $state();
+  const coarse = new MediaQuery("(pointer: coarse)", false);
+  const shown = $derived(controls_shown(onscreen, coarse.current));
 
   const pinch = new Map<number, { x: number; y: number }>();
   let pinch_start: { distance: number; zoom: number } | null = null;
@@ -161,7 +167,7 @@
 <svelte:window onkeydown={on_window_keydown} onkeyup={on_keyup} onblur={onrelease} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={root} class={cn("ll-root grid h-full [container:ll-app/size]", win.immersive ? "grid-rows-[1fr_auto]" : "grid-rows-[auto_1fr_auto]")} {onkeydown}>
+<div bind:this={root} class={cn("ll-root grid h-full [container:ll-app/size]", win.immersive ? "grid-rows-[1fr_auto]" : "grid-rows-[auto_1fr_auto]", shown && "ll-onscreen")} {onkeydown}>
   {#if !win.immersive}
     <Toolbar class="ll-toolbar">
       {@render toolbar()}
@@ -188,7 +194,7 @@
         {@render overlay()}
       </div>
 
-      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} class={cn("ll-left hidden touch-none items-end select-none pointer-coarse:flex", controls_idle && "ll-idle")}>
+      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} class={cn("ll-left touch-none items-end select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
         <Lever
           class="ll-lever-size ll-face rounded-xl p-1.5"
           notch={controls.notch}
@@ -198,9 +204,9 @@
           onchange={set_lever}
         />
       </div>
-      <div class={cn("ll-middle hidden touch-none select-none pointer-coarse:flex", controls_idle && "ll-idle")}>
+      <div class={cn("ll-middle touch-none select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
         <Button
-          class="ll-face h-14 w-full rounded-xl pointer-coarse:h-14"
+          class="ll-face h-11 w-full rounded-xl pointer-coarse:h-14"
           variant={controls.held_burn ? "primary" : "secondary"}
           aria-pressed={controls.held_burn}
           onpointerdown={hold_burn}
@@ -208,7 +214,7 @@
           oncontextmenu={(event) => event.preventDefault()}>Burn</Button
         >
       </div>
-      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} class={cn("ll-right hidden touch-none items-end justify-end gap-2 select-none pointer-coarse:flex", controls_idle && "ll-idle")}>
+      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} class={cn("ll-right touch-none items-end justify-end gap-2 select-none", shown ? "flex" : "hidden", controls_idle && "ll-idle")}>
         <IconButton
           class="ll-face ll-turn rounded-xl"
           variant={controls.held_turn < 0 ? "primary" : "secondary"}
@@ -271,6 +277,23 @@
     height: min(5.5rem, 22cqh);
   }
 
+  @media (pointer: fine) {
+    .ll-left :global(.ll-lever-size) {
+      height: min(9.5rem, 30cqh);
+    }
+
+    .ll-right :global(.ll-turn) {
+      width: 3.5rem;
+      height: min(4.5rem, 22cqh);
+    }
+  }
+
+  .ll-onscreen .ll-layout {
+    grid-template:
+      "board board board" minmax(0, 1fr)
+      "left middle right" auto / auto minmax(0, 1fr) auto;
+  }
+
   @media (pointer: coarse) {
     .ll-stage {
       padding: 0;
@@ -278,62 +301,79 @@
 
     .ll-layout {
       padding: 0.5rem;
-      grid-template:
-        "board board board" minmax(0, 1fr)
-        "left middle right" auto / auto minmax(0, 1fr) auto;
+    }
+  }
+
+  /* Must match OVERLAY_ASPECT: sideways the board takes the whole stage and the controls float over its sides. */
+  @container ll-stage (aspect-ratio > 1.25) {
+    .ll-onscreen .ll-layout {
+      position: relative;
+      grid-template: "board" minmax(0, 1fr) / minmax(0, 1fr);
     }
 
-    /* Must match OVERLAY_ASPECT: held sideways the board takes the whole stage and the controls float over its sides. */
-    @container ll-stage (aspect-ratio > 1.25) {
+    .ll-onscreen .ll-left,
+    .ll-onscreen .ll-right,
+    .ll-onscreen .ll-middle {
+      grid-area: auto;
+      position: absolute;
+      z-index: 1;
+      bottom: 0.75rem;
+    }
+
+    .ll-onscreen .ll-left {
+      left: 0.75rem;
+    }
+
+    .ll-onscreen .ll-right {
+      right: 0.75rem;
+    }
+
+    .ll-onscreen .ll-middle {
+      left: 50%;
+      translate: -50% 0;
+      width: 8rem;
+    }
+
+    .ll-onscreen .ll-idle {
+      visibility: hidden;
+    }
+
+    .ll-onscreen .ll-left :global(.ll-lever-size) {
+      height: min(12rem, 58cqh);
+    }
+
+    .ll-onscreen .ll-right :global(.ll-turn) {
+      height: min(6rem, 40cqh);
+    }
+
+    .ll-onscreen :global(.ll-face) {
+      background: color-mix(in oklch, var(--background) 55%, transparent);
+      backdrop-filter: blur(2px);
+    }
+
+    @media (pointer: fine) {
+      .ll-onscreen .ll-left :global(.ll-lever-size) {
+        height: min(10rem, 45cqh);
+      }
+
+      .ll-onscreen .ll-right :global(.ll-turn) {
+        height: min(4.5rem, 30cqh);
+      }
+
+      .ll-onscreen .ll-middle {
+        width: 6.5rem;
+      }
+    }
+
+    @media (pointer: coarse) {
       .ll-layout {
         position: relative;
         padding: 0;
-        grid-template: "board" minmax(0, 1fr) / minmax(0, 1fr);
       }
 
       .ll-board {
         border-radius: 0;
         box-shadow: none;
-      }
-
-      .ll-left,
-      .ll-right,
-      .ll-middle {
-        grid-area: auto;
-        position: absolute;
-        z-index: 1;
-        bottom: 0.75rem;
-      }
-
-      .ll-left {
-        left: 0.75rem;
-      }
-
-      .ll-right {
-        right: 0.75rem;
-      }
-
-      .ll-middle {
-        left: 50%;
-        translate: -50% 0;
-        width: 8rem;
-      }
-
-      .ll-idle {
-        visibility: hidden;
-      }
-
-      .ll-left :global(.ll-lever-size) {
-        height: min(12rem, 58cqh);
-      }
-
-      .ll-right :global(.ll-turn) {
-        height: min(6rem, 40cqh);
-      }
-
-      .ll-root :global(.ll-face) {
-        background: color-mix(in oklch, var(--background) 55%, transparent);
-        backdrop-filter: blur(2px);
       }
     }
   }

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { get_app_context } from "$lib/core/contexts/app";
   import { cn } from "$lib/core/utils";
+  import { OnScreen } from "$kit/games/play2d/onscreen";
   import { Badge, BoardOverlay, Button, IconButton, Segmented, Spinner } from "$lib/core/components/ui";
   import { ImmersiveNotch, KeyHint, RoundCard } from "$kit/components/play2d";
   import { daily_seed, format_time, track_play } from "$kit/games";
@@ -721,10 +722,12 @@
   {#if round}<Button size="sm" variant="quiet" onclick={to_hub}>Base</Button>{:else}<Button size="sm" variant="quiet" onclick={to_base}>Hangar</Button>{/if}
   <SettingsPanel
     sound={settings.sound}
+    onscreen={settings.onscreen}
     air={settings.air}
     wind={settings.wind}
     infinite_fuel={settings.infinite_fuel}
     onsound={set_sound}
+    ononscreen={(mode) => (settings_file.value.onscreen = mode)}
     onair={(on) => (settings_file.value.air = on)}
     onwind={(on) => (settings_file.value.wind = on)}
     oninfinite={(on) => (settings_file.value.infinite_fuel = on)}
@@ -827,8 +830,8 @@
       style:top="{overlay_height + 16 + (profile_shown && tall ? profile_width * 0.36 + 8 + notch.top : 0)}px"
       style:right="{profile_shown && !tall ? profile_width + 16 : 8}px"
     >
-      <span class="pointer-fine:hidden">Push the lever to Rise to lift off, Hover holds you still. The arrows on the right turn the ship; land on a pad to open its mission.</span>
-      <span class="hidden pointer-fine:inline">W raises the lever a notch, S lowers it: Rise lifts off, Hover holds you still. A and D turn, Space burns full. Land on a pad to open its mission.</span>
+      <span class={cn("pointer-fine:hidden", settings.onscreen === OnScreen.NEVER && "hidden")}>Push the lever to Rise to lift off, Hover holds you still. The arrows on the right turn the ship; land on a pad to open its mission.</span>
+      <span class={cn("hidden pointer-fine:inline", settings.onscreen === OnScreen.NEVER && "inline")}>W raises the lever a notch, S lowers it: Rise lifts off, Hover holds you still. A and D turn, Space burns full. Land on a pad to open its mission.</span>
     </p>
   {/if}
 
@@ -995,6 +998,7 @@
     label="Lunar Lander. W and S move the throttle lever, Space burns full, A and D turn, Escape pauses."
     {controls}
     split={spec.steering === Steering.SPLIT}
+    onscreen={settings.onscreen}
     controls_idle={crashed || done || waiting || !!card || hangar_card || flight.status === Status.PAUSED}
     {engage}
     onkeydown={on_keydown}

@@ -6,8 +6,10 @@
   import { CaretLeft as CaretLeftIcon, CaretRight as CaretRightIcon } from "phosphor-svelte";
   import { FullScreenButton, Lever } from "$kit/components/play2d";
   import { clamp_zoom } from "$kit/games/play2d/camera";
+  import { controls_shown, type OnScreen } from "$kit/games/play2d/onscreen";
   import { read_palette, type Palette } from "$kit/games/play2d/palette";
   import type { Snippet } from "svelte";
+  import { MediaQuery } from "svelte/reactivity";
   import { PitchMode, type Controls } from "./core/controls.svelte";
   import { read_scenery, type Scenery } from "./core/draw";
   import PitchPad from "./pitch-pad.svelte";
@@ -23,6 +25,7 @@
     /** The turn buttons only work on the ground; in the air they stay in place, disabled, so the layout doesn't jump. */
     on_ground: boolean;
     pitch: PitchMode;
+    onscreen: OnScreen;
     /** Held sideways the touch controls float over the board; hidden while a card is up so it stays in sight. */
     controls_idle: boolean;
     /** A control was used: may resume; `false` ignores it. */
@@ -49,6 +52,7 @@
     controls,
     on_ground,
     pitch,
+    onscreen,
     controls_idle,
     engage,
     ontrim,
@@ -71,6 +75,8 @@
   const system = $derived(kernel.service<SettingsService>("settings"));
   const { window: win } = get_app_context();
   let root: HTMLDivElement | undefined = $state();
+  const coarse = new MediaQuery("(pointer: coarse)", false);
+  const shown = $derived(controls_shown(onscreen, coarse.current));
 
   const pinch = new Map<number, { x: number; y: number }>();
   let pinch_start: { distance: number; zoom: number } | null = null;
@@ -197,7 +203,7 @@
 <svelte:window onkeydown={on_window_keydown} onkeyup={on_keyup} onblur={onrelease} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div bind:this={root} class={cn("af-root grid h-full [container:af-app/size]", win.immersive ? "grid-rows-[1fr_auto]" : "grid-rows-[auto_1fr_auto]")} {onkeydown}>
+<div bind:this={root} class={cn("af-root grid h-full [container:af-app/size]", win.immersive ? "grid-rows-[1fr_auto]" : "grid-rows-[auto_1fr_auto]", shown && "af-onscreen")} {onkeydown}>
   {#if !win.immersive}
     <Toolbar class="af-toolbar">
       {@render toolbar()}
@@ -225,7 +231,7 @@
         {@render overlay()}
       </div>
 
-      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} class={cn("af-left hidden touch-none items-end select-none pointer-coarse:flex", controls_idle && "af-idle")}>
+      <div bind:clientWidth={left_box.width} bind:clientHeight={left_box.height} class={cn("af-left touch-none items-end select-none", shown ? "flex" : "hidden", controls_idle && "af-idle")}>
         <Lever
           class="af-lever-size af-face rounded-xl p-1.5"
           notch={controls.notch}
@@ -236,19 +242,19 @@
           onchange={set_lever}
         />
       </div>
-      <div class={cn("af-middle hidden touch-none grid-cols-2 gap-1.5 select-none pointer-coarse:grid", controls_idle && "af-idle")}>
-        <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(-1)} aria-label="Flaps up">Flaps ▲</Button>
-        <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(1)} aria-label="Flaps down">Flaps ▼</Button>
+      <div class={cn("af-middle touch-none grid-cols-2 gap-1.5 select-none", shown ? "grid" : "hidden", controls_idle && "af-idle")}>
+        <Button class="af-face h-9 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(-1)} aria-label="Flaps up">Flaps ▲</Button>
+        <Button class="af-face h-9 pointer-coarse:h-11" variant="secondary" disabled={controls.cockpit.flaps.length < 2} onclick={() => flaps(1)} aria-label="Flaps down">Flaps ▼</Button>
         <span class="af-flaps-label af-face col-span-2 rounded-md px-1 text-center text-2xs font-medium text-foreground/80">Flaps {controls.flap_name}</span>
-        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing < 0} label="Turn to face left" onclick={() => face(-1)} onpointerdown={(event) => walk(event, -1)} onlostpointercapture={() => (controls.held_walk = 0)}>
+        <IconButton class="af-face h-9 w-full min-w-9 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full pointer-coarse:min-w-11" variant="secondary" disabled={!on_ground} pressed={controls.facing < 0} label="Turn to face left" onclick={() => face(-1)} onpointerdown={(event) => walk(event, -1)} onlostpointercapture={() => (controls.held_walk = 0)}>
           <CaretLeftIcon weight="bold" />
         </IconButton>
-        <IconButton class="af-face h-11 w-full min-w-11 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full" variant="secondary" disabled={!on_ground} pressed={controls.facing > 0} label="Turn to face right" onclick={() => face(1)} onpointerdown={(event) => walk(event, 1)} onlostpointercapture={() => (controls.held_walk = 0)}>
+        <IconButton class="af-face h-9 w-full min-w-9 rounded-xl pointer-coarse:h-11 pointer-coarse:w-full pointer-coarse:min-w-11" variant="secondary" disabled={!on_ground} pressed={controls.facing > 0} label="Turn to face right" onclick={() => face(1)} onpointerdown={(event) => walk(event, 1)} onlostpointercapture={() => (controls.held_walk = 0)}>
           <CaretRightIcon weight="bold" />
         </IconButton>
-        <Button class="af-face h-11 pointer-coarse:h-11" variant="secondary" onclick={trim}>Trim</Button>
+        <Button class="af-face h-9 pointer-coarse:h-11" variant="secondary" onclick={trim}>Trim</Button>
         <Button
-          class="af-face h-11 pointer-coarse:h-11"
+          class="af-face h-9 pointer-coarse:h-11"
           variant={controls.held_brake ? "primary" : "secondary"}
           aria-pressed={controls.held_brake}
           onpointerdown={hold_brake}
@@ -256,7 +262,7 @@
           oncontextmenu={(event) => event.preventDefault()}>Brake</Button
         >
       </div>
-      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} class={cn("af-right hidden touch-none items-end justify-end select-none pointer-coarse:flex", controls_idle && "af-idle")}>
+      <div bind:clientWidth={right_box.width} bind:clientHeight={right_box.height} class={cn("af-right touch-none items-end justify-end select-none", shown ? "flex" : "hidden", controls_idle && "af-idle")}>
         <PitchPad class="af-pad-size af-face" value={controls.held_stick} pilot={pitch === PitchMode.PILOT} onchange={set_pad} onengage={engage} />
       </div>
     </div>
@@ -298,6 +304,23 @@
     width: 5.5rem;
   }
 
+  @media (pointer: fine) {
+    .af-left :global(.af-lever-size) {
+      height: min(9.5rem, 30cqh);
+    }
+
+    .af-right :global(.af-pad-size) {
+      height: min(9.5rem, 30cqh);
+      width: 4.5rem;
+    }
+  }
+
+  .af-onscreen .af-layout {
+    grid-template:
+      "board board board" minmax(0, 1fr)
+      "left middle right" auto / auto minmax(0, 1fr) auto;
+  }
+
   @media (pointer: coarse) {
     .af-stage {
       padding: 0;
@@ -305,67 +328,77 @@
 
     .af-layout {
       padding: 0.5rem;
-      grid-template:
-        "board board board" minmax(0, 1fr)
-        "left middle right" auto / auto minmax(0, 1fr) auto;
+    }
+  }
+
+  /* Must match OVERLAY_ASPECT: sideways the board takes the whole stage and the controls float over its sides. */
+  @container af-stage (aspect-ratio > 1.25) {
+    .af-onscreen .af-layout {
+      position: relative;
+      grid-template: "board" minmax(0, 1fr) / minmax(0, 1fr);
     }
 
-    /* Must match OVERLAY_ASPECT: held sideways the board takes the whole stage and the controls float over its sides. */
-    @container af-stage (aspect-ratio > 1.25) {
+    .af-onscreen .af-left,
+    .af-onscreen .af-right,
+    .af-onscreen .af-middle {
+      grid-area: auto;
+      position: absolute;
+      z-index: 1;
+      bottom: 0.75rem;
+    }
+
+    .af-onscreen .af-left {
+      left: 0.75rem;
+    }
+
+    .af-onscreen .af-right {
+      right: 0.75rem;
+    }
+
+    .af-onscreen .af-middle {
+      left: 50%;
+      translate: -50% 0;
+      width: max-content;
+      grid-template-columns: repeat(6, auto);
+    }
+
+    .af-onscreen .af-flaps-label {
+      display: none;
+    }
+
+    .af-onscreen .af-idle {
+      visibility: hidden;
+    }
+
+    .af-onscreen .af-left :global(.af-lever-size) {
+      height: min(12rem, 58cqh);
+    }
+
+    .af-onscreen .af-right :global(.af-pad-size) {
+      height: min(12rem, 58cqh);
+    }
+
+    .af-onscreen :global(.af-face) {
+      background: color-mix(in oklch, var(--background) 55%, transparent);
+      backdrop-filter: blur(2px);
+    }
+
+    @media (pointer: fine) {
+      .af-onscreen .af-left :global(.af-lever-size),
+      .af-onscreen .af-right :global(.af-pad-size) {
+        height: min(10rem, 45cqh);
+      }
+    }
+
+    @media (pointer: coarse) {
       .af-layout {
         position: relative;
         padding: 0;
-        grid-template: "board" minmax(0, 1fr) / minmax(0, 1fr);
       }
 
       .af-board {
         border-radius: 0;
         box-shadow: none;
-      }
-
-      .af-left,
-      .af-right,
-      .af-middle {
-        grid-area: auto;
-        position: absolute;
-        z-index: 1;
-        bottom: 0.75rem;
-      }
-
-      .af-left {
-        left: 0.75rem;
-      }
-
-      .af-right {
-        right: 0.75rem;
-      }
-
-      .af-middle {
-        left: 50%;
-        translate: -50% 0;
-        width: max-content;
-        grid-template-columns: repeat(6, auto);
-      }
-
-      .af-flaps-label {
-        display: none;
-      }
-
-      .af-idle {
-        visibility: hidden;
-      }
-
-      .af-left :global(.af-lever-size) {
-        height: min(12rem, 58cqh);
-      }
-
-      .af-right :global(.af-pad-size) {
-        height: min(12rem, 58cqh);
-      }
-
-      .af-root :global(.af-face) {
-        background: color-mix(in oklch, var(--background) 55%, transparent);
-        backdrop-filter: blur(2px);
       }
     }
   }

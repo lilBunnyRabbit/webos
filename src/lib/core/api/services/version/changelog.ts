@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.13.0",
+    date: "2026-11-08",
+    title: "On-screen flight controls",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["airfield", "lunar-lander"],
+        text: "Airfield and Lunar Lander can show their on-screen controls on a desktop too, to fly with the mouse, or hide them on a touch screen: pick Auto, Always or Never in each game's settings.",
+      },
+    ],
+  },
+  {
     version: "4.12.1",
     date: "2026-11-08",
     title: "A steady Lunar Lander view",

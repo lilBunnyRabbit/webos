@@ -13,6 +13,7 @@ The strip top right shows the whole area: the ground, the pads (the next one mar
 - **A** and **D** (or **←** **→**) turn. The lander and the shuttle turn on thrusters and stop turning when you let go. The **twin pods** have no thrusters: A and D push one pod harder than the other, so they only turn under power.
 - To move sideways, lean: the engine pushes the way the top leans. Lean back to stop.
 - On a touch screen: the lever on the left, the turn buttons on the right, **Burn** between them. Pinch to zoom.
+- Settings › **On-screen controls**: **Auto** shows them on a touch screen, **Always** on any screen (they work with the mouse too), **Never** hides them even on a touch screen.
 - **Esc** pauses, **R** puts you back in the hangar (in a mission: restarts), the scroll wheel or **+** **−** zoom.
 
 ## Landing

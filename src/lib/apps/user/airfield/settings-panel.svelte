@@ -1,18 +1,21 @@
 <script lang="ts">
   import { IconButton, Segmented, Switch } from "$lib/core/components/ui";
   import { SlidersHorizontal as SlidersIcon } from "phosphor-svelte";
+  import { ONSCREEN_OPTIONS, type OnScreen } from "$kit/games/play2d/onscreen";
   import { PitchMode } from "./core/controls.svelte";
 
   interface Props {
     sound: boolean;
     pitch: PitchMode;
+    onscreen: OnScreen;
     onsound: (on: boolean) => void;
     onpitch: (mode: PitchMode) => void;
+    ononscreen: (mode: OnScreen) => void;
     onfocus: () => void;
     panel?: HTMLDivElement;
   }
 
-  let { sound, pitch, onsound, onpitch, onfocus, panel = $bindable() }: Props = $props();
+  let { sound, pitch, onscreen, onsound, onpitch, ononscreen, onfocus, panel = $bindable() }: Props = $props();
 
   const uid = $props.id();
   const PITCH_OPTIONS = [
@@ -48,6 +51,10 @@
     <div class="flex flex-col gap-1.5">
       <span class="flex flex-col text-ui">Pitch <span class="text-2xs text-foreground/65">Up is up: W, ↑ or dragging up raise the nose. Pilot: they push the stick forward, as in a cockpit</span></span>
       <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="Pitch" options={PITCH_OPTIONS} bind:value={() => pitch, onpitch} />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <span class="flex flex-col text-ui">On-screen controls <span class="text-2xs text-foreground/65">The lever, the pitch pad and the buttons. Auto shows them on a touch screen</span></span>
+      <Segmented size="sm" class="flex w-full [&>label]:flex-1 [&>label]:justify-center" label="On-screen controls" options={ONSCREEN_OPTIONS} bind:value={() => onscreen, ononscreen} />
     </div>
   </div>
 </div>

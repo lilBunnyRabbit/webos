@@ -63,7 +63,7 @@
   <span class="absolute inset-x-0 top-1.5 text-center text-2xs font-medium text-foreground/65" aria-hidden="true">{pilot ? "Push" : "Nose up"}</span>
   <span class="absolute inset-x-0 bottom-1.5 text-center text-2xs font-medium text-foreground/65" aria-hidden="true">{pilot ? "Pull" : "Nose down"}</span>
   <span class="af-centre absolute inset-x-4 top-1/2 h-px" aria-hidden="true"></span>
-  <span class={cn("af-knob absolute left-1/2 size-11 -translate-1/2 rounded-full", value !== null && "af-held")} style:top="{top}%" aria-hidden="true"></span>
+  <span class={cn("af-knob absolute left-1/2 size-9 -translate-1/2 pointer-coarse:size-11 rounded-full", value !== null && "af-held")} style:top="{top}%" aria-hidden="true"></span>
 </div>
 
 <style>
