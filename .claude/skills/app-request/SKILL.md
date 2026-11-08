@@ -100,7 +100,7 @@ Small features may use one `## Decisions` list instead of per-topic headings.
 
 **ADR** when it's architectural: a new app with a format or algorithm, a new public API (`define_app`, `IService`, props, service interface), a new state layer, a new kind in a core type. Next free number in `docs/adrs/`, a row in `docs/adrs/README.md` (Status: Accepted). An extension of an existing ADR gets a dated revision note on that ADR instead.
 
-Docs are uncommitted at this point. The builder copies them into its worktree and commits them with the build.
+Commit the brainstorm, the ADR and its index row as `docs:` on master before spawning (unpushed is fine). A worktree starts from the remote default branch, so the builder gets the base sha and fast-forwards onto it; docs left uncommitted for it to copy clashed with the main checkout on every merge.
 
 ## 6. Build
 

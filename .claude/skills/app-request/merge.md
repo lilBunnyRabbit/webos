@@ -11,9 +11,8 @@ Run once per finished `app-builder` agent, in the order they report. Pushes go i
 
 - [ ] `git branch --show-current` prints `master`. If not, stop and find out why.
 - [ ] `git status` — account for every change. Someone else's uncommitted work is not yours: leave it, don't stage it.
-- [ ] Remove the untracked copies of docs the agent committed (the brainstorm, the ADR): `rm docs/brainstorm/… docs/adrs/…`. Compare first if the local copy changed after the agent copied it; fold the difference in after the pick.
 - [ ] Stash unrelated local edits to files the pick touches (e.g. a pending `docs/adrs/README.md` row): `git stash push -- <paths>`.
-- [ ] `git cherry-pick <commits>` in order.
+- [ ] `git merge --ff-only <branch>` when master hasn't moved since the base sha; otherwise `git cherry-pick <commits>` in order.
 
 ## Conflicts
 

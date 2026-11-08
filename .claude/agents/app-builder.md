@@ -12,7 +12,7 @@ You build one item in a WebOS worktree. The decisions are already made, in the A
 ## Read first
 
 1. `CLAUDE.md` (whole), `docs/PRINCIPLES.md`, `docs/CONVENTIONS.md`, `docs/design/README.md`.
-2. The ADR and brainstorm from the prompt. They may be uncommitted in the main checkout: copy them into your worktree (and any ADR index row the prompt gives) and commit them with the build.
+2. The ADR and brainstorm from the prompt. They are committed on local master: first run `git merge --ff-only <base sha>` from the prompt in your worktree, which starts from the remote branch.
 3. The `docs/system/` pages and ADRs for every area you touch; `docs/apps/{id}.md` for a listed app.
 4. Similar apps for patterns (file layout, `define_app`, associations, tasks, widgets). Copy the repo's way, don't invent one.
 
@@ -60,7 +60,8 @@ One user-facing sentence in `src/lib/core/api/services/version/changelog.ts`, no
 "Check passes" is not a UI check.
 
 - Start the dev server in your worktree on a free port, never 5173: `bun run dev --port 51xx --strictPort` in the background.
-- Drive it with Playwright Chromium (the repo's `playwright` package) from a script in the session scratchpad, taking screenshots and reading them.
+- Load-only screenshots: `~/dev/hq/knowledge/snippets/bin/pw-shot <url> <scratchpad dir> [--widths 1440,1024,390] [--themes dark,light]`, then read the images.
+- Flows that need clicks: a Playwright script using the repo's `playwright` package. It resolves only from inside the repo, so run it from a gitignored path in the worktree and delete it after; never commit it.
 - Desktop: open the app in a window, use it with mouse and keyboard, resize the window narrow and wide.
 - Mobile: `?platform=mobile` in a context with `viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true`. A desktop Chrome window can't go below about 495 px, so use the emulated context. Check touch targets, nothing cut off or overflowing, panels that stack, no hover-only actions.
 - Test inputs from the prompt (videos, photos) live in the scratchpad; never copy them into the repo.

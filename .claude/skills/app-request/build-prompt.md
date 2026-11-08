@@ -5,10 +5,8 @@ The `app-builder` agent already carries the standing rules (read-first list, har
 ```
 Build {name} ({kind: new app | feature in {id} | OS feature | fix}).
 
-Decisions: {ADR path} and {brainstorm path}. Both are uncommitted in the main
-checkout (/Users/lilbunnyrabbit/dev/orgs/lilbunnyrabbit/webos). Copy them into
-your worktree and commit them with the build. Also copy {ADR index row: "| [058](./058-x.md) | Title | YYYY-MM-DD | Accepted |"}
-into docs/adrs/README.md.
+Base: run `git merge --ff-only {master sha}` in your worktree before anything
+else. It holds the decisions, committed: {ADR path} and {brainstorm path}.
 
 Scope:
 - {what ships in this cut, as decided}
@@ -28,7 +26,7 @@ another build lands first.
 Test inputs: {scratchpad paths of transcoded videos or photos | none}. Never
 copy them into the repo.
 
-Order: {"after X merges, rebase on master" | none}.
+Order: {"after X merges, fast-forward onto its sha" | none}.
 ```
 
 Fix agents (bug, polish, review screenshots) use the same template with the screenshot paths, the exact symptom, and `kind: fix`; no ADR unless the fix changes shape.
