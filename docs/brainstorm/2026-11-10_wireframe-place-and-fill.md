@@ -49,7 +49,7 @@ The constraint behind the placing design: a cursor in empty space has no depth i
 ## Action items
 
 - [x] One app-builder builds the placing tools, the clipboard, Duplicate, the label toggle and faces, as one feature release.
-- [ ] Review, a visual pass, then a push.
+- [x] Review, a visual pass, then a push (4.15.0, 2026-11-10).
 
 ## Next session topics
 
