@@ -56,7 +56,7 @@ export function create_wire(unit: Unit = Unit.CM): Wire {
 }
 
 export function new_id(): string {
-  return crypto.randomUUID().slice(0, 8);
+  return crypto.randomUUID();
 }
 
 export const ORIGIN: Vec3 = { x: 0, y: 0, z: 0 };

@@ -18,11 +18,13 @@ export interface LabelRequest {
   sides: Point[];
   width: number;
   height: number;
+  group?: string;
+  forced?: boolean;
 }
 
 export const LABEL_GAP = 4;
 const PAD = 2;
-const STEPS = [0, 6, 14, 26, 42];
+const STEPS = [0, 6, 14, 24];
 const SLIDES = [0, -0.6, 0.6];
 const CELL = 64;
 
@@ -123,8 +125,9 @@ function candidates(request: LabelRequest): Rect[] {
 
 /**
  * Greedy, in request order: each label takes the first spot, nearest first on its preferred side, that crosses no line
- * and no label placed before it. Failing that, the nearest spot clear of labels, even across a line; a label with no
- * such spot is left out, since stacked text can't be read anyway.
+ * and no label placed before it, and a group stops at its first label. What found no such spot gets a second pass with
+ * the nearest spot clear of labels, even across a line, if its group is still unlabelled; otherwise it's left out,
+ * since stacked text can't be read. A forced label takes its nearest spot whatever it covers.
  */
 export function place_labels(
   requests: readonly LabelRequest[],
@@ -136,22 +139,35 @@ export function place_labels(
   const taken = new Grid<Rect>();
   for (const rect of blocked) taken.add(rect, rect);
   const placed = new Map<string, Rect>();
-  for (const request of requests) {
-    const options = candidates(request);
-    const clear_of_labels = (rect: Rect) => {
-      const padded = grow(rect, PAD);
-      for (const other of taken.near(padded)) if (rects_overlap(padded, other)) return false;
-      return true;
-    };
-    const free = options.find((rect) => {
-      const padded = grow(rect, PAD);
-      for (const line of line_grid.near(padded)) if (segment_hits_rect(line, padded)) return false;
-      return clear_of_labels(rect);
-    });
-    const rect = free ?? options.find(clear_of_labels);
-    if (!rect) continue;
+  const groups = new Set<string>();
+  const clear_of_labels = (rect: Rect) => {
+    const padded = grow(rect, PAD);
+    for (const other of taken.near(padded)) if (rects_overlap(padded, other)) return false;
+    return true;
+  };
+  const clear_of_lines = (rect: Rect) => {
+    const padded = grow(rect, PAD);
+    for (const line of line_grid.near(padded)) if (segment_hits_rect(line, padded)) return false;
+    return true;
+  };
+  const place = (request: LabelRequest, rect: Rect) => {
     placed.set(request.id, rect);
     taken.add(rect, rect);
+    if (request.group) groups.add(request.group);
+  };
+  const later: LabelRequest[] = [];
+  for (const request of requests) {
+    if (request.group && groups.has(request.group)) continue;
+    const options = candidates(request);
+    const free = options.find((rect) => clear_of_lines(rect) && clear_of_labels(rect));
+    if (free) place(request, free);
+    else if (request.forced) place(request, options.find(clear_of_labels) ?? options[0]);
+    else later.push(request);
+  }
+  for (const request of later) {
+    if (request.group && groups.has(request.group)) continue;
+    const rect = candidates(request).find(clear_of_labels);
+    if (rect) place(request, rect);
   }
   return placed;
 }

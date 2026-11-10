@@ -36,11 +36,15 @@ Pitch is clamped to ±90°, yaw wraps. Picking a preset animates the orbit for 2
 
 Points are projected about a pivot. Orbiting turns about the drawing's 3D centre: when an orbit starts, the pivot moves there and the pan takes up the difference so nothing jumps (`repivot`, `projection.ts:120`). Zoom is the app's own clamp, 0.002 to 40 px per mm (`scene.ts`), since the kit's clamp (0.05) can't fit a 50 m fence on a phone.
 
+### Input
+
+Mouse: left-drag from a point strokes (Draw), on empty space it pans; right- or middle-drag orbits, Shift with it pans; the wheel zooms about the pointer. Touch: one finger strokes from a point or pans. Two fingers lock after 10 px to what they did first (`wireframe-canvas.svelte`): moving together orbits; spreading or closing zooms about the midpoint and pans with it. Locking keeps a pinch from turning the view or fading Cavalier's shear. Opening a file shows it in Cavalier, fitted; a load that lands after the drawing was edited, or after New, is dropped with a notice (`open_request`, and the wire compared before and after the read).
+
 ### Axis inference
 
 In a parallel projection the six axis directions (±X, ±Y, ±Z) are six screen directions. `axis_directions` (`projection.ts:188`) lists them for the current basis, minus any axis whose screen length is under 0.2 of the longest: seen almost end-on, a stroke along it would be a guess. A drag from a point picks the direction with the smallest angle to the drag (`nearest_axis`). `overlapping` refuses drawing when two different axes are within 14° of each other on screen, with a hint naming them; Front, Side and Top drop the axis pointing at you and still draw along the other two.
 
-While the drag moves, the stroke shows as a dashed line in its axis colour with a suggested length: the drag projected on the axis in mm, rounded to the smallest of 1, 5, 10, 50, 100, 500, 1000, 5000 mm that's at least 8 px on screen (`round_drag`), or the exact distance when the pointer is over a point that lies on that ray. The suggestion is shown dimmed; the first key typed replaces it. Enter (or ✓) commits the stroke, and the next stroke starts at its end.
+While the drag moves, the stroke shows as a dashed line in its axis colour with a suggested length: the drag projected on the axis in mm, rounded to the smallest of 1, 5, 10, 50, 100, 500, 1000, 5000 mm that's at least 8 px on screen (`round_drag`), or the exact distance when the pointer is over a point that lies on that ray. Every point under the pointer is looked at (`elementsFromPoint`), so of two corners on one pixel the stroke takes the one its ray reaches. A snapped stroke remembers the point (`Editor.snap`) and commits to it exactly, whatever the rounded text says. The suggestion is shown dimmed; the first key typed replaces it and drops the snap. Enter (or ✓) commits the stroke, and the next stroke starts at its end.
 
 Without a drag: type a length, then press X, Y or Z (Shift for minus) or tap a spoke of the ring. The ring (the kit's `DirectionRing`, `$kit/components/length-pad`, shared with Tape Sketch) draws its six spokes along their projected directions, coloured per axis, and picks the spoke nearest the finger on release (lost pointer capture), showing its name in the middle while held; the stroke waiting for its length stays lit. Visually hidden buttons carry the same actions for screen readers.
 
@@ -60,7 +64,13 @@ Move, Extrude and Copy run from the selection bar or M, E, C: the axis panel ope
 
 ### Labels
 
-`build_scene` (`scene.ts`) projects every point and places a label per line in screen space, so labels stay upright at any orbit. A line under 30 px on screen gets no label. Requests go longest line first, each preferring the side of its line away from the drawing's screen centroid. `place_labels` (`labels.ts`) is Tape Sketch's greedy placer (step out from the line, slide along it, first spot that crosses no line and no earlier label or point) with a 64 px grid index for lines and placed labels, since it reruns on every frame of an orbit. With no such spot it takes the nearest one clear of other labels, even across a line, and with none of those the label is left out: stacked text can't be read. Lines lying on top of each other on screen (a box seen square-on) get one label.
+`build_scene` (`scene.ts`) projects every point and places labels in screen space, so they stay upright at any orbit. Not every line gets one:
+
+- Within one connected part (union-find over the lines), lines that are parallel and of the same length share a group (part, direction either way, length to 0.01 mm) and show their length once, on the first of them that finds a spot. A box reads W × D × H; three copied boxes, being three parts, read it three times.
+- The selected lines and the line under the mouse are forced: they always show their own label, placed first.
+- A line under 30 px on screen gets none, unless forced.
+
+Requests go forced first, then longest line first, each preferring the side of its line away from the drawing's screen centroid. `place_labels` (`labels.ts`) is Tape Sketch's greedy placer (step out from the line up to 24 px, slide along it, first spot that crosses no line and no earlier label or point) with a 64 px grid index for lines and placed labels, since it reruns on every frame of an orbit. What finds no such spot gets a second pass, after every group has had its chance, with the nearest spot clear of other labels even across a line; with none, it's left out rather than floated away or stacked. A slope that lies on another line on screen (Front view) isn't parallel to it in 3D, so it keeps its own label. Lengths show to 0.01 mm (2 places in mm, 3 in cm, 5 in m, trailing zeros trimmed).
 
 ### Export
 

@@ -6,7 +6,7 @@
   export interface StrokeEvent {
     from: string | null;
     toward: Point;
-    over: Hit | null;
+    over: Hit[];
     done: boolean;
   }
 </script>
@@ -44,7 +44,9 @@
     onturn,
   }: Props = $props();
 
-  const scene = $derived(build_scene(editor.wire, camera, true));
+  let hover = $state<string | null>(null);
+  const forced = $derived(new Set(hover ? [...editor.selection.lines, hover] : editor.selection.lines));
+  const scene = $derived(build_scene(editor.wire, camera, true, forced));
   const project = $derived(projector(camera));
   const picked_lines = $derived(new Set(editor.selection.lines));
   const picked_points = $derived(new Set(editor.selection.points));
@@ -91,7 +93,11 @@
 
   const pointers = new Map<number, Point>();
   let gesture: Gesture | null = null;
-  let pinch: { mid: Point; distance: number } | null = null;
+  const TwoFinger = { ORBIT: "orbit", PINCH: "pinch" } as const;
+  type TwoFinger = (typeof TwoFinger)[keyof typeof TwoFinger];
+  // Two fingers lock to what they did first, so a pinch never turns the view (or leaves Cavalier) by drifting.
+  const LOCK_AFTER = 10;
+  let pinch: { start_mid: Point; start_distance: number; mid: Point; distance: number; mode: TwoFinger | null } | null = null;
 
   function local(event: PointerEvent | WheelEvent): Point {
     const box = svg!.getBoundingClientRect();
@@ -105,6 +111,14 @@
     if (hit === "point" || hit === "line") return { kind: hit, id };
     if (hit === "origin") return { kind: "origin" };
     return null;
+  }
+
+  function hits_at(event: PointerEvent): Hit[] {
+    return document
+      .elementsFromPoint(event.clientX, event.clientY)
+      .filter((element) => svg!.contains(element))
+      .map((element) => read_hit(element))
+      .filter((hit) => hit !== null);
   }
 
   function stroke_from(hit: Hit | null): string | null | undefined {
@@ -129,8 +143,9 @@
         if (gesture.kind === Kind.STROKE) editor.clear_length();
       }
       const [a, b] = [...pointers.values()];
-      pinch = { mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, distance: Math.hypot(a.x - b.x, a.y - b.y) };
-      begin_orbit();
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const distance = Math.hypot(a.x - b.x, a.y - b.y);
+      pinch = { start_mid: mid, start_distance: distance, mid, distance, mode: null };
       return;
     }
     if (pointers.size > 2) return;
@@ -150,6 +165,10 @@
   }
 
   function on_pointermove(event: PointerEvent) {
+    if (!pointers.size && event.pointerType === "mouse") {
+      const hit = read_hit(event.target);
+      hover = hit?.kind === "line" ? hit.id : null;
+    }
     if (!pointers.has(event.pointerId)) return;
     const p = local(event);
     pointers.set(event.pointerId, p);
@@ -157,10 +176,22 @@
       const [a, b] = [...pointers.values()];
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
       const distance = Math.hypot(a.x - b.x, a.y - b.y);
-      const turned = { ...camera, orbit: orbit_by(camera.orbit, mid.x - pinch.mid.x, mid.y - pinch.mid.y) };
-      camera = { ...turned, view: zoom_at(turned.view, distance / Math.max(1, pinch.distance), mid.x, mid.y) };
-      pinch = { mid, distance };
-      onturn();
+      if (!pinch.mode) {
+        const moved = Math.hypot(mid.x - pinch.start_mid.x, mid.y - pinch.start_mid.y);
+        const spread = Math.abs(distance - pinch.start_distance);
+        if (Math.max(moved, spread) < LOCK_AFTER) return;
+        pinch.mode = spread > moved ? TwoFinger.PINCH : TwoFinger.ORBIT;
+        if (pinch.mode === TwoFinger.ORBIT) begin_orbit();
+      }
+      if (pinch.mode === TwoFinger.ORBIT) {
+        camera = { ...camera, orbit: orbit_by(camera.orbit, mid.x - pinch.mid.x, mid.y - pinch.mid.y) };
+        onturn();
+      } else {
+        const panned = { ...camera.view, offset_x: camera.view.offset_x + mid.x - pinch.mid.x, offset_y: camera.view.offset_y + mid.y - pinch.mid.y };
+        camera = { ...camera, view: zoom_at(panned, distance / Math.max(1, pinch.distance), mid.x, mid.y) };
+      }
+      pinch.mid = mid;
+      pinch.distance = distance;
       return;
     }
     const current = gesture;
@@ -180,11 +211,10 @@
       camera = { ...camera, orbit: orbit_by(camera.orbit, p.x - current.last.x, p.y - current.last.y) };
       onturn();
     } else {
-      const element = document.elementFromPoint(event.clientX, event.clientY);
       onstroke({
         from: stroke_from(current.hit) ?? null,
         toward: { x: p.x - current.start.x, y: p.y - current.start.y },
-        over: read_hit(element),
+        over: hits_at(event),
         done: false,
       });
     }
@@ -207,11 +237,10 @@
       return;
     }
     if (current.kind === Kind.STROKE) {
-      const element = document.elementFromPoint(event.clientX, event.clientY);
       onstroke({
         from: stroke_from(current.hit) ?? null,
         toward: { x: current.last.x - current.start.x, y: current.last.y - current.start.y },
-        over: read_hit(element),
+        over: hits_at(event),
         done: true,
       });
     }
@@ -248,6 +277,7 @@
     onpointermove={on_pointermove}
     onpointercancel={on_pointercancel}
     onlostpointercapture={on_pointerend}
+    onpointerleave={() => (hover = null)}
   >
     {#each guide_lines as guide (guide.axis)}
       <line x1={guide.a.x} y1={guide.a.y} x2={guide.b.x} y2={guide.b.y} class={[AXIS_STROKE[guide.axis], "opacity-40"]} stroke-width="1" stroke-dasharray="4 4" />

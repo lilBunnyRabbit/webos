@@ -19,7 +19,7 @@ Every line runs along X (across), Y (into the depth) or Z (up), at the length yo
 
 ## Look around
 
-- Right-drag or middle-drag turns the view, Shift with it pans, left-drag on empty space pans, the wheel zooms. On a phone two fingers turn and pinch, one finger pans.
+- Right-drag or middle-drag turns the view, Shift with it pans, left-drag on empty space pans, the wheel zooms. On a phone two fingers moved together turn the view, a pinch zooms and pans, one finger pans.
 - The **View** menu (or Alt+1 to Alt+5) has Cavalier, Isometric, Front, Side and Top. Ctrl+0 fits the drawing.
 - When two axes line up on screen you can't draw along them; turn the view a little.
 

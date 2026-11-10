@@ -184,13 +184,20 @@
 
   async function load(path: string) {
     const id = ++open_request;
+    const before = editor.wire;
     loading = true;
     try {
       const opened = await read_path(path);
       if (id !== open_request) return;
+      // An edit made while the file was still loading wins: replacing it would lose work without asking.
+      if (editor.wire !== before) {
+        say(`Didn't open ${base_name(path)}: the drawing changed meanwhile`);
+        return;
+      }
       editor.load(opened);
       file_path = path;
       untitled = base_name(path);
+      camera = { ...camera, orbit: PRESETS[ViewPreset.CAVALIER] };
       fit();
     } catch (reason) {
       if (id === open_request) report_error(app_id, `Couldn't open ${base_name(path)}`, reason);
@@ -207,6 +214,8 @@
 
   async function create() {
     if (!(await discard_ok())) return;
+    open_request++;
+    loading = false;
     editor.load(create_wire(editor.wire.unit));
     file_path = null;
     untitled = `Untitled${EXTENSION}`;
@@ -482,17 +491,29 @@
     return editor.wire.points.length ? null : ORIGIN;
   }
 
-  function suggestion(from: Vec3, direction: AxisDirection, event: StrokeEvent): number {
-    if (event.over?.kind === "point") {
-      const target = position(editor.wire, event.over.id);
-      if (target) {
-        const d = sub3(target, from);
-        const others = AXES.filter((axis) => axis !== direction.axis);
-        const along = d[direction.axis] * direction.sign;
-        if (others.every((axis) => Math.abs(d[axis]) < 0.005) && along > 0) return along;
-      }
+  function on_ray(from: Vec3, direction: { axis: Axis; sign: 1 | -1 }, id: string): number | null {
+    const target = position(editor.wire, id);
+    if (!target) return null;
+    const d = sub3(target, from);
+    const along = d[direction.axis] * direction.sign;
+    const others = AXES.filter((axis) => axis !== direction.axis);
+    return others.every((axis) => Math.abs(d[axis]) < 0.005) && along > 0 ? along : null;
+  }
+
+  // Of the points under the pointer, the one the stroke's ray reaches: two corners can share a pixel.
+  function suggestion(from: Vec3, direction: AxisDirection, event: StrokeEvent): { length: number; snap: string | null } {
+    for (const hit of event.over) {
+      if (hit.kind !== "point") continue;
+      const along = on_ray(from, direction, hit.id);
+      if (along !== null) return { length: along, snap: hit.id };
     }
-    return round_drag(drag_length(direction, event.toward, camera.view.scale), direction.reach, camera.view.scale);
+    return { length: round_drag(drag_length(direction, event.toward, camera.view.scale), direction.reach, camera.view.scale), snap: null };
+  }
+
+  function pending_length(): number | null {
+    const from = start_position();
+    if (editor.snap && !editor.typed && editor.pending && from) return on_ray(from, editor.pending, editor.snap);
+    return parse_input(editor.input, editor.wire.unit);
   }
 
   function on_stroke(event: StrokeEvent) {
@@ -506,7 +527,10 @@
     const from = start_position();
     if (!from) return;
     editor.pending = { axis: direction.axis, sign: direction.sign };
-    if (!editor.typed || !event.done) editor.suggest(input_for(suggestion(from, direction, event), editor.wire.unit));
+    if (!editor.typed || !event.done) {
+      const suggested = suggestion(from, direction, event);
+      editor.suggest(input_for(suggested.length, editor.wire.unit), suggested.snap);
+    }
     if (event.done) focus_canvas();
   }
 
@@ -536,7 +560,7 @@
 
   function commit_pending() {
     const pending = editor.pending;
-    const length = parse_input(editor.input, editor.wire.unit);
+    const length = pending_length();
     if (!pending) return;
     if (length === null) {
       say("Type a length first");
@@ -610,7 +634,7 @@
   const ghost = $derived.by(() => {
     if (editor.panel !== Op.WALK || !editor.pending) return null;
     const from = start_position();
-    const length = parse_input(editor.input, wire.unit);
+    const length = pending_length();
     if (!from || length === null) return null;
     const end = walk_end(from, editor.pending.axis, editor.pending.sign, length);
     const lands = point_at(wire, end);

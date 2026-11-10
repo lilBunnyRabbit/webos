@@ -44,6 +44,8 @@ export class Editor {
   input = $state("");
   /** Set once a key is typed, so the first key replaces a suggested length instead of adding to it. */
   typed = $state(false);
+  /** The point a stroke was dragged onto: it's joined exactly, since the suggested text is rounded, unless a length is typed. */
+  snap = $state<string | null>(null);
   count = $state(2);
   ink = $state<Ink>(null);
 
@@ -67,7 +69,9 @@ export class Editor {
   apply(change: (wire: Wire) => Wire): void {
     const before = current(this.history);
     const next = change(before);
-    if (next !== before) this.history = push(this.history, next);
+    if (next === before) return;
+    this.history = push(this.history, next);
+    this.repair();
   }
 
   undo(): void {
@@ -86,6 +90,7 @@ export class Editor {
     const lines = new Set(wire.lines.map((line) => line.id));
     if (this.from && !points.has(this.from)) this.from = null;
     if (this.slope_from && !points.has(this.slope_from)) this.slope_from = null;
+    if (this.snap && !points.has(this.snap)) this.snap = null;
     this.select({
       points: this.selection.points.filter((id) => points.has(id)),
       lines: this.selection.lines.filter((id) => lines.has(id)),
@@ -112,16 +117,19 @@ export class Editor {
     const base = this.typed ? this.input : "";
     this.input = type_key(base, key);
     this.typed = true;
+    this.snap = null;
   }
 
-  suggest(text: string): void {
+  suggest(text: string, snap: string | null = null): void {
     this.input = text;
     this.typed = false;
+    this.snap = snap;
   }
 
   clear_length(): void {
     this.input = "";
     this.typed = false;
+    this.snap = null;
     this.pending = null;
   }
 }

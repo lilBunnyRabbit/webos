@@ -20,7 +20,7 @@ export default [
   {
     icon: RulerIcon,
     title: "Every length on show",
-    text: "Each line carries its length, upright and off the lines, in mm, cm or m.",
+    text: "Lengths sit upright beside their lines in mm, cm or m, once for each set of equal edges, so a box reads width × depth × height.",
   },
   {
     icon: CubeIcon,

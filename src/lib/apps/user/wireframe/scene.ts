@@ -1,3 +1,4 @@
+import { round_mm } from "$kit/components/length-pad/keys";
 import type { View } from "$kit/utils/view";
 import { place_labels, text_width, type LabelRequest, type Rect, type Segment } from "./labels";
 import { axis_of, line_length, point_map, type Axis, type Ink, type Vec3, type Wire } from "./model";
@@ -53,7 +54,12 @@ function point_rect(p: { x: number; y: number }, by = 5): Rect {
   return { x: p.x - by, y: p.y - by, w: by * 2, h: by * 2 };
 }
 
-export function build_scene(wire: Wire, camera: Camera, labelled = true): Scene {
+export function build_scene(
+  wire: Wire,
+  camera: Camera,
+  labelled = true,
+  forced: ReadonlySet<string> = new Set()
+): Scene {
   const to_screen = projector(camera).project;
   const points = point_map(wire);
   const screen = new Map(wire.points.map((point) => [point.id, to_screen(point)]));
@@ -74,10 +80,38 @@ export function build_scene(wire: Wire, camera: Camera, labelled = true): Scene 
   lines.sort((p, q) => p.depth - q.depth);
   const scene_points = wire.points.map((point) => ({ id: point.id, at: screen.get(point.id)! }));
   scene_points.sort((p, q) => p.at.depth - q.at.depth);
-  return { lines, points: scene_points, labels: labelled ? label_lines(wire, lines, scene_points) : [] };
+  return { lines, points: scene_points, labels: labelled ? label_lines(wire, lines, scene_points, forced) : [] };
 }
 
-function label_lines(wire: Wire, lines: readonly SceneLine[], points: readonly ScenePoint[]): SceneLabel[] {
+function parts(wire: Wire): Map<string, string> {
+  const parent = new Map(wire.points.map((point) => [point.id, point.id]));
+  const root = (id: string): string => {
+    let at = id;
+    while (parent.get(at) !== at) at = parent.get(at)!;
+    parent.set(id, at);
+    return at;
+  };
+  for (const line of wire.lines) parent.set(root(line.a), root(line.b));
+  return new Map(wire.points.map((point) => [point.id, root(point.id)]));
+}
+
+// Either way along the line gives one key, so a box's four uprights share theirs.
+function direction_key(a: Vec3, b: Vec3, length: number): string {
+  const d = [(b.x - a.x) / length, (b.y - a.y) / length, (b.z - a.z) / length];
+  const sign = Math.sign(d.find((each) => Math.abs(each) > 1e-6) ?? 1);
+  return d.map((each) => Math.round(each * sign * 1000) + 0).join(",");
+}
+
+/**
+ * Within one connected part, parallel lines of the same length show their length once, so a box reads W × D × H.
+ * Lines in `forced` (the selection, the line under the pointer) always show their own.
+ */
+function label_lines(
+  wire: Wire,
+  lines: readonly SceneLine[],
+  points: readonly ScenePoint[],
+  forced: ReadonlySet<string>
+): SceneLabel[] {
   const segments: Segment[] = lines.map((line) => ({ a: line.a, b: line.b }));
   let cx = 0;
   let cy = 0;
@@ -87,19 +121,18 @@ function label_lines(wire: Wire, lines: readonly SceneLine[], points: readonly S
   }
   const map = point_map(wire);
   const sources = new Map(wire.lines.map((line) => [line.id, line]));
+  const part = parts(wire);
   const text = new Map<string, string>();
   const requests: (LabelRequest & { span: number })[] = [];
-  // Lines that cover each other on screen (a box seen square-on) would stack identical labels; one is enough.
-  const shown = new Set<string>();
-  const key = (p: { x: number; y: number }) => `${Math.round(p.x / 3)},${Math.round(p.y / 3)}`;
   for (const line of [...lines].reverse()) {
     const span = Math.hypot(line.b.x - line.a.x, line.b.y - line.a.y);
-    if (span < MIN_LABELLED) continue;
-    const ends = [key(line.a), key(line.b)].sort().join(":");
-    if (shown.has(ends)) continue;
-    shown.add(ends);
+    const is_forced = forced.has(line.id);
+    if (span < MIN_LABELLED && !is_forced) continue;
     const source = sources.get(line.id)!;
-    const label = format_length(line_length(wire, source, map), wire.unit);
+    const a = map.get(source.a)!;
+    const b = map.get(source.b)!;
+    const length = line_length(wire, source, map);
+    const label = format_length(length, wire.unit);
     text.set(line.id, label);
     const normal = { x: (line.b.y - line.a.y) / span, y: -(line.b.x - line.a.x) / span };
     const mid = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
@@ -111,9 +144,11 @@ function label_lines(wire: Wire, lines: readonly SceneLine[], points: readonly S
       width: text_width(label, LABEL_FONT) + LABEL_PAD_X * 2,
       height: LABEL_HEIGHT,
       span,
+      forced: is_forced,
+      group: is_forced ? undefined : `${part.get(source.a)}|${direction_key(a, b, length)}|${round_mm(length)}`,
     });
   }
-  requests.sort((p, q) => q.span - p.span);
+  requests.sort((p, q) => Number(!!q.forced) - Number(!!p.forced) || q.span - p.span);
   const placed = place_labels(
     requests,
     segments,

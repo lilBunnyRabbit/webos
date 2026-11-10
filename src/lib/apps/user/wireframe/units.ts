@@ -2,7 +2,8 @@ import { round_mm } from "$kit/components/length-pad/keys";
 import { Unit } from "./model";
 
 export const MM_PER: Record<Unit, number> = { [Unit.MM]: 1, [Unit.CM]: 10, [Unit.M]: 1000 };
-const DECIMALS: Record<Unit, number> = { [Unit.MM]: 1, [Unit.CM]: 1, [Unit.M]: 3 };
+// Coordinates are kept to 0.01 mm, so this many places show any length exactly; trailing zeros are trimmed.
+const DECIMALS: Record<Unit, number> = { [Unit.MM]: 2, [Unit.CM]: 3, [Unit.M]: 5 };
 
 export const UNIT_LABELS: Record<Unit, string> = {
   [Unit.MM]: "Millimetres",
