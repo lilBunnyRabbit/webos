@@ -135,6 +135,7 @@ What are the implications of this decision?
 | [099](./099-lunar-lander-rework.md) | Lunar Lander rework and the play2d rounds kit | 2026-11-07 | Implemented |
 | [100](./100-video-mp4-output.md) | MP4 output in Video Tools with mediabunny | 2026-11-08 | Implemented |
 | [101](./101-immersive-windows.md) | Immersive windows | 2026-11-08 | Implemented |
+| [102](./102-wireframe.md) | Wireframe | 2026-11-09 | Accepted |
 
 All ADR snippets use the snake_case naming from [CONVENTIONS.md](../CONVENTIONS.md). The one exception is the `version.json` wire format in ADR-004.
 
