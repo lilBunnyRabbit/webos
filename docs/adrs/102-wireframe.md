@@ -69,3 +69,12 @@ Decided within scope while building; nothing changes a shape outside the app. De
 - **Input.** Left-drag on empty space pans, right- or middle-drag orbits (Shift pans), the wheel zooms about the pointer. On touch one finger pans or strokes; two fingers lock after 10 px to what they did first: moving together orbits, spreading or closing zooms and pans with the fingers' midpoint, so a pinch never turns the view or leaves Cavalier. Zoom is clamped to 0.002–40 px per mm. Orbit turns about the drawing's centre.
 - **Opening** a file, or a load that lands, shows it in Cavalier, fitted. A file still loading when the drawing is edited (or New is picked) isn't opened over the edit.
 - **Export** writes theme tokens as sRGB hex, so the file opens anywhere; the PNG is the SVG at 2×.
+
+## Revision 2026-11-10 (place, labels, faces)
+Owner decisions after using v1 on a real drawing ([brainstorm](../brainstorm/2026-11-10_wireframe-place-and-fill.md)):
+- **Place by points.** Move (G), Paste (Mod+V) and Duplicate (Mod+D) take a handle point on the part, show it as a ghost following the cursor and drop it on a tapped target point: the part moves by target − handle, exactly. Esc cancels. The typed axis Move stays.
+- **Clipboard.** Mod+C writes the selection to the system clipboard as Wire JSON text, positions relative to the handle; any Wireframe window pastes it.
+- **Labels toggle** (View menu, Shift+L): off shows only the selected and hovered lines' lengths. Remembered in the app's settings file.
+- **Faces.** Select lines closing one flat loop and press F. Faces are opaque and drawn back to front with the lines, so they hide what's behind. Their colour comes from the edges' most common colour and can be changed like a line's.
+- **File version 2** adds `faces: { id: string; points: string[]; color }[]` (point ids in loop order). Version 1 still opens; a v2 file in an older Wireframe is refused, not stripped.
+- Shell: unchanged.
