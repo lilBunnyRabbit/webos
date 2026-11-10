@@ -1,6 +1,6 @@
 import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$kit/utils/history";
 import { create_wire, type Axis, type Ink, type Sign, type Wire } from "./model";
-import { type_key } from "./units";
+import { type_key } from "$kit/components/length-pad/keys";
 
 export const Tool = {
   SELECT: "select",

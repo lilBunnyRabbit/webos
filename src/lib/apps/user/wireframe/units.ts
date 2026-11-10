@@ -1,3 +1,4 @@
+import { round_mm } from "$kit/components/length-pad/keys";
 import { Unit } from "./model";
 
 export const MM_PER: Record<Unit, number> = { [Unit.MM]: 1, [Unit.CM]: 10, [Unit.M]: 1000 };
@@ -8,10 +9,6 @@ export const UNIT_LABELS: Record<Unit, string> = {
   [Unit.CM]: "Centimetres",
   [Unit.M]: "Metres",
 };
-
-export const MAX_INPUT = 9;
-
-export const NumpadKey = { BACK: "back", POINT: "." } as const;
 
 export function to_mm(value: number, unit: Unit): number {
   return value * MM_PER[unit];
@@ -33,22 +30,6 @@ export function format_number(mm: number, unit: Unit): string {
 
 export function format_length(mm: number, unit: Unit): string {
   return `${format_number(mm, unit)} ${unit}`;
-}
-
-export function type_key(text: string, key: string): string {
-  if (key === NumpadKey.BACK) return text.slice(0, -1);
-  if (text.length >= MAX_INPUT) return text;
-  if (key === NumpadKey.POINT) {
-    if (text.includes(".")) return text;
-    return text ? `${text}.` : "0.";
-  }
-  if (!/^\d$/.test(key)) return text;
-  if (text === "0") return key;
-  return text + key;
-}
-
-export function round_mm(mm: number): number {
-  return Math.round(mm * 100) / 100;
 }
 
 export function parse_input(text: string, unit: Unit): number | null {

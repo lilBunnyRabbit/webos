@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { Unit } from "./model";
-import { format_area, format_length, from_mm, input_for, parse_input, to_mm, type_key } from "./units";
+import { format_area, format_length, from_mm, input_for, parse_input, to_mm } from "./units";
 
 describe("units", () => {
   test("converts to and from mm", () => {
@@ -25,14 +25,6 @@ describe("units", () => {
     expect(format_area(50_000, Unit.MM)).toBe("500 cm²");
     expect(format_area(92_903.04 * 2, Unit.IN)).toBe("2 ft²");
     expect(format_area(645.16 * 12, Unit.IN)).toBe("12 in²");
-  });
-
-  test("numpad keys build a number", () => {
-    let text = "";
-    for (const key of ["0", "2", ".", "5", ".", "back", "7"]) text = type_key(text, key);
-    expect(text).toBe("2.7");
-    expect(type_key("", ".")).toBe("0.");
-    expect(type_key("123456789", "1")).toBe("123456789");
   });
 
   test("parses typed text in the sketch's unit", () => {

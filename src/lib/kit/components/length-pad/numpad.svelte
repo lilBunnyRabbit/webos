@@ -1,8 +1,15 @@
+<script lang="ts" module>
+  // A key under a thumb gives no click; a short buzz says it took. Touch only: a mouse or pen already feels its press.
+  export function buzz(event: PointerEvent): void {
+    if (event.pointerType === "touch") navigator.vibrate?.(8);
+  }
+</script>
+
 <script lang="ts">
   import { button } from "$lib/core/components/ui";
   import { cn } from "$lib/core/utils";
   import { Backspace as BackspaceIcon } from "phosphor-svelte";
-  import { NumpadKey } from "./units";
+  import { NumpadKey } from "./keys";
 
   interface Props {
     onpress: (key: string) => void;
@@ -13,10 +20,10 @@
 
   const KEYS = ["7", "8", "9", "4", "5", "6", "1", "2", "3", NumpadKey.POINT, "0", NumpadKey.BACK];
 
-  // The canvas keeps keyboard focus, so typing on a keyboard keeps working after a press on the pad.
+  // The app keeps keyboard focus, so typing on a desktop keyboard keeps working after a click on the pad.
   function keep_focus(event: PointerEvent) {
     event.preventDefault();
-    if (event.pointerType === "touch") navigator.vibrate?.(8);
+    buzz(event);
   }
 </script>
 

@@ -6,7 +6,7 @@
   import type { Editor } from "./editor.svelte";
   import { closure } from "./geometry";
   import { point_map, type Target } from "./model";
-  import TapeSketchKeys, { buzz } from "./tape-sketch-keys.svelte";
+  import { buzz, Numpad } from "$kit/components/length-pad";
   import { format_length, input_for } from "./units";
 
   interface Props {
@@ -81,7 +81,7 @@
   {/if}
 
   <div class="grid grid-cols-[3fr_1fr] gap-1.5">
-    <TapeSketchKeys class="grid-rows-[repeat(4,3rem)]" onpress={(key) => editor.press(key)} />
+    <Numpad class="grid-rows-[repeat(4,3rem)]" onpress={(key) => editor.press(key)} />
     <div class="grid grid-rows-[3rem_1fr] gap-1.5">
       <Button variant="secondary" class="h-full rounded-lg pointer-coarse:h-full" tabindex={-1} onpointerdown={buzz} onclick={() => editor.clear_input()}>Clear</Button>
       <Button variant="primary" class="h-full rounded-lg text-sm pointer-coarse:h-full" tabindex={-1} onpointerdown={buzz} aria-label="Done (Enter)" onclick={() => editor.close_numpad()}>

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { is_hex, LINE_COLORS, UNITS, type HexColor, type Wire } from "./model";
-import { round_mm } from "./units";
+import { round_mm } from "$kit/components/length-pad/keys";
 
 export const VERSION = 1;
 export const EXTENSION = ".wire";

@@ -1,7 +1,8 @@
 import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$kit/utils/history";
 import { length_of, set_length, step_target, target_exists } from "./edit";
 import { create_sketch, same_target, type Sketch, type Target } from "./model";
-import { input_for, parse_input, type_key } from "./units";
+import { type_key } from "$kit/components/length-pad/keys";
+import { input_for, parse_input } from "./units";
 
 export const Tool = {
   SELECT: "select",

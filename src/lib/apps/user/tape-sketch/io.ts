@@ -1,17 +1,8 @@
-import kernel, { type FilesService } from "$lib/core/api";
-import { base_name, parent_path } from "$lib/core/api/services/files/path";
+import { read_text } from "$kit/utils/file-io";
 import { parse_sketch, type Parsed } from "./format";
 
-export async function read_path(path: string): Promise<Parsed> {
-  const file = await kernel.service<FilesService>("files").get_file(path);
-  if (!file) throw new Error(`File not found: ${path}`);
-  return parse_sketch(await file.text());
-}
+export { write_file } from "$kit/utils/file-io";
 
-export async function write_file(path: string, content: string | Blob): Promise<void> {
-  const files = kernel.service<FilesService>("files");
-  const folder = parent_path(path);
-  const directory = await files.get_directory(folder);
-  if (!directory) throw new Error(`Folder not found: ${folder}`);
-  await files.create_file(directory, base_name(path), { content, overwrite: true });
+export async function read_path(path: string): Promise<Parsed> {
+  return parse_sketch(await read_text(path));
 }

@@ -15,8 +15,7 @@
   import type { Editor } from "./editor.svelte";
   import { DIRECTIONS, nearest_direction, snap_directions, snap_preset, SnapPreset, type Direction } from "./geometry";
   import { rotate } from "./rotation";
-  import TapeSketchKeys from "./tape-sketch-keys.svelte";
-  import TapeSketchRing from "./tape-sketch-ring.svelte";
+  import { DirectionRing, Numpad, type Spoke } from "$kit/components/length-pad";
 
   interface Props {
     editor: Editor;
@@ -44,6 +43,20 @@
   const has_length = $derived(Number(editor.input) > 0);
   const directions = $derived(snap_directions(editor.sketch.snap));
   const grid = $derived(snap_preset(editor.sketch.snap) === SnapPreset.DEG_45);
+  const spokes = $derived<Spoke[]>(
+    directions.map((direction) => ({
+      id: direction.id,
+      at: rotate(direction, rotation),
+      label: direction.label,
+      name: `Walk ${direction.label}`,
+      labelled: directions.length <= 8 || Number(direction.id) % 45 === 0,
+    }))
+  );
+
+  function pick_spoke(id: string) {
+    const direction = directions.find((each) => each.id === id);
+    if (direction) onstep(direction);
+  }
 
   // The pad shows directions as they look on screen, so a turned sketch walks the way the arrow points.
   function step_toward(screen: Direction) {
@@ -78,7 +91,7 @@
   </div>
 
   <div class="grid grid-cols-2 gap-3">
-    <TapeSketchKeys class="grid-rows-[repeat(4,2.75rem)]" onpress={(key) => editor.press(key)} />
+    <Numpad class="grid-rows-[repeat(4,2.75rem)]" onpress={(key) => editor.press(key)} />
     {#if grid}
     <div class="grid grid-cols-3 grid-rows-[repeat(3,1fr)] gap-1.5" role="group" aria-label="Directions">
       {#each DIRECTIONS as direction, i (direction.id)}
@@ -98,7 +111,7 @@
       {/each}
     </div>
     {:else}
-      <TapeSketchRing {directions} {rotation} disabled={!ready} armed={has_length} onpick={onstep} />
+      <DirectionRing {spokes} disabled={!ready} armed={has_length} onpick={(id) => pick_spoke(id)} />
     {/if}
   </div>
 </section>

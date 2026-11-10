@@ -28,7 +28,7 @@ Dragging a corner moves it, pulled onto a neighbour's x or y within 8 px so wall
 
 The Magnet button in the toolbar (Corners and Walk) opens a menu: Off, **45°** (0, 45, 90, 135: 8 directions, the default and what older files get), **Iso** (0, 30, 90, 150: ±30°, ±150°, verticals, horizontals, for drawing a box in isometric), **15°** (every 15°, 24 directions), and **Custom…**, a prompt prefilled with the current set where you type angles separated by commas or spaces (`parse_angles`, `geometry.ts:118`), for example `0, 22.5, 63, 90`. `snap_preset` names a set by comparing it with the presets; anything else reads as Custom. Picking a set is an undoable edit of the sketch and turns the magnet on; Off is per device (`snap` in `/var/lib/apps/tape-sketch/storage.json`), the set is per sketch. A new sketch keeps the last sketch's unit and set.
 
-**Direction ring** (`tape-sketch-ring.svelte`). For any set but 45°, Walk shows a disc with a tick per direction (every direction labelled up to 8 of them, else only multiples of 45°). Press anywhere on it: the direction nearest the finger lights up with its angle in the middle, sliding moves it, and lifting (lost pointer capture) walks that way. A press in the middle 8 % picks nothing. Visually hidden buttons, one per direction, carry the same action for screen readers.
+**Direction ring** (the kit's `DirectionRing`, `$kit/components/length-pad`, shared with Wireframe). For any set but 45°, Walk shows a disc with a tick per direction (every direction labelled up to 8 of them, else only multiples of 45°). Press anywhere on it: the direction nearest the finger lights up with its angle in the middle, sliding moves it, and lifting (lost pointer capture) walks that way. A press in the middle 8 % picks nothing. Visually hidden buttons, one per direction, carry the same action for screen readers.
 
 Corner-drag alignment doesn't use the set: it still pulls a dragged corner onto a neighbour's x or y.
 
@@ -36,7 +36,7 @@ Corner-drag alignment doesn't use the set: it still pulls a dragged corner onto 
 
 Every length is a target: per path its edges in order, then the dimensions (`measure_targets`, `edit.ts:192`). The numpad opens on the tapped edge or label. ← and → (and Tab) commit and step; while anything is unmeasured they step only through those, otherwise through all (`step_target`, `edit.ts:226`). ✓ (Enter) commits and closes, Clear unmeasures. A length is only rewritten when a key was typed, so stepping past a measured edge doesn't touch it. The current target is drawn in `primary` and the view pans just enough to keep its label out from under the sheet.
 
-On touch, every numpad key (digits, point, backspace, Clear and ✓) buzzes for 8 ms (`buzz`, `tape-sketch-keys.svelte`) through `navigator.vibrate`, only when the press is `pointerType === "touch"`. Safari and Firefox don't have the Vibration API; the keys just don't buzz there (compat entry `vibration`, cosmetic).
+On touch, every numpad key (digits, point, backspace, Clear and ✓) buzzes for 8 ms (`buzz` beside the kit's `Numpad`, `$kit/components/length-pad`) through `navigator.vibrate`, only when the press is `pointerType === "touch"`. Safari and Firefox don't have the Vibration API; the keys just don't buzz there (compat entry `vibration`, cosmetic).
 
 ### Closure check
 

@@ -14,7 +14,7 @@ import {
   type WireLine,
   type WirePoint,
 } from "./model";
-import { round_mm } from "./units";
+import { round_mm } from "$kit/components/length-pad/keys";
 
 const clean = (p: Vec3): Vec3 => ({ x: round_mm(p.x) + 0, y: round_mm(p.y) + 0, z: round_mm(p.z) + 0 });
 

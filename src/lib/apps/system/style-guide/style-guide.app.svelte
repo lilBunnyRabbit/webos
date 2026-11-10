@@ -56,6 +56,7 @@
   import { AiGate } from "$kit/components/ai-gate";
   import { CropFrame } from "$kit/components/crop-frame";
   import { DropZone, type SourceFile } from "$kit/components/drop-zone";
+  import { DirectionRing, Numpad, type Spoke, type_key } from "$kit/components/length-pad";
   import { KeyHint, Lever, SpeedChip, SteeringWheel } from "$kit/components/play2d";
   import { QuadFrame } from "$kit/components/quad-frame";
   import type { Quad } from "$kit/utils/perspective";
@@ -149,6 +150,14 @@
   };
   let trim = $state({ start: 0.2, end: 1.8 });
   let wave_selection = $state<Span | null>({ start: 0.8, end: 1.1 });
+  let pad_text = $state("");
+  let pad_pick = $state<string | null>(null);
+  const PAD_SPOKES: Spoke[] = ["E", "NE", "N", "NW", "W", "SW", "S", "SE"].map((label, i) => ({
+    id: label,
+    label,
+    name: `Toward ${label}`,
+    at: { x: Math.cos((i * Math.PI) / 4), y: -Math.sin((i * Math.PI) / 4) },
+  }));
   let wheel = $state(0.2);
   let lever = $state(2);
   const LEVER_DEMO = {
@@ -519,6 +528,19 @@
             <span class="font-mono text-2xs text-foreground/80 tabular-nums"
               >{trim.start.toFixed(2)}–{trim.end.toFixed(2)} s{wave_selection ? `, selected ${wave_selection.start.toFixed(2)}–${wave_selection.end.toFixed(2)} s` : ""}</span
             >
+          </div>
+        </Section>
+        <Section
+          title="Length pad"
+          description="A numpad and a direction ring from $kit, for typing a length one-handed and sending it somewhere: press the ring and slide, lifting picks the lit spoke. Tape Sketch's Walk and Wireframe's axis panel use them."
+          flush
+        >
+          <div class="flex flex-col gap-2">
+            <div class="grid max-w-sm grid-cols-2 items-center gap-3">
+              <Numpad class="grid-rows-[repeat(4,2.75rem)]" onpress={(key) => (pad_text = type_key(pad_text, key))} />
+              <DirectionRing class="aspect-square w-full" spokes={PAD_SPOKES} disabled={false} armed={Number(pad_text) > 0} onpick={(id) => (pad_pick = id)} />
+            </div>
+            <span class="font-mono text-2xs text-foreground/80 tabular-nums">{pad_text || "0"}{pad_pick ? ` → ${pad_pick}` : ""}</span>
           </div>
         </Section>
         <Section

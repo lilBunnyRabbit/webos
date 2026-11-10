@@ -3,8 +3,8 @@
   import { Check as CheckIcon, Minus as MinusIcon, Plus as PlusIcon } from "phosphor-svelte";
   import { Op, type Editor } from "./editor.svelte";
   import type { AxisDirection } from "./projection";
-  import WireframeKeys from "./wireframe-keys.svelte";
-  import WireframeRing from "./wireframe-ring.svelte";
+  import { DirectionRing, Numpad, type Spoke } from "$kit/components/length-pad";
+  import { AXIS_FILL, AXIS_STROKE } from "./colors";
 
   interface Props {
     editor: Editor;
@@ -29,6 +29,20 @@
   const op = $derived(editor.panel ?? Op.WALK);
   const has_length = $derived(Number(editor.input) > 0);
   const MAX_COUNT = 99;
+
+  const spoke_id = (direction: { axis: string; sign: number }) => `${direction.sign > 0 ? "+" : "−"}${direction.axis.toUpperCase()}`;
+
+  const spokes = $derived<Spoke[]>(
+    directions.map((direction) => {
+      const id = spoke_id(direction);
+      return { id, at: direction.at, label: id, name: `Along ${id}`, stroke: AXIS_STROKE[direction.axis], fill: AXIS_FILL[direction.axis] };
+    })
+  );
+
+  function pick_spoke(id: string) {
+    const direction = directions.find((each) => spoke_id(each) === id);
+    if (direction) onpick(direction);
+  }
 
   function keep_focus(event: PointerEvent) {
     event.preventDefault();
@@ -75,7 +89,15 @@
   {/if}
 
   <div class="grid grid-cols-2 items-center gap-3">
-    <WireframeKeys class="grid-rows-[repeat(4,2.75rem)]" onpress={(key) => editor.press(key)} />
-    <WireframeRing {directions} disabled={!ready || !!blocked} armed={has_length} pending={editor.pending} {onpick} />
+    <Numpad class="grid-rows-[repeat(4,2.75rem)]" onpress={(key) => editor.press(key)} />
+    <DirectionRing
+      {spokes}
+      label="Axis directions"
+      class="aspect-square w-full max-w-56 justify-self-center"
+      disabled={!ready || !!blocked}
+      armed={has_length}
+      selected={editor.pending ? spoke_id(editor.pending) : null}
+      onpick={(id) => pick_spoke(id)}
+    />
   </div>
 </section>

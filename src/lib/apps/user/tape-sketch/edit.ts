@@ -11,7 +11,7 @@ import {
   type Target,
   type Unit,
 } from "./model";
-import { round_mm } from "./units";
+import { round_mm } from "$kit/components/length-pad/keys";
 
 export interface Added {
   sketch: Sketch;

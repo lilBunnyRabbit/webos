@@ -42,7 +42,7 @@ In a parallel projection the six axis directions (±X, ±Y, ±Z) are six screen 
 
 While the drag moves, the stroke shows as a dashed line in its axis colour with a suggested length: the drag projected on the axis in mm, rounded to the smallest of 1, 5, 10, 50, 100, 500, 1000, 5000 mm that's at least 8 px on screen (`round_drag`), or the exact distance when the pointer is over a point that lies on that ray. The suggestion is shown dimmed; the first key typed replaces it. Enter (or ✓) commits the stroke, and the next stroke starts at its end.
 
-Without a drag: type a length, then press X, Y or Z (Shift for minus) or tap a spoke of the ring. The ring (`wireframe-ring.svelte`) draws its six spokes along their projected directions, coloured per axis, and picks the spoke nearest the finger on release (lost pointer capture). Visually hidden buttons carry the same actions for screen readers.
+Without a drag: type a length, then press X, Y or Z (Shift for minus) or tap a spoke of the ring. The ring (the kit's `DirectionRing`, `$kit/components/length-pad`, shared with Tape Sketch) draws its six spokes along their projected directions, coloured per axis, and picks the spoke nearest the finger on release (lost pointer capture), showing its name in the middle while held; the stroke waiting for its length stays lit. Visually hidden buttons carry the same actions for screen readers.
 
 Axis colours are tokens: X `accent`, Y `secondary`, Z `tertiary`, in the gizmo, the ring, the stroke preview and the guides from the start point.
 
