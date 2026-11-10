@@ -1,5 +1,6 @@
 import { add_face } from "./edit";
-import { face_sides, point_map, same_side, sub3, type Ink, type Vec3, type Wire, type WirePoint } from "./model";
+import { face_sides, point_map, same_side, type Ink, type Wire, type WirePoint } from "./model";
+import { is_flat } from "./plane";
 
 export const FillRefusal = {
   NO_LOOP: "These lines don't close a loop",
@@ -7,9 +8,6 @@ export const FillRefusal = {
   FILLED: "That loop is already filled",
 } as const;
 export type FillRefusal = (typeof FillRefusal)[keyof typeof FillRefusal];
-
-// Coordinates are rounded to 0.01 mm, so a loop drawn flat is off its plane by far less than this.
-const FLAT = 0.05;
 
 export function loop_of(wire: Wire, line_ids: readonly string[]): string[] | null {
   const picked = new Set(line_ids);
@@ -32,29 +30,6 @@ export function loop_of(wire: Wire, line_ids: readonly string[]): string[] | nul
     at = step;
   }
   return loop.length === lines.length ? loop : null;
-}
-
-export function normal_of(points: readonly Vec3[]): Vec3 {
-  const n = { x: 0, y: 0, z: 0 };
-  for (let i = 0; i < points.length; i++) {
-    const a = points[i];
-    const b = points[(i + 1) % points.length];
-    n.x += (a.y - b.y) * (a.z + b.z);
-    n.y += (a.z - b.z) * (a.x + b.x);
-    n.z += (a.x - b.x) * (a.y + b.y);
-  }
-  return n;
-}
-
-export function is_flat(points: readonly Vec3[]): boolean {
-  const n = normal_of(points);
-  const length = Math.hypot(n.x, n.y, n.z);
-  if (length < 1e-9) return false;
-  const unit = { x: n.x / length, y: n.y / length, z: n.z / length };
-  return points.every((point) => {
-    const d = sub3(point, points[0]);
-    return Math.abs(d.x * unit.x + d.y * unit.y + d.z * unit.z) <= FLAT;
-  });
 }
 
 /** The edges' most common colour; a tie goes to the first edge round the loop. */

@@ -35,6 +35,17 @@ describe("placing parts", () => {
     expect(parse_clip(JSON.stringify({ version: 2, unit: "cm", points: [], lines: [], faces: [] }))).toBeNull();
   });
 
+  test("a part of edges round a face doesn't carry it", () => {
+    const wire = box_with_face();
+    const [face] = wire.faces;
+    const uprights = wire.lines.filter((line) => {
+      const [a, b] = [line.a, line.b].map((id) => wire.points.find((point) => point.id === id)!);
+      return a.z !== b.z;
+    });
+    expect(extract_part(wire, [], uprights.map((line) => line.id), []).faces).toHaveLength(0);
+    expect(extract_part(wire, [], [], [face.id]).faces).toHaveLength(1);
+  });
+
   test("a moved part merges into the points it lands on", () => {
     const wire = box_with_face();
     const placed = place_part(wire, extract_part(wire, [], wire.lines.map((line) => line.id), []), { x: 300, y: 0, z: 0 });

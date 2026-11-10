@@ -1,7 +1,8 @@
 import { round_mm } from "$kit/components/length-pad/keys";
 import type { View } from "$kit/utils/view";
 import { place_labels, text_width, type LabelRequest, type Rect, type Segment } from "./labels";
-import { axis_of, face_sides, line_length, point_map, type Axis, type Ink, type Vec3, type Wire } from "./model";
+import { axis_of, line_length, point_map, type Axis, type Ink, type Vec3, type Wire } from "./model";
+import { on_face, plane_of } from "./plane";
 import { basis, projector, type Camera, type Orbit, type Projected } from "./projection";
 import { format_length } from "./units";
 
@@ -69,7 +70,38 @@ function point_rect(p: { x: number; y: number }, by = 5): Rect {
   return { x: p.x - by, y: p.y - by, w: by * 2, h: by * 2 };
 }
 
-const pair = (a: string, b: string) => (a < b ? `${a}:${b}` : `${b}:${a}`);
+interface Attached {
+  lines: Map<string, string[]>;
+  points: Map<string, string[]>;
+}
+
+const attachments = new WeakMap<Wire, Attached>();
+
+/** The lines and points lying on each face (its sides, its corners, anything drawn on it), by id: they draw on top of it. */
+export function attached(wire: Wire): Attached {
+  const known = attachments.get(wire);
+  if (known) return known;
+  const found: Attached = { lines: new Map(), points: new Map() };
+  const add = (map: Map<string, string[]>, id: string, face: string) => map.set(id, [...(map.get(id) ?? []), face]);
+  const points = point_map(wire);
+  for (const face of wire.faces) {
+    const corners = face.points.map((id) => points.get(id)!);
+    const plane = plane_of(corners);
+    if (!plane) continue;
+    const on = new Set(wire.points.filter((point) => face.points.includes(point.id) || on_face(corners, plane, point)).map((point) => point.id));
+    for (const id of on) add(found.points, id, face.id);
+    for (const line of wire.lines) {
+      if (!on.has(line.a) || !on.has(line.b)) continue;
+      const a = points.get(line.a)!;
+      const b = points.get(line.b)!;
+      if (on_face(corners, plane, { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2 })) add(found.lines, line.id, face.id);
+    }
+  }
+  attachments.set(wire, found);
+  return found;
+}
+
+type Ordered = SceneItem & { depth: number; rank: number };
 
 export function build_scene(
   wire: Wire,
@@ -81,45 +113,45 @@ export function build_scene(
   const points = point_map(wire);
   const screen = new Map(wire.points.map((point) => [point.id, to_screen(point)]));
   const faces: SceneFace[] = [];
-  // A face's own sides and corners are drawn just after it, even where their middle sits behind the face's middle.
-  const side_depth = new Map<string, number>();
-  const corner_depth = new Map<string, number>();
   for (const face of wire.faces) {
     const corners = face.points.map((id) => screen.get(id));
     if (corners.some((corner) => !corner)) continue;
     const at = corners as Projected[];
-    const depth = at.reduce((sum, corner) => sum + corner.depth, 0) / at.length;
-    faces.push({ id: face.id, points: at, depth, color: face.color });
-    for (const [a, b] of face_sides(face)) {
-      side_depth.set(pair(a, b), Math.max(side_depth.get(pair(a, b)) ?? -Infinity, depth));
-      corner_depth.set(a, Math.max(corner_depth.get(a) ?? -Infinity, depth));
-    }
+    faces.push({ id: face.id, points: at, depth: at.reduce((sum, corner) => sum + corner.depth, 0) / at.length, color: face.color });
   }
   const lines: SceneLine[] = [];
-  const line_depth = new Map<string, number>();
   for (const line of wire.lines) {
     const a = screen.get(line.a);
     const b = screen.get(line.b);
     if (!a || !b) continue;
-    const depth = (a.depth + b.depth) / 2;
-    line_depth.set(line.id, Math.max(depth, side_depth.get(pair(line.a, line.b)) ?? -Infinity));
-    lines.push({ id: line.id, a, b, depth, color: line.color, axis: axis_of(points.get(line.a)!, points.get(line.b)!) });
+    lines.push({ id: line.id, a, b, depth: (a.depth + b.depth) / 2, color: line.color, axis: axis_of(points.get(line.a)!, points.get(line.b)!) });
   }
   lines.sort((p, q) => p.depth - q.depth);
   const scene_points = wire.points.map((point) => ({ id: point.id, at: screen.get(point.id)! }));
   scene_points.sort((p, q) => p.at.depth - q.at.depth);
-  const order: (SceneItem & { depth: number; rank: number })[] = [
+  const on = attached(wire);
+  const sorted: Ordered[] = [
     ...faces.map((face) => ({ kind: "face" as const, id: face.id, face, depth: face.depth, rank: 0 })),
-    ...lines.map((line) => ({ kind: "line" as const, id: line.id, line, depth: line_depth.get(line.id)!, rank: 1 })),
-    ...scene_points.map((point) => ({
-      kind: "point" as const,
-      id: point.id,
-      point,
-      depth: Math.max(point.at.depth, corner_depth.get(point.id) ?? -Infinity),
-      rank: 2,
-    })),
+    ...lines.map((line) => ({ kind: "line" as const, id: line.id, line, depth: line.depth, rank: 1 })),
+    ...scene_points.map((point) => ({ kind: "point" as const, id: point.id, point, depth: point.at.depth, rank: 2 })),
   ];
-  order.sort((p, q) => p.depth - q.depth || p.rank - q.rank);
+  sorted.sort((p, q) => p.depth - q.depth || p.rank - q.rank);
+  // What lies on a face goes right after the last of its faces, not up to that face's depth: lifted that far it could
+  // cover a nearer, separate face drawn in between.
+  const face_at = new Map<string, number>();
+  sorted.forEach((item, i) => item.kind === "face" && face_at.set(item.id, i));
+  const after = new Map<number, Ordered[]>();
+  const order: SceneItem[] = [];
+  sorted.forEach((item, i) => {
+    const owners = item.kind === "line" ? on.lines.get(item.id) : item.kind === "point" ? on.points.get(item.id) : undefined;
+    const last = Math.max(-1, ...(owners ?? []).map((id) => face_at.get(id) ?? -1));
+    if (last > i) {
+      after.set(last, [...(after.get(last) ?? []), item]);
+      return;
+    }
+    order.push(item);
+    if (item.kind === "face") order.push(...(after.get(i) ?? []).sort((p, q) => p.rank - q.rank || p.depth - q.depth));
+  });
   return {
     lines,
     points: scene_points,
@@ -179,7 +211,7 @@ function label_lines(
   }
   const map = point_map(wire);
   const sources = new Map(wire.lines.map((line) => [line.id, line]));
-  const sides = new Map(wire.faces.map((face) => [face.id, new Set(face_sides(face).map(([a, b]) => pair(a, b)))]));
+  const on = attached(wire).lines;
   const part = parts(wire);
   const text = new Map<string, string>();
   const requests: (LabelRequest & { span: number })[] = [];
@@ -190,7 +222,7 @@ function label_lines(
     const source = sources.get(line.id)!;
     const middle = { x: (line.a.x + line.b.x) / 2, y: (line.a.y + line.b.y) / 2 };
     // A line behind a face isn't seen, so neither is its length.
-    if (!is_forced && faces.some((face) => face.depth > line.depth && !sides.get(face.id)!.has(pair(source.a, source.b)) && inside(face.points, middle)))
+    if (!is_forced && faces.some((face) => face.depth > line.depth && !on.get(line.id)?.includes(face.id) && inside(face.points, middle)))
       continue;
     const a = map.get(source.a)!;
     const b = map.get(source.b)!;

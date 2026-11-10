@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { add_box } from "./edit";
-import { parse_wire, serialize_wire } from "./format";
+import { parse_wire, read_wire, serialize_wire } from "./format";
 import { create_wire } from "./model";
 
 describe(".wire", () => {
@@ -9,6 +9,28 @@ describe(".wire", () => {
     const wire = parse_wire(serialize_wire(box.wire));
     expect(wire).toEqual(box.wire);
     expect(wire.points.some((point) => point.x === 800)).toBe(true);
+  });
+
+  test("leaves out faces that are bent or have a side with no line", () => {
+    const points = [
+      { id: "a", x: 0, y: 0, z: 0 },
+      { id: "b", x: 100, y: 0, z: 0 },
+      { id: "c", x: 100, y: 100, z: 0 },
+      { id: "d", x: 0, y: 100, z: 50 },
+    ];
+    const lines = [
+      { id: "1", a: "a", b: "b", color: null },
+      { id: "2", a: "b", b: "c", color: null },
+      { id: "3", a: "c", b: "a", color: null },
+    ];
+    const faces = [
+      { id: "ok", points: ["a", "b", "c"], color: null },
+      { id: "bent", points: ["a", "b", "c", "d"], color: null },
+      { id: "edgeless", points: ["a", "b", "d"], color: null },
+    ];
+    const read = read_wire(JSON.stringify({ version: 2, unit: "mm", points, lines, faces }));
+    expect(read.wire.faces.map((face) => face.id)).toEqual(["ok"]);
+    expect(read.dropped).toBe(2);
   });
 
   test("opens a version 1 file with no faces and saves it as version 2", () => {

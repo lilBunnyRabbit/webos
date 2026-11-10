@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { is_hex, LINE_COLORS, UNITS, type HexColor, type Wire, type WireFace, type WireLine, type WirePoint } from "./model";
 import { round_mm } from "$kit/components/length-pad/keys";
+import { sound_face } from "./plane";
 
 export const VERSION = 2;
 export const EXTENSION = ".wire";
@@ -54,6 +55,11 @@ export function check_references(wire: Shape): void {
 }
 
 export function parse_wire(text: string): Wire {
+  return read_wire(text).wire;
+}
+
+/** `dropped` counts faces left out for being bent or missing a side. */
+export function read_wire(text: string): { wire: Wire; dropped: number } {
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -70,7 +76,9 @@ export function parse_wire(text: string): Wire {
   }
   const wire: Wire = { ...(result.data as Omit<Wire, "version">), version: VERSION };
   check_references(wire);
-  return wire;
+  const points = new Map(wire.points.map((point) => [point.id, point]));
+  const faces = wire.faces.filter((face) => sound_face(face, points, wire.lines));
+  return { wire: { ...wire, faces }, dropped: wire.faces.length - faces.length };
 }
 
 export function serialize_wire(wire: Wire): string {

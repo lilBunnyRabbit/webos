@@ -41,6 +41,7 @@
     Tag as TagIcon,
     Trash as TrashIcon,
     Crosshair as CrosshairIcon,
+    DotsThreeOutline as DotsThreeOutlineIcon,
     Eye as EyeIcon,
   } from "phosphor-svelte";
   import { onMount, untrack, type Component } from "svelte";
@@ -145,15 +146,17 @@
     notice = text;
   }
 
+  // The camera a fit left: while it's untouched (no pan, zoom, orbit), a resize fits again instead of keeping the scale.
+  let fit_camera: Camera | null = null;
+
   function fit() {
     if (!width || !height) return;
     const centre = center3(editor.wire);
     if (!editor.wire.points.length) {
       const scale = Math.min(width, height) / 2600;
       camera = { ...camera, pivot: ORIGIN, view: { scale, offset_x: width * 0.4, offset_y: height * 0.62 } };
-      return;
-    }
-    camera = { ...camera, pivot: centre, view: fitted_view(editor.wire, camera.orbit, centre, width, height, 64, 4) };
+    } else camera = { ...camera, pivot: centre, view: fitted_view(editor.wire, camera.orbit, centre, width, height, 64, 4) };
+    fit_camera = camera;
   }
 
   $effect(() => {
@@ -168,10 +171,13 @@
   $effect(() => {
     const size = { width, height, panel: panel_open };
     untrack(() => {
-      if (last_size.width && last_size.height && size.width && size.height) {
+      const fresh = camera === fit_camera;
+      if (fresh && size.panel === last_size.panel) fit();
+      else if (last_size.width && last_size.height && size.width && size.height) {
         const dx = (size.width - last_size.width) / 2;
         const dy = size.panel === last_size.panel ? (size.height - last_size.height) / 2 : 0;
         camera = { ...camera, view: { ...camera.view, offset_x: camera.view.offset_x + dx, offset_y: camera.view.offset_y + dy } };
+        if (fresh) fit_camera = camera;
       }
       last_size = size;
     });
@@ -213,7 +219,8 @@
         say(`Didn't open ${base_name(path)}: the drawing changed meanwhile`);
         return;
       }
-      editor.load(opened);
+      editor.load(opened.wire);
+      if (opened.dropped) say(`Left out ${opened.dropped} ${opened.dropped === 1 ? "face" : "faces"} that ${opened.dropped === 1 ? "was" : "were"} bent or missing a side`);
       file_path = path;
       untitled = base_name(path);
       camera = { ...camera, orbit: PRESETS[ViewPreset.CAVALIER] };
@@ -704,6 +711,32 @@
     cancel_place();
   }
 
+  // Below 34rem the bar keeps Move, Fill and Delete; Extrude and Copy along move in here with the clipboard actions.
+  async function more_menu(event: MouseEvent) {
+    const narrow = width < 34 * 16;
+    const lines = editor.selection.lines.length + editor.selection.faces.length > 0;
+    const choice = await dialogs.menu(
+      [
+        ...(narrow && lines
+          ? [
+              { id: "extrude", label: "Extrude", icon: StackIcon, shortcut: mobile ? undefined : "E" },
+              { id: "along", label: "Copy along an axis", icon: CopyIcon, shortcut: mobile ? undefined : "C" },
+              { separator: true as const },
+            ]
+          : []),
+        { id: "duplicate", label: "Duplicate", icon: CopySimpleIcon, shortcut: mobile ? undefined : "Mod+D" },
+        { id: "copy", label: "Copy", icon: ClipboardIcon, shortcut: mobile ? undefined : "Mod+C" },
+        { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: mobile ? undefined : "Mod+V" },
+      ],
+      { anchor: below(event) }
+    );
+    if (choice === "extrude") start_op(Op.EXTRUDE);
+    else if (choice === "along") start_op(Op.COPY);
+    else if (choice === "duplicate") start_place(PlaceKind.DUPLICATE);
+    else if (choice === "copy") void copy_selection();
+    else if (choice === "paste") void paste();
+  }
+
   function fill_selection() {
     const lines = editor.selection.lines;
     if (!lines.length) {
@@ -1113,17 +1146,15 @@
           {#if editor.selection.points.length === 1 && !editor.selection.lines.length}
             <Button size="sm" variant="secondary" onclick={() => set_tool(Tool.DRAW)}><PencilSimpleLineIcon weight="bold" />Draw from here</Button>
           {/if}
-          <Button size="sm" variant="secondary" aria-label="Move" title="Move by points (G), or by a length (M)" pressed={editor.op === Op.MOVE} onclick={() => start_place(PlaceKind.MOVE)}><ArrowsOutCardinalIcon weight="bold" /><span class="@max-[34rem]:hidden">Move</span></Button>
+          <Button size="sm" variant="secondary" title="Move by points (G), or by a length (M)" pressed={editor.op === Op.MOVE} onclick={() => start_place(PlaceKind.MOVE)}><ArrowsOutCardinalIcon weight="bold" />Move</Button>
           {#if editor.selection.lines.length || editor.selection.faces.length}
-            <Button size="sm" variant="secondary" aria-label="Extrude" title="Extrude (E)" pressed={editor.op === Op.EXTRUDE} onclick={() => start_op(Op.EXTRUDE)}><StackIcon weight="bold" /><span class="@max-[34rem]:hidden">Extrude</span></Button>
-            <Button size="sm" variant="secondary" aria-label="Copy along" title="Copy along an axis (C)" pressed={editor.op === Op.COPY} onclick={() => start_op(Op.COPY)}><CopyIcon weight="bold" /><span class="@max-[34rem]:hidden">Copy along</span></Button>
+            <Button size="sm" variant="secondary" class="@max-[34rem]:hidden" title="Extrude (E)" pressed={editor.op === Op.EXTRUDE} onclick={() => start_op(Op.EXTRUDE)}><StackIcon weight="bold" />Extrude</Button>
+            <Button size="sm" variant="secondary" class="@max-[34rem]:hidden" title="Copy along an axis (C)" pressed={editor.op === Op.COPY} onclick={() => start_op(Op.COPY)}><CopyIcon weight="bold" />Copy along</Button>
           {/if}
           {#if editor.selection.lines.length >= 3}
-            <IconButton label="Fill (F)" size="md" onclick={fill_selection}><PaintBucketIcon weight="bold" /></IconButton>
+            <Button size="sm" variant="secondary" title="Fill the loop (F)" onclick={fill_selection}><PaintBucketIcon weight="bold" />Fill</Button>
           {/if}
-          <IconButton label="Duplicate (Mod+D)" size="md" onclick={() => start_place(PlaceKind.DUPLICATE)}><CopySimpleIcon weight="bold" /></IconButton>
-          <IconButton label="Copy (Mod+C)" size="md" onclick={() => void copy_selection()}><ClipboardIcon weight="bold" /></IconButton>
-          <IconButton label="Paste (Mod+V)" size="md" onclick={() => void paste()}><ClipboardTextIcon weight="bold" /></IconButton>
+          <IconButton label="More" size="md" aria-haspopup="menu" onclick={more_menu}><DotsThreeOutlineIcon weight="fill" /></IconButton>
           <IconButton label="Delete" size="md" onclick={delete_selection}><TrashIcon weight="bold" /></IconButton>
         {/if}
       </div>

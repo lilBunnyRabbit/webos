@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { add_box, delete_items, merge_coincident, move_points, walk } from "./edit";
+import { add_box, add_line, copy_along, delete_items, ensure_point, merge_coincident, move_points, walk } from "./edit";
 import { fill, FillRefusal } from "./faces";
 import { create_wire, type Wire } from "./model";
 import { PRESETS, ViewPreset } from "./projection";
@@ -73,5 +73,42 @@ describe("faces", () => {
     for (const line of front) expect(at(line.id)).toBeGreaterThan(at(done.id));
     const labelled = new Set(scene.labels.map((label) => label.id));
     expect(front.some((line) => labelled.has(line.id))).toBe(true);
+  });
+
+  test("a line drawn across a filled floor draws on it and keeps its label", () => {
+    const box = add_box(create_wire(), null, { x: 1000, y: 1000, z: 500 }, null);
+    const points = new Map(box.wire.points.map((point) => [point.id, point]));
+    const floor = box.wire.lines.filter((line) => points.get(line.a)!.z === 0 && points.get(line.b)!.z === 0);
+    const done = fill(
+      box.wire,
+      floor.map((line) => line.id)
+    );
+    if ("refused" in done) throw new Error(done.refused);
+    const left = ensure_point(done.wire, { x: 0, y: 800, z: 0 });
+    const right = ensure_point(left.wire, { x: 1000, y: 800, z: 0 });
+    const diagonal = add_line(right.wire, left.id, right.id, null);
+    const camera = { orbit: PRESETS[ViewPreset.CAVALIER], pivot: { x: 0, y: 0, z: 0 }, view: { scale: 0.3, offset_x: 400, offset_y: 500 } };
+    const scene = build_scene(diagonal.wire, camera);
+    const at = (id: string) => scene.order.findIndex((item) => item.id === id);
+    const depth = scene.lines.find((line) => line.id === diagonal.id)!.depth;
+    expect(depth).toBeLessThan(scene.faces[0].depth);
+    expect(at(diagonal.id!)).toBeGreaterThan(at(done.id));
+    expect(scene.labels.some((label) => label.id === diagonal.id)).toBe(true);
+  });
+
+  test("copies carry a face only with its sides", () => {
+    const box = add_box(create_wire(), null, { x: 100, y: 100, z: 100 }, null);
+    const points = new Map(box.wire.points.map((point) => [point.id, point]));
+    const flat = (z: number) =>
+      box.wire.lines.filter((line) => points.get(line.a)!.z === z && points.get(line.b)!.z === z).map((line) => line.id);
+    let wire = box.wire;
+    for (const z of [0, 100]) {
+      const done = fill(wire, flat(z));
+      if ("refused" in done) throw new Error(done.refused);
+      wire = done.wire;
+    }
+    const uprights = wire.lines.filter((line) => points.get(line.a)!.z !== points.get(line.b)!.z).map((line) => line.id);
+    expect(copy_along(wire, uprights, "x", 200, 1).wire.faces).toHaveLength(2);
+    expect(copy_along(wire, flat(0), "x", 200, 1).wire.faces).toHaveLength(3);
   });
 });

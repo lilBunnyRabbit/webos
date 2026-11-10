@@ -18,6 +18,7 @@ import {
   type WirePoint,
 } from "./model";
 import { round_mm } from "$kit/components/length-pad/keys";
+import { is_flat } from "./plane";
 
 const clean = (p: Vec3): Vec3 => ({ x: round_mm(p.x) + 0, y: round_mm(p.y) + 0, z: round_mm(p.z) + 0 });
 
@@ -72,14 +73,21 @@ export function add_offset_point(wire: Wire, from: string | null, offset: Vec3):
   return ensure_point(wire, add3(base, offset));
 }
 
+/** A face that only some of the moved points belong to can end up bent; it goes, as a bent face can't be made. */
+function flat_faces(wire: Wire): Wire {
+  const points = point_map(wire);
+  const faces = wire.faces.filter((face) => is_flat(face.points.map((id) => points.get(id)!)));
+  return faces.length === wire.faces.length ? wire : { ...wire, faces };
+}
+
 export function move_points(wire: Wire, ids: readonly string[], axis: Axis, distance: number): Wire {
   if (!ids.length || !distance) return wire;
   const moving = new Set(ids);
   const shift = scale3(axis_vector(axis), distance);
-  return {
+  return flat_faces({
     ...wire,
     points: wire.points.map((point) => (moving.has(point.id) ? { ...point, ...clean(add3(point, shift)) } : point)),
-  };
+  });
 }
 
 /**
@@ -205,9 +213,13 @@ function copy_lines(
     next = added.wire;
     if (added.id) copied.push(added.id);
   }
-  for (const face of wire.faces.filter((each) => each.points.every((id) => map.has(id))))
+  for (const face of wire.faces.filter((each) => sides_among(each, lines)))
     next = add_face(next, face.points.map((id) => map.get(id)!), face.color).wire;
   return { wire: next, map, lines: copied };
+}
+
+export function sides_among(face: WireFace, lines: readonly WireLine[]): boolean {
+  return face_sides(face).every(([a, b]) => lines.some((line) => same_side(line, a, b)));
 }
 
 function clean_loop(points: readonly string[]): string[] | null {
@@ -313,7 +325,7 @@ export function translate(wire: Wire, ids: readonly string[], shift: Vec3): Wire
     if (same) into.set(point.id, same.id);
   }
   const next = { ...wire, points: moved };
-  return into.size ? remap(next, moved.filter((point) => !into.has(point.id)), into) : next;
+  return flat_faces(into.size ? remap(next, moved.filter((point) => !into.has(point.id)), into) : next);
 }
 
 export function line_points(wire: Wire, line_ids: readonly string[]): string[] {

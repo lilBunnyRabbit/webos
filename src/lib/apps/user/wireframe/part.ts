@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { round_mm } from "$kit/components/length-pad/keys";
-import { add_face, add_line, ensure_point } from "./edit";
+import { add_face, add_line, ensure_point, sides_among } from "./edit";
 import { face_lines } from "./faces";
 import { check_references, FacesSchema, LinesSchema, PointsSchema, type Shape } from "./format";
 import { add3, sub3, UNITS, type Unit, type Vec3, type Wire, type WirePoint } from "./model";
+import { sound_face } from "./plane";
 
 export type Part = Shape;
 
@@ -28,7 +29,7 @@ export function extract_part(wire: Wire, points: readonly string[], lines: reado
   return {
     points: wire.points.filter((point) => point_ids.has(point.id)),
     lines: picked_lines,
-    faces: wire.faces.filter((face) => face.points.every((id) => point_ids.has(id))),
+    faces: wire.faces.filter((face) => faces.includes(face.id) || sides_among(face, picked_lines)),
   };
 }
 
@@ -96,5 +97,6 @@ export function parse_clip(text: string): Part | null {
   } catch {
     return null;
   }
-  return part;
+  const points = new Map(part.points.map((point) => [point.id, point]));
+  return { ...part, faces: part.faces.filter((face) => sound_face(face, points, part.lines)) };
 }
