@@ -29,8 +29,12 @@ export function format_number(mm: number, unit: Unit): string {
   return text === "-0" ? "0" : text;
 }
 
+// Labels read to 0.1 mm: exact to 0.01 mm turned every slope into "116.619 cm"; the input keeps full precision.
+const LABEL_DECIMALS: Record<Unit, number> = { [Unit.MM]: 1, [Unit.CM]: 2, [Unit.M]: 4 };
+
 export function format_length(mm: number, unit: Unit): string {
-  return `${format_number(mm, unit)} ${unit}`;
+  const text = trim(from_mm(mm, unit), LABEL_DECIMALS[unit]);
+  return `${text === "-0" ? "0" : text} ${unit}`;
 }
 
 export function parse_input(text: string, unit: Unit): number | null {

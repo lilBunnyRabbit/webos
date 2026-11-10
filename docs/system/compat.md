@@ -192,7 +192,7 @@ Generated from `FEATURES` on 2026-10-23. The code is the source of truth.
 | `keyboard-map` | Keyboard map | Key labels for your keyboard layout. | `hid-lab` | 69 | no | no |
 | `scrollbar-gutter` | Scrollbar gutter | Week columns don't line up with their headers. | `calendar` | 94 | 97 | 18.2 |
 | `fullscreen` | Fullscreen | Full screen windows keep the browser's own bars, and visuals can't fill the screen. iPhones have none. | `music-visualizer` | 71 | 64 | 16.4 |
-| `vibration` | Vibration | Haptic feedback on long-press and in a few apps. | `hopsprite` `image-tools` `nurikabe` `shopping-list` `tape-sketch` `glimpse` | 32 | no | no |
+| `vibration` | Vibration | Haptic feedback on long-press and in a few apps. | `hopsprite` `image-tools` `nurikabe` `shopping-list` `tape-sketch` `glimpse` `wireframe` `style-guide` | 32 | no | no |
 | `view-transitions` | View transitions | Window and list animations. | `shopping-list` | 111 | 144 | 18 |
 | `base-select` | Customizable select | Dropdowns use the browser's plain look. |  | 135 | no | 27 |
 | `scroll-timeline` | Scroll-driven animations | Terminal tables don't fade at their scroll edge. | `terminal` | 115 | 159 | 26 |
