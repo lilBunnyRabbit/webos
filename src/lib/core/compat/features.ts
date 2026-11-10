@@ -567,7 +567,7 @@ export const FEATURES: Feature[] = [
     name: "Vibration",
     lost: "Haptic feedback on long-press and in a few apps.",
     level: Level.COSMETIC,
-    apps: ["hopsprite", "image-tools", "nurikabe", "shopping-list", "tape-sketch", "glimpse"],
+    apps: ["hopsprite", "image-tools", "nurikabe", "shopping-list", "tape-sketch", "glimpse", "wireframe"],
     min: min("32", null, null),
     probe: () => "vibrate" in navigator,
   },

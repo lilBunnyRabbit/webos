@@ -5,6 +5,19 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.14.0",
+    date: "2026-11-10",
+    title: "Wireframe",
+    introduces: ["wireframe"],
+    changes: [
+      {
+        kind: NEW,
+        apps: ["wireframe"],
+        text: "Wireframe draws furniture, rooms and fences as 3D lines at real lengths: walk each line along X, Y or Z with a typed length, add boxes and repeats, then turn the drawing any way you like with every length labelled.",
+      },
+    ],
+  },
+  {
     version: "4.13.0",
     date: "2026-11-08",
     title: "On-screen flight controls",

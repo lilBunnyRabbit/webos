@@ -54,6 +54,7 @@ export const APP_NAMES: Record<string, string> = {
   "video-tools": "Video Tools",
   warren: "Warren",
   "web-app": "Web App",
+  wireframe: "Wireframe",
 };
 
 export function app_name(id: string): string {

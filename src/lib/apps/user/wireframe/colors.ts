@@ -1,0 +1,40 @@
+import { is_hex, type Axis, type Ink, type LineColor } from "./model";
+
+// Full class names: Tailwind only compiles classes it finds written out.
+export const AXIS_STROKE: Record<Axis, string> = {
+  x: "stroke-accent",
+  y: "stroke-secondary",
+  z: "stroke-tertiary",
+};
+
+export const AXIS_FILL: Record<Axis, string> = {
+  x: "fill-accent",
+  y: "fill-secondary",
+  z: "fill-tertiary",
+};
+
+export const AXIS_BG: Record<Axis, string> = {
+  x: "bg-accent",
+  y: "bg-secondary",
+  z: "bg-tertiary",
+};
+
+export const SWATCH: Record<LineColor, string> = {
+  primary: "bg-primary",
+  secondary: "bg-secondary",
+  tertiary: "bg-tertiary",
+  accent: "bg-accent",
+  info: "bg-info",
+  success: "bg-success",
+  warning: "bg-warning",
+};
+
+export function ink_css(color: Ink): string {
+  if (color === null) return "var(--foreground)";
+  return is_hex(color) ? color : `var(--${color})`;
+}
+
+export function ink_label(color: Ink): string {
+  if (color === null) return "Ink";
+  return is_hex(color) ? color : color[0].toUpperCase() + color.slice(1);
+}

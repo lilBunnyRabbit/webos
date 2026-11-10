@@ -1,0 +1,31 @@
+import { describe, expect, test } from "vitest";
+import { add_box } from "./edit";
+import { parse_wire, serialize_wire } from "./format";
+import { create_wire } from "./model";
+
+describe(".wire", () => {
+  test("round-trips a sketch", () => {
+    const box = add_box(create_wire("m"), null, { x: 800.004, y: 400, z: 2000 }, "#3584e4");
+    const wire = parse_wire(serialize_wire(box.wire));
+    expect(wire).toEqual(box.wire);
+    expect(wire.points.some((point) => point.x === 800)).toBe(true);
+  });
+
+  test("refuses broken references, bad colours and newer versions", () => {
+    const base = { version: 1, unit: "cm", points: [{ id: "a", x: 0, y: 0, z: 0 }], lines: [] as unknown[] };
+    expect(() => parse_wire(JSON.stringify({ ...base, lines: [{ id: "l", a: "a", b: "zz", color: null }] }))).toThrow(
+      /doesn't exist/
+    );
+    expect(() =>
+      parse_wire(
+        JSON.stringify({
+          ...base,
+          points: [...base.points, { id: "b", x: 1, y: 0, z: 0 }],
+          lines: [{ id: "l", a: "a", b: "b", color: "red" }],
+        })
+      )
+    ).toThrow(/valid Wireframe/);
+    expect(() => parse_wire(JSON.stringify({ ...base, version: 2 }))).toThrow(/newer Wireframe/);
+    expect(() => parse_wire("nope")).toThrow(/isn't JSON/);
+  });
+});

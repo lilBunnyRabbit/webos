@@ -1,6 +1,6 @@
 # ADR-102: Wireframe
 **Date:** 2026-11-09
-**Status:** Accepted
+**Status:** Implemented
 
 ## Context
 The owner plans furniture, rooms and fences as 3D line drawings in Inkscape, at real lengths in a cavalier oblique projection. In those drawings X is horizontal, Z is vertical and Y runs at 30° at true length, with 1 unit = 1 mm. Once a drawing is made, it can't be turned to look from another side, and lengths in depth are hard to read off. A college project (points and lines → a rotatable 3D object) had the other half of the idea. Discussion, the analysis of the owner's files and research into how other tools solve it: [brainstorm](../brainstorm/2026-11-09_line-sketch-3d.md).
@@ -57,3 +57,14 @@ A new user app, **Wireframe** (`wireframe`), desktop first and usable on mobile.
 - A new file type and association, `.wire`.
 - No dependency, no new service.
 - Projection, orbit and label placement are the app's own code. A second app that needs them moves them to the kit.
+
+## Revision 2026-11-10 (build)
+Decided within scope while building; nothing changes a shape outside the app. Details in [the app's page](../apps/wireframe.md).
+- **Cavalier is a blend, not an orbit.** The orbit carries `oblique` from 0 to 1 and the basis blends the orthographic orbit (yaw 30°, pitch 20°) with the cavalier shear. Orbiting out of Cavalier fades the shear over the first 160 px of drag instead of jumping. Isometric is yaw 45°, pitch asin(tan 30°); Front, Side and Top are plain orbits. Presets animate for 260 ms (Alt+1 to Alt+5).
+- **Axis inference.** An axis whose screen length is under 0.2 of the longest isn't offered (seen end-on); drawing is refused when two other axes are within 14° on screen. A drag suggests a length rounded to the smallest of 1, 5, 10, 50, 100, 500, 1000, 5000 mm that is at least 8 px, or the exact distance when it ends over a point on that ray; the first typed key replaces the suggestion.
+- **Same point.** Points within 0.005 mm are one point; every edit reuses a point already there, so a walk, a box corner or a copy that lands on a point ends on it. Coordinates are rounded to 0.01 mm.
+- **Line colours** are `null` (the foreground), one of `primary`, `secondary`, `tertiary`, `accent`, `info`, `success`, `warning`, or `#rrggbb`, as Soundboard's pads. Axis colours in the gizmo, ring and preview: X `accent`, Y `secondary`, Z `tertiary`.
+- **Floating points and boxes** take their three numbers in a text prompt (`80 x 40 x 200`, `0, -12.5, 30`), not on the numpad. Move also moves the ends of selected lines. Extrude and Copy leave the new lines selected. Deleting lines drops their ends no other line holds; a lone anchor point stays. Copy along counts 1 to 99. Merge coincident points is in the File menu.
+- **Labels** are placed greedily, longest line first, away from the drawing's centre; a line under 30 px on screen gets none, lines lying on top of each other on screen get one, and a label with no spot clear of other labels is left out rather than stacked.
+- **Input.** Left-drag on empty space pans, right- or middle-drag orbits (Shift pans), the wheel zooms about the pointer; on touch one finger pans or strokes, two fingers orbit and pinch. Zoom is clamped to 0.002–40 px per mm. Orbit turns about the drawing's centre.
+- **Export** writes theme tokens as sRGB hex, so the file opens anywhere; the PNG is the SVG at 2×.

@@ -96,7 +96,8 @@ The full research, with sources, is summarised here. The per-tool tables were in
 ## Action items
 
 - [x] Owner decides: new app or part of Tape Sketch; the editor model; importing Inkscape files; the renderer; shell.
-- [ ] One app-builder agent builds Wireframe v1 per ADR-102, then a review, a visual pass on desktop and mobile, and a push.
+- [x] One app-builder agent builds Wireframe v1 per ADR-102, with a visual pass on desktop and mobile (2026-11-10).
+- [ ] A review of the build, then a push.
 
 ## Next session topics
 
