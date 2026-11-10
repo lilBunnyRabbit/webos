@@ -1,7 +1,13 @@
 <script lang="ts" module>
   import type { Point } from "./projection";
 
-  export type Hit = { kind: "point"; id: string } | { kind: "line"; id: string } | { kind: "origin" };
+  export type Hit = { kind: "point"; id: string } | { kind: "line"; id: string } | { kind: "face"; id: string } | { kind: "origin" };
+
+  export interface PlaceGhost {
+    lines: { id: string; a: Point; b: Point }[];
+    faces: { id: string; points: Point[] }[];
+    at: Point;
+  }
 
   export interface StrokeEvent {
     from: string | null;
@@ -12,7 +18,7 @@
 </script>
 
 <script lang="ts">
-  import { AXIS_STROKE, ink_css } from "./colors";
+  import { AXIS_STROKE, face_css, ink_css } from "./colors";
   import { Tool, type Editor } from "./editor.svelte";
   import { AXES, axis_vector, ORIGIN, type Vec3 } from "./model";
   import { orbit_by, projector, repivot, type Camera } from "./projection";
@@ -26,6 +32,10 @@
     pivot: Vec3;
     ghost: { a: Vec3; b: Vec3; text: string } | null;
     guides: Vec3 | null;
+    labels: boolean;
+    handle: string | null;
+    placing: PlaceGhost | null;
+    onhover: (at: Point | null, hit: Hit | null) => void;
     ontap: (hit: Hit | null, shift: boolean) => void;
     onstroke: (event: StrokeEvent) => void;
     onturn: () => void;
@@ -39,6 +49,10 @@
     pivot,
     ghost,
     guides,
+    labels,
+    handle,
+    placing,
+    onhover,
     ontap,
     onstroke,
     onturn,
@@ -46,10 +60,11 @@
 
   let hover = $state<string | null>(null);
   const forced = $derived(new Set(hover ? [...editor.selection.lines, hover] : editor.selection.lines));
-  const scene = $derived(build_scene(editor.wire, camera, true, forced));
+  const scene = $derived(build_scene(editor.wire, camera, labels, forced));
   const project = $derived(projector(camera));
   const picked_lines = $derived(new Set(editor.selection.lines));
   const picked_points = $derived(new Set(editor.selection.points));
+  const picked_faces = $derived(new Set(editor.selection.faces));
   const empty = $derived(!editor.wire.points.length);
   const origin = $derived(project.project(ORIGIN));
 
@@ -108,7 +123,7 @@
     const element = target instanceof Element ? target.closest<SVGElement>("[data-hit]") : null;
     if (!element) return null;
     const { hit, id = "" } = element.dataset;
-    if (hit === "point" || hit === "line") return { kind: hit, id };
+    if (hit === "point" || hit === "line" || hit === "face") return { kind: hit, id };
     if (hit === "origin") return { kind: "origin" };
     return null;
   }
@@ -168,6 +183,7 @@
     if (!pointers.size && event.pointerType === "mouse") {
       const hit = read_hit(event.target);
       hover = hit?.kind === "line" ? hit.id : null;
+      onhover(local(event), hit);
     }
     if (!pointers.has(event.pointerId)) return;
     const p = local(event);
@@ -277,7 +293,10 @@
     onpointermove={on_pointermove}
     onpointercancel={on_pointercancel}
     onlostpointercapture={on_pointerend}
-    onpointerleave={() => (hover = null)}
+    onpointerleave={() => {
+      hover = null;
+      onhover(null, null);
+    }}
   >
     {#each guide_lines as guide (guide.axis)}
       <line x1={guide.a.x} y1={guide.a.y} x2={guide.b.x} y2={guide.b.y} class={[AXIS_STROKE[guide.axis], "opacity-40"]} stroke-width="1" stroke-dasharray="4 4" />
@@ -291,21 +310,48 @@
       <circle cx={origin.x} cy={origin.y} r="20" class="hit-fill" data-hit="origin" />
     {/if}
 
-    {#each scene.lines as line (line.id)}
-      {#if picked_lines.has(line.id)}
-        <line x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} class="stroke-primary/35" stroke-width="9" stroke-linecap="round" />
+    {#each scene.order as item (`${item.kind}:${item.id}`)}
+      {#if item.kind === "face"}
+        {@const picked = picked_faces.has(item.id)}
+        <polygon
+          points={item.face.points.map((corner) => `${corner.x},${corner.y}`).join(" ")}
+          style:fill={picked ? "color-mix(in srgb, var(--primary) 32%, var(--background))" : face_css(item.face.color)}
+          stroke-linejoin="round"
+          data-hit="face"
+          data-id={item.id}
+        />
+      {:else if item.kind === "line"}
+        {@const line = item.line}
+        {#if picked_lines.has(line.id)}
+          <line x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} class="stroke-primary/35" stroke-width="9" stroke-linecap="round" />
+        {/if}
+        <line
+          x1={line.a.x}
+          y1={line.a.y}
+          x2={line.b.x}
+          y2={line.b.y}
+          style:stroke={ink_css(line.color)}
+          stroke-width={picked_lines.has(line.id) ? 2.75 : 2}
+          stroke-linecap="round"
+        />
+        <line x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} class="hit" stroke-width="16" data-hit="line" data-id={line.id} />
+      {:else}
+        {@const at = item.point.at}
+        <circle cx={at.x} cy={at.y} r="3" class="fill-background stroke-foreground/80" stroke-width="1.5" />
       {/if}
-      <line
-        x1={line.a.x}
-        y1={line.a.y}
-        x2={line.b.x}
-        y2={line.b.y}
-        style:stroke={ink_css(line.color)}
-        stroke-width={picked_lines.has(line.id) ? 2.75 : 2}
-        stroke-linecap="round"
-      />
-      <line x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} class="hit" stroke-width="16" data-hit="line" data-id={line.id} />
     {/each}
+
+    {#if placing}
+      <g class="pointer-events-none opacity-80">
+        {#each placing.faces as face (face.id)}
+          <polygon points={face.points.map((corner) => `${corner.x},${corner.y}`).join(" ")} class="fill-primary/15" />
+        {/each}
+        {#each placing.lines as line (line.id)}
+          <line x1={line.a.x} y1={line.a.y} x2={line.b.x} y2={line.b.y} class="stroke-primary" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round" />
+        {/each}
+        <circle cx={placing.at.x} cy={placing.at.y} r="6" class="fill-primary/30 stroke-primary" stroke-width="2" />
+      </g>
+    {/if}
 
     {#if ghost_shown}
       <g class="pointer-events-none">
@@ -327,11 +373,10 @@
     {/if}
 
     {#each scene.points as point (point.id)}
-      {@const active = picked_points.has(point.id) || point.id === from_id}
-      {#if active}
+      {#if picked_points.has(point.id) || point.id === from_id || point.id === handle}
         <circle cx={point.at.x} cy={point.at.y} r="9" class="fill-primary/20" />
+        <circle cx={point.at.x} cy={point.at.y} r="4" class="fill-primary stroke-primary" stroke-width="1.5" />
       {/if}
-      <circle cx={point.at.x} cy={point.at.y} r={active ? 4 : 3} class={active ? "fill-primary stroke-primary" : "fill-background stroke-foreground/80"} stroke-width="1.5" />
       <circle cx={point.at.x} cy={point.at.y} r="13" class="hit-fill" data-hit="point" data-id={point.id} />
     {/each}
 

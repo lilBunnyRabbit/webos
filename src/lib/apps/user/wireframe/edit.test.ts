@@ -75,7 +75,7 @@ describe("repeat tools", () => {
 
   test("merge joins points in one place and drops the lines that collapse", () => {
     const wire: Wire = {
-      version: 1,
+      version: 2,
       unit: "cm",
       points: [
         { id: "a", x: 0, y: 0, z: 0 },
@@ -87,6 +87,7 @@ describe("repeat tools", () => {
         { id: "2", a: "a", b: "c", color: null },
         { id: "3", a: "b", b: "c", color: null },
       ],
+      faces: [],
     };
     const merged = merge_coincident(wire);
     expect(merged.merged).toBe(1);

@@ -34,6 +34,15 @@ export function ink_css(color: Ink): string {
   return is_hex(color) ? color : `var(--${color})`;
 }
 
+// The ink is the strongest colour, so it gets less of the face; both stay opaque, so a face hides what's behind it.
+export function face_tint(color: Ink): number {
+  return color === null ? 0.12 : 0.24;
+}
+
+export function face_css(color: Ink): string {
+  return `color-mix(in srgb, ${ink_css(color)} ${face_tint(color) * 100}%, var(--background))`;
+}
+
 export function ink_label(color: Ink): string {
   if (color === null) return "Ink";
   return is_hex(color) ? color : color[0].toUpperCase() + color.slice(1);

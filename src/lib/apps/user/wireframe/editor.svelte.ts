@@ -1,6 +1,7 @@
 import { can_redo, can_undo, create_history, current, push, redo, undo, type History } from "$kit/utils/history";
 import { create_wire, type Axis, type Ink, type Sign, type Wire } from "./model";
 import { type_key } from "$kit/components/length-pad/keys";
+import type { Part } from "./part";
 
 export const Tool = {
   SELECT: "select",
@@ -19,9 +20,24 @@ export const Op = {
 } as const;
 export type Op = (typeof Op)[keyof typeof Op];
 
+export const PlaceKind = {
+  MOVE: "move",
+  DUPLICATE: "duplicate",
+  PASTE: "paste",
+} as const;
+export type PlaceKind = (typeof PlaceKind)[keyof typeof PlaceKind];
+
+/** A part waiting to be dropped: held by `handle`, one of its points, then dropped on a point of the drawing. */
+export interface Place {
+  kind: PlaceKind;
+  part: Part;
+  handle: string | null;
+}
+
 export interface Selection {
   points: string[];
   lines: string[];
+  faces: string[];
 }
 
 export interface Pending {
@@ -29,7 +45,7 @@ export interface Pending {
   sign: Sign;
 }
 
-const EMPTY: Selection = { points: [], lines: [] };
+const EMPTY: Selection = { points: [], lines: [], faces: [] };
 
 export class Editor {
   private history = $state.raw<History<Wire>>(create_history(create_wire()));
@@ -46,6 +62,7 @@ export class Editor {
   typed = $state(false);
   /** The point a stroke was dragged onto: it's joined exactly, since the suggested text is rounded, unless a length is typed. */
   snap = $state<string | null>(null);
+  place = $state.raw<Place | null>(null);
   count = $state(2);
   ink = $state<Ink>(null);
 
@@ -88,12 +105,16 @@ export class Editor {
     const wire = current(this.history);
     const points = new Set(wire.points.map((point) => point.id));
     const lines = new Set(wire.lines.map((line) => line.id));
+    const faces = new Set(wire.faces.map((face) => face.id));
+    // A part held from the drawing was lifted from the sketch before this change, so it no longer matches it.
+    if (this.place && this.place.kind !== PlaceKind.PASTE) this.place = null;
     if (this.from && !points.has(this.from)) this.from = null;
     if (this.slope_from && !points.has(this.slope_from)) this.slope_from = null;
     if (this.snap && !points.has(this.snap)) this.snap = null;
     this.select({
       points: this.selection.points.filter((id) => points.has(id)),
       lines: this.selection.lines.filter((id) => lines.has(id)),
+      faces: this.selection.faces.filter((id) => faces.has(id)),
     });
   }
 
@@ -102,6 +123,7 @@ export class Editor {
     this.from = null;
     this.slope_from = null;
     this.op = null;
+    this.place = null;
     this.clear_length();
   }
 

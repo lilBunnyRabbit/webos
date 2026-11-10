@@ -1,9 +1,11 @@
 import {
   add3,
   axis_vector,
+  face_sides,
   new_id,
   point_map,
   same_place,
+  same_side,
   scale3,
   type Axis,
   type Ink,
@@ -11,6 +13,7 @@ import {
   type Unit,
   type Vec3,
   type Wire,
+  type WireFace,
   type WireLine,
   type WirePoint,
 } from "./model";
@@ -79,26 +82,54 @@ export function move_points(wire: Wire, ids: readonly string[], axis: Axis, dist
   };
 }
 
-/** Deleting lines also drops their ends when nothing else holds them; a point that never had a line stays. */
-export function delete_items(wire: Wire, points: readonly string[], lines: readonly string[]): Wire {
+/**
+ * Deleting lines also drops their ends when nothing else holds them; a point that never had a line stays.
+ * A face goes with any of its points or with a deleted line along one of its sides.
+ */
+export function delete_items(
+  wire: Wire,
+  points: readonly string[],
+  lines: readonly string[],
+  faces: readonly string[] = []
+): Wire {
   const gone_points = new Set(points);
   const gone_lines = new Set(lines);
+  const gone_faces = new Set(faces);
   const kept = wire.lines.filter(
     (line) => !gone_lines.has(line.id) && !gone_points.has(line.a) && !gone_points.has(line.b)
   );
+  const cut = wire.lines.filter((line) => !kept.includes(line));
   const ends = new Set(wire.lines.filter((line) => gone_lines.has(line.id)).flatMap((line) => [line.a, line.b]));
   const used = new Set(kept.flatMap((line) => [line.a, line.b]));
+  const kept_points = wire.points.filter(
+    (point) => !gone_points.has(point.id) && (!ends.has(point.id) || used.has(point.id))
+  );
+  const alive = new Set(kept_points.map((point) => point.id));
   return {
     ...wire,
-    points: wire.points.filter((point) => !gone_points.has(point.id) && (!ends.has(point.id) || used.has(point.id))),
+    points: kept_points,
     lines: kept,
+    faces: wire.faces.filter(
+      (face) =>
+        !gone_faces.has(face.id) &&
+        face.points.every((id) => alive.has(id)) &&
+        !face_sides(face).some(([a, b]) => cut.some((line) => same_side(line, a, b)))
+    ),
   };
 }
 
-export function set_color(wire: Wire, lines: readonly string[], color: Ink): Wire {
+export function set_color(wire: Wire, lines: readonly string[], color: Ink, faces: readonly string[] = []): Wire {
   const picked = new Set(lines);
-  if (!wire.lines.some((line) => picked.has(line.id) && line.color !== color)) return wire;
-  return { ...wire, lines: wire.lines.map((line) => (picked.has(line.id) ? { ...line, color } : line)) };
+  const picked_faces = new Set(faces);
+  const changes =
+    wire.lines.some((line) => picked.has(line.id) && line.color !== color) ||
+    wire.faces.some((face) => picked_faces.has(face.id) && face.color !== color);
+  if (!changes) return wire;
+  return {
+    ...wire,
+    lines: wire.lines.map((line) => (picked.has(line.id) ? { ...line, color } : line)),
+    faces: wire.faces.map((face) => (picked_faces.has(face.id) ? { ...face, color } : face)),
+  };
 }
 
 export function set_unit(wire: Wire, unit: Unit): Wire {
@@ -174,7 +205,25 @@ function copy_lines(
     next = added.wire;
     if (added.id) copied.push(added.id);
   }
+  for (const face of wire.faces.filter((each) => each.points.every((id) => map.has(id))))
+    next = add_face(next, face.points.map((id) => map.get(id)!), face.color).wire;
   return { wire: next, map, lines: copied };
+}
+
+function clean_loop(points: readonly string[]): string[] | null {
+  const loop = points.filter((id, i) => id !== points[(i + 1) % points.length]);
+  return loop.length >= 3 && new Set(loop).size === loop.length ? loop : null;
+}
+
+const loop_key = (points: readonly string[]) => [...points].sort().join(":");
+
+export function add_face(wire: Wire, points: readonly string[], color: Ink): { wire: Wire; id: string | null } {
+  const loop = clean_loop(points);
+  if (!loop) return { wire, id: null };
+  const key = loop_key(loop);
+  if (wire.faces.some((face) => loop_key(face.points) === key)) return { wire, id: null };
+  const id = new_id();
+  return { wire: { ...wire, faces: [...wire.faces, { id, points: loop, color }] }, id };
 }
 
 export function extrude(
@@ -216,15 +265,8 @@ export function copy_along(
   return { wire: next, lines: all };
 }
 
-export function merge_coincident(wire: Wire): { wire: Wire; merged: number } {
-  const keep: WirePoint[] = [];
-  const into = new Map<string, string>();
-  for (const point of wire.points) {
-    const same = keep.find((other) => same_place(other, point));
-    if (same) into.set(point.id, same.id);
-    else keep.push(point);
-  }
-  if (!into.size) return { wire, merged: 0 };
+/** Lines and faces that collapse onto one point, or double another, go. */
+function remap(wire: Wire, keep: WirePoint[], into: ReadonlyMap<string, string>): Wire {
   const lines: WireLine[] = [];
   const seen = new Set<string>();
   for (const line of wire.lines) {
@@ -235,7 +277,43 @@ export function merge_coincident(wire: Wire): { wire: Wire; merged: number } {
     seen.add(key);
     lines.push({ ...line, a, b });
   }
-  return { wire: { ...wire, points: keep, lines }, merged: into.size };
+  const faces: WireFace[] = [];
+  const filled = new Set<string>();
+  for (const face of wire.faces) {
+    const loop = clean_loop(face.points.map((id) => into.get(id) ?? id));
+    if (!loop || filled.has(loop_key(loop))) continue;
+    filled.add(loop_key(loop));
+    faces.push({ ...face, points: loop });
+  }
+  return { ...wire, points: keep, lines, faces };
+}
+
+export function merge_coincident(wire: Wire): { wire: Wire; merged: number } {
+  const keep: WirePoint[] = [];
+  const into = new Map<string, string>();
+  for (const point of wire.points) {
+    const same = keep.find((other) => same_place(other, point));
+    if (same) into.set(point.id, same.id);
+    else keep.push(point);
+  }
+  if (!into.size) return { wire, merged: 0 };
+  return { wire: remap(wire, keep, into), merged: into.size };
+}
+
+/** A moved point that lands on one that stayed merges into it, as every edit does. */
+export function translate(wire: Wire, ids: readonly string[], shift: Vec3): Wire {
+  if (!ids.length || (!shift.x && !shift.y && !shift.z)) return wire;
+  const moving = new Set(ids);
+  const moved = wire.points.map((point) => (moving.has(point.id) ? { ...point, ...clean(add3(point, shift)) } : point));
+  const staying = moved.filter((point) => !moving.has(point.id));
+  const into = new Map<string, string>();
+  for (const point of moved) {
+    if (!moving.has(point.id)) continue;
+    const same = staying.find((other) => same_place(other, point));
+    if (same) into.set(point.id, same.id);
+  }
+  const next = { ...wire, points: moved };
+  return into.size ? remap(next, moved.filter((point) => !into.has(point.id)), into) : next;
 }
 
 export function line_points(wire: Wire, line_ids: readonly string[]): string[] {

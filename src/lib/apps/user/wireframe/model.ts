@@ -44,15 +44,32 @@ export interface WireLine {
   color: Ink;
 }
 
+/** A flat, opaque polygon: its points in loop order. */
+export interface WireFace {
+  id: string;
+  points: string[];
+  color: Ink;
+}
+
 export interface Wire {
-  version: 1;
+  version: 2;
   unit: Unit;
   points: WirePoint[];
   lines: WireLine[];
+  faces: WireFace[];
 }
 
 export function create_wire(unit: Unit = Unit.CM): Wire {
-  return { version: 1, unit, points: [], lines: [] };
+  return { version: 2, unit, points: [], lines: [], faces: [] };
+}
+
+/** The loop's sides as point pairs, the last one closing back to the first. */
+export function face_sides(face: WireFace): [string, string][] {
+  return face.points.map((id, i) => [id, face.points[(i + 1) % face.points.length]]);
+}
+
+export function same_side(line: WireLine, a: string, b: string): boolean {
+  return (line.a === a && line.b === b) || (line.a === b && line.b === a);
 }
 
 export function new_id(): string {

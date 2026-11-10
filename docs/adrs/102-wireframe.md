@@ -78,3 +78,14 @@ Owner decisions after using v1 on a real drawing ([brainstorm](../brainstorm/202
 - **Faces.** Select lines closing one flat loop and press F. Faces are opaque and drawn back to front with the lines, so they hide what's behind. Their colour comes from the edges' most common colour and can be changed like a line's.
 - **File version 2** adds `faces: { id: string; points: string[]; color }[]` (point ids in loop order). Version 1 still opens; a v2 file in an older Wireframe is refused, not stripped.
 - Shell: unchanged.
+
+Decided while building (2026-11-10), inside that scope; details in [the app's page](../apps/wireframe.md):
+- **Handles.** Move and Duplicate take the handle as a tap on one of the selection's points. Copy has no handle step: the clipboard text is relative to the part's lowest corner (lowest Z, then Y, then X), and Paste holds the part by it.
+- **Duplicate** isn't written to the drawing until the drop (a copy in place would merge into its original through `ensure_point`); it's Paste with the selection as the part, and the drop is the one undo step.
+- **Clipboard text** is `{ wireframe: 2, unit, points, lines, faces }`, positions in mm. Paste reads it with `navigator.clipboard.readText()`; ClipboardService has no text read. Mod+C and Mod+V stay the browser's in a text field.
+- **Typed Move** stays on M and on a **By length** button while placing. The selection bar's Copy (along an axis) is now **Copy along**, next to clipboard Copy, Paste, Duplicate and Fill (icon buttons); Paste is also in the File menu, for a phone with nothing selected.
+- **Painter's order:** one list of faces, lines and points by depth (face: mean of its corners; line: midpoint); a face's sides and corners are lifted to at least its depth and sort after it. Point hit areas stay on top so a hidden corner can still be a drop target. A line whose middle is behind a nearer face loses its label.
+- **Fill colour:** the face colour mixed 24 % (the ink 12 %) into `--background` in sRGB, opaque; export does the same mix on the hex values. Selected faces are the primary colour at 32 %.
+- **Flatness:** the corners within 0.05 mm of the plane through Newell's normal. A loop already filled is refused. A face partly moved by a typed Move follows its corners and isn't re-checked.
+- **Labels off** exports no labels.
+- **Phone multi-select:** with lines selected, a tap on another line adds it (no Shift on a phone), so Fill works on touch; this replaces "a selection is one item at a time" on a phone for lines.

@@ -7,6 +7,7 @@ export interface Palette {
   ink: string;
   chip: string;
   line: (color: Ink) => string;
+  face: (color: Ink) => string;
 }
 
 const SIDE = 1000;
@@ -19,10 +20,10 @@ function escape(text: string): string {
 
 const n = (value: number) => Math.round(value * 10) / 10;
 
-export function wire_svg(wire: Wire, orbit: Orbit, pivot: Vec3, palette: Palette): string | null {
+export function wire_svg(wire: Wire, orbit: Orbit, pivot: Vec3, palette: Palette, labels = true): string | null {
   if (!wire.points.length) return null;
   const view = fitted_view(wire, orbit, pivot, SIDE, SIDE, MARGIN);
-  const scene = build_scene(wire, { orbit, pivot, view });
+  const scene = build_scene(wire, { orbit, pivot, view }, labels);
   let x0 = Infinity;
   let y0 = Infinity;
   let x1 = -Infinity;
@@ -44,12 +45,17 @@ export function wire_svg(wire: Wire, orbit: Orbit, pivot: Vec3, palette: Palette
     `<svg xmlns="http://www.w3.org/2000/svg" width="${box.w}" height="${box.h}" viewBox="${n(box.x)} ${n(box.y)} ${box.w} ${box.h}">`,
     `<rect x="${n(box.x)}" y="${n(box.y)}" width="${box.w}" height="${box.h}" fill="${palette.paper}"/>`,
   ];
-  for (const line of scene.lines)
-    out.push(
-      `<line x1="${n(line.a.x)}" y1="${n(line.a.y)}" x2="${n(line.b.x)}" y2="${n(line.b.y)}" stroke="${palette.line(line.color)}" stroke-width="2" stroke-linecap="round"/>`
-    );
-  for (const point of scene.points)
-    out.push(`<circle cx="${n(point.at.x)}" cy="${n(point.at.y)}" r="2.5" fill="${palette.ink}"/>`);
+  for (const item of scene.order) {
+    if (item.kind === "face") {
+      const corners = item.face.points.map((corner) => `${n(corner.x)},${n(corner.y)}`).join(" ");
+      out.push(`<polygon points="${corners}" fill="${palette.face(item.face.color)}" stroke-linejoin="round"/>`);
+    } else if (item.kind === "line") {
+      const line = item.line;
+      out.push(
+        `<line x1="${n(line.a.x)}" y1="${n(line.a.y)}" x2="${n(line.b.x)}" y2="${n(line.b.y)}" stroke="${palette.line(line.color)}" stroke-width="2" stroke-linecap="round"/>`
+      );
+    } else out.push(`<circle cx="${n(item.point.at.x)}" cy="${n(item.point.at.y)}" r="2.5" fill="${palette.ink}"/>`);
+  }
   for (const label of scene.labels) {
     const { x, y, w, h } = label.rect;
     out.push(

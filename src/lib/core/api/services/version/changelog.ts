@@ -5,6 +5,28 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.15.0",
+    date: "2026-11-10",
+    title: "Wireframe faces and placing",
+    changes: [
+      {
+        kind: IMPROVED,
+        apps: ["wireframe"],
+        text: "Wireframe moves, duplicates and pastes parts by holding one corner and dropping it on a point, so a copied wall section joins the old one exactly; copy and paste work between Wireframe windows.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["wireframe"],
+        text: "Wireframe fills a closed flat loop of lines with a solid face that hides what's behind it, in the drawing and in exported pictures.",
+      },
+      {
+        kind: IMPROVED,
+        apps: ["wireframe"],
+        text: "Wireframe can hide the lengths, showing only the selected line's, and remembers the choice.",
+      },
+    ],
+  },
+  {
     version: "4.14.0",
     date: "2026-11-10",
     title: "Wireframe",

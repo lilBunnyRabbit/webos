@@ -1,5 +1,13 @@
 <script lang="ts">
-  import kernel, { Platform, ShortcutCategory, type AppsService, type DialogsService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, {
+    Platform,
+    ShortcutCategory,
+    type AppsService,
+    type ClipboardService,
+    type DialogsService,
+    type NotificationsService,
+    type ShortcutsService,
+  } from "$lib/core/api";
   import { Button, IconButton, Spinner, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { is_system_path } from "$lib/core/api/services/files/hierarchy";
@@ -11,7 +19,10 @@
     ArrowCounterClockwise as ArrowCounterClockwiseIcon,
     ArrowsOutCardinal as ArrowsOutCardinalIcon,
     CaretDown as CaretDownIcon,
+    Clipboard as ClipboardIcon,
+    ClipboardText as ClipboardTextIcon,
     Copy as CopyIcon,
+    CopySimple as CopySimpleIcon,
     CornersOut as CornersOutIcon,
     Cube as CubeIcon,
     Cursor as CursorIcon,
@@ -22,15 +33,18 @@
     FolderOpen as FolderOpenIcon,
     GitMerge as GitMergeIcon,
     LineSegment as LineSegmentIcon,
+    PaintBucket as PaintBucketIcon,
     Palette as PaletteIcon,
     PencilSimpleLine as PencilSimpleLineIcon,
     Ruler as RulerIcon,
     Stack as StackIcon,
+    Tag as TagIcon,
     Trash as TrashIcon,
     Crosshair as CrosshairIcon,
     Eye as EyeIcon,
   } from "phosphor-svelte";
   import { onMount, untrack, type Component } from "svelte";
+  import { z } from "zod";
   import { ink_css, ink_label, SWATCH } from "./colors";
   import {
     add_box,
@@ -47,10 +61,13 @@
     position,
     set_color,
     set_unit,
+    translate,
     walk,
     walk_end,
   } from "./edit";
-  import { Editor, Op, Tool, type Selection } from "./editor.svelte";
+  import { Editor, Op, PlaceKind, Tool, type Selection } from "./editor.svelte";
+  import { face_lines, fill } from "./faces";
+  import { anchor_of, clip_text, extract_part, parse_clip, place_part } from "./part";
   import { svg_to_png, theme_palette } from "./export";
   import { EXTENSION, serialize_wire, wire_name_for } from "./format";
   import { read_path, write_file } from "./io";
@@ -76,17 +93,19 @@
   import { fitted_view } from "./scene";
   import { wire_svg } from "./svg";
   import { format_length, input_for, parse_input, parse_numbers, UNIT_LABELS } from "./units";
-  import WireframeCanvas, { type Hit, type StrokeEvent } from "./wireframe-canvas.svelte";
+  import WireframeCanvas, { type Hit, type PlaceGhost, type StrokeEvent } from "./wireframe-canvas.svelte";
   import WireframeGizmo from "./wireframe-gizmo.svelte";
   import WireframePanel from "./wireframe-panel.svelte";
 
   const { path: initial_path }: { path?: string } = $props();
-  const { app_id, window_id, window: win } = get_app_context();
+  const { app_id, window_id, window: win, storage } = get_app_context();
+  const settings = storage.file("settings.json", { labels: true }, z.object({ labels: z.boolean().catch(true) }));
 
   const notifications = $derived(kernel.service<NotificationsService>("notifications"));
   const shortcuts = $derived(kernel.service<ShortcutsService>("shortcuts"));
   const dialogs = $derived(kernel.service<DialogsService>("dialogs"));
   const apps = $derived(kernel.service<AppsService>("apps"));
+  const clipboard = $derived(kernel.service<ClipboardService>("clipboard"));
 
   const editor = new Editor();
   const mobile = kernel.platform === Platform.MOBILE;
@@ -252,7 +271,7 @@
   }
 
   async function export_as(format: "png" | "svg") {
-    const svg = wire_svg(editor.wire, camera.orbit, center3(editor.wire), theme_palette());
+    const svg = wire_svg(editor.wire, camera.orbit, center3(editor.wire), theme_palette(), settings.value.labels);
     if (!svg) {
       say("Nothing to export yet");
       return;
@@ -302,6 +321,7 @@
         { id: "svg", label: "Export SVG…", icon: ExportIcon },
         { separator: true },
         { id: "all", label: "Select all", shortcut: "Mod+A" },
+        { id: "paste", label: "Paste", icon: ClipboardTextIcon, shortcut: "Mod+V" },
         { id: "merge", label: "Merge overlapping points", icon: GitMergeIcon },
       ],
       { anchor: below(event) }
@@ -312,6 +332,7 @@
     else if (choice === "save-as") void save_as();
     else if (choice === "png" || choice === "svg") void export_as(choice);
     else if (choice === "all") select_all();
+    else if (choice === "paste") void paste();
     else if (choice === "merge") merge();
   }
 
@@ -326,11 +347,13 @@
           shortcut: mobile ? undefined : `Alt+${i + 1}`,
         })),
         { separator: true },
+        { id: "labels", label: `All lengths${settings.value.labels ? " ✓" : ""}`, icon: TagIcon, shortcut: mobile ? undefined : "Shift+L" },
         { id: "fit", label: "Fit the drawing", icon: CornersOutIcon, shortcut: "Mod+0" },
       ],
       { anchor: below(event) }
     );
     if (choice === "fit") fit();
+    else if (choice === "labels") toggle_labels();
     else if (choice && choice in PRESETS) turn_to(PRESETS[choice as ViewPreset]);
   }
 
@@ -363,8 +386,14 @@
     root?.querySelector<SVGElement>("svg.canvas")?.focus({ preventScroll: true });
   }
 
+  function toggle_labels() {
+    settings.value.labels = !settings.value.labels;
+    say(settings.value.labels ? "Showing every length" : "Lengths only for the selection");
+  }
+
   function set_tool(tool: Tool) {
     editor.op = null;
+    editor.place = null;
     editor.clear_length();
     editor.slope_from = null;
     const single = editor.selection.points.length === 1 && !editor.selection.lines.length ? editor.selection.points[0] : null;
@@ -376,6 +405,7 @@
 
   function start_op(op: Op) {
     if (editor.tool !== Tool.SELECT) editor.tool = Tool.SELECT;
+    editor.place = null;
     editor.clear_length();
     editor.op = op;
     focus_canvas();
@@ -389,7 +419,7 @@
   }
 
   function select_all() {
-    editor.select({ points: [], lines: editor.wire.lines.map((line) => line.id) });
+    editor.select({ points: [], lines: editor.wire.lines.map((line) => line.id), faces: editor.wire.faces.map((face) => face.id) });
     if (editor.tool !== Tool.SELECT) {
       editor.tool = Tool.SELECT;
       editor.clear_length();
@@ -406,9 +436,11 @@
       if (!shift) editor.clear_selection();
       return;
     }
-    const key = hit.kind === "point" ? "points" : "lines";
-    if (shift) editor.select({ ...selection, [key]: toggle(selection[key], hit.id) });
-    else editor.select({ points: [], lines: [], [key]: [hit.id] } as Selection);
+    const key = hit.kind === "point" ? "points" : hit.kind === "line" ? "lines" : "faces";
+    // A phone has no Shift: once lines are selected, tapping more lines adds them, so a loop can be picked for Fill.
+    const adding = mobile && key === "lines" && selection.lines.length > 0 && !selection.points.length && !selection.faces.length;
+    if (shift || adding) editor.select({ ...selection, [key]: toggle(selection[key], hit.id) });
+    else editor.select({ points: [], lines: [], faces: [], [key]: [hit.id] } as Selection);
   }
 
   async function ask_numbers(message: string, count: number, initial: string, placeholder: string): Promise<number[] | null> {
@@ -456,14 +488,15 @@
       return added.wire;
     });
     editor.tool = Tool.SELECT;
-    editor.select({ points: [], lines });
+    editor.select({ points: [], lines, faces: [] });
     focus_canvas();
   }
 
   function on_tap(hit: Hit | null, shift: boolean) {
     focus_canvas();
     const tool = editor.tool;
-    if (tool === Tool.SELECT) tap_select(hit, shift);
+    if (editor.place) place_tap(hit);
+    else if (tool === Tool.SELECT) tap_select(hit, shift);
     else if (tool === Tool.DRAW) {
       if (hit?.kind === "point") {
         editor.from = hit.id;
@@ -570,9 +603,157 @@
     walk_along(pending.axis, pending.sign, length);
   }
 
-  function selected_points(): string[] {
-    return [...new Set([...editor.selection.points, ...line_points(editor.wire, editor.selection.lines)])];
+  function selected_lines(): string[] {
+    return [...new Set([...editor.selection.lines, ...face_lines(editor.wire, editor.selection.faces)])];
   }
+
+  function selected_points(): string[] {
+    const faces = new Set(editor.selection.faces);
+    const corners = editor.wire.faces.filter((face) => faces.has(face.id)).flatMap((face) => face.points);
+    return [...new Set([...editor.selection.points, ...line_points(editor.wire, editor.selection.lines), ...corners])];
+  }
+
+  const has_selection = () => editor.selection.points.length + editor.selection.lines.length + editor.selection.faces.length > 0;
+
+  function selected_part() {
+    const { points, lines, faces } = editor.selection;
+    return extract_part(editor.wire, points, lines, faces);
+  }
+
+  function start_place(kind: PlaceKind) {
+    if (!has_selection()) {
+      say(kind === PlaceKind.MOVE ? "Select what to move" : "Select what to duplicate");
+      return;
+    }
+    if (editor.tool !== Tool.SELECT) editor.tool = Tool.SELECT;
+    editor.op = null;
+    editor.clear_length();
+    editor.place = { kind, part: selected_part(), handle: null };
+    focus_canvas();
+  }
+
+  function cancel_place() {
+    editor.place = null;
+    cursor = null;
+  }
+
+  async function copy_selection() {
+    const part = selected_part();
+    const text = has_selection() ? clip_text(part, editor.wire.unit) : null;
+    if (!text) {
+      say("Select lines to copy");
+      return;
+    }
+    try {
+      await clipboard.copy_text(text);
+      const lines = part.lines.length;
+      const faces = part.faces.length;
+      say(`Copied ${lines} ${lines === 1 ? "line" : "lines"}${faces ? ` and ${faces} ${faces === 1 ? "face" : "faces"}` : ""}`);
+    } catch (reason) {
+      report_error(app_id, "Couldn't copy to the clipboard", reason);
+    }
+  }
+
+  async function paste() {
+    let text: string;
+    try {
+      text = await navigator.clipboard.readText();
+    } catch {
+      say("The clipboard can't be read here");
+      return;
+    }
+    const part = parse_clip(text);
+    const anchor = part && anchor_of(part);
+    if (!part || !anchor) {
+      say("The clipboard doesn't hold Wireframe lines");
+      return;
+    }
+    if (editor.tool !== Tool.SELECT) editor.tool = Tool.SELECT;
+    editor.op = null;
+    editor.clear_length();
+    editor.place = { kind: PlaceKind.PASTE, part, handle: anchor.id };
+    focus_canvas();
+  }
+
+  function place_tap(hit: Hit | null) {
+    const place = editor.place;
+    if (!place) return;
+    if (!place.handle) {
+      if (hit?.kind === "point" && place.part.points.some((point) => point.id === hit.id)) editor.place = { ...place, handle: hit.id };
+      else say("Tap a corner of the selection to hold it by");
+      return;
+    }
+    const target = hit?.kind === "point" ? position(editor.wire, hit.id) : hit?.kind === "origin" ? ORIGIN : null;
+    if (!target) {
+      say("Tap a point to drop it on");
+      return;
+    }
+    const handle = place.part.points.find((point) => point.id === place.handle)!;
+    const shift = sub3(target, handle);
+    if (place.kind === PlaceKind.MOVE) {
+      editor.apply((value) => translate(value, place.part.points.map((point) => point.id), shift));
+    } else {
+      let made = { lines: [] as string[], faces: [] as string[] };
+      editor.apply((value) => {
+        const result = place_part(value, place.part, shift);
+        made = result;
+        return result.wire;
+      });
+      editor.select({ points: [], lines: made.lines, faces: made.faces });
+    }
+    cancel_place();
+  }
+
+  function fill_selection() {
+    const lines = editor.selection.lines;
+    if (!lines.length) {
+      say("Select the lines round the face first");
+      return;
+    }
+    let made: string | null = null;
+    let refused: string | null = null;
+    editor.apply((value) => {
+      const result = fill(value, lines);
+      if ("refused" in result) {
+        refused = result.refused;
+        return value;
+      }
+      made = result.id;
+      return result.wire;
+    });
+    if (refused) say(refused);
+    else if (made) editor.select({ points: [], lines: [], faces: [made] });
+  }
+
+  let cursor = $state<{ x: number; y: number } | null>(null);
+  let cursor_point = $state<string | null>(null);
+
+  function on_hover(at: { x: number; y: number } | null, hit: Hit | null) {
+    if (!editor.place) return;
+    cursor = at;
+    cursor_point = hit?.kind === "point" ? hit.id : null;
+  }
+
+  const placing = $derived.by<PlaceGhost | null>(() => {
+    const place = editor.place;
+    if (!place?.handle || !cursor) return null;
+    const handle = place.part.points.find((point) => point.id === place.handle);
+    if (!handle) return null;
+    const project = projector(camera);
+    const over = cursor_point ? position(wire, cursor_point) : null;
+    const at = over ? project.project(over) : cursor;
+    const corners = new Map(
+      place.part.points.map((point) => {
+        const d = project.direction(sub3(point, handle));
+        return [point.id, { x: at.x + d.x, y: at.y + d.y }];
+      })
+    );
+    return {
+      at,
+      lines: place.part.lines.map((line) => ({ id: line.id, a: corners.get(line.a)!, b: corners.get(line.b)! })),
+      faces: place.part.faces.map((face) => ({ id: face.id, points: face.points.map((id) => corners.get(id)!) })),
+    };
+  });
 
   function pick(direction: { axis: Axis; sign: 1 | -1 }) {
     if (blocked) {
@@ -599,7 +780,7 @@
       return;
     }
     const distance = length * direction.sign;
-    const lines = editor.selection.lines;
+    const lines = selected_lines();
     if (op === Op.MOVE) {
       const ids = selected_points();
       editor.apply((value) => move_points(value, ids, direction.axis, distance));
@@ -610,23 +791,23 @@
         made = result.lines;
         return result.wire;
       });
-      if (made.length) editor.select({ points: [], lines: made });
+      if (made.length) editor.select({ points: [], lines: made, faces: [] });
     }
     editor.op = null;
     editor.clear_length();
   }
 
   function delete_selection() {
-    const { points, lines } = editor.selection;
-    if (!points.length && !lines.length) return;
-    editor.apply((value) => delete_items(value, points, lines));
+    const { points, lines, faces } = editor.selection;
+    if (!points.length && !lines.length && !faces.length) return;
+    editor.apply((value) => delete_items(value, points, lines, faces));
     editor.clear_selection();
   }
 
   function choose_ink(color: Ink) {
     editor.ink = color;
-    const lines = editor.selection.lines;
-    if (lines.length) editor.apply((value) => set_color(value, lines, color));
+    const { lines, faces } = editor.selection;
+    if (lines.length || faces.length) editor.apply((value) => set_color(value, lines, color, faces));
   }
 
   let custom_value = $state("#3584e4");
@@ -644,15 +825,16 @@
   const guides = $derived(editor.tool === Tool.DRAW && !blocked ? start_position() : null);
 
   const selected_count = $derived.by(() => {
-    const { points, lines } = editor.selection;
+    const { points, lines, faces } = editor.selection;
     const parts: string[] = [];
+    if (faces.length) parts.push(`${faces.length} ${faces.length === 1 ? "face" : "faces"}`);
     if (lines.length) parts.push(`${lines.length} ${lines.length === 1 ? "line" : "lines"}`);
     if (points.length) parts.push(`${points.length} ${points.length === 1 ? "point" : "points"}`);
     return parts.join(", ");
   });
 
   const selected_length = $derived.by(() => {
-    if (editor.selection.lines.length !== 1 || editor.selection.points.length) return null;
+    if (editor.selection.lines.length !== 1 || editor.selection.points.length || editor.selection.faces.length) return null;
     const line = wire.lines.find((each) => each.id === editor.selection.lines[0]);
     const a = line && position(wire, line.a);
     const b = line && position(wire, line.b);
@@ -662,8 +844,8 @@
   const panel_ready = $derived.by(() => {
     const op = editor.panel;
     if (op === Op.WALK) return start_position() !== null;
-    if (op === Op.MOVE) return editor.selection.points.length + editor.selection.lines.length > 0;
-    return editor.selection.lines.length > 0;
+    if (op === Op.MOVE) return has_selection();
+    return editor.selection.lines.length + editor.selection.faces.length > 0;
   });
 
   const panel_hint = $derived.by(() => {
@@ -678,12 +860,24 @@
     return `${what} a length, then pick a direction`;
   });
 
+  const PLACE_TITLES: Record<PlaceKind, string> = {
+    [PlaceKind.MOVE]: "Move",
+    [PlaceKind.DUPLICATE]: "Duplicate",
+    [PlaceKind.PASTE]: "Paste",
+  };
+
   const hint = $derived.by(() => {
     const tool = editor.tool;
+    const place = editor.place;
+    if (place) {
+      const what = PLACE_TITLES[place.kind];
+      if (!place.handle) return `${what}: tap the corner to hold it by`;
+      return wire.points.length ? `${what}: tap the point to drop it on` : `${what}: tap the origin`;
+    }
     if (tool === Tool.SLOPE) return editor.slope_from ? "Tap the other end" : "Tap two points to join them";
     if (tool === Tool.POINT) return wire.points.length ? "Tap the point to measure from" : "Tap the origin";
     if (tool === Tool.BOX) return wire.points.length ? "Tap the corner the box grows from" : "Tap the origin";
-    if (tool === Tool.SELECT && !selected_count) return wire.lines.length ? (mobile ? "Tap a line or a point" : "Click a line or a point; Shift adds to the selection") : "Pick Draw or Box to start";
+    if (tool === Tool.SELECT && !selected_count) return wire.lines.length ? (mobile ? "Tap a line or a point; tap more lines to add them" : "Click a line or a point; Shift adds to the selection") : "Pick Draw or Box to start";
     return "";
   });
 
@@ -722,7 +916,8 @@
       return;
     }
     if (event.key === "Escape") {
-      if (editor.slope_from) editor.slope_from = null;
+      if (editor.place) cancel_place();
+      else if (editor.slope_from) editor.slope_from = null;
       else editor.clear_selection();
     } else if (event.key === "Delete" || event.key === "Backspace") delete_selection();
     else return;
@@ -732,6 +927,17 @@
   $effect(() => {
     const scoped = (id: string, keys: string, label: string, run: () => void) =>
       shortcuts.register({ id: `wireframe.${id}`, keys, label, category: ShortcutCategory.APP, window: window_id, run });
+    // Copy and paste in a text field (a prompt, the colour input) stay the browser's own.
+    const typing_aside = (id: string, keys: string, label: string, run: () => void) =>
+      shortcuts.register({
+        id: `wireframe.${id}`,
+        keys,
+        label,
+        category: ShortcutCategory.APP,
+        window: window_id,
+        run,
+        when: () => !(document.activeElement instanceof Element && document.activeElement.matches("input, textarea, [contenteditable]")),
+      });
     const disposers = [
       scoped("undo", "mod+z", "Undo", () => editor.undo()),
       scoped("redo", "mod+shift+z", "Redo", () => editor.redo()),
@@ -741,8 +947,14 @@
       scoped("save-as", "mod+shift+s", "Save as…", save_as),
       scoped("fit", "mod+0", "Fit the drawing", fit),
       scoped("all", "mod+a", "Select all", select_all),
+      typing_aside("clip-copy", "mod+c", "Copy the selection", () => void copy_selection()),
+      typing_aside("clip-paste", "mod+v", "Paste and place", () => void paste()),
+      scoped("duplicate", "mod+d", "Duplicate and place", () => start_place(PlaceKind.DUPLICATE)),
+      scoped("place", "g", "Move by points", () => start_place(PlaceKind.MOVE)),
+      scoped("fill", "f", "Fill the selected loop", fill_selection),
+      scoped("labels", "shift+l", "Show every length", toggle_labels),
       ...TOOLS.map((tool) => scoped(`tool.${tool.id}`, tool.key, tool.label, () => set_tool(tool.id))),
-      scoped("move", "m", "Move the selection", () => start_op(Op.MOVE)),
+      scoped("move", "m", "Move the selection by a length", () => start_op(Op.MOVE)),
       scoped("extrude", "e", "Extrude the selected lines", () => start_op(Op.EXTRUDE)),
       scoped("copy", "c", "Copy the selected lines along an axis", () => start_op(Op.COPY)),
       ...VIEW_ORDER.map((each, i) => scoped(`view.${each}`, `alt+${i + 1}`, `${PRESET_LABELS[each]} view`, () => turn_to(PRESETS[each]))),
@@ -753,8 +965,9 @@
   $effect(() =>
     win.on_back(() => {
       if (colours_open) colours_open = false;
+      else if (editor.place) cancel_place();
       else if (editor.panel) close_panel();
-      else if (editor.selection.lines.length || editor.selection.points.length) editor.clear_selection();
+      else if (has_selection()) editor.clear_selection();
       else return false;
       return true;
     })
@@ -831,13 +1044,28 @@
         </span>
       </label>
       <span class="min-w-0 flex-1 truncate px-1 text-2xs text-foreground/65">
-        {editor.selection.lines.length ? "Recolours the selected lines and what you draw next" : "For what you draw next"}
+        {editor.selection.lines.length || editor.selection.faces.length ? "Recolours the selection and what you draw next" : "For what you draw next"}
       </span>
     </div>
   {/if}
 
   <div class="area-stage relative grid min-h-0 min-w-0">
-    <WireframeCanvas {editor} bind:camera bind:width bind:height {pivot} {ghost} {guides} ontap={on_tap} onstroke={on_stroke} onturn={() => cancelAnimationFrame(animation)} />
+    <WireframeCanvas
+      {editor}
+      bind:camera
+      bind:width
+      bind:height
+      {pivot}
+      {ghost}
+      {guides}
+      labels={settings.value.labels}
+      handle={editor.place?.kind === PlaceKind.PASTE ? null : (editor.place?.handle ?? null)}
+      {placing}
+      onhover={on_hover}
+      ontap={on_tap}
+      onstroke={on_stroke}
+      onturn={() => cancelAnimationFrame(animation)}
+    />
 
     <div class="pointer-events-none absolute bottom-1 left-1 opacity-90">
       <WireframeGizmo basis={basis(camera.orbit)} />
@@ -871,7 +1099,13 @@
     {#if hint || selected_count}
       <div class="flex min-h-11 items-center gap-1 overflow-x-auto px-2 py-1 [&>*]:shrink-0">
         {#if hint}<span class="min-w-0 shrink! truncate px-1 text-2xs text-foreground/65">{hint}</span>{/if}
-        {#if selected_count && editor.tool === Tool.SELECT}
+        {#if editor.place}
+          <span class="flex-1"></span>
+          {#if editor.place.kind === PlaceKind.MOVE}
+            <Button size="sm" variant="secondary" onclick={() => start_op(Op.MOVE)}><RulerIcon weight="bold" />By length</Button>
+          {/if}
+          <Button size="sm" variant="secondary" onclick={cancel_place}>Cancel</Button>
+        {:else if selected_count && editor.tool === Tool.SELECT}
           <span class="min-w-0 shrink! truncate px-1 text-2xs text-foreground/80">
             {selected_count}{#if selected_length}<span class="font-mono"> · {selected_length}</span>{/if}
           </span>
@@ -879,11 +1113,17 @@
           {#if editor.selection.points.length === 1 && !editor.selection.lines.length}
             <Button size="sm" variant="secondary" onclick={() => set_tool(Tool.DRAW)}><PencilSimpleLineIcon weight="bold" />Draw from here</Button>
           {/if}
-          <Button size="sm" variant="secondary" pressed={editor.op === Op.MOVE} onclick={() => start_op(Op.MOVE)}><ArrowsOutCardinalIcon weight="bold" />Move</Button>
-          {#if editor.selection.lines.length}
-            <Button size="sm" variant="secondary" pressed={editor.op === Op.EXTRUDE} onclick={() => start_op(Op.EXTRUDE)}><StackIcon weight="bold" />Extrude</Button>
-            <Button size="sm" variant="secondary" pressed={editor.op === Op.COPY} onclick={() => start_op(Op.COPY)}><CopyIcon weight="bold" />Copy</Button>
+          <Button size="sm" variant="secondary" aria-label="Move" title="Move by points (G), or by a length (M)" pressed={editor.op === Op.MOVE} onclick={() => start_place(PlaceKind.MOVE)}><ArrowsOutCardinalIcon weight="bold" /><span class="@max-[34rem]:hidden">Move</span></Button>
+          {#if editor.selection.lines.length || editor.selection.faces.length}
+            <Button size="sm" variant="secondary" aria-label="Extrude" title="Extrude (E)" pressed={editor.op === Op.EXTRUDE} onclick={() => start_op(Op.EXTRUDE)}><StackIcon weight="bold" /><span class="@max-[34rem]:hidden">Extrude</span></Button>
+            <Button size="sm" variant="secondary" aria-label="Copy along" title="Copy along an axis (C)" pressed={editor.op === Op.COPY} onclick={() => start_op(Op.COPY)}><CopyIcon weight="bold" /><span class="@max-[34rem]:hidden">Copy along</span></Button>
           {/if}
+          {#if editor.selection.lines.length >= 3}
+            <IconButton label="Fill (F)" size="md" onclick={fill_selection}><PaintBucketIcon weight="bold" /></IconButton>
+          {/if}
+          <IconButton label="Duplicate (Mod+D)" size="md" onclick={() => start_place(PlaceKind.DUPLICATE)}><CopySimpleIcon weight="bold" /></IconButton>
+          <IconButton label="Copy (Mod+C)" size="md" onclick={() => void copy_selection()}><ClipboardIcon weight="bold" /></IconButton>
+          <IconButton label="Paste (Mod+V)" size="md" onclick={() => void paste()}><ClipboardTextIcon weight="bold" /></IconButton>
           <IconButton label="Delete" size="md" onclick={delete_selection}><TrashIcon weight="bold" /></IconButton>
         {/if}
       </div>

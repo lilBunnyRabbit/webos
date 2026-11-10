@@ -1,5 +1,6 @@
 import { is_hex, type Ink } from "./model";
 import type { Palette } from "./svg";
+import { face_tint } from "./colors";
 
 const PNG_DENSITY = 2;
 
@@ -13,6 +14,12 @@ function css_hex(probe: CanvasRenderingContext2D, value: string): string {
   return `#${[r, g, b].map((part) => part.toString(16).padStart(2, "0")).join("")}`;
 }
 
+function mix_hex(a: string, b: string, amount: number): string {
+  const channels = (hex: string) => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
+  const [p, q] = [channels(a), channels(b)];
+  return `#${p.map((each, i) => Math.round(each * amount + q[i] * (1 - amount)).toString(16).padStart(2, "0")).join("")}`;
+}
+
 export function theme_palette(): Palette {
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 1;
@@ -20,21 +27,24 @@ export function theme_palette(): Palette {
   const style = getComputedStyle(document.documentElement);
   const token = (name: string) => css_hex(probe, style.getPropertyValue(`--${name}`).trim());
   const ink = token("foreground");
+  const paper = token("background");
   const cache = new Map<string, string>();
+  const line = (color: Ink) => {
+    if (color === null) return ink;
+    if (is_hex(color)) return color;
+    let hex = cache.get(color);
+    if (!hex) {
+      hex = token(color);
+      cache.set(color, hex);
+    }
+    return hex;
+  };
   return {
-    paper: token("background"),
+    paper,
     ink,
     chip: token("background-light"),
-    line: (color: Ink) => {
-      if (color === null) return ink;
-      if (is_hex(color)) return color;
-      let hex = cache.get(color);
-      if (!hex) {
-        hex = token(color);
-        cache.set(color, hex);
-      }
-      return hex;
-    },
+    line,
+    face: (color: Ink) => mix_hex(line(color), paper, face_tint(color)),
   };
 }
 
