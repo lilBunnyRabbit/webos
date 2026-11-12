@@ -153,15 +153,18 @@ export const FEATURED: Project[] = [
     id: "hq",
     name: "hq",
     badge: "Go CLI",
-    kicker: "The repo behind every session",
+    kicker: "A home base for coding agents",
     status: OK,
-    tagline: "hq is where my work lives: the quests I track and run, the fixes I've already found, how I write code as rules with reasons, and the skills that tie them together. Every coding session reads from it and writes back.",
+    tagline: "Agents forget, hq remembers: one git repo every Claude Code and Codex session reads from and writes to, holding the quests I run, the fixes already found, how I write code, and the skills and hooks that tie them together.",
     points: [
       "A fix is written down once: after a non-obvious one, /learn adds a line to the knowledge base, and later sessions in any repo find it from the error alone.",
       "Code style corrections become rules with their reason, so the next session writes code the way I would.",
       "A retrieval eval checks that a fresh session, given only the error, finds the stored fix and applies it.",
       "Skills Claude Code and Codex both run: triage notes into briefs, start a quest, save a fix, save a rule, re-read the knowledge base for stale lines.",
       "The hq CLI, in Go: capture, a Bubble Tea terminal UI, and sessions started on a quest in the right repo.",
+      "One setup on every machine: hq link puts the same instructions, skills and hooks live for Claude Code and Codex on macOS, Linux and Windows.",
+      "Team mode for bigger runs: a lead session runs coder, reviewer, researcher, QA and designer agents over a channel and asks me only what needs me.",
+      "Token cost is a design constraint: hooks, sync and board moves run as scripts, outside the model.",
     ],
     stack: ["Go", "Bubble Tea", "Markdown", "Obsidian", "Claude Code", "Codex"],
     shows: {
@@ -169,8 +172,8 @@ export const FEATURED: Project[] = [
       team: "hq stores each fix and each code style rule once, and every coding agent in every repo reads them before it starts.",
       tested: "hq has a retrieval eval: a fresh session gets only the error, and passes when it finds the stored fix and applies it.",
     },
-    note: "Private repo, so there's no link.",
-    links: [],
+    note: "The repo is private; the site shows how it works.",
+    links: [{ kind: SITE, url: `${PAGES}/hq/` }],
   },
 ];
 
