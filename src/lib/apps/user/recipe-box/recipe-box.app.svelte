@@ -278,10 +278,12 @@
   async function rename_path(target: string) {
     const open_here = target === path;
     try {
-      const file = await files.get_file(target);
-      if (!file) throw new Error(`File not found: ${target}`);
-      const disk = await file.text();
-      const current = recipe_title(parse_cook(open_here ? text : disk), base_name(target));
+      const read = async () => {
+        const file = await files.get_file(target);
+        if (!file) throw new Error(`File not found: ${target}`);
+        return file.text();
+      };
+      const current = recipe_title(parse_cook(open_here ? text : await read()), base_name(target));
       const entered = await dialogs.show(
         PromptDialog,
         { message: "Rename recipe", initial: current, confirm_label: "Rename", validate: (value: string) => (value.trim() === "" ? "Give the recipe a name" : null) },
@@ -289,23 +291,19 @@
       );
       const next_name = entered?.trim();
       if (!next_name || next_name === current) return;
-      const content = set_meta(disk, "title", next_name);
+      const content = set_meta(await read(), "title", next_name);
       const directory = await files.get_directory(parent_path(target));
       if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
       const file_name = cook_file_name(next_name);
-      let renamed = target;
-      if (file_name.toLowerCase() === base_name(target).toLowerCase()) {
-        await files.create_file(directory, base_name(target), { content, overwrite: true });
-      } else {
-        const handle = await files.create_file(directory, file_name, { content });
-        await files.delete_entry(directory, base_name(target));
-        renamed = `${parent_path(target)}/${handle.name}`;
+      const same_file = file_name.toLowerCase() === base_name(target).toLowerCase();
+      const handle = await files.create_file(directory, same_file ? base_name(target) : file_name, { content, overwrite: same_file });
+      if (open_here) {
+        path = `${parent_path(target)}/${handle.name}`;
+        text = dirty ? set_meta(text, "title", next_name) : content;
+        saved_text = content;
+        if (view === View.EDIT && editor === Editor.FORM) enter_form();
       }
-      if (!open_here) return;
-      path = renamed;
-      text = dirty ? set_meta(text, "title", next_name) : content;
-      saved_text = content;
-      if (view === View.EDIT && editor === Editor.FORM) enter_form();
+      if (!same_file) await files.delete_entry(directory, base_name(target));
     } catch (reason) {
       report_error(APP_ID, "Couldn't rename the recipe", reason);
     }
@@ -321,7 +319,9 @@
     );
     if (!ok) return;
     try {
-      await files.delete_entry(await files.get_directory(parent_path(target)), base_name(target));
+      const directory = await files.get_directory(parent_path(target));
+      if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
+      await files.delete_entry(directory, base_name(target));
       if (!open_here) return;
       path = null;
       text = "";
@@ -422,7 +422,7 @@
         <Segmented size="sm" label="View" options={VIEWS} bind:value={() => view as RecipeView, set_view} class="hidden @xl:inline-flex" />
         <Select size="sm" aria-label="View" class="w-auto @xl:hidden" options={VIEWS} bind:value={() => view as RecipeView, set_view} />
         {#if view === View.EDIT || dirty}
-          <Button size="sm" variant="primary" disabled={!dirty} onclick={save} title="Save (Ctrl+S)"><FloppyDiskIcon />Save</Button>
+          <Button size="sm" variant="primary" disabled={!dirty} onclick={save}><FloppyDiskIcon />Save</Button>
         {/if}
         {#if path}
           <IconButton size="sm" label="Recipe actions" onclick={more}><DotsThreeIcon weight="bold" /></IconButton>

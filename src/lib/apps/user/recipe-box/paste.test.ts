@@ -84,6 +84,10 @@ describe("pasted_cook", () => {
     expect(pasted_cook(answer)).toBe("---\ntitle: Toast\nservings: 1\n---\n\nToast @bread{2%slices}.\n");
   });
 
+  test("prose before unfenced front matter is dropped", () => {
+    expect(pasted_cook("Sure! Here's the Cooklang:\n\n---\ntitle: X\n---\n\nBeat @eggs{2}.")).toBe("---\ntitle: X\n---\n\nBeat @eggs{2}.\n");
+  });
+
   test("markers without front matter are Cooklang", () => {
     expect(pasted_cook("Boil @water{1%l} for ~{5%minutes}.")).toBe("Boil @water{1%l} for ~{5%minutes}.\n");
   });

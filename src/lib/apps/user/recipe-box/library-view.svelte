@@ -35,8 +35,8 @@
   let tag = $state<string | null>(null);
   let favorites_only = $state(false);
 
-  const tags = $derived(all_tags(entries));
-  const any_favorite = $derived(entries.some((entry) => entry.favorite));
+  const tags = $derived(tag !== null && !all_tags(entries).includes(tag) ? [...all_tags(entries), tag] : all_tags(entries));
+  const any_favorite = $derived(favorites_only || entries.some((entry) => entry.favorite));
   const shown = $derived(favorites_first(entries.filter((entry) => recipe_matches(entry, query, tag) && (!favorites_only || entry.favorite))));
 
   const subfolders = $derived(

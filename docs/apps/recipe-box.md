@@ -73,13 +73,13 @@ The result opens in the form as an unsaved draft (`pasted_form`); nothing is wri
 
 ### Pasting a Cooklang file
 
-`pasted_cook` (`paste.ts`) runs before the paste parser. When the pasted text holds a fenced code block (a chat assistant's answer copied whole), its contents are taken; the text counts as Cooklang when it opens with `---` front matter or has a marker (`@x{…}`, `#x{…}`, `~{…}`). Then it becomes the draft's text exactly as pasted and opens in Recipe, unsaved; otherwise the paste parser runs as below. A spec to hand a chat assistant so its recipes come out in this shape lives outside the repo.
+`pasted_cook` (`paste.ts`) runs before the paste parser. When the pasted text holds a fenced code block (a chat assistant's answer copied whole), its contents are taken, and without a fence anything before a `---` front matter block (first line `key:`) is dropped; the text counts as Cooklang when it has that front matter or has a marker (`@x{…}`, `#x{…}`, `~{…}`). Then it becomes the draft's text exactly as pasted and opens in Recipe, unsaved; otherwise the paste parser runs as below. A spec to hand a chat assistant so its recipes come out in this shape lives outside the repo.
 
 ### Rename and delete
 
 The recipe toolbar's actions button, and a right-click or long press on a library card, open a menu with Rename and Delete.
 
-- **Rename** asks for the name, writes it as `title:` through `set_meta` (one front matter line, nothing else rewritten) and moves the file to `{name}.cook` under a free name, deleting the old one. A name that only changes case keeps the file name. On the open recipe, unsaved edits stay unsaved and get the new title too.
+- **Rename** asks for the name, writes it as `title:` through `set_meta` (one front matter line, nothing else rewritten) on the file as read after the prompt, and moves it to `{name}.cook` under a free name; the open recipe follows the new file before the old one is deleted. Other windows with the same recipe open, and running cook timers, keep the old path. A name that only changes case keeps the file name. On the open recipe, unsaved edits stay unsaved and get the new title too.
 - **Delete** confirms, then removes the file. Deleting the open recipe goes back to the library.
 
 ### Favourites and the source link
