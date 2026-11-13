@@ -1,19 +1,25 @@
 <script lang="ts">
-  import kernel, { ShortcutCategory, type DialogsService, type FilesService, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import kernel, { ShortcutCategory, type DialogsService, type FilesService, type MenuItem, type NotificationsService, type ShortcutsService } from "$lib/core/api";
+  import ConfirmDialog from "$lib/core/components/dialogs/confirm-dialog.svelte";
+  import PromptDialog from "$lib/core/components/dialogs/prompt-dialog.svelte";
   import { CodeView } from "$kit/components/code";
   import { base_name, parent_path, tilde_path } from "$lib/core/api/services/files/path";
   import { Button, EmptyState, IconButton, Segmented, Select, Spinner, Toolbar } from "$lib/core/components/ui";
   import { confirm_discard, get_app_context } from "$lib/core/contexts/app";
   import { cn, error_message } from "$lib/core/utils";
   import { pick_device_files } from "$lib/core/utils/device-file";
+  import type { Position } from "$lib/core/utils/type";
   import {
     ArrowLeft as ArrowLeftIcon,
     ClipboardText as ClipboardTextIcon,
     Devices as DevicesIcon,
+    DotsThree as DotsThreeIcon,
     FloppyDisk as FloppyDiskIcon,
     FolderOpen as FolderOpenIcon,
     FolderSimple as FolderSimpleIcon,
+    PencilSimple as PencilSimpleIcon,
     Plus as PlusIcon,
+    Trash as TrashIcon,
     WarningCircle as WarningCircleIcon,
   } from "phosphor-svelte";
   import { untrack } from "svelte";
@@ -23,9 +29,9 @@
   import { is_favorite, parse_cook, recipe_servings, recipe_tags, recipe_title } from "./cooklang";
   import { all_tags, ensure_folder, list_recipes } from "./library";
   import LibraryView from "./library-view.svelte";
-  import { parse_pasted, pasted_form } from "./paste";
+  import { parse_pasted, pasted_cook, pasted_form } from "./paste";
   import PasteDialog from "./paste-dialog.svelte";
-  import { empty_form, form_from_cook, form_issues, form_to_cook, with_favorite, type FormIssue, type RecipeForm } from "./recipe-form";
+  import { empty_form, form_from_cook, form_issues, form_to_cook, set_meta, with_favorite, type FormIssue, type RecipeForm } from "./recipe-form";
   import RecipeFormView from "./recipe-form.svelte";
   import RecipeView from "./recipe-view.svelte";
   import ScaleControls from "./scale-controls.svelte";
@@ -186,7 +192,17 @@
     if (!(await discard_ok())) return;
     const pasted = await dialogs.show(PasteDialog, {}, { window: window_id });
     if (pasted === null) return;
-    start_draft(pasted_form(parse_pasted(pasted)), true);
+    const cook = pasted_cook(pasted);
+    if (cook) draft_source(cook);
+    else start_draft(pasted_form(parse_pasted(pasted)), true);
+  }
+
+  function draft_source(source: string) {
+    start_draft(form_from_cook(source), false);
+    text = source;
+    issues = form_issues(source);
+    amount = recipe_servings(parse_cook(source)) ?? 1;
+    view = View.RECIPE;
   }
 
   function start_draft(next: RecipeForm, changed: boolean) {
@@ -244,8 +260,7 @@
       if (path) {
         await write(path, content);
       } else {
-        const file_name = `${(recipe_title(recipe, "").trim() || "Recipe").replace(/[/\\]/g, "-")}.cook`;
-        const handle = await files.create_file(await folder_handle(), file_name, { content });
+        const handle = await files.create_file(await folder_handle(), cook_file_name(recipe_title(recipe, "")), { content });
         path = `${prefs.value.folder}/${handle.name}`;
       }
       saved_text = content;
@@ -254,6 +269,84 @@
       report_error(APP_ID, "Couldn't save the recipe", reason);
       return false;
     }
+  }
+
+  function cook_file_name(recipe_name: string): string {
+    return `${(recipe_name.trim() || "Recipe").replace(/[/\\]/g, "-")}.cook`;
+  }
+
+  async function rename_path(target: string) {
+    const open_here = target === path;
+    try {
+      const file = await files.get_file(target);
+      if (!file) throw new Error(`File not found: ${target}`);
+      const disk = await file.text();
+      const current = recipe_title(parse_cook(open_here ? text : disk), base_name(target));
+      const entered = await dialogs.show(
+        PromptDialog,
+        { message: "Rename recipe", initial: current, confirm_label: "Rename", validate: (value: string) => (value.trim() === "" ? "Give the recipe a name" : null) },
+        { window: window_id }
+      );
+      const next_name = entered?.trim();
+      if (!next_name || next_name === current) return;
+      const content = set_meta(disk, "title", next_name);
+      const directory = await files.get_directory(parent_path(target));
+      if (!directory) throw new Error(`Folder not found: ${parent_path(target)}`);
+      const file_name = cook_file_name(next_name);
+      let renamed = target;
+      if (file_name.toLowerCase() === base_name(target).toLowerCase()) {
+        await files.create_file(directory, base_name(target), { content, overwrite: true });
+      } else {
+        const handle = await files.create_file(directory, file_name, { content });
+        await files.delete_entry(directory, base_name(target));
+        renamed = `${parent_path(target)}/${handle.name}`;
+      }
+      if (!open_here) return;
+      path = renamed;
+      text = dirty ? set_meta(text, "title", next_name) : content;
+      saved_text = content;
+      if (view === View.EDIT && editor === Editor.FORM) enter_form();
+    } catch (reason) {
+      report_error(APP_ID, "Couldn't rename the recipe", reason);
+    }
+  }
+
+  async function delete_path(target: string) {
+    const open_here = target === path;
+    const shown = open_here ? title : base_name(target).replace(/\.cook$/i, "");
+    const ok = await dialogs.show(
+      ConfirmDialog,
+      { message: `Delete “${shown}”?`, detail: "The recipe file is removed. This can't be undone.", confirm_label: "Delete", danger: true },
+      { window: window_id }
+    );
+    if (!ok) return;
+    try {
+      await files.delete_entry(await files.get_directory(parent_path(target)), base_name(target));
+      if (!open_here) return;
+      path = null;
+      text = "";
+      saved_text = "";
+      view = View.LIBRARY;
+    } catch (reason) {
+      report_error(APP_ID, "Couldn't delete the recipe", reason);
+    }
+  }
+
+  async function recipe_menu(target: string, anchor: Position) {
+    const entries: MenuItem[] = [
+      { id: "rename", label: "Rename…", icon: PencilSimpleIcon },
+      { separator: true },
+      { id: "delete", label: "Delete…", icon: TrashIcon, danger: true },
+    ];
+    const choice = await dialogs.menu(entries, { anchor });
+    if (choice === "rename") await rename_path(target);
+    else if (choice === "delete") await delete_path(target);
+  }
+
+  function more(event: MouseEvent) {
+    if (!path) return;
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    void recipe_menu(path, { x: rect.left, y: rect.bottom + 4 });
   }
 
   async function set_favorite(on: boolean) {
@@ -329,13 +422,16 @@
         <Segmented size="sm" label="View" options={VIEWS} bind:value={() => view as RecipeView, set_view} class="hidden @xl:inline-flex" />
         <Select size="sm" aria-label="View" class="w-auto @xl:hidden" options={VIEWS} bind:value={() => view as RecipeView, set_view} />
         {#if view === View.EDIT || dirty}
-          <IconButton size="sm" label="Save" disabled={!dirty} onclick={save}><FloppyDiskIcon /></IconButton>
+          <Button size="sm" variant="primary" disabled={!dirty} onclick={save} title="Save (Ctrl+S)"><FloppyDiskIcon />Save</Button>
+        {/if}
+        {#if path}
+          <IconButton size="sm" label="Recipe actions" onclick={more}><DotsThreeIcon weight="bold" /></IconButton>
         {/if}
       {/if}
     </Toolbar>
 
     {#if view === View.LIBRARY}
-      <LibraryView folder={prefs.value.folder} onopen={open_path} onnew={new_recipe} onpaste={paste_recipe} onfavorite={favorite_path} />
+      <LibraryView folder={prefs.value.folder} onopen={open_path} onnew={new_recipe} onpaste={paste_recipe} onfavorite={favorite_path} onmenu={recipe_menu} />
     {:else if loading}
       <div class="grid flex-1 place-items-center"><Spinner label="Opening" /></div>
     {:else if load_error}

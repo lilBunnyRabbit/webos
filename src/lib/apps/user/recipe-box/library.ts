@@ -69,21 +69,6 @@ export function all_tags(entries: RecipeEntry[]): string[] {
   return [...new Set(entries.flatMap((entry) => entry.tags))].sort((a, b) => a.localeCompare(b));
 }
 
-export const Shelf = { FAVORITES: "favorites", TAG: "tag", UNTAGGED: "untagged" } as const;
-export type Shelf = (typeof Shelf)[keyof typeof Shelf];
-
-export interface RecipeShelf {
-  kind: Shelf;
-  label: string;
-  entries: RecipeEntry[];
-}
-
-export function shelves(entries: RecipeEntry[]): RecipeShelf[] {
-  const favorites = entries.filter((entry) => entry.favorite);
-  const untagged = entries.filter((entry) => entry.tags.length === 0);
-  return [
-    ...(favorites.length > 0 ? [{ kind: Shelf.FAVORITES, label: "Favourites", entries: favorites }] : []),
-    ...all_tags(entries).map((tag) => ({ kind: Shelf.TAG, label: tag, entries: entries.filter((entry) => entry.tags.includes(tag)) })),
-    ...(untagged.length > 0 ? [{ kind: Shelf.UNTAGGED, label: "Untagged", entries: untagged }] : []),
-  ];
+export function favorites_first(entries: RecipeEntry[]): RecipeEntry[] {
+  return [...entries].sort((a, b) => Number(b.favorite) - Number(a.favorite) || a.title.localeCompare(b.title));
 }

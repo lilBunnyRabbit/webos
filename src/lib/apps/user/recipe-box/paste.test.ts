@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { parse_ingredient_line, parse_pasted } from "./paste";
+import { parse_ingredient_line, parse_pasted, pasted_cook } from "./paste";
 
 describe("parse_ingredient_line", () => {
   test("splits amount, unit and name", () => {
@@ -75,5 +75,20 @@ Cook in a hot pan for 2 minutes.`);
   test("prose only: everything after the title becomes steps", () => {
     const pasted = parse_pasted("Toast\nPut bread in the toaster.\nButter it while hot.");
     expect(pasted).toEqual({ title: "Toast", servings: "", ingredients: [], steps: ["Put bread in the toaster.", "Butter it while hot."] });
+  });
+});
+
+describe("pasted_cook", () => {
+  test("a chat answer's code fence is unwrapped", () => {
+    const answer = "Here you go:\n\n```cooklang\n---\ntitle: Toast\nservings: 1\n---\n\nToast @bread{2%slices}.\n```\n\nEnjoy!";
+    expect(pasted_cook(answer)).toBe("---\ntitle: Toast\nservings: 1\n---\n\nToast @bread{2%slices}.\n");
+  });
+
+  test("markers without front matter are Cooklang", () => {
+    expect(pasted_cook("Boil @water{1%l} for ~{5%minutes}.")).toBe("Boil @water{1%l} for ~{5%minutes}.\n");
+  });
+
+  test("a recipe from a website is not", () => {
+    expect(pasted_cook("Banana bread\nServes 8\n\nIngredients\n3 bananas\n\nMethod\n1. Mash the bananas. Email me@example.com")).toBeNull();
   });
 });

@@ -3,11 +3,11 @@ Id `recipe-box` · Source: `src/lib/apps/user/recipe-box/` · [scheduler](../sys
 
 ## What it does
 
-Recipes as [Cooklang](https://cooklang.org) `.cook` files in `~/Documents/Recipes` (subfolders walked). The library puts them on shelves by tag with Favourites first; a recipe reads as a page, a table or one step at a time with timers, scales servings and converts units. Most people never see Cooklang: they paste a recipe copied from a website or fill in a form, and the app writes the file. Source is the raw file, for people who want it.
+Recipes as [Cooklang](https://cooklang.org) `.cook` files in `~/Documents/Recipes` (subfolders walked). The library is one grid with Favourites first, filtered by tag; a recipe reads as a page, a table or one step at a time with timers, scales servings and converts units. Most people never see Cooklang: they paste a recipe copied from a website or fill in a form, and the app writes the file. Source is the raw file, for people who want it.
 
 ## How it works
 
-Pure logic is Node-tested beside it: `cooklang.ts` (parser), `amounts.ts` (scaling, units), `recipe-form.ts` (the form and its writer), `paste.ts` (the paste parser), `library.ts` (summaries, shelves). Rendering is `recipe-box.app.svelte` with `library-view`, `recipe-view`, `recipe-form`, `paste-dialog`, `table-view` and `cook-mode`.
+Pure logic is Node-tested beside it: `cooklang.ts` (parser), `amounts.ts` (scaling, units), `recipe-form.ts` (the form and its writer), `paste.ts` (the paste parser), `library.ts` (summaries, order). Rendering is `recipe-box.app.svelte` with `library-view`, `recipe-view`, `recipe-form`, `paste-dialog`, `table-view` and `cook-mode`.
 
 ### One source of truth: the file text
 
@@ -71,13 +71,26 @@ Form shows a warning naming them with Edit the source; Source is unchanged.
 
 The result opens in the form as an unsaved draft (`pasted_form`); nothing is written until Save.
 
+### Pasting a Cooklang file
+
+`pasted_cook` (`paste.ts`) runs before the paste parser. When the pasted text holds a fenced code block (a chat assistant's answer copied whole), its contents are taken; the text counts as Cooklang when it opens with `---` front matter or has a marker (`@x{…}`, `#x{…}`, `~{…}`). Then it becomes the draft's text exactly as pasted and opens in Recipe, unsaved; otherwise the paste parser runs as below. A spec to hand a chat assistant so its recipes come out in this shape lives outside the repo.
+
+### Rename and delete
+
+The recipe toolbar's actions button, and a right-click or long press on a library card, open a menu with Rename and Delete.
+
+- **Rename** asks for the name, writes it as `title:` through `set_meta` (one front matter line, nothing else rewritten) and moves the file to `{name}.cook` under a free name, deleting the old one. A name that only changes case keeps the file name. On the open recipe, unsaved edits stay unsaved and get the new title too.
+- **Delete** confirms, then removes the file. Deleting the open recipe goes back to the library.
+
 ### Favourites and the source link
 
 The heart writes `favorite: true` or removes it (and any `favourite:`) through `set_meta` (`recipe-form.ts:275`), which touches that one front matter line and nothing else, so it never rewrites a hand-made file. On the open recipe it reads the file from disk (another window may have saved it), writes the change, and applies it to the editor text separately, so unsaved edits stay unsaved and stay. A card's heart reads, edits and writes that file. `source:` starting with `http(s)://` shows as "From {host}" and opens in a new tab.
 
-### Shelves
+### Library
 
-`shelves` (`library.ts`): Favourites, one per tag (alphabetical), then Untagged; a recipe is on every shelf of its tags. Search filters before grouping. The library re-reads on the revision of the recipes folder and of every subfolder holding a recipe. A shelf is a horizontal snap row; one shelf only (no tags, no favourites) is shown as the plain grid. A tag chip shows that tag as a grid.
+One grid, each recipe once: `favorites_first` (`library.ts`) puts favourites first, then by title. A Favourites chip and one chip per tag filter it, together with search. The library re-reads on the revision of the recipes folder and of every subfolder holding a recipe.
+
+Until 4.17 recipes sat on shelves, one per tag plus Favourites, so a recipe with two tags showed three times; that read as duplicates and was dropped.
 
 ## Data
 

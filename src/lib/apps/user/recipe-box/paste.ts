@@ -168,3 +168,14 @@ export function pasted_form(pasted: PastedRecipe): RecipeForm {
     extra: {},
   };
 }
+
+const FENCED = /```[^\n]*\n([\s\S]*?)\n\s*```/;
+const MARKER = /[@#]\??[^\s@#~{}][^@#~{}\n]*\{[^}\n]*\}|~[^\s@#~{}]*\{[^}\n]*\}/;
+
+/** Text that is already a Cooklang file (front matter or `@x{}` markers), unwrapped from a chat code fence; `null` for a plain recipe. */
+export function pasted_cook(text: string): string | null {
+  const normalized = text.replace(/\r\n?/g, "\n").replace(/ /g, " ");
+  const source = (FENCED.exec(normalized)?.[1] ?? normalized).trim();
+  const front = /^---\n[\s\S]*?\n---(\n|$)/.test(source);
+  return front || MARKER.test(source) ? `${source}\n` : null;
+}

@@ -18,7 +18,7 @@
 <form class="flex max-h-[calc(100cqh-2rem)] w-[min(34rem,calc(100cqw-2rem))] flex-col gap-4 rounded-2xl bg-background-lighter p-5 shadow-popover" onsubmit={submit}>
   <div>
     <h2 class="text-sm font-semibold">Paste a recipe</h2>
-    <p class="mt-0.5 text-ui text-foreground/65">Copy the recipe from a website, title to last step, and paste it here. You can fix anything before it's saved.</p>
+    <p class="mt-0.5 text-ui text-foreground/65">Copy the recipe from a website, title to last step, and paste it here. A Cooklang recipe (from a chat assistant, say) is taken as it is. Nothing is kept until you save.</p>
   </div>
 
   <Textarea
