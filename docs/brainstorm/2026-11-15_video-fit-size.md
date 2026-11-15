@@ -22,8 +22,14 @@ Today Clip has Format (WebM/MP4), Size (Original/1080p/720p/480p, `kit/utils/vid
 - The planning math (budget, size drop, audio share, too-long check) is pure and lives in `kit/utils/video/plan.ts` next to `video_bitrate`, unit-tested.
 
 ## Action items
-- [ ] Build: plan function, encoder `bitrateMode` + audio bitrate, Clip panel Fit, settings v3, shell `--max-size`, `docs/apps/video-tools.md`, changelog.
+- [x] Build: plan function, encoder `bitrateMode` + audio bitrate, Clip panel Fit, settings v3, shell `--max-size`, `docs/apps/video-tools.md`, changelog.
 
 ## Next session topics
 - Re-encode once on overshoot, if the margin misses in practice.
 - Fit for GIF (budget via frame rate/width).
+
+## Revision (2026-11-15, build)
+- **Video stops at High's bitrate.** Without a ceiling a 3-second part with a 20 MB target would get about 50 Mb/s and come out near 19 MB. Fit means "at most", so the video bitrate is capped at High's 0.16 bpp and the estimate can read below the target.
+- **The shell flag is on `video trim`** (there is no `clip` command): `video trim <path> -m 20mb`. `--quality` lost its default so an explicit one can be told apart; neither flag still means Medium.
+- **MB is decimal** (20 MB = 20,000,000 bytes), like Image Tools' fit: the smaller reading of a site's limit. The saved panel still shows the size through the binary `format_bytes`.
+- **Measured overshoot** (headless Chromium, drawn 640 × 360 footage, constant bitrate): VP9 and H.264 within about 1% at 0.08 bpp and up; at 0.055 bpp H.264 came out about 1.6× over, VP9 within 4%. Near Low's 0.04 bpp the "came out over" note will show for H.264; a second pass (above) is the fix if it does in practice.

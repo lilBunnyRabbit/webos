@@ -11,6 +11,8 @@ export default {
     "mp4",
     "h.264",
     "resize",
+    "compress",
+    "file size",
     "audio",
     "sound",
     "duplicate frames",

@@ -3,7 +3,7 @@ import { define_command } from "$lib/core/api/services/shell/define";
 import type { ShellSession } from "$lib/core/api/services/shell/type";
 import { z } from "zod";
 import { CLIP_FORMATS, ClipFormat, OUTPUT_SIZES, OutputSize } from "$kit/utils/video/plan";
-import { GIF_FPS, GIF_WIDTH, QUALITIES, Quality } from "./kinds";
+import { GIF_FPS, GIF_WIDTH, QUALITIES } from "./kinds";
 import type { ShellContribution } from "$lib/core/api/services/shell/type";
 
 const logic = () => import("./shell");
@@ -31,12 +31,19 @@ export default {
       description: "Save part of a video as a WebM or MP4 clip next to it, in about the part's length",
       args: z.object({
         ...clip,
-        quality: z.enum(QUALITIES).default(Quality.MEDIUM),
+        quality: z.enum(QUALITIES).optional().describe("low, medium (the default) or high"),
+        max_size: z
+          .string()
+          .optional()
+          .describe("Fit the clip under this size, like 20mb or 500kb (a plain number is MB); not with --quality"),
         mute: z.boolean().default(false),
         format: z.enum(CLIP_FORMATS).default(ClipFormat.WEBM).describe("webm (VP9 + Opus) or mp4 (H.264 + AAC)"),
-        size: z.enum(OUTPUT_SIZES).default(OutputSize.ORIGINAL).describe("Short side in pixels; never upscaled"),
+        size: z
+          .enum(OUTPUT_SIZES)
+          .default(OutputSize.ORIGINAL)
+          .describe("Short side in pixels; never upscaled; with --max-size, the largest it may use"),
       }),
-      short: { out: "o", quality: "q" },
+      short: { out: "o", quality: "q", max_size: "m" },
       run: async (context) => (await logic()).trim(context),
     }),
     define_command({

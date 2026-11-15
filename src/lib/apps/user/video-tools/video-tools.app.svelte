@@ -1,7 +1,7 @@
 <script lang="ts">
   import kernel, { type AppsService, type FilesService, type TaskJob } from "$lib/core/api";
   import { base_name, parent_path } from "$lib/core/api/services/files/path";
-  import { Button, EmptyState, IconButton, Segmented, Select, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
+  import { Button, EmptyState, IconButton, Input, Segmented, Select, Slider, Spinner, StatusBar, Switch, Toolbar } from "$lib/core/components/ui";
   import { get_app_context } from "$lib/core/contexts/app";
   import { error_message, format_bytes } from "$lib/core/utils";
   import { has_files } from "$kit/utils/image";
@@ -32,6 +32,9 @@
     Output,
     OutputSize,
     estimate_gif_bytes,
+    fit_plan,
+    fit_too_long,
+    format_mb,
     format_time,
     gif_frame_count,
     gif_size,
@@ -93,6 +96,7 @@
     { value: Quality.LOW, label: "Low" },
     { value: Quality.MEDIUM, label: "Medium" },
     { value: Quality.HIGH, label: "High" },
+    { value: Quality.FIT, label: "Fit" },
   ];
 
   const length = $derived(Math.max(0, to - from));
@@ -110,6 +114,13 @@
     if (mp4 && aac === null) void can_encode_aac().then((supported) => (aac = supported));
   });
   const sound = $derived(keep_audio && !skip && !(mp4 && aac === false));
+  const max_bytes = $derived(Math.round(prefs.value.max_mb * 1e6));
+  const fit = $derived(
+    loaded && output === Output.CLIP && quality === Quality.FIT
+      ? fit_plan({ source: loaded, ceiling: clip_size, seconds: length, target_bytes: max_bytes, audio: sound })
+      : null
+  );
+  const output_dimensions = $derived(fit?.ok ? fit.size : clip_dimensions);
   const width_options = $derived.by(() => {
     const full = loaded?.width ?? GIF_WIDTH.DEFAULT;
     const sizes = [...GIF_WIDTHS.filter((size) => size < full), full];
@@ -271,7 +282,14 @@
     const skipping = skip ? { skip: prefs.value.skip_sensitivity } : {};
     if (output === Output.GIF) return { output, fps, width: Number(width_value), dither, ...skipping };
     if (output === Output.AUDIO) return { output };
-    return { output, format: prefs.value.format, size: clip_size, quality, audio: keep_audio && !skip, ...skipping };
+    return {
+      output,
+      format: prefs.value.format,
+      size: clip_size,
+      quality: quality === Quality.FIT ? { max_bytes } : quality,
+      audio: keep_audio && !skip,
+      ...skipping,
+    };
   }
 
   async function save() {
@@ -365,7 +383,7 @@
       {#if running}
         <Button size="sm" onclick={() => job?.cancel()}><XIcon weight="bold" /> Cancel</Button>
       {:else}
-        <Button variant="primary" size="sm" disabled={length < STEP} onclick={save}>
+        <Button variant="primary" size="sm" disabled={length < STEP || fit?.ok === false} onclick={save}>
           <FloppyDiskIcon weight="bold" /> Save {output === Output.GIF ? "GIF" : output === Output.AUDIO ? "sound" : "clip"}
         </Button>
       {/if}
@@ -463,13 +481,46 @@
                 aria-label="Size"
               />
             </label>
-            {#if clip_dimensions}
-              {@render row("Output", `${clip_dimensions.width} × ${clip_dimensions.height}`)}
+            {#if output_dimensions}
+              {@render row(
+                "Output",
+                `${output_dimensions.width} × ${output_dimensions.height}${fit?.ok && fit.lowered ? " · lowered to fit" : ""}`
+              )}
             {/if}
             <label class="flex items-center justify-between gap-2 text-ui">
               Quality
               <Segmented size="sm" label="Quality" options={QUALITY_OPTIONS} bind:value={quality} />
             </label>
+            {#if fit}
+              <label class="flex items-center justify-between gap-2 text-ui">
+                Max size
+                <span class="flex items-center gap-1.5">
+                  <Input
+                    size="sm"
+                    type="number"
+                    inputmode="decimal"
+                    min="0.1"
+                    step="any"
+                    class="w-20 text-right font-mono tabular-nums"
+                    aria-label="Max size in MB"
+                    value={prefs.value.max_mb}
+                    oninput={(event) => {
+                      const next = Number(event.currentTarget.value);
+                      if (Number.isFinite(next) && next > 0) prefs.value.max_mb = next;
+                    }}
+                  />
+                  <span class="text-foreground/80">MB</span>
+                </span>
+              </label>
+              {#if fit.ok}
+                {@render row(
+                  "Estimate",
+                  `~${format_mb(fit.estimate_bytes)} · ${Math.min(fit.size.width, fit.size.height)}p · ${((fit.video_bps + fit.audio_bps) / 1e6).toFixed(1)} Mb/s`
+                )}
+              {:else}
+                <p class="flex gap-1.5 px-0.5 text-2xs text-warning"><WarningIcon class="mt-px size-3.5 shrink-0" weight="bold" />{fit_too_long(max_bytes, fit.max_seconds)}</p>
+              {/if}
+            {/if}
             {@render skip_controls()}
             <label class="flex items-center justify-between gap-2 text-ui">
               Keep the sound

@@ -8,9 +8,9 @@ import {
   type WebmChunk,
   type WebmVideoTrack,
 } from "./webm";
+import { AUDIO_BITRATE } from "./plan";
 
 export const OPUS_RATE = 48_000;
-const OPUS_BITRATE = 128_000;
 const AUDIO_SLICE = 960;
 const KEYFRAME_EVERY_US = 2_000_000;
 /** Frames queued in the encoder before capture pauses; held frames keep the video decoder's buffers busy. */
@@ -26,6 +26,16 @@ export interface VideoSetup {
   height: number;
   bitrate: number;
   framerate: number;
+  bitrate_mode?: VideoEncoderBitrateMode;
+}
+
+export interface AudioSetup {
+  channels: number;
+  bitrate?: number;
+}
+
+export function with_bitrate_mode(config: VideoEncoderConfig, mode: VideoEncoderBitrateMode | undefined): VideoEncoderConfig[] {
+  return mode ? [{ ...config, bitrateMode: mode }, config] : [config];
 }
 
 export async function pick_video_codec(
@@ -33,7 +43,7 @@ export async function pick_video_codec(
 ): Promise<{ config: VideoEncoderConfig; webm: WebmVideoTrack["codec"] }> {
   if (typeof VideoEncoder === "undefined") throw new Error("This browser can't encode video (no WebCodecs)");
   for (const candidate of VIDEO_CODECS) {
-    const config: VideoEncoderConfig = {
+    const base: VideoEncoderConfig = {
       codec: candidate.codec,
       width: setup.width,
       height: setup.height,
@@ -41,8 +51,10 @@ export async function pick_video_codec(
       framerate: setup.framerate,
       latencyMode: "realtime",
     };
-    const { supported } = await VideoEncoder.isConfigSupported(config);
-    if (supported) return { config, webm: candidate.webm };
+    for (const config of with_bitrate_mode(base, setup.bitrate_mode)) {
+      const { supported } = await VideoEncoder.isConfigSupported(config);
+      if (supported) return { config, webm: candidate.webm };
+    }
   }
   throw new Error(`This browser can't encode VP9 or VP8 at ${setup.width} × ${setup.height}`);
 }
@@ -79,7 +91,7 @@ export function* audio_slices(buffer: AudioBuffer, from: number, to: number): Ge
 
 export interface WebmEncoderSetup {
   video?: VideoSetup;
-  audio?: { channels: number };
+  audio?: AudioSetup;
   /** Each chunk goes here instead of being kept: for a caller that keeps its own (a pre-roll ring) and muxes with `tracks`. */
   on_chunk?: (chunk: WebmChunk) => void;
 }
@@ -101,7 +113,7 @@ export class WebmEncoder {
     const out = new WebmEncoder();
     out.on_chunk = setup.on_chunk;
     if (setup.video) await out.start_video(setup.video);
-    if (setup.audio) await out.start_audio(setup.audio.channels);
+    if (setup.audio) await out.start_audio(setup.audio);
     return out;
   }
 
@@ -127,13 +139,13 @@ export class WebmEncoder {
     this.video_encoder.configure(config);
   }
 
-  private async start_audio(channels: number) {
+  private async start_audio({ channels, bitrate = AUDIO_BITRATE }: AudioSetup) {
     if (typeof AudioEncoder === "undefined") throw new Error("This browser can't encode audio (no WebCodecs)");
     const config: AudioEncoderConfig = {
       codec: "opus",
       sampleRate: OPUS_RATE,
       numberOfChannels: channels,
-      bitrate: OPUS_BITRATE,
+      bitrate,
     };
     if (!(await AudioEncoder.isConfigSupported(config)).supported)
       throw new Error("This browser can't encode Opus audio");

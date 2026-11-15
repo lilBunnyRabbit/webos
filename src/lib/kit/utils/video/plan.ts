@@ -1,8 +1,9 @@
 import { file_stem } from "$lib/core/api/services/files/path";
 
-export const Quality = { LOW: "low", MEDIUM: "medium", HIGH: "high" } as const;
+export const Quality = { LOW: "low", MEDIUM: "medium", HIGH: "high", FIT: "fit" } as const;
 export type Quality = (typeof Quality)[keyof typeof Quality];
-export const QUALITIES = Object.values(Quality) as [Quality, ...Quality[]];
+export type FixedQuality = Exclude<Quality, typeof Quality.FIT>;
+export const QUALITIES = [Quality.LOW, Quality.MEDIUM, Quality.HIGH] as [FixedQuality, ...FixedQuality[]];
 
 export const Output = { CLIP: "clip", GIF: "gif", AUDIO: "audio" } as const;
 export type Output = (typeof Output)[keyof typeof Output];
@@ -16,7 +17,7 @@ export const OutputSize = { ORIGINAL: "original", P1080: "1080", P720: "720", P4
 export type OutputSize = (typeof OutputSize)[keyof typeof OutputSize];
 export const OUTPUT_SIZES = Object.values(OutputSize) as [OutputSize, ...OutputSize[]];
 
-const BITS_PER_PIXEL: Record<Quality, number> = { low: 0.04, medium: 0.08, high: 0.16 };
+const BITS_PER_PIXEL: Record<FixedQuality, number> = { low: 0.04, medium: 0.08, high: 0.16 };
 const MIN_BITRATE = 250_000;
 
 export const GIF_WIDTHS = [160, 240, 320, 480, 640, 800] as const;
@@ -36,8 +37,80 @@ export interface Range {
   to: number;
 }
 
-export function video_bitrate(size: Size, quality: Quality, framerate = 30): number {
+export function video_bitrate(size: Size, quality: FixedQuality, framerate = 30): number {
   return Math.max(MIN_BITRATE, Math.round(size.width * size.height * framerate * BITS_PER_PIXEL[quality]));
+}
+
+export const AUDIO_BITRATE = 128_000;
+const FIT_AUDIO_LOW = 64_000;
+/** Aims under the target: container overhead, and the encoder drifting even at a constant bitrate. */
+const FIT_MARGIN = 0.95;
+const FIT_AUDIO_SHARE = 0.15;
+const FIT_SIZES = [OutputSize.P1080, OutputSize.P720, OutputSize.P480] as const;
+
+export type FitPlan =
+  | {
+      ok: true;
+      size: Size;
+      video_bps: number;
+      audio_bps: number;
+      lowered: boolean;
+      estimate_bytes: number;
+    }
+  | { ok: false; max_seconds: number };
+
+export interface FitInput {
+  source: Size;
+  ceiling: OutputSize;
+  seconds: number;
+  target_bytes: number;
+  audio: boolean;
+}
+
+/** Video stops at High's bitrate, so a short clip isn't padded out to the target. */
+export function fit_plan({ source, ceiling, seconds, target_bytes, audio }: FitInput): FitPlan {
+  const budget = (target_bytes * 8 * FIT_MARGIN) / Math.max(seconds, 1e-3);
+  const audio_bps = !audio ? 0 : AUDIO_BITRATE > budget * FIT_AUDIO_SHARE ? FIT_AUDIO_LOW : AUDIO_BITRATE;
+  const room = budget - audio_bps;
+  const top = scaled_size(source, ceiling);
+  const sizes = [top];
+  for (const choice of FIT_SIZES) {
+    const size = scaled_size(source, choice);
+    const last = sizes.at(-1)!;
+    if (size.width * size.height < last.width * last.height) sizes.push(size);
+  }
+  const pick = sizes.find((size) => room / (size.width * size.height * 30) >= BITS_PER_PIXEL.low);
+  const size = pick ?? sizes.at(-1)!;
+  if (!pick && room < MIN_BITRATE)
+    return { ok: false, max_seconds: (target_bytes * 8 * FIT_MARGIN) / (MIN_BITRATE + (audio ? FIT_AUDIO_LOW : 0)) };
+  const video_bps = Math.round(Math.min(room, video_bitrate(size, Quality.HIGH)));
+  return {
+    ok: true,
+    size,
+    video_bps,
+    audio_bps,
+    lowered: size !== top,
+    estimate_bytes: Math.round(((video_bps + audio_bps) * seconds) / 8),
+  };
+}
+
+/** Decimal, like the limits sites state: 20 MB is 20,000,000 bytes. */
+export function format_mb(bytes: number): string {
+  const mb = bytes / 1e6;
+  return `${mb >= 10 ? Math.round(mb * 10) / 10 : Math.round(mb * 100) / 100} MB`;
+}
+
+export function fit_too_long(target_bytes: number, max_seconds: number): string {
+  return `Too long for ${format_mb(target_bytes)}: trim to ~${format_time(Math.floor(max_seconds), 0)}`;
+}
+
+/** A plain number is MB. */
+export function parse_max_size(text: string): number | null {
+  const match = /^\s*(\d+(?:\.\d+)?)\s*(kb?|mb?|gb?)?\s*$/i.exec(text);
+  if (!match) return null;
+  const unit = (match[2] ?? "m")[0]!.toLowerCase();
+  const bytes = Math.round(Number(match[1]) * (unit === "k" ? 1e3 : unit === "g" ? 1e9 : 1e6));
+  return bytes >= 1 && Number.isSafeInteger(bytes) ? bytes : null;
 }
 
 /** VP8, VP9 and H.264 want even sides. */

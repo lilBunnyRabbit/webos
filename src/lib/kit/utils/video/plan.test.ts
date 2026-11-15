@@ -11,6 +11,9 @@ import {
   clamp_range,
   estimate_gif_bytes,
   even_size,
+  fit_plan,
+  fit_too_long,
+  parse_max_size,
   format_eta,
   format_time,
   gif_frame_count,
@@ -95,6 +98,41 @@ describe("plan", () => {
     expect(avc_level({ width: 3840, height: 2160 }, 30)).toBe(0x33);
     expect(avc_level({ width: 20_000, height: 20_000 }, 30)).toBeNull();
     expect(avc_codec("6400", 0x28)).toBe("avc1.640028");
+  });
+
+  describe("fit to a file size", () => {
+    const hd = { width: 1920, height: 1080 };
+    const mb = 1e6;
+
+    it("keeps the size when the budget holds Low's bits per pixel, and stops at High's bitrate", () => {
+      const long = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 30, target_bytes: 20 * mb, audio: true });
+      expect(long).toMatchObject({ ok: true, size: hd, audio_bps: 128_000, lowered: false });
+      if (long.ok) expect(long.video_bps).toBe(Math.round((20 * mb * 8 * 0.95) / 30 - 128_000));
+      const short = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 2, target_bytes: 20 * mb, audio: false });
+      expect(short).toMatchObject({ ok: true, video_bps: video_bitrate(hd, Quality.HIGH) });
+      if (short.ok) expect(short.estimate_bytes).toBeLessThan(20 * mb * 0.95);
+    });
+
+    it("drops the size and the sound's bitrate for a longer clip, never above the ceiling", () => {
+      const plan = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 300, target_bytes: 20 * mb, audio: true });
+      expect(plan).toMatchObject({ ok: true, size: { width: 854, height: 480 }, audio_bps: 64_000, lowered: true });
+      const capped = fit_plan({ source: hd, ceiling: OutputSize.P720, seconds: 10, target_bytes: 50 * mb, audio: true });
+      expect(capped).toMatchObject({ ok: true, size: { width: 1280, height: 720 }, lowered: false });
+    });
+
+    it("says how long a clip fits when even 480p at the floor can't", () => {
+      const plan = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 600, target_bytes: 10 * mb, audio: true });
+      expect(plan.ok).toBe(false);
+      if (!plan.ok) {
+        expect(plan.max_seconds).toBeCloseTo((10 * mb * 8 * 0.95) / 314_000);
+        expect(fit_too_long(10 * mb, plan.max_seconds)).toBe("Too long for 10 MB: trim to ~4:02");
+      }
+    });
+
+    it("reads sizes in decimal units, a plain number as MB", () => {
+      expect(["20mb", "500kb", "1.5 MB", "20", "1g"].map(parse_max_size)).toEqual([20e6, 500e3, 1.5e6, 20e6, 1e9]);
+      expect(["", "big", "-1", "0", "5tb"].map(parse_max_size)).toEqual([null, null, null, null, null]);
+    });
   });
 
   it("words the time left", () => {

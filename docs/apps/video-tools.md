@@ -1,10 +1,10 @@
 # Video Tools
 
-Id `video-tools` · Source: `src/lib/apps/user/video-tools/`, capture and encoding in `src/lib/kit/utils/video/` · [ADR-092](../adrs/092-skip-pauses.md) · [ADR-100](../adrs/100-video-mp4-output.md) · brainstorms [skip pauses](../brainstorm/2026-11-04_skip-pauses.md), [MP4 and size](../brainstorm/2026-11-08_video-mp4-and-size.md)
+Id `video-tools` · Source: `src/lib/apps/user/video-tools/`, capture and encoding in `src/lib/kit/utils/video/` · [ADR-092](../adrs/092-skip-pauses.md) · [ADR-100](../adrs/100-video-mp4-output.md) · brainstorms [skip pauses](../brainstorm/2026-11-04_skip-pauses.md), [MP4 and size](../brainstorm/2026-11-08_video-mp4-and-size.md), [fit to a file size](../brainstorm/2026-11-15_video-fit-size.md)
 
 ## What it does
 
-Trims a video to a WebM or MP4 clip, turns part of it into a GIF, or saves its sound. Pick the part with the two scrubber handles or with I and O, choose **Clip**, **GIF** or **Sound**, and save. **Skip pauses** on Clip and GIF leaves out the stretches where nothing on screen changes, so a screen recording or a timelapse plays without them. A clip can be scaled down to 1080p, 720p or 480p. `video trim`, `video gif` and `video audio` do the same from the Terminal (without Skip pauses).
+Trims a video to a WebM or MP4 clip, turns part of it into a GIF, or saves its sound. Pick the part with the two scrubber handles or with I and O, choose **Clip**, **GIF** or **Sound**, and save. **Skip pauses** on Clip and GIF leaves out the stretches where nothing on screen changes, so a screen recording or a timelapse plays without them. A clip can be scaled down to 1080p, 720p or 480p, or fitted under a file size (Quality › Fit). `video trim`, `video gif` and `video audio` do the same from the Terminal (without Skip pauses).
 
 With no video open, the window shows what it does: a drawing of a video cut down to a clip, a GIF or its sound (`empty-art.svelte`, from the kit's `tool-art` pieces), three steps, Open a video… and the drop and paste hint. Video Tools is one tool with three outputs, so it has no home screen ([Multi-tool app](../design/patterns.md#multi-tool-app)).
 
@@ -20,12 +20,24 @@ Each captured frame goes to the format's encoder (`WebmEncoder` or `Mp4Encoder`,
 
 **Size** (`scaled_size`): Original, 1080p, 720p or 480p, measured on the **short side**, so 720p is 1280 × 720 for a landscape video and 720 × 1280 for a portrait one. The long side follows the aspect ratio and both are rounded to even numbers; Original only drops an odd pixel. The Size menu offers only sizes below the open video's short side (`size_choices`), so it never upscales. A remembered size the video is too small for shows as Original and stays remembered.
 
+**Fit** (`plan.ts` `fit_plan`, `jobs.ts` `clip_encoding`): Quality's fourth option takes a Max size in MB (decimal: 20 MB is 20,000,000 bytes, the smaller reading of what a site means by it) and works out the size and bitrates before encoding.
+- *Budget.* `target × 8 × 0.95 / seconds` bits per second, `seconds` being the part's length. Skip pauses only makes the output shorter, so that's a safe upper bound. The 5% covers the container and the encoder's drift.
+- *Sound.* 128 kb/s, or 64 kb/s when 128 would take more than 15% of the budget. Video gets the rest.
+- *Size.* The Size pick is a ceiling. Fit takes the largest of it, 1080p, 720p and 480p (via `scaled_size`, so never above the source) where the video bitrate gives Low's 0.04 bits per pixel at 30 fps. When none does, it takes the smallest at whatever is left, down to the 250 kb/s floor. The Output row says "lowered to fit" when the size dropped.
+- *Ceiling.* Video stops at High's bitrate (0.16 bpp), so a short part isn't padded out to the target; the estimate then reads below the Max size.
+- *Too long.* When even the smallest size at 250 kb/s (plus 64 kb/s of sound) can't fit, the panel reads "Too long for 20 MB: trim to ~m:ss" and Save is disabled; the job and the shell fail with the same text.
+- *Encoder.* Fit sets `bitrateMode: "constant"` on the video encoder (both formats; a codec that rejects it is tried without, `with_bitrate_mode`) and the audio bitrate on Opus or AAC. Low/Medium/High keep the default variable mode, so their clips don't grow.
+- *Overshoot.* A file over the target is kept; the saved panel and the done toast carry "Came out 20.6 MB, over 20 MB" (the same `note` the AAC warning uses). No second pass.
+- The panel estimate assumes the clip has sound when Keep the sound is on; the job plans with the sound the file really has, so a silent source gets a little more video bitrate than the estimate shows.
+
+Measured in headless Chromium on drawn 640 × 360 footage (moving shapes over a gradient, light grain), two seconds at a constant bitrate: VP9 and H.264 both land within about 1% of the bitrate at 0.08 bpp and up. At 0.055 bpp H.264 (OpenH264 there) came out about 1.6× over, VP9 within 4%; pure noise overshoots in both at any bitrate (the quantizer bottoms out). `shell.browser.test.ts` checks 150 KB and 300 KB targets in both formats.
+
 **WebM:** VP9, else VP8, and Opus. The hand-written muxer (`kit/utils/video/webm.ts`) writes the WebM with a Duration, so other players see the length.
 
 **MP4** (`kit/utils/video/mp4.ts`): H.264 and AAC through WebCodecs, muxed by [mediabunny](https://mediabunny.dev).
 - *Frame rate.* An MP4 is encoded at 30 fps at most: capture hands over every frame the source has (60 for a 60 fps video), so frames are taken on a 1/30 s slot grid, as GIF does with its own rate. A frame left out never reaches the output clock, so the frame before it lasts until the next one and the clip keeps its length. The level and the bitrate are set for 30 fps, so they hold. WebM takes every frame, as before.
 - *Codec string.* `avc_level` picks the smallest H.264 level whose frame size and macroblock rate at 30 fps hold the output (ITU-T H.264 Table A-1): 1280 × 720 is 3.1, 1920 × 1080 is 4.0, 3840 × 2160 is 5.1. `pick_avc_config` then tries High, Main and Constrained Baseline (`avc1.6400LL`, `4d00LL`, `42e0LL`) through `isConfigSupported`, with `avc: { format: "avc" }` so the encoder hands back an avcC description, and fails with "This browser can't encode H.264 video at W × H" when none fits.
-- *Sound.* AAC-LC (`mp4a.40.2`, 128 kb/s). When `AudioEncoder.isConfigSupported` says no, the clip is saved silent: the panel warns as soon as MP4 is picked, and the saved panel and the toast carry "Saved without sound: this browser can't encode AAC".
+- *Sound.* AAC-LC (`mp4a.40.2`, 128 kb/s, or what Fit picks). When `AudioEncoder.isConfigSupported` says no, the clip is saved silent: the panel warns as soon as MP4 is picked, and the saved panel and the toast carry "Saved without sound: this browser can't encode AAC".
 - *Muxing.* The encoder keeps every chunk and the first decoder config of each track. `finish()` is the only place that imports mediabunny (`await import("mediabunny")`), so a WebM save, the app's first paint and boot never load it. It adds video and audio packets interleaved by timestamp to an `Output` with `Mp4OutputFormat({ fastStart: "in-memory" })` (moov before mdat, so a player starts before the whole file is read). Realtime H.264 has no B-frames, so decode order is presentation order; each frame lasts until the next one and the last until the end of the part (or the output clock's end), so the MP4's duration is the WebM's.
 
 The file name is `{name}-clip.webm` or `{name}-clip.mp4`.
@@ -64,14 +76,14 @@ Comparing with the last kept frame, not the previous one, matters both ways: a s
 
 | What | Where | Format |
 |------|-------|--------|
-| Sensitivity, clip format and size | `/var/lib/apps/video-tools/settings.json` through `storage.file` | `{ "version": 2, "skip_sensitivity": 0–100, "format": "webm" \| "mp4", "size": "original" \| "1080" \| "720" \| "480" }`; defaults 50, webm, original. A version 1 file (`{ "version": 1, "skip_sensitivity" }`) reads as webm and original with its sensitivity (`settings.ts`) |
+| Sensitivity, clip format, size and Fit target | `/var/lib/apps/video-tools/settings.json` through `storage.file` | `{ "version": 3, "skip_sensitivity": 0–100, "format": "webm" \| "mp4", "size": "original" \| "1080" \| "720" \| "480", "max_mb": > 0 }`; defaults 50, webm, original, 20. A version 2 file reads with `max_mb` 20; a version 1 file (`{ "version": 1, "skip_sensitivity" }`) reads as webm, original and 20 with its sensitivity (`settings.ts`) |
 | Output | Next to the source, or `/home/Videos` for a dropped or pasted file | `{name}-clip.webm`, `{name}-clip.mp4`, `{name}.gif`, `{name}-audio.webm`; a taken name gets a free one |
 
-The Skip pauses switch itself isn't remembered; format and size are. Props: `{ path?: string, skip_pauses?: boolean }`. `skip_pauses: true` opens with Clip chosen and Skip pauses on; Recorder's **Save & remove pauses…** launches it that way with the saved take, so it saves in the remembered format and size.
+The Skip pauses switch and the Quality pick aren't remembered; format, size and the Fit target are. Picking Fit fills in the last Max size, and editing it saves it. Props: `{ path?: string, skip_pauses?: boolean }`. `skip_pauses: true` opens with Clip chosen and Skip pauses on; Recorder's **Save & remove pauses…** launches it that way with the saved take, so it saves in the remembered format and size.
 
 ## Shell
 
-`video trim <path> [--from S] [--to S] [-q low|medium|high] [--mute] [--format webm|mp4] [--size original|1080|720|480] [-o out]`: defaults webm and original; `--size` is the short side and never upscales; `-o` without the right extension gets `.webm` or `.mp4`. `video gif` and `video audio` are unchanged. None of them skip pauses.
+`video trim <path> [--from S] [--to S] [-q low|medium|high | -m SIZE] [--mute] [--format webm|mp4] [--size original|1080|720|480] [-o out]`: defaults webm and original; `--size` is the short side and never upscales; `-o` without the right extension gets `.webm` or `.mp4`. `-m` / `--max-size` takes `20mb`, `500kb` or a plain number of MB and runs the same Fit planning as the panel (with `--size` as the ceiling); it fails with "Too long for N MB: trim to ~m:ss" before encoding when the part can't fit, and when given together with `-q` (quality is optional, Medium when neither is given). `video gif` and `video audio` are unchanged. None of them skip pauses.
 
 ## Dependencies & licences
 
@@ -87,6 +99,7 @@ The Skip pauses switch itself isn't remembered; format and size are. Props: `{ p
 - The default was tuned on drawn footage, not on real recordings; real screen recordings with grain or a video playing in a corner keep more.
 - Both formats are built in memory. The WebM muxer holds every chunk until it writes the file. For an MP4 the encoder hands its chunks to mediabunny in `finish()` and keeps no reference, mediabunny holds them until `finalize()` writes the file through a `StreamTarget`, and the written parts become the Blob; at the end that is about twice the clip's size for a moment. Cancel is checked between packets while muxing.
 - H.264 gets the VP9 bitrate table, so an MP4 at the same quality is a little softer or larger than the WebM.
+- Fit is one pass: a file over the target is kept with a note, not encoded again. Low bits per pixel (near 0.04) and grainy footage overshoot most, H.264 more than VP9. Fit is Clip only; a GIF has no size target.
 - No H.265, no .mov.
 
 ## Decisions

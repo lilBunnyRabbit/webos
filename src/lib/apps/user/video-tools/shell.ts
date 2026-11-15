@@ -11,14 +11,17 @@ import {
 } from "$lib/core/api/services/shell/type";
 import { probe_video } from "$kit/utils/video/capture";
 import { export_clip, type ClipSettings, type ClipSource } from "./jobs";
-import { is_video_name, type Quality } from "./kinds";
+import { is_video_name, Quality, type FixedQuality } from "./kinds";
 import {
   clamp_range,
   ClipFormat,
+  fit_plan,
+  fit_too_long,
   format_time,
   Output,
   output_extension,
   output_name,
+  parse_max_size,
   parse_time,
   type OutputSize,
   type Range,
@@ -95,6 +98,17 @@ async function run_clip(context: CommandContext<ClipArgs>, settings: ClipSetting
   const path = resolve_path(session.cwd, args.path);
   const source = await source_at(path);
   const range = range_of(args, source.duration);
+  if (settings.output === Output.CLIP && typeof settings.quality === "object") {
+    const { max_bytes } = settings.quality;
+    const plan = fit_plan({
+      source: source.size,
+      ceiling: settings.size,
+      seconds: range.to - range.from,
+      target_bytes: max_bytes,
+      audio: settings.audio,
+    });
+    if (!plan.ok) throw new ShellError(fit_too_long(max_bytes, plan.max_seconds));
+  }
   const target = await target_of(path, settings, args.out, session.cwd, elevated);
   const outcome = await export_clip({ app_id: APP_ID, source, range, settings, target, signal });
   if (!outcome.ok) throw new ShellError(outcome.cancelled ? "stopped" : outcome.error);
@@ -102,11 +116,24 @@ async function run_clip(context: CommandContext<ClipArgs>, settings: ClipSetting
   return file_value(outcome.result.path, "file", file?.size ?? null, file?.lastModified ?? null);
 }
 
-export function trim(
-  context: CommandContext<ClipArgs & { quality: Quality; mute: boolean; format: ClipFormat; size: OutputSize }>
+export async function trim(
+  context: CommandContext<
+    ClipArgs & { quality?: FixedQuality; max_size?: string; mute: boolean; format: ClipFormat; size: OutputSize }
+  >
 ): Promise<FileValue> {
-  const { quality, mute, format, size } = context.args;
-  return run_clip(context, { output: Output.CLIP, format, size, quality, audio: !mute });
+  const { quality, max_size, mute, format, size } = context.args;
+  if (max_size !== undefined && quality !== undefined)
+    throw new ShellError("give --max-size or --quality, not both: --max-size sets the quality to fit");
+  const max_bytes = max_size === undefined ? null : parse_max_size(max_size);
+  if (max_size !== undefined && max_bytes === null)
+    throw new ShellError(`--max-size ${max_size}: give a size like 20mb or 500kb, or a number of MB`);
+  return run_clip(context, {
+    output: Output.CLIP,
+    format,
+    size,
+    quality: max_bytes === null ? (quality ?? Quality.MEDIUM) : { max_bytes },
+    audio: !mute,
+  });
 }
 
 export function gif(

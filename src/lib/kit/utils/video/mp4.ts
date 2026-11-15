@@ -1,8 +1,7 @@
-import { OPUS_RATE, type VideoSetup } from "./encode";
-import { avc_codec, avc_level, AVC_PROFILES } from "./plan";
+import { OPUS_RATE, with_bitrate_mode, type AudioSetup, type VideoSetup } from "./encode";
+import { AUDIO_BITRATE, avc_codec, avc_level, AVC_PROFILES } from "./plan";
 
 const AAC = "mp4a.40.2";
-const AAC_BITRATE = 128_000;
 const KEYFRAME_EVERY_US = 2_000_000;
 const MAX_QUEUE = 6;
 
@@ -15,7 +14,7 @@ interface Mp4Chunk {
 
 export interface Mp4EncoderSetup {
   video: VideoSetup;
-  audio?: { channels: number };
+  audio?: AudioSetup;
 }
 
 export async function pick_avc_config(setup: VideoSetup): Promise<VideoEncoderConfig> {
@@ -23,7 +22,7 @@ export async function pick_avc_config(setup: VideoSetup): Promise<VideoEncoderCo
   const level = avc_level(setup, setup.framerate);
   if (level !== null) {
     for (const profile of AVC_PROFILES) {
-      const config: VideoEncoderConfig = {
+      const base: VideoEncoderConfig = {
         codec: avc_codec(profile, level),
         width: setup.width,
         height: setup.height,
@@ -32,14 +31,15 @@ export async function pick_avc_config(setup: VideoSetup): Promise<VideoEncoderCo
         latencyMode: "realtime",
         avc: { format: "avc" },
       };
-      if ((await VideoEncoder.isConfigSupported(config)).supported) return config;
+      for (const config of with_bitrate_mode(base, setup.bitrate_mode))
+        if ((await VideoEncoder.isConfigSupported(config)).supported) return config;
     }
   }
   throw new Error(`This browser can't encode H.264 video at ${setup.width} × ${setup.height}`);
 }
 
-function aac_config(channels: number): AudioEncoderConfig {
-  return { codec: AAC, sampleRate: OPUS_RATE, numberOfChannels: channels, bitrate: AAC_BITRATE };
+function aac_config(channels: number, bitrate = AUDIO_BITRATE): AudioEncoderConfig {
+  return { codec: AAC, sampleRate: OPUS_RATE, numberOfChannels: channels, bitrate };
 }
 
 export async function can_encode_aac(channels = 2): Promise<boolean> {
@@ -93,7 +93,7 @@ export class Mp4Encoder {
         },
         error: this.fail,
       });
-      this.audio_encoder.configure(aac_config(audio.channels));
+      this.audio_encoder.configure(aac_config(audio.channels, audio.bitrate));
     }
   }
 

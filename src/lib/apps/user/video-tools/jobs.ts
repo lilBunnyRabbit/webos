@@ -11,12 +11,15 @@ import type { AppId } from "$lib/core/api/services/apps/type";
 import { base_name, parent_path } from "$lib/core/api/services/files/path";
 import { error_message, format_bytes } from "$lib/core/utils";
 import { capture } from "$kit/utils/video/capture";
-import { audio_slices, decode_audio, WebmEncoder } from "$kit/utils/video/encode";
+import { audio_slices, decode_audio, WebmEncoder, type VideoSetup } from "$kit/utils/video/encode";
 import { can_encode_aac, Mp4Encoder } from "$kit/utils/video/mp4";
 import { gif_local_frame, gif_start, GIF_TRAILER } from "./gif";
 import {
   ClipFormat,
+  fit_plan,
+  fit_too_long,
   format_eta,
+  format_mb,
   format_time,
   gif_playback_rate,
   gif_size,
@@ -28,7 +31,7 @@ import {
   type Range,
   type Size,
 } from "$kit/utils/video/plan";
-import type { Quality } from "./kinds";
+import type { FixedQuality } from "./kinds";
 import { map_pixels, median_cut } from "$kit/utils/codecs/quantize";
 import { OutputClock, PauseFilter, skip_size, skip_threshold, to_grey } from "./skip";
 
@@ -53,12 +56,15 @@ interface SkipSetting {
   skip?: number;
 }
 
+/** Fit carries its target; `size` is then the largest it may use. */
+export type ClipQuality = FixedQuality | { max_bytes: number };
+
 export type ClipSettings =
   | ({
       output: typeof Output.CLIP;
       format: ClipFormat;
       size: OutputSize;
-      quality: Quality;
+      quality: ClipQuality;
       audio: boolean;
     } & SkipSetting)
   | ({ output: typeof Output.GIF; fps: number; width: number; dither: boolean } & SkipSetting)
@@ -139,14 +145,34 @@ interface Step {
   run: (task: { progress: (value: number) => void; log: (text: string) => void }) => Promise<void>;
 }
 
+function clip_encoding(
+  source: Size,
+  settings: { size: OutputSize; quality: ClipQuality },
+  seconds: number,
+  audio: boolean
+): { video: VideoSetup; audio_bps?: number } {
+  const { quality } = settings;
+  if (typeof quality === "string") {
+    const size = scaled_size(source, settings.size);
+    return { video: { ...size, bitrate: video_bitrate(size, quality, CLIP_FPS), framerate: CLIP_FPS } };
+  }
+  const plan = fit_plan({ source, ceiling: settings.size, seconds, target_bytes: quality.max_bytes, audio });
+  if (!plan.ok) throw new Error(fit_too_long(quality.max_bytes, plan.max_seconds));
+  // Constant for Fit only: Low/Medium/High stay variable, so their clips don't grow.
+  return {
+    video: { ...plan.size, bitrate: plan.video_bps, framerate: CLIP_FPS, bitrate_mode: "constant" },
+    audio_bps: plan.audio_bps,
+  };
+}
+
 function clip_steps(
   run: ClipRun,
   context: TaskContext,
   out: Built,
-  settings: { format: ClipFormat; size: OutputSize; quality: Quality; audio: boolean } & SkipSetting
+  settings: { format: ClipFormat; size: OutputSize; quality: ClipQuality; audio: boolean } & SkipSetting
 ): Step[] {
   const { range, source } = run;
-  const size = scaled_size(source.size, settings.size);
+  const { quality } = settings;
   const mp4 = settings.format === ClipFormat.MP4;
   let audio: AudioBuffer | null = null;
   const steps: Step[] = [];
@@ -170,10 +196,11 @@ function clip_steps(
     name: "Encode video",
     async run(task) {
       context.signal.throwIfAborted();
-      const setup = {
-        video: { ...size, bitrate: video_bitrate(size, settings.quality, CLIP_FPS), framerate: CLIP_FPS },
-        audio: audio ? { channels: Math.min(2, audio.numberOfChannels) } : undefined,
-      };
+      const channels = audio ? Math.min(2, audio.numberOfChannels) : 0;
+      const { video, audio_bps } = clip_encoding(source.size, settings, range.to - range.from, channels > 0);
+      const size = { width: video.width, height: video.height };
+      const setup = { video, audio: channels ? { channels, bitrate: audio_bps } : undefined };
+      if (video.bitrate_mode) task.log(`Fit · ${Math.round(video.bitrate / 1000)} + ${(audio_bps ?? 0) / 1000} kb/s`);
       const encoder = mp4 ? await Mp4Encoder.create(setup) : await WebmEncoder.create(setup);
       task.log(`${mp4 ? "MP4, H.264" : "WebM"} · ${size.width} × ${size.height}`);
       try {
@@ -216,6 +243,11 @@ function clip_steps(
           encoder instanceof Mp4Encoder
             ? await encoder.finish(length * 1000, context.signal)
             : await encoder.finish(length * 1000);
+        if (typeof quality === "object" && out.blob.size > quality.max_bytes) {
+          const over = `Came out ${format_mb(out.blob.size)}, over ${format_mb(quality.max_bytes)}`;
+          out.note = out.note ? `${out.note} · ${over}` : over;
+          task.log(over);
+        }
       } finally {
         encoder.close();
       }

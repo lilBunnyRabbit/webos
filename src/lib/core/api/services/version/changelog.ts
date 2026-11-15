@@ -5,6 +5,18 @@ const { NEW, IMPROVED, FIXED } = ChangeKind;
 /** Hand-written release notes, newest first (ADR-026). The first entry's version equals `package.json`. */
 export const CHANGELOG: Release[] = [
   {
+    version: "4.18.0",
+    date: "2026-11-15",
+    title: "Clips that fit",
+    changes: [
+      {
+        kind: NEW,
+        apps: ["video-tools"],
+        text: "Video Tools can fit a clip under a file size: pick Fit, type the most it may weigh, and it picks the quality and, when needed, a smaller size.",
+      },
+    ],
+  },
+  {
     version: "4.17.0",
     date: "2026-11-13",
     title: "Recipe Box tidy-up",

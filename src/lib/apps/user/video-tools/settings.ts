@@ -6,20 +6,31 @@ import { SKIP_SENSITIVITY } from "./skip";
 export const SETTINGS_FILE = "settings.json";
 
 export interface VideoToolsSettings {
-  version: 2;
+  version: 3;
   skip_sensitivity: number;
   format: ClipFormat;
   size: OutputSize;
+  /** Fit's target, in decimal MB. */
+  max_mb: number;
 }
 
 export const DEFAULT_SETTINGS: VideoToolsSettings = {
-  version: 2,
+  version: 3,
   skip_sensitivity: SKIP_SENSITIVITY.DEFAULT,
   format: ClipFormat.WEBM,
   size: OutputSize.ORIGINAL,
+  max_mb: 20,
 };
 
 const sensitivity = z.number().min(SKIP_SENSITIVITY.MIN).max(SKIP_SENSITIVITY.MAX);
+
+const SettingsV3 = z.object({
+  version: z.literal(3),
+  skip_sensitivity: sensitivity,
+  format: z.enum(CLIP_FORMATS),
+  size: z.enum(OUTPUT_SIZES),
+  max_mb: z.number().positive(),
+});
 
 const SettingsV2 = z.object({
   version: z.literal(2),
@@ -31,6 +42,7 @@ const SettingsV2 = z.object({
 const SettingsV1 = z.object({ version: z.literal(1), skip_sensitivity: sensitivity });
 
 export const SettingsSchema: z.ZodType<VideoToolsSettings> = z.union([
-  SettingsV2,
+  SettingsV3,
+  SettingsV2.transform((saved): VideoToolsSettings => ({ ...DEFAULT_SETTINGS, ...saved, version: 3 })),
   SettingsV1.transform(({ skip_sensitivity }): VideoToolsSettings => ({ ...DEFAULT_SETTINGS, skip_sensitivity })),
 ]);

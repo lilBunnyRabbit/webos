@@ -8,6 +8,7 @@
 
 - **Clip** saves a WebM or an MP4 file: pick it under **Format**. MP4 (H.264 with AAC sound) plays almost anywhere, phones and messaging apps included. Saving plays the part through once, so it takes about as long as the part.
 - **Size** makes the clip smaller: 1080p, 720p or 480p by its short side, so a portrait video stays portrait. Only sizes below the video's own are offered. Format and size are remembered.
+- **Quality › Fit** keeps a clip under a file size, for a site or chat app with a limit: type the most it may weigh in **Max size** (MB). It shows the expected size, and drops to a smaller size when the part is too long for the picked one. When even 480p can't fit, it says how far to trim. If the file still comes out a little over, the panel says so.
 - **GIF** shows its frame count and an estimated size before you save. Fewer frames per second or a smaller width makes it smaller.
 - **Sound** saves only the audio. It needs a video that has sound.
 - **Skip pauses** (Clip and GIF) leaves out the stretches where nothing on screen changes, so a screen recording or a timelapse plays without them. It's also how you remove duplicate frames: a frame that looks the same as the last kept one is dropped. The saved file shows how long the part was and how long the result is.

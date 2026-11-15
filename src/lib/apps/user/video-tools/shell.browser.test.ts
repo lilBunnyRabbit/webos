@@ -6,8 +6,8 @@ import { NotificationsService } from "$lib/core/api/services/notifications/servi
 import { TasksService } from "$lib/core/api/services/tasks/service.svelte";
 import type { CommandContext } from "$lib/core/api/services/shell/type";
 import { probe_video } from "$kit/utils/video/capture";
-import { decode_audio } from "$kit/utils/video/encode";
-import { make_video } from "$kit/utils/video/fixtures";
+import { decode_audio, WebmEncoder } from "$kit/utils/video/encode";
+import { FIXTURE_FPS, make_video } from "$kit/utils/video/fixtures";
 import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 import { audio, gif, trim } from "./shell";
 
@@ -147,6 +147,52 @@ test("bad times and non-videos fail with a message", async () => {
   await expect(trim(context({ path: "note.txt", quality: "low" as const, mute: false, ...WEBM }))).rejects.toThrow(
     "not a video"
   );
+});
+
+/** Moving shapes over a shifting gradient, with a little grain: busy enough that the bitrate decides the size. */
+async function busy_video(seconds: number, width: number, height: number): Promise<Blob> {
+  const encoder = await WebmEncoder.create({ video: { width, height, bitrate: 20_000_000, framerate: FIXTURE_FPS } });
+  const canvas = new OffscreenCanvas(width, height);
+  const draw = canvas.getContext("2d")!;
+  for (let i = 0; i < seconds * FIXTURE_FPS; i++) {
+    const gradient = draw.createLinearGradient(0, 0, width, height);
+    gradient.addColorStop(0, `hsl(${i * 6}, 70%, 50%)`);
+    gradient.addColorStop(1, `hsl(${i * 6 + 120}, 70%, 40%)`);
+    draw.fillStyle = gradient;
+    draw.fillRect(0, 0, width, height);
+    for (let k = 0; k < 40; k++) {
+      draw.fillStyle = `hsl(${k * 37}, 80%, ${30 + (k % 5) * 10}%)`;
+      draw.fillRect((k * 53 + i * (k % 7)) % width, (k * 31 + i * 2) % height, 30 + k, 20 + k);
+    }
+    for (let k = 0; k < 150; k++) {
+      draw.fillStyle = `hsl(${(k * 97 + i * 13) % 360}, 60%, 50%)`;
+      draw.fillRect((k * 211 + i * 17) % width, (k * 113 + i * 29) % height, 2, 2);
+    }
+    encoder.encode_frame(canvas, Math.round((i / FIXTURE_FPS) * 1e6));
+    await encoder.drained();
+  }
+  return encoder.finish(seconds * 1000);
+}
+
+test("video trim --max-size lands under the target in WebM and MP4, and says when a part can't fit", async () => {
+  await seed("busy.webm", await busy_video(2, 640, 360));
+  const size = "original" as const;
+  for (const format of ["webm", "mp4"] as const) {
+    const sizes: number[] = [];
+    for (const kb of [150, 300]) {
+      const out = `fit-${kb}.${format}`;
+      const value = await trim(context({ path: "busy.webm", max_size: `${kb}kb`, mute: true, format, size, out }));
+      sizes.push((await files.get_file(value.path))!.size);
+      expect(sizes.at(-1)).toBeLessThan(kb * 1000 * 1.02);
+    }
+    expect(sizes[1]).toBeGreaterThan(sizes[0]! * 1.5);
+  }
+  await expect(trim(context({ path: "busy.webm", max_size: "40kb", mute: true, ...WEBM }))).rejects.toThrow(
+    "Too long for 0.04 MB: trim to ~0:01"
+  );
+  await expect(
+    trim(context({ path: "busy.webm", max_size: "1", quality: "low" as const, mute: true, ...WEBM }))
+  ).rejects.toThrow("not both");
 });
 
 test("Ctrl+C stops a trim and writes nothing", async () => {
