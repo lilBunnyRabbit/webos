@@ -85,8 +85,7 @@ async function target_of(
     else {
       folder = parent_path(typed);
       if (!(await files().get_directory(folder))) throw new ShellError(`${folder}: no such folder`);
-      name =
-        file_extension(typed).toLowerCase() === extension ? base_name(typed) : `${base_name(typed)}${extension}`;
+      name = file_extension(typed).toLowerCase() === extension ? base_name(typed) : `${base_name(typed)}${extension}`;
     }
   }
   assert_writable(child_path(folder, name), elevated);
@@ -100,14 +99,19 @@ async function run_clip(context: CommandContext<ClipArgs>, settings: ClipSetting
   const range = range_of(args, source.duration);
   if (settings.output === Output.CLIP && typeof settings.quality === "object") {
     const { max_bytes } = settings.quality;
-    const plan = fit_plan({
+    const input = {
       source: source.size,
       ceiling: settings.size,
       seconds: range.to - range.from,
       target_bytes: max_bytes,
       audio: settings.audio,
-    });
-    if (!plan.ok) throw new ShellError(fit_too_long(max_bytes, plan.max_seconds));
+      format: settings.format,
+    };
+    const plan = fit_plan(input);
+    if (!plan.ok) {
+      const silent_fits = settings.audio && fit_plan({ ...input, audio: false }).ok;
+      throw new ShellError(fit_too_long(max_bytes, plan.max_seconds, silent_fits ? "pass --mute" : undefined));
+    }
   }
   const target = await target_of(path, settings, args.out, session.cwd, elevated);
   const outcome = await export_clip({ app_id: APP_ID, source, range, settings, target, signal });

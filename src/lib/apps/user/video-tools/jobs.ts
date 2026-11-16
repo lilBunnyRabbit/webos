@@ -107,7 +107,11 @@ async function write(blob: Blob, run: ClipRun): Promise<ClipResult> {
   const handle = await files().create_file(
     directory,
     run.target?.name ??
-      output_name(run.source.name, run.settings.output, run.settings.output === Output.CLIP ? run.settings.format : undefined),
+      output_name(
+        run.source.name,
+        run.settings.output,
+        run.settings.output === Output.CLIP ? run.settings.format : undefined
+      ),
     { content: blob }
   );
   return { path: child_path(folder, handle.name), size: blob.size };
@@ -147,7 +151,7 @@ interface Step {
 
 function clip_encoding(
   source: Size,
-  settings: { size: OutputSize; quality: ClipQuality },
+  settings: { format: ClipFormat; size: OutputSize; quality: ClipQuality },
   seconds: number,
   audio: boolean
 ): { video: VideoSetup; audio_bps?: number } {
@@ -156,7 +160,14 @@ function clip_encoding(
     const size = scaled_size(source, settings.size);
     return { video: { ...size, bitrate: video_bitrate(size, quality, CLIP_FPS), framerate: CLIP_FPS } };
   }
-  const plan = fit_plan({ source, ceiling: settings.size, seconds, target_bytes: quality.max_bytes, audio });
+  const plan = fit_plan({
+    source,
+    ceiling: settings.size,
+    seconds,
+    target_bytes: quality.max_bytes,
+    audio,
+    format: settings.format,
+  });
   if (!plan.ok) throw new Error(fit_too_long(quality.max_bytes, plan.max_seconds));
   // Constant for Fit only: Low/Medium/High stay variable, so their clips don't grow.
   return {

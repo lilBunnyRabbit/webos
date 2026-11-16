@@ -105,28 +105,74 @@ describe("plan", () => {
     const mb = 1e6;
 
     it("keeps the size when the budget holds Low's bits per pixel, and stops at High's bitrate", () => {
-      const long = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 30, target_bytes: 20 * mb, audio: true });
+      const long = fit_plan({
+        source: hd,
+        ceiling: OutputSize.ORIGINAL,
+        seconds: 30,
+        target_bytes: 20 * mb,
+        audio: true,
+        format: ClipFormat.WEBM,
+      });
       expect(long).toMatchObject({ ok: true, size: hd, audio_bps: 128_000, lowered: false });
       if (long.ok) expect(long.video_bps).toBe(Math.round((20 * mb * 8 * 0.95) / 30 - 128_000));
-      const short = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 2, target_bytes: 20 * mb, audio: false });
+      const short = fit_plan({
+        source: hd,
+        ceiling: OutputSize.ORIGINAL,
+        seconds: 2,
+        target_bytes: 20 * mb,
+        audio: false,
+        format: ClipFormat.WEBM,
+      });
       expect(short).toMatchObject({ ok: true, video_bps: video_bitrate(hd, Quality.HIGH) });
       if (short.ok) expect(short.estimate_bytes).toBeLessThan(20 * mb * 0.95);
     });
 
     it("drops the size and the sound's bitrate for a longer clip, never above the ceiling", () => {
-      const plan = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 300, target_bytes: 20 * mb, audio: true });
+      const plan = fit_plan({
+        source: hd,
+        ceiling: OutputSize.ORIGINAL,
+        seconds: 300,
+        target_bytes: 20 * mb,
+        audio: true,
+        format: ClipFormat.WEBM,
+      });
       expect(plan).toMatchObject({ ok: true, size: { width: 854, height: 480 }, audio_bps: 64_000, lowered: true });
-      const capped = fit_plan({ source: hd, ceiling: OutputSize.P720, seconds: 10, target_bytes: 50 * mb, audio: true });
+      const capped = fit_plan({
+        source: hd,
+        ceiling: OutputSize.P720,
+        seconds: 10,
+        target_bytes: 50 * mb,
+        audio: true,
+        format: ClipFormat.WEBM,
+      });
       expect(capped).toMatchObject({ ok: true, size: { width: 1280, height: 720 }, lowered: false });
     });
 
     it("says how long a clip fits when even 480p at the floor can't", () => {
-      const plan = fit_plan({ source: hd, ceiling: OutputSize.ORIGINAL, seconds: 600, target_bytes: 10 * mb, audio: true });
+      const plan = fit_plan({
+        source: hd,
+        ceiling: OutputSize.ORIGINAL,
+        seconds: 600,
+        target_bytes: 10 * mb,
+        audio: true,
+        format: ClipFormat.WEBM,
+      });
       expect(plan.ok).toBe(false);
       if (!plan.ok) {
         expect(plan.max_seconds).toBeCloseTo((10 * mb * 8 * 0.95) / 314_000);
         expect(fit_too_long(10 * mb, plan.max_seconds)).toBe("Too long for 10 MB: trim to ~4:02");
       }
+    });
+
+    it("holds MP4 to Medium's bits per pixel, so it drops sooner and runs out sooner", () => {
+      const input = { source: hd, ceiling: OutputSize.ORIGINAL, seconds: 30, target_bytes: 20 * mb, audio: true };
+      expect(fit_plan({ ...input, format: ClipFormat.MP4 })).toMatchObject({
+        ok: true,
+        size: { width: 1280, height: 720 },
+      });
+      const plan = fit_plan({ ...input, seconds: 150, target_bytes: 10 * mb, format: ClipFormat.MP4 });
+      expect(plan.ok).toBe(false);
+      expect(fit_plan({ ...input, seconds: 150, target_bytes: 10 * mb, format: ClipFormat.WEBM }).ok).toBe(true);
     });
 
     it("reads sizes in decimal units, a plain number as MB", () => {

@@ -33,3 +33,9 @@ Today Clip has Format (WebM/MP4), Size (Original/1080p/720p/480p, `kit/utils/vid
 - **The shell flag is on `video trim`** (there is no `clip` command): `video trim <path> -m 20mb`. `--quality` lost its default so an explicit one can be told apart; neither flag still means Medium.
 - **MB is decimal** (20 MB = 20,000,000 bytes), like Image Tools' fit: the smaller reading of a site's limit. The saved panel still shows the size through the binary `format_bytes`.
 - **Measured overshoot** (headless Chromium, drawn 640 × 360 footage, constant bitrate): VP9 and H.264 within about 1% at 0.08 bpp and up; at 0.055 bpp H.264 came out about 1.6× over, VP9 within 4%. Near Low's 0.04 bpp the "came out over" note will show for H.264; a second pass (above) is the fix if it does in practice.
+
+## Revision (2026-11-16, review)
+- Owner kept the High cap.
+- **MP4 floor raised to Medium's 0.08 bpp** (owner): H.264 Fit lowers the size sooner, and its too-long limit is the smallest size at 0.08 bpp. WebM stays at 0.04 down to 250 kb/s.
+- The panel and the shell plan with the sound kept. When the part would fit silent, the too-long text says to turn the sound off (`--mute`) instead of only saying to trim.
+- The Max size field shows the saved value again on blur after an invalid entry (0 or empty).

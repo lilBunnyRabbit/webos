@@ -47,6 +47,8 @@ const FIT_AUDIO_LOW = 64_000;
 const FIT_MARGIN = 0.95;
 const FIT_AUDIO_SHARE = 0.15;
 const FIT_SIZES = [OutputSize.P1080, OutputSize.P720, OutputSize.P480] as const;
+/** Realtime H.264 came out about 1.6× over at 0.055 bpp at a constant bitrate; at 0.08 it held within 1%. */
+const FIT_MIN_BPP: Record<ClipFormat, number> = { webm: BITS_PER_PIXEL.low, mp4: BITS_PER_PIXEL.medium };
 
 export type FitPlan =
   | {
@@ -65,10 +67,11 @@ export interface FitInput {
   seconds: number;
   target_bytes: number;
   audio: boolean;
+  format: ClipFormat;
 }
 
 /** Video stops at High's bitrate, so a short clip isn't padded out to the target. */
-export function fit_plan({ source, ceiling, seconds, target_bytes, audio }: FitInput): FitPlan {
+export function fit_plan({ source, ceiling, seconds, target_bytes, audio, format }: FitInput): FitPlan {
   const budget = (target_bytes * 8 * FIT_MARGIN) / Math.max(seconds, 1e-3);
   const audio_bps = !audio ? 0 : AUDIO_BITRATE > budget * FIT_AUDIO_SHARE ? FIT_AUDIO_LOW : AUDIO_BITRATE;
   const room = budget - audio_bps;
@@ -79,10 +82,13 @@ export function fit_plan({ source, ceiling, seconds, target_bytes, audio }: FitI
     const last = sizes.at(-1)!;
     if (size.width * size.height < last.width * last.height) sizes.push(size);
   }
-  const pick = sizes.find((size) => room / (size.width * size.height * 30) >= BITS_PER_PIXEL.low);
+  const min_bpp = FIT_MIN_BPP[format];
+  const pick = sizes.find((size) => room / (size.width * size.height * 30) >= min_bpp);
   const size = pick ?? sizes.at(-1)!;
-  if (!pick && room < MIN_BITRATE)
-    return { ok: false, max_seconds: (target_bytes * 8 * FIT_MARGIN) / (MIN_BITRATE + (audio ? FIT_AUDIO_LOW : 0)) };
+  const floor =
+    format === ClipFormat.MP4 ? Math.max(MIN_BITRATE, size.width * size.height * 30 * min_bpp) : MIN_BITRATE;
+  if (!pick && room < floor)
+    return { ok: false, max_seconds: (target_bytes * 8 * FIT_MARGIN) / (floor + (audio ? FIT_AUDIO_LOW : 0)) };
   const video_bps = Math.round(Math.min(room, video_bitrate(size, Quality.HIGH)));
   return {
     ok: true,
@@ -100,8 +106,10 @@ export function format_mb(bytes: number): string {
   return `${mb >= 10 ? Math.round(mb * 10) / 10 : Math.round(mb * 100) / 100} MB`;
 }
 
-export function fit_too_long(target_bytes: number, max_seconds: number): string {
-  return `Too long for ${format_mb(target_bytes)}: trim to ~${format_time(Math.floor(max_seconds), 0)}`;
+/** `without_sound` is how to drop the sound, given only when the part would fit without it. */
+export function fit_too_long(target_bytes: number, max_seconds: number, without_sound?: string): string {
+  const trim = `Too long for ${format_mb(target_bytes)}: trim to ~${format_time(Math.floor(max_seconds), 0)}`;
+  return without_sound ? `${trim} or ${without_sound}` : trim;
 }
 
 /** A plain number is MB. */

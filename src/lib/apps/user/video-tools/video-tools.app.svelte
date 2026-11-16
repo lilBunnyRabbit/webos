@@ -115,10 +115,22 @@
   });
   const sound = $derived(keep_audio && !skip && !(mp4 && aac === false));
   const max_bytes = $derived(Math.round(prefs.value.max_mb * 1e6));
-  const fit = $derived(
+  const fit_input = $derived(
     loaded && output === Output.CLIP && quality === Quality.FIT
-      ? fit_plan({ source: loaded, ceiling: clip_size, seconds: length, target_bytes: max_bytes, audio: sound })
+      ? {
+          source: loaded,
+          ceiling: clip_size,
+          seconds: length,
+          target_bytes: max_bytes,
+          audio: sound,
+          format: prefs.value.format,
+        }
       : null
+  );
+  const fit = $derived(fit_input && fit_plan(fit_input));
+  // Planned with the sound kept; a part that only fits silent says so instead of looking hopeless.
+  const silent_fits = $derived(
+    !!fit_input && fit?.ok === false && sound && fit_plan({ ...fit_input, audio: false }).ok
   );
   const output_dimensions = $derived(fit?.ok ? fit.size : clip_dimensions);
   const width_options = $derived.by(() => {
@@ -508,6 +520,7 @@
                       const next = Number(event.currentTarget.value);
                       if (Number.isFinite(next) && next > 0) prefs.value.max_mb = next;
                     }}
+                    onblur={(event) => (event.currentTarget.value = String(prefs.value.max_mb))}
                   />
                   <span class="text-foreground/80">MB</span>
                 </span>
@@ -518,7 +531,7 @@
                   `~${format_mb(fit.estimate_bytes)} · ${Math.min(fit.size.width, fit.size.height)}p · ${((fit.video_bps + fit.audio_bps) / 1e6).toFixed(1)} Mb/s`
                 )}
               {:else}
-                <p class="flex gap-1.5 px-0.5 text-2xs text-warning"><WarningIcon class="mt-px size-3.5 shrink-0" weight="bold" />{fit_too_long(max_bytes, fit.max_seconds)}</p>
+                <p class="flex gap-1.5 px-0.5 text-2xs text-warning"><WarningIcon class="mt-px size-3.5 shrink-0" weight="bold" />{fit_too_long(max_bytes, fit.max_seconds, silent_fits ? "turn the sound off" : undefined)}</p>
               {/if}
             {/if}
             {@render skip_controls()}
